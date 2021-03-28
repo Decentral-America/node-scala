@@ -88,7 +88,7 @@ class Docker(suiteConfig: Config = empty, tag: String = "", enableProfiling: Boo
 
   private lazy val wavesNetwork: Network = {
     val id          = Random.nextInt(Int.MaxValue)
-    val networkName = s"waves-$id"
+    val networkName = s"decentralchain-$id"
 
     def network: Option[Network] =
       try {
@@ -523,7 +523,7 @@ class Docker(suiteConfig: Config = empty, tag: String = "", enableProfiling: Boo
 }
 
 object Docker {
-  val NodeImageName: String = "com.wavesplatform/node-it:latest"
+  val NodeImageName: String = "decentralchain/node-it:latest"
 
   private val ContainerRoot = Paths.get("/usr/share/waves")
   private val ProfilerPort  = 10001

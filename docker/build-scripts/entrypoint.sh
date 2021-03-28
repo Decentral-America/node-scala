@@ -3,7 +3,7 @@ shopt -s nullglob
 NETWORKS="mainnet testnet stagenet"
 
 logEcho() {
-  echo $1 | gosu waves tee -a /var/log/waves/waves.log
+  echo $1 | gosu decentralchain tee -a /var/log/decentralchain/waves.log
 }
 
 mkdir -p $WVDATA $WVLOG
@@ -11,11 +11,11 @@ chmod 700 $WVDATA $WVLOG || :
 
 user="$(id -u)"
 if [ "$user" = '0' ]; then
-  find $WVDATA \! -user waves -exec chown waves '{}' +
-  find $WVLOG \! -user waves -exec chown waves '{}' +
+  find $WVDATA \! -user decentralchain -exec chown decentralchain '{}' +
+  find $WVLOG \! -user decentralchain -exec chown decentralchain '{}' +
 fi
 
-[ -z "${WAVES_CONFIG}" ] && WAVES_CONFIG="/etc/waves/waves.conf"
+[ -z "${WAVES_CONFIG}" ] && WAVES_CONFIG="/etc/decentralchain/waves.conf"
 if [[ ! -f "$WAVES_CONFIG" ]]; then
   logEcho "Custom '$WAVES_CONFIG' not found. Using a default one for '${WAVES_NETWORK,,}' network."
   if [[ $NETWORKS == *"${WAVES_NETWORK,,}"* ]]; then
@@ -23,7 +23,7 @@ if [[ ! -f "$WAVES_CONFIG" ]]; then
     echo "waves.blockchain.type=${WAVES_NETWORK}" >>$WAVES_CONFIG
 
     sed -i 's/include "local.conf"//' "$WAVES_CONFIG"
-    for f in /etc/waves/ext/*.conf; do
+    for f in /etc/decentralchain/ext/*.conf; do
       echo "Adding $f extension config to waves.conf"
       echo "include required(\"$f\")" >>$WAVES_CONFIG
     done
@@ -55,4 +55,4 @@ JAVA_OPTS="-Dlogback.stdout.level=${WAVES_LOG_LEVEL}
   -Dlogback.file.directory=$WVLOG
   -Dconfig.override_with_env_vars=true
   ${JAVA_OPTS}
-  -cp '/usr/share/waves/lib/plugins/*:/usr/share/waves/lib/*'" exec gosu waves waves "$WAVES_CONFIG"
+  -cp '/usr/share/decentralchain/lib/plugins/*:/usr/share/decentralchain/lib/*'" exec gosu decentralchain decentralchain "$WAVES_CONFIG"

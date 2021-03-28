@@ -106,7 +106,7 @@ package object settings {
         } else
           bc.toLowerCase
 
-      s"waves-$suffix"
+      s"decentralchain-$suffix"
     }
 
     val parent =

@@ -15,16 +15,16 @@ COPY build-scripts /tmp/
 RUN /bin/bash /tmp/setup-deps.sh
 
 # Node DEB files
-ENV WVDATA=/var/lib/waves
-ENV WVLOG=/var/log/waves
+ENV WVDATA=/var/lib/decentralchain
+ENV WVLOG=/var/log/decentralchain
 COPY target /tmp/
 RUN /bin/bash /tmp/setup-node.sh
 
 EXPOSE 6869 6868 6863 6862 6870
-VOLUME /var/lib/waves
-VOLUME /var/log/waves
-VOLUME /usr/share/waves/lib/plugins
-WORKDIR /var/lib/waves
+VOLUME /var/lib/decentralchain
+VOLUME /var/log/decentralchain
+VOLUME /usr/share/decentralchain/lib/plugins
+WORKDIR /var/lib/decentralchain
 
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/usr/share/waves/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/share/decentralchain/bin/entrypoint.sh"]
