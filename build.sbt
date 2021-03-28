@@ -153,7 +153,7 @@ packageAll := {
 
   val nodeDebFile = (node / Debian / packageBin).value
   val grpcDebFile = (`grpc-server` / Debian / packageBin).value
-  IO.copyFile(nodeDebFile, new File(baseDirectory.value, "docker/target/waves.deb"))
+  IO.copyFile(nodeDebFile, new File(baseDirectory.value, "docker/target/decentralchain.deb"))
   IO.copyFile(grpcDebFile, new File(baseDirectory.value, "docker/target/grpc-server.deb"))
 }
 

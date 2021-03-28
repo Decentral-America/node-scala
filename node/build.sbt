@@ -25,7 +25,7 @@ inConfig(Compile)(
 inTask(assembly)(
   Seq(
     test := {},
-    assemblyJarName := s"waves-all-${version.value}.jar",
+    assemblyJarName := s"decentralchain-all-${version.value}.jar",
     assemblyMergeStrategy := {
       case "module-info.class"                                  => MergeStrategy.discard
       case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.concat
@@ -73,7 +73,7 @@ bashScriptExtraDefines ++= Seq(
 
 inConfig(Universal)(
   Seq(
-    mappings += (baseDirectory.value / s"waves-sample.conf" -> "doc/waves.conf.sample"),
+    mappings += (baseDirectory.value / s"decentralchain-sample.conf" -> "doc/waves.conf.sample"),
     mappings := {
       val linuxScriptPattern = "bin/(.+)".r
       val batScriptPattern   = "bin/([^.]+)\\.bat".r
@@ -102,15 +102,15 @@ inConfig(Universal)(
 
 inConfig(Linux)(
   Seq(
-    maintainer := "wavesplatform.com",
-    packageSummary := "Waves node",
-    packageDescription := "Waves node"
+    maintainer := "decentralchain",
+    packageSummary := "decentralchain node",
+    packageDescription := "decentralchain node"
   )
 )
 
 // Variable options are used in different tasks and configs, so we will specify all of them
 val nameFix = Seq(
-  name := "waves",
+  name := "decentralchain",
   packageName := s"${name.value}${network.value.packageSuffix}",
   normalizedName := s"${name.value}${network.value.packageSuffix}"
 )
@@ -148,7 +148,7 @@ V.scalaPackage := "com.wavesplatform"
 
 // Hack for https://youtrack.jetbrains.com/issue/SCL-15210
 
-moduleName := s"waves${network.value.packageSuffix}" // waves-*.jar instead of node-*.jar
+moduleName := s"decentralchain${network.value.packageSuffix}" // waves-*.jar instead of node-*.jar
 executableScriptName := moduleName.value             // bin/waves instead of bin/node
 
 nameFix

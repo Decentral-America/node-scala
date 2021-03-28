@@ -257,7 +257,7 @@ object Importer extends ScorexLogging {
           System.in
 
         case _ =>
-          System.setProperty("http.agent", s"waves-node/${Version.VersionString}")
+          System.setProperty("http.agent", s"decentralchain-node/${Version.VersionString}")
           try {
             val url        = new URL(file)
             val connection = url.openConnection()
