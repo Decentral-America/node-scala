@@ -1,12 +1,12 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Waves Full Node (???)",
-    "description": "The Waves node REST API is the main interface for interacting with the blockchain. See [documentation](https://docs.waves.tech/en/waves-node/node-api/) for more info. If this API lacks data you need, check the [Waves Data Services API](https://docs.waves.tech/en/building-apps/waves-api-and-sdk/waves-data-service-api).",
+    "title": "Decentralchain Full Node (???)",
+    "description": "The Decentralchain node REST API is the main interface for interacting with the blockchain.",
     "termsOfService": "",
     "license": {
       "name": "MIT License",
-      "url": "https://github.com/wavesplatform/Waves/blob/master/LICENSE"
+      "url": "https://github.com/Decentral-America/Waves/blob/master/LICENSE"
     },
     "version": "???"
   },
@@ -4287,7 +4287,7 @@
         }
       }
     },
-    "/debug/stateWaves/{height}": {
+    "/debug/DCC/{height}": {
       "get": {
         "tags": [
           "debug"
@@ -4646,7 +4646,7 @@
           "node"
         ],
         "summary": "Version",
-        "description": "Get Waves node version",
+        "description": "Get Decentralchain node version",
         "operationId": "version_1",
         "responses": {
           "200": {
