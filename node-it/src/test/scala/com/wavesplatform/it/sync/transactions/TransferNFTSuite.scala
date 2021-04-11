@@ -150,7 +150,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
 
     val nftAsset =
       sender.broadcastIssue(seller, assetName, assetDescription, 1, 0, reissuable = false, 1.waves / 1000, waitForTx = true, script = None).id
-    val pair = AssetPair.createAssetPair(nftAsset, "WAVES")
+    val pair = AssetPair.createAssetPair(nftAsset, "DCC")
     val ts   = ntpTime.correctedTime()
     val buy = Order.buy(
       Order.V2,

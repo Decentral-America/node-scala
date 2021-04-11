@@ -30,8 +30,8 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
       |func foo(txProtoBytes: ByteVector) = {
       |    let transferTx = transferTransactionFromProto(txProtoBytes).value()
       |    let transferTxAttachment = transferTx.attachment.toBase58String()
-      |    let assetId = if (!transferTx.assetId.isDefined()) then {"WAVES"} else {transferTx.assetId.value().toBase58String()}
-      |    let feeAssetId = if (!transferTx.feeAssetId.isDefined()) then {"WAVES"} else {transferTx.feeAssetId.value().toBase58String()}
+      |    let assetId = if (!transferTx.assetId.isDefined()) then {"DCC"} else {transferTx.assetId.value().toBase58String()}
+      |    let feeAssetId = if (!transferTx.feeAssetId.isDefined()) then {"DCC"} else {transferTx.feeAssetId.value().toBase58String()}
       |[
       |IntegerEntry("amount", transferTx.amount),
       |StringEntry("senderPublicKey", transferTx.senderPublicKey.toBase58String()),
@@ -81,8 +81,8 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
     sender.getDataByKey(dAppAddress, "amount").value shouldBe transferTx.amount
     sender.getDataByKey(dAppAddress, "fee").value shouldBe transferTx.fee
     sender.getDataByKey(dAppAddress, "id").value shouldBe transferTx.id().toString
-    sender.getDataByKey(dAppAddress, "assetId").value shouldBe "WAVES"
-    sender.getDataByKey(dAppAddress, "feeAssetId").value shouldBe "WAVES"
+    sender.getDataByKey(dAppAddress, "assetId").value shouldBe "DCC"
+    sender.getDataByKey(dAppAddress, "feeAssetId").value shouldBe "DCC"
     sender.getDataByKey(dAppAddress, "attachment").value shouldBe Base58.encode("WAVES transfer".getBytes)
     sender.getDataByKey(dAppAddress, "senderPublicKey").value shouldBe transferTx.sender.toString
     sender.getDataByKey(dAppAddress, "sender").value shouldBe transferTx.sender.toAddress.toString

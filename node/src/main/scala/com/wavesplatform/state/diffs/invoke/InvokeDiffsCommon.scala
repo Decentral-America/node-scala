@@ -142,7 +142,7 @@ object InvokeDiffsCommon {
         val dAppInvocationFee = FeeConstants(InvokeScriptTransaction.typeId) * FeeUnit * stepsNumber
         val minWaves          = totalScriptsInvoked * ScriptExtraFee + dAppInvocationFee + minIssueFee
         val txName            = Constants.TransactionNames(InvokeScriptTransaction.typeId)
-        val assetName         = tx.assetFee._1.fold("WAVES")(_.id.toString)
+        val assetName         = tx.assetFee._1.fold("DCC")(_.id.toString)
         Either.cond(
           minWaves <= feeInfo._1,
           totalScriptsInvoked,

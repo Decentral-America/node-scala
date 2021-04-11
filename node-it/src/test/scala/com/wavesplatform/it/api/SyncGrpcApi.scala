@@ -100,7 +100,7 @@ object SyncGrpcApi extends Assertions {
         fee: Long,
         timestamp: Long,
         version: Byte,
-        matcherFeeAssetId: String = "WAVES",
+        matcherFeeAssetId: String = "DCC",
         waitForTx: Boolean = false
     ): PBSignedTransaction = {
       maybeWaitForTransaction(
@@ -135,8 +135,8 @@ object SyncGrpcApi extends Assertions {
         amount: Long,
         fee: Long,
         version: Int = 2,
-        assetId: String = "WAVES",
-        feeAssetId: String = "WAVES",
+        assetId: String = "DCC",
+        feeAssetId: String = "DCC",
         attachment: ByteString = ByteString.EMPTY,
         timestamp: Long = System.currentTimeMillis(),
         waitForTx: Boolean = false

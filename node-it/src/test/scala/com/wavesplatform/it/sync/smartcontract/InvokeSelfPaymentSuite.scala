@@ -39,7 +39,7 @@ class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailur
         |
         |@Callable(inv)
         |func paySelf(asset: String) = {
-        |  let id = if asset == "WAVES" then unit else fromBase58String(asset)
+        |  let id = if asset == "DCC" then unit else fromBase58String(asset)
         |  [ ScriptTransfer(this, 1, id) ]
         |}
       """.stripMargin
@@ -56,7 +56,7 @@ class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailur
         |
         |@Callable(inv)
         |func paySelf(asset: String) = {
-        |  let id = if asset == "WAVES" then unit else fromBase58String(asset)
+        |  let id = if asset == "DCC" then unit else fromBase58String(asset)
         |  TransferSet([ ScriptTransfer(this, 1, id) ])
         |}
       """.stripMargin
@@ -91,7 +91,7 @@ class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailur
 
   test("V4: can't send tokens to itself from a script") {
     for (args <- List(
-           List(CONST_STRING("WAVES").explicitGet()),
+           List(CONST_STRING("DCC").explicitGet()),
            List(CONST_STRING(asset1Id).explicitGet())
          )) {
       assertApiError(
@@ -120,7 +120,7 @@ class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailur
   }
 
   test("V3: still can pay itself") {
-    sender.invokeScript(caller, dAppV3Address, Some("paySelf"), List(CONST_STRING("WAVES").explicitGet()), waitForTx = true)
+    sender.invokeScript(caller, dAppV3Address, Some("paySelf"), List(CONST_STRING("DCC").explicitGet()), waitForTx = true)
     sender.invokeScript(caller, dAppV3Address, Some("paySelf"), List(CONST_STRING(asset1Id).explicitGet()), waitForTx = true)
   }
 
