@@ -389,7 +389,7 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
       val mf                  = 300000L
       val buyAmount           = 2
       val sellAmount          = 3
-      val assetPair           = AssetPair.createAssetPair("WAVES", issueTx).get
+      val assetPair           = AssetPair.createAssetPair("DCC", issueTx).get
       val buy                 = Order.buy(o1ver, buyer, matcher.publicKey, assetPair, buyAmount, buyPrice, ts, expirationTimestamp, mf, matcherFeeOrder1)
       val sell                = Order.sell(o2ver, seller, matcher.publicKey, assetPair, sellAmount, sellPrice, ts, expirationTimestamp, mf, matcherFeeOrder2)
 

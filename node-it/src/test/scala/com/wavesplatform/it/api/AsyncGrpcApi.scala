@@ -108,21 +108,21 @@ object AsyncGrpcApi {
         amount: Long,
         fee: Long,
         version: Int = 2,
-        assetId: String = "WAVES",
-        feeAssetId: String = "WAVES",
+        assetId: String = "DCC",
+        feeAssetId: String = "DCC",
         attachment: ByteString = ByteString.EMPTY,
         timestamp: Long = System.currentTimeMillis
     ): Future[PBSignedTransaction] = {
       val unsigned = PBTransaction(
         chainId,
         ByteString.copyFrom(source.publicKey.arr),
-        Some(Amount.of(if (feeAssetId == "WAVES") ByteString.EMPTY else ByteString.copyFrom(Base58.decode(feeAssetId)), fee)),
+        Some(Amount.of(if (feeAssetId == "DCC") ByteString.EMPTY else ByteString.copyFrom(Base58.decode(feeAssetId)), fee)),
         timestamp,
         version,
         PBTransaction.Data.Transfer(
           TransferTransactionData.of(
             Some(recipient),
-            Some(Amount.of(if (assetId == "WAVES") ByteString.EMPTY else ByteString.copyFrom(Base58.decode(assetId)), amount)),
+            Some(Amount.of(if (assetId == "DCC") ByteString.EMPTY else ByteString.copyFrom(Base58.decode(assetId)), amount)),
             attachment
           )
         )
@@ -214,13 +214,13 @@ object AsyncGrpcApi {
         fee: Long,
         timestamp: Long,
         version: Byte,
-        matcherFeeAssetId: String = "WAVES"
+        matcherFeeAssetId: String = "DCC"
     ): Future[PBSignedTransaction] = {
 
       val unsigned = PBTransaction(
         chainId,
         ByteString.copyFrom(matcher.publicKey.arr),
-        Some(Amount.of(if (matcherFeeAssetId == "WAVES") ByteString.EMPTY else ByteString.copyFrom(Base58.decode(matcherFeeAssetId)), fee)),
+        Some(Amount.of(if (matcherFeeAssetId == "DCC") ByteString.EMPTY else ByteString.copyFrom(Base58.decode(matcherFeeAssetId)), fee)),
         timestamp,
         version,
         PBTransaction.Data.Exchange(

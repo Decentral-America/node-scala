@@ -287,7 +287,7 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
 
     sender.balance(otherCaller).balance shouldBe 0L
 
-    val assetPair = AssetPair.createAssetPair("WAVES", tradeAsset)
+    val assetPair = AssetPair.createAssetPair("DCC", tradeAsset)
 
     val ts = ntpTime.getTimestamp()
     val buyOrder = Order.buy(
@@ -359,7 +359,7 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
       100.millis
     )
 
-    val assetPair = AssetPair.createAssetPair("WAVES", tradeAsset).get
+    val assetPair = AssetPair.createAssetPair("DCC", tradeAsset).get
 
     def orders: (Order, Order) = {
       val ts = ntpTime.getTimestamp()
