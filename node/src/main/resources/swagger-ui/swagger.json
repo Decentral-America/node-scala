@@ -314,7 +314,7 @@
         "tags": [
           "addresses"
         ],
-        "summary": "Regular balance in WAVES",
+        "summary": "Regular balance in DCC",
         "description": "Get the regular balance at a given address",
         "operationId": "balance_2",
         "parameters": [
@@ -447,7 +447,7 @@
         "tags": [
           "addresses"
         ],
-        "summary": "Effective balance in WAVES",
+        "summary": "Effective balance in DCC",
         "description": "Get the effective balance at a given address",
         "operationId": "effectiveBalance_1",
         "parameters": [
@@ -916,7 +916,7 @@
         "tags": [
           "addresses"
         ],
-        "summary": "All types of balances in WAVES",
+        "summary": "All types of balances in DCC",
         "description": "Get the available, regular, generating, and effective balance, see [definitions](https://docs.waves.tech/en/blockchain/account/account-balance#account-balance-in-waves)",
         "operationId": "balanceDetails_1",
         "parameters": [
@@ -971,7 +971,7 @@
         "tags": [
           "addresses"
         ],
-        "summary": "Confirmed regular balance in WAVES",
+        "summary": "Confirmed regular balance in DCC",
         "description": "Get the minimum regular balance at a given address for {confirmations} blocks back from the current height. Max number of confirmations is set by `waves.db.max-rollback-depth`, 2000 by default",
         "operationId": "balanceWithConfirmations_1",
         "parameters": [
@@ -1007,7 +1007,7 @@
         "tags": [
           "addresses"
         ],
-        "summary": "Confirmed effective balance in WAVES",
+        "summary": "Confirmed effective balance in DCC",
         "description": "Get the minimum effective balance at a given address for {confirmations} blocks from the current height. Max number of confirmations is set by `waves.db.max-rollback-depth`, 2000 by default",
         "operationId": "effectiveBalanceWithConfirmations_1",
         "parameters": [
@@ -3094,7 +3094,7 @@
           "assets"
         ],
         "summary": "Account balances in all assets",
-        "description": "Get account balances in all assets (excluding WAVES and NFTs) at a given address",
+        "description": "Get account balances in all assets (excluding DCC and NFTs) at a given address",
         "operationId": "balances_1",
         "parameters": [
           {
@@ -3147,13 +3147,13 @@
                             "type": "integer",
                             "format": "int64",
                             "nullable": true,
-                            "description": "For [sponsored asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee) only: the equivalent of 0.001 WAVES"
+                            "description": "For [sponsored asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee) only: the equivalent of 0.001 DCC"
                           },
                           "sponsorBalance": {
                             "type": "integer",
                             "format": "int64",
                             "nullable": true,
-                            "description": "For [sponsored asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee) only: the sponsor balance in WAVES"
+                            "description": "For [sponsored asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee) only: the sponsor balance in DCC"
                           },
                           "quantity": {
                             "type": "integer",
