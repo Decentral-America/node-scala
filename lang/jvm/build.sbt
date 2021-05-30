@@ -4,7 +4,7 @@ publishTo := Some("Sonatype Nexus" at "https://oss.sonatype.org/service/local/st
 name := "RIDE Compiler"
 normalizedName := "lang"
 description := "The RIDE smart contract language compiler"
-homepage := Some(url("https://docs.wavesplatform.com/en/technical-details/waves-contracts-language-description/maven-compiler-package.html"))
+homepage := Some(url("https://decentralchain.io/documentacion/en/technical-details/waves-contracts-language-description/maven-compiler-package.html"))
 developers := List(Developer("petermz", "Peter Zhelezniakov", "peterz@rambler.ru", url("https://wavesplatform.com")))
 libraryDependencies ++=
   Seq(

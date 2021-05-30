@@ -66,7 +66,7 @@
           "addresses"
         ],
         "summary": "Wallet addresses",
-        "description": "Get a list of account addresses in the [node wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)",
+        "description": "Get a list of account addresses in the [node wallet](https://decentralchain.io/documentacion/en/waves-node/how-to-work-with-node-wallet)",
         "operationId": "root_1",
         "responses": {
           "200": {
@@ -89,7 +89,7 @@
           "addresses"
         ],
         "summary": "Create wallet address",
-        "description": "Generate a new account address in the [node wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)",
+        "description": "Generate a new account address in the [node wallet](https://decentralchain.io/documentacion/en/waves-node/how-to-work-with-node-wallet)",
         "operationId": "create_1",
         "responses": {
           "200": {
@@ -182,7 +182,7 @@
           "addresses"
         ],
         "summary": "Wallet addresses by range",
-        "description": "Get a list addresses in the [node wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet) by a given range of indices. Max range {from}-{to} is 100 addresses",
+        "description": "Get a list addresses in the [node wallet](https://decentralchain.io/documentacion/en/waves-node/how-to-work-with-node-wallet) by a given range of indices. Max range {from}-{to} is 100 addresses",
         "operationId": "seq_2",
         "parameters": [
           {
@@ -747,7 +747,7 @@
                     "verifierComplexity": {
                       "type": "integer",
                       "format": "int64",
-                      "description": "[Complexity](https://docs.waves.tech/en/ride/base-concepts/complexity) of an account script or the verifier function of the dApp script"
+                      "description": "[Complexity](https://decentralchain.io/documentacion/en/ride/base-concepts/complexity) of an account script or the verifier function of the dApp script"
                     },
                     "callableComplexities": {
                       "type": "object",
@@ -917,7 +917,7 @@
           "addresses"
         ],
         "summary": "All types of balances in DCC",
-        "description": "Get the available, regular, generating, and effective balance, see [definitions](https://docs.waves.tech/en/blockchain/account/account-balance#account-balance-in-waves)",
+        "description": "Get the available, regular, generating, and effective balance, see [definitions](https://decentralchain.io/documentacion/en/blockchain/account/account-balance#account-balance-in-waves)",
         "operationId": "balanceDetails_1",
         "parameters": [
           {
@@ -2072,10 +2072,10 @@
           "transactions"
         ],
         "summary": "Sign transaction on behalf of wallet account",
-        "description": "Sign a transaction with the private key corresponding to the `sender`. Sender must exist in the [node's wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)",
+        "description": "Sign a transaction with the private key corresponding to the `sender`. Sender must exist in the [node's wallet](https://decentralchain.io/documentacion/en/waves-node/how-to-work-with-node-wallet)",
         "operationId": "sign",
         "requestBody": {
-          "description": "Transaction [data in JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation) including [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and `sender`. If `timestamp` is omitted, current node's time is used. `senderPublicKey` is ignored.",
+          "description": "Transaction [data in JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation) including [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and `sender`. If `timestamp` is omitted, current node's time is used. `senderPublicKey` is ignored.",
           "content": {
             "application/json": {
               "schema": {
@@ -2247,7 +2247,7 @@
         "description": "Get the minimum fee for a given transaction",
         "operationId": "calculateFee_1",
         "requestBody": {
-          "description": "Transaction [data in JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation) including [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and `senderPublicKey`. To calculate a sponsored fee, specify `feeAssetId`. `fee` and `sender` are ignored.",
+          "description": "Transaction [data in JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation) including [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and `senderPublicKey`. To calculate a sponsored fee, specify `feeAssetId`. `fee` and `sender` are ignored.",
           "content": {
             "application/json": {
               "schema": {
@@ -2291,7 +2291,7 @@
           "transactions"
         ],
         "summary": "Sign transaction on behalf of wallet account",
-        "description": "Sign a transaction with the private key corresponding to a given address. The address must exist in the [node's wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)",
+        "description": "Sign a transaction with the private key corresponding to a given address. The address must exist in the [node's wallet](https://decentralchain.io/documentacion/en/waves-node/how-to-work-with-node-wallet)",
         "operationId": "signWithSigner_1",
         "parameters": [
           {
@@ -2306,7 +2306,7 @@
           }
         ],
         "requestBody": {
-          "description": "Transaction [data in JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation) including [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and `sender`. If `timestamp` is omitted, current node's time is used. `senderPublicKey` is ignored.",
+          "description": "Transaction [data in JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation) including [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and `sender`. If `timestamp` is omitted, current node's time is used. `senderPublicKey` is ignored.",
           "content": {
             "application/json": {
               "schema": {
@@ -2348,7 +2348,7 @@
         "description": "Broadcast a signed transaction",
         "operationId": "signedBroadcast_1",
         "requestBody": {
-          "description": "Transaction [data in JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation) including [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and `signature`/`proofs`",
+          "description": "Transaction [data in JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation) including [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and `signature`/`proofs`",
           "content": {
             "application/json": {
               "schema": {
@@ -2379,7 +2379,7 @@
           "transactions"
         ],
         "summary": "Merkle proofs",
-        "description": "Get [merkle proofs](https://docs.waves.tech/en/blockchain/block/merkle-root#proof-of-transaction-in-block) for given transactions. For dozens of transactions, better use the POST method",
+        "description": "Get [merkle proofs](https://decentralchain.io/documentacion/en/blockchain/block/merkle-root#proof-of-transaction-in-block) for given transactions. For dozens of transactions, better use the POST method",
         "operationId": "merkle_proof_1",
         "parameters": [
           {
@@ -2415,7 +2415,7 @@
           "transactions"
         ],
         "summary": "Merkle proofs",
-        "description": "Get [merkle proofs](https://docs.waves.tech/en/blockchain/block/merkle-root#proof-of-transaction-in-block) for given transactions",
+        "description": "Get [merkle proofs](https://decentralchain.io/documentacion/en/blockchain/block/merkle-root#proof-of-transaction-in-block) for given transactions",
         "operationId": "merkle_proof_2",
         "requestBody": {
           "description": "Transaction IDs",
@@ -2748,7 +2748,7 @@
                     "verifierComplexity": {
                       "type": "integer",
                       "format": "int64",
-                      "description": "[Complexity](https://docs.waves.tech/en/ride/base-concepts/complexity) of the account or asset script or the verifier function of the dApp script"
+                      "description": "[Complexity](https://decentralchain.io/documentacion/en/ride/base-concepts/complexity) of the account or asset script or the verifier function of the dApp script"
                     },
                     "callableComplexities": {
                       "type": "object",
@@ -2942,7 +2942,7 @@
         "description": "Serialize transaction",
         "operationId": "transactionSerialize_1",
         "requestBody": {
-          "description": "Transaction [data in JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation) including [`type`](https://docs.waves.tech/en/blockchain/transaction-type/)",
+          "description": "Transaction [data in JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation) including [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/)",
           "content": {
             "application/json": {
               "schema": {
@@ -3147,13 +3147,13 @@
                             "type": "integer",
                             "format": "int64",
                             "nullable": true,
-                            "description": "For [sponsored asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee) only: the equivalent of 0.001 DCC"
+                            "description": "For [sponsored asset](https://decentralchain.io/documentacion/en/blockchain/waves-protocol/sponsored-fee) only: the equivalent of 0.001 DCC"
                           },
                           "sponsorBalance": {
                             "type": "integer",
                             "format": "int64",
                             "nullable": true,
-                            "description": "For [sponsored asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee) only: the sponsor balance in DCC"
+                            "description": "For [sponsored asset](https://decentralchain.io/documentacion/en/blockchain/waves-protocol/sponsored-fee) only: the sponsor balance in DCC"
                           },
                           "quantity": {
                             "type": "integer",
@@ -3180,7 +3180,7 @@
           "assets"
         ],
         "summary": "Information about asset",
-        "description": "Get detailed information about a given asset. See [fields descriptions](https://docs.waves.tech/en/blockchain/token/#custom-token-parameters)",
+        "description": "Get detailed information about a given asset. See [fields descriptions](https://decentralchain.io/documentacion/en/blockchain/token/#custom-token-parameters)",
         "operationId": "asset_details",
         "parameters": [
           {
@@ -3215,7 +3215,7 @@
           "assets"
         ],
         "summary": "Information about multiple assets",
-        "description": "Get detailed information about given assets. See [fields descriptions](https://docs.waves.tech/en/blockchain/token/#custom-token-parameters)",
+        "description": "Get detailed information about given assets. See [fields descriptions](https://decentralchain.io/documentacion/en/blockchain/token/#custom-token-parameters)",
         "operationId": "asset_details_array",
         "parameters": [
           {
@@ -3392,7 +3392,7 @@
           "assets"
         ],
         "summary": "Account NFTs",
-        "description": "Get a list of [non-fungible tokens](https://docs.waves.tech/en/blockchain/token/non-fungible-token) at a given address. Max for 1000 tokens. For pagination, use the field {after}. See [fields descriptions](https://docs.waves.tech/en/blockchain/token/#custom-token-parameters).<br>Since activation of [feature #15](https://docs.waves.tech/en/waves-node/features/) this method returns only tokens that are issued as NFT (amount: 1, decimal places: 0, reissuable: false) after activation of feature #13. Before activation of feature #15 the method returned all the assets that are issued as NFT.",
+        "description": "Get a list of [non-fungible tokens](https://decentralchain.io/documentacion/en/blockchain/token/non-fungible-token) at a given address. Max for 1000 tokens. For pagination, use the field {after}. See [fields descriptions](https://decentralchain.io/documentacion/en/blockchain/token/#custom-token-parameters).<br>Since activation of [feature #15](https://decentralchain.io/documentacion/en/waves-node/features/) this method returns only tokens that are issued as NFT (amount: 1, decimal places: 0, reissuable: false) after activation of feature #13. Before activation of feature #15 the method returned all the assets that are issued as NFT.",
         "operationId": "nft_1",
         "parameters": [
           {
@@ -3617,7 +3617,7 @@
           "activation"
         ],
         "summary": "Feature activation status",
-        "description": "Activation statuses of [blockchain features](https://docs.waves.tech/en/waves-node/features/)",
+        "description": "Activation statuses of [blockchain features](https://decentralchain.io/documentacion/en/waves-node/features/)",
         "operationId": "status",
         "responses": {
           "200": {
@@ -5037,7 +5037,7 @@
           "verifierComplexity": {
             "type": "integer",
             "format": "int64",
-            "description": "[Complexity](https://docs.waves.tech/en/ride/base-concepts/complexity) of an account or asset script or the verifier function of the dApp script"
+            "description": "[Complexity](https://decentralchain.io/documentacion/en/ride/base-concepts/complexity) of an account or asset script or the verifier function of the dApp script"
           },
           "callableComplexities": {
             "type": "object",
@@ -5473,7 +5473,7 @@
       },
       "Transaction": {
         "type": "object",
-        "description": "Transaction's JSON representation (see <a href='https://docs.wavesplatform.com/en/blockchain/transaction/'>documentation</a>)",
+        "description": "Transaction's JSON representation (see <a href='https://decentralchain.io/documentacion/en/blockchain/transaction/'>documentation</a>)",
         "example": {
           "id": "string",
           "timestamp": 0,
@@ -5563,7 +5563,7 @@
           },
           "applicationStatus": {
             "type": "string",
-            "description": "succeeded: transaction is successful, script_execution_failed: the dApp script or the asset script failed. See [Transaction Validation](https://docs.waves.tech/en/blockchain/transaction/transaction-validation) for details"
+            "description": "succeeded: transaction is successful, script_execution_failed: the dApp script or the asset script failed. See [Transaction Validation](https://decentralchain.io/documentacion/en/blockchain/transaction/transaction-validation) for details"
           }
         }
       },
