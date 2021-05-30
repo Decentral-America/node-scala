@@ -14,7 +14,7 @@ val langPublishSettings = Seq(
   coverageExcludedPackages := "",
   publishMavenStyle := true,
   publishTo := Some("Sonatype Nexus" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
-  homepage := Some(url("https://docs.wavesplatform.com/en/technical-details/waves-contracts-language-description/maven-compiler-package.html")),
+  homepage := Some(url("https://decentralchain.io/documentacion/en/technical-details/waves-contracts-language-description/maven-compiler-package.html")),
   developers := List(
     Developer("petermz", "Peter Zhelezniakov", "peterz@rambler.ru", url("https://wavesplatform.com"))
   )
