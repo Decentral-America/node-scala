@@ -67,7 +67,7 @@ class OverdraftTest extends PropSpec with PropertyChecks with Matchers with Tran
             r should produce("AccountBalanceError")
           else
             r should produce(
-              s"Fee in WAVES for InvokeScriptTransaction (1 in WAVES) does not exceed minimal value of $InvokeFee WAVES"
+              s"Fee in DCC for InvokeScriptTransaction (1 in DCC) does not exceed minimal value of $InvokeFee DCC"
             )
         }
     }

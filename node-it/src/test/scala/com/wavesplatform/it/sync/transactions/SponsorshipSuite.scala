@@ -375,7 +375,7 @@ class SponsorshipSuite
           sender
             .transfer(sponsor, aliceAddress, 11 * Token, fee = SmallFee, assetId = Some(firstSponsorAssetId), feeAssetId = Some(firstSponsorAssetId))
             .id,
-          s"Fee for TransferTransaction \\($SmallFee in ${Some(firstSponsorAssetId).get}\\) does not exceed minimal value of 100000 WAVES or $LargeFee ${Some(firstSponsorAssetId).get}"
+          s"Fee for TransferTransaction \\($SmallFee in ${Some(firstSponsorAssetId).get}\\) does not exceed minimal value of 100000 DCC or $LargeFee ${Some(firstSponsorAssetId).get}"
         )
         assertBadRequestAndResponse(
           sender
@@ -388,7 +388,7 @@ class SponsorshipSuite
               feeAssetId = Some(secondSponsorAssetId)
             )
             .id,
-          s"Fee for TransferTransaction \\($SmallFee in ${Some(secondSponsorAssetId).get}\\) does not exceed minimal value of 100000 WAVES or $LargeFee ${Some(secondSponsorAssetId).get}"
+          s"Fee for TransferTransaction \\($SmallFee in ${Some(secondSponsorAssetId).get}\\) does not exceed minimal value of 100000 DCC or $LargeFee ${Some(secondSponsorAssetId).get}"
         )
       }
 

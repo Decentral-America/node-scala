@@ -64,7 +64,7 @@ class ReissueTransactionSuite extends BaseTransactionSuite {
 
       assertApiError(sender.reissue(firstKeyPair, issuedAssetId, someAssetAmount, reissuable = true, fee = reissueReducedFee - 1, version = v)) { error =>
         error.id shouldBe StateCheckFailed.Id
-        error.message should include(s"Fee for ReissueTransaction (${reissueReducedFee - 1} in WAVES) does not exceed minimal value of $reissueReducedFee WAVES.")
+        error.message should include(s"Fee for ReissueTransaction (${reissueReducedFee - 1} in DCC) does not exceed minimal value of $reissueReducedFee DCC.")
       }
     }
   }

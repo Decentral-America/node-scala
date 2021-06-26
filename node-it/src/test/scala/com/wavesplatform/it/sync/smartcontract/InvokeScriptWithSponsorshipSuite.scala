@@ -157,7 +157,7 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
         fee = feeAmount - 1,
         feeAssetId = Some(dAppAsset)
       ),
-      s"does not exceed minimal value of 900000 WAVES or $feeAmount"
+      s"does not exceed minimal value of 900000 DCC or $feeAmount"
     )
 
     assertApiError(

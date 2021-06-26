@@ -139,7 +139,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
 
       assertBadRequestAndMessage(
         sender.signedBroadcast(exchangeTx(smartAssetPair, smartMatcherFee + smartFee, smartMatcherFee + smartFee, ntpTime, 2, 2, acc1, acc0, acc2)),
-        "does not exceed minimal value of 1500000 WAVES"
+        "does not exceed minimal value of 1500000 DCC"
       )
 
       sender.signedBroadcast(

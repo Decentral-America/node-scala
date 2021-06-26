@@ -135,7 +135,7 @@ class CallableV4DiffTest extends PropSpec with PropertyChecks with Matchers with
           Seq(TestBlock.create(genesis :+ setScript :+ issue)),
           TestBlock.create(Seq(invoke)),
           features
-        )(_ should produce(s" with 6 total scripts invoked does not exceed minimal value of $minimalFee WAVES"))
+        )(_ should produce(s" with 6 total scripts invoked does not exceed minimal value of $minimalFee DCC"))
     }
   }
 

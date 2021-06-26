@@ -38,7 +38,7 @@ class InvokeAssetChecksTest
   private val time = new TestTime
   private def ts   = time.getTimestamp()
 
-  private val invalidLengthAsset = IssuedAsset(ByteStr.decodeBase58("WAVES").get)
+  private val invalidLengthAsset = IssuedAsset(ByteStr.decodeBase58("DCC").get)
   private val unexistingAsset    = IssuedAsset(ByteStr.decodeBase58("WAVESwavesWAVESwavesWAVESwavesWAVESwaves123").get)
 
   property("invoke asset checks") {

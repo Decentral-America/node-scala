@@ -84,7 +84,7 @@ class MassTransferTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 
     assertGrpcError(
       sender.broadcastMassTransfer(firstAcc, transfers = transfers, fee = massTransferTransactionFee - 1),
-      s"does not exceed minimal value of $massTransferTransactionFee WAVES",
+      s"does not exceed minimal value of $massTransferTransactionFee DCC",
       Code.INVALID_ARGUMENT
     )
 

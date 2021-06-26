@@ -196,8 +196,8 @@ class FailedTransactionSuite extends BaseTransactionSuite with CancelAfterFailur
             (" with 1 total scripts invoked", "")
 
         val minFee = if (typeName == "issue") invokeFee + issueFee else invokeFee + smartFee
-        val text = s"Fee in WAVES for InvokeScriptTransaction ($invokeFee in WAVES)" +
-          s"$scriptInvokedInfo$issuedInfo does not exceed minimal value of $minFee WAVES."
+        val text = s"Fee in DCC for InvokeScriptTransaction ($invokeFee in DCC)" +
+          s"$scriptInvokedInfo$issuedInfo does not exceed minimal value of $minFee DCC."
 
         failed.foreach { s =>
           checkStateChange(sender.debugStateChanges(s.id), 2, text)

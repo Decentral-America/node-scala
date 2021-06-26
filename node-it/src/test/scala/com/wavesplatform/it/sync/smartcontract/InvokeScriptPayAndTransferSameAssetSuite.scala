@@ -59,7 +59,7 @@ class InvokeScriptPayAndTransferSameAssetSuite extends BaseTransactionSuite with
           |  if (isDefined(i.payment)) then
           |    let pay = extract(i.payment)
           |    TransferSet([ScriptTransfer(receiver, 1, pay.assetId)])
-          |  else throw("need payment in WAVES or any Asset")
+          |  else throw("need payment in DCC or any Asset")
           |}
         """.stripMargin, estimator).explicitGet()._1
     sender.setScript(dApp, Some(dAppScript.bytes().base64), waitForTx = true).id

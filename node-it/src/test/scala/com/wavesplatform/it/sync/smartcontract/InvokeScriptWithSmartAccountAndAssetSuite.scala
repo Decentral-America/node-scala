@@ -36,7 +36,7 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         Some("justWriteData"),
         fee = 0.00899999.waves
       ),
-      s"does not exceed minimal value of 900000 WAVES"
+      s"does not exceed minimal value of 900000 DCC"
     )
   }
 
@@ -54,7 +54,7 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         ),
       AssertiveApiError(
         ScriptExecutionError.Id,
-        "Error while executing account-script: Fee in WAVES for InvokeScriptTransaction (5299999 in WAVES) with 12 total scripts invoked does not exceed minimal value of 5300000 WAVES."
+        "Error while executing account-script: Fee in DCC for InvokeScriptTransaction (5299999 in DCC) with 12 total scripts invoked does not exceed minimal value of 5300000 DCC."
       )
     )
 
@@ -105,7 +105,7 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         )
         ._1
         .id,
-      "does not exceed minimal value of 900000 WAVES"
+      "does not exceed minimal value of 900000 DCC"
     )
   }
 
@@ -123,7 +123,7 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         ),
       AssertiveApiError(
         ScriptExecutionError.Id,
-        "Error while executing account-script: Fee in WAVES for InvokeScriptTransaction (900000 in WAVES) with 2 total scripts invoked does not exceed minimal value of 1300000 WAVES."
+        "Error while executing account-script: Fee in DCC for InvokeScriptTransaction (900000 in DCC) with 2 total scripts invoked does not exceed minimal value of 1300000 DCC."
       )
     )
   }

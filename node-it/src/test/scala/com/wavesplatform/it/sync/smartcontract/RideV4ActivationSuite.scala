@@ -127,7 +127,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
 
     assertApiError(sender.reissue(callerAcc, issuedAssetId, someAssetAmount, reissuable = true, fee = reissueReducedFee)) { error =>
       error.id shouldBe StateCheckFailed.Id
-      error.message should include(s"Fee for ReissueTransaction ($reissueReducedFee in WAVES) does not exceed minimal value of $reissueFee WAVES.")
+      error.message should include(s"Fee for ReissueTransaction ($reissueReducedFee in DCC) does not exceed minimal value of $reissueFee DCC.")
     }
   }
 

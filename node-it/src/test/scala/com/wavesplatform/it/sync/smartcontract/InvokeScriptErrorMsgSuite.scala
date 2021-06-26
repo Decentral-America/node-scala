@@ -75,7 +75,7 @@ class InvokeScriptErrorMsgSuite extends BaseTransactionSuite with CancelAfterFai
         fee = 1000
       ),
       "State check failed. Reason: Transaction sent from smart account. Requires 400000 extra fee. Transaction involves 1 scripted assets." +
-        " Requires 400000 extra fee. Fee for InvokeScriptTransaction (1000 in WAVES) does not exceed minimal value of 1300000 WAVES."
+        " Requires 400000 extra fee. Fee for InvokeScriptTransaction (1000 in DCC) does not exceed minimal value of 1300000 DCC."
     )
 
     assertApiError(
@@ -91,7 +91,7 @@ class InvokeScriptErrorMsgSuite extends BaseTransactionSuite with CancelAfterFai
         ),
       AssertiveApiError(
         ScriptExecutionError.Id,
-        "Error while executing account-script: Fee in WAVES for InvokeScriptTransaction (1300000 in WAVES) with 12 total scripts invoked does not exceed minimal value of 5300000 WAVES."
+        "Error while executing account-script: Fee in DCC for InvokeScriptTransaction (1300000 in DCC) with 12 total scripts invoked does not exceed minimal value of 5300000 DCC."
       )
     )
   }

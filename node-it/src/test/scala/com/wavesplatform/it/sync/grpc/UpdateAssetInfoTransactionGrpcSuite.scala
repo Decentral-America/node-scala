@@ -111,7 +111,7 @@ class UpdateAssetInfoTransactionGrpcSuite extends GrpcBaseTransactionSuite with 
   test("not able to update asset info without paying enough fee") {
     assertGrpcError(
       sender.updateAssetInfo(issuer, assetId, "updatedName", "updatedDescription", minFee - 1),
-      s"does not exceed minimal value of $minFee WAVES",
+      s"does not exceed minimal value of $minFee DCC",
       Code.INVALID_ARGUMENT
     )
   }

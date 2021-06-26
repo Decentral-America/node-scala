@@ -106,12 +106,12 @@ object InvokeDiffsCommon {
               else
                 ""
 
-            val assetName = tx.assetFee._1.fold("WAVES")(_.id.toString)
+            val assetName = tx.assetFee._1.fold("DCC")(_.id.toString)
             val txName    = Constants.TransactionNames(InvokeScriptTransaction.typeId)
 
             s"Fee in $assetName for $txName (${tx.assetFee._2} in $assetName)" +
               s"$stepsInfo$totalScriptsInvokedInfo$issuesInfo " +
-              s"does not exceed minimal value of $minFee WAVES."
+              s"does not exceed minimal value of $minFee DCC."
           }
 
           Either.cond(

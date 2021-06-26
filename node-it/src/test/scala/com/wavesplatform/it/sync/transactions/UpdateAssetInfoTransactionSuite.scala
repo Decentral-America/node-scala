@@ -294,7 +294,7 @@ class UpdateAssetInfoTransactionSuite extends BaseTransactionSuite with CancelAf
   test("not able to update asset info without paying enough fee") {
     assertApiError(sender.updateAssetInfo(issuer, assetId, "updatedName", "updatedDescription", minFee - 1)) { error =>
       error.id shouldBe StateCheckFailed.Id
-      error.message shouldBe s"State check failed. Reason: . Fee for UpdateAssetInfoTransaction (${minFee - 1} in WAVES) does not exceed minimal value of $minFee WAVES."
+      error.message shouldBe s"State check failed. Reason: . Fee for UpdateAssetInfoTransaction (${minFee - 1} in DCC) does not exceed minimal value of $minFee DCC."
     }
   }
 
@@ -361,14 +361,14 @@ class UpdateAssetInfoTransactionSuite extends BaseTransactionSuite with CancelAf
     assertApiError(sender.updateAssetInfo(issuer, smartAssetId, "updatedName", "updatedDescription", minFee + smartFee - 1)) { error =>
       error.id shouldBe StateCheckFailed.Id
       error.message shouldBe s"State check failed. Reason: Transaction involves 1 scripted assets. Requires $smartFee extra fee." +
-        s" Fee for UpdateAssetInfoTransaction (${smartMinFee - 1} in WAVES) does not exceed minimal value of $smartMinFee WAVES."
+        s" Fee for UpdateAssetInfoTransaction (${smartMinFee - 1} in DCC) does not exceed minimal value of $smartMinFee DCC."
     }
     sender.setScript(issuer, Some(script), waitForTx = true)
     assertApiError(sender.updateAssetInfo(issuer, smartAssetId, "updatedName", "updatedDescription", minFee + 2 * smartFee - 1)) { error =>
       error.id shouldBe StateCheckFailed.Id
       error.message shouldBe s"State check failed. Reason: Transaction sent from smart account. Requires $smartFee extra fee." +
         s" Transaction involves 1 scripted assets. Requires $smartFee extra fee." +
-        s" Fee for UpdateAssetInfoTransaction (${smartMinFee + smartFee - 1} in WAVES) does not exceed minimal value of ${smartMinFee + smartFee} WAVES."
+        s" Fee for UpdateAssetInfoTransaction (${smartMinFee + smartFee - 1} in DCC) does not exceed minimal value of ${smartMinFee + smartFee} DCC."
     }
 
     sender.updateAssetInfo(issuer, smartAssetId, "updatedName", "updatedDescription", minFee + 2 * smartFee, waitForTx = true)

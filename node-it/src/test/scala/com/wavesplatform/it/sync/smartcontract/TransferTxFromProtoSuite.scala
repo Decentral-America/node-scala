@@ -61,7 +61,7 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
         amount = transferAmount,
         feeAsset = Waves,
         fee = minFee,
-        attachment = ByteStr("WAVES transfer".getBytes),
+        attachment = ByteStr("DCC transfer".getBytes),
         timestamp = System.currentTimeMillis()
       )
       .explicitGet()
@@ -83,7 +83,7 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
     sender.getDataByKey(dAppAddress, "id").value shouldBe transferTx.id().toString
     sender.getDataByKey(dAppAddress, "assetId").value shouldBe "DCC"
     sender.getDataByKey(dAppAddress, "feeAssetId").value shouldBe "DCC"
-    sender.getDataByKey(dAppAddress, "attachment").value shouldBe Base58.encode("WAVES transfer".getBytes)
+    sender.getDataByKey(dAppAddress, "attachment").value shouldBe Base58.encode("DCC transfer".getBytes)
     sender.getDataByKey(dAppAddress, "senderPublicKey").value shouldBe transferTx.sender.toString
     sender.getDataByKey(dAppAddress, "sender").value shouldBe transferTx.sender.toAddress.toString
     sender.getDataByKey(dAppAddress, "recipient").value shouldBe transferTx.recipient.toString
