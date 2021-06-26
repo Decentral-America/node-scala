@@ -8,7 +8,7 @@ useradd -r -g decentralchain --uid=999 --home-dir=$WVDATA --shell=/bin/bash dece
 dpkg -i /tmp/decentralchain.deb || exit 1
 if [[ $ENABLE_GRPC == "true" ]]; then
   echo "Installing gRPC server"
-  dpkg -i /tmp/waves-grpc-server.deb || exit 1
+  dpkg -i /tmp/decentralchain-grpc-server.deb || exit 1
 fi
 
 # Set permissions
