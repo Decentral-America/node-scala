@@ -1,17 +1,17 @@
 openapi: 3.0.1
 info:
   version: '{{version}}'
-  title: Waves Full Node ({{chainId}})
+  title: DCC Full Node ({{chainId}})
   description: >-
-    The Waves node REST API is the main interface for interacting with the
+    The DCC node REST API is the main interface for interacting with the
     blockchain. See
-    [documentation](https://docs.waves.tech/en/waves-node/node-api/) for more
-    info. If this API lacks data you need, check the [Waves Data Services
-    API](https://docs.waves.tech/en/building-apps/waves-api-and-sdk/waves-data-service-api).
+    [documentation](https://decentralchain.io/documentacion/en/dcc-node/node-api/) for more
+    info. If this API lacks data you need, check the [DCC Data Services
+    API](https://decentralchain.io/documentacion/en/building-apps/dcc-api-and-sdk/dcc-data-service-api).
   termsOfService: ''
   license:
     name: MIT License
-    url: 'https://github.com/wavesplatform/Waves/blob/version-1.3.x/LICENSE'
+    url: 'https://github.com/Decentral-America/DCC/blob/version-1.2.x/LICENSE'
 servers:
   - url: /
 tags:
@@ -37,7 +37,7 @@ paths:
       summary: Wallet addresses
       description: >-
         Get a list of account addresses in the [node
-        wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)
+        wallet](https://decentralchain.io/documentacion/en/dcc-node/how-to-work-with-node-wallet)
       operationId: getWalletAddresses
       responses:
         '200':
@@ -54,7 +54,7 @@ paths:
       summary: Create wallet address
       description: >-
         Generate a new account address in the [node
-        wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)
+        wallet](https://decentralchain.io/documentacion/en/dcc-node/how-to-work-with-node-wallet)
       operationId: createWalletAddress
       responses:
         '200':
@@ -79,7 +79,7 @@ paths:
       summary: Wallet addresses by range
       description: >-
         Get a list addresses in the [node
-        wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)
+        wallet](https://decentralchain.io/documentacion/en/dcc-node/how-to-work-with-node-wallet)
         by a given range of indices. Max range {from}-{to} is 100 addresses
       operationId: getWalletAddressesRange
       parameters:
@@ -431,7 +431,7 @@ paths:
                     type: integer
                     format: int64
                     description: >-
-                      [Complexity](https://docs.waves.tech/en/ride/base-concepts/complexity)
+                      [Complexity](https://decentralchain.io/documentacion/en/ride/base-concepts/complexity)
                       of an account script or the verifier function of the dApp
                       script
                   callableComplexities:
@@ -477,7 +477,7 @@ paths:
       summary: All types of balances in DCC
       description: >-
         Get the available, regular, generating, and effective balance, see
-        [definitions](https://docs.waves.tech/en/blockchain/account/account-balance#account-balance-in-waves)
+        [definitions](https://decentralchain.io/documentacion/en/blockchain/account/account-balance#account-balance-in-dcc)
       operationId: getWavesBalances
       parameters:
         - $ref: '#/components/parameters/address'
@@ -1198,14 +1198,14 @@ paths:
       description: >-
         Sign a transaction with the private key corresponding to the `sender`.
         Sender must exist in the [node's
-        wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)
+        wallet](https://decentralchain.io/documentacion/en/dcc-node/how-to-work-with-node-wallet)
       operationId: signTx
       requestBody:
         description: >-
           Transaction [data in
-          JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation)
+          JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation)
           including
-          [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and
+          [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and
           `sender`. If `timestamp` is omitted, current node's time is used.
           `senderPublicKey` is ignored.
         content:
@@ -1320,9 +1320,9 @@ paths:
       requestBody:
         description: >-
           Transaction [data in
-          JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation)
+          JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation)
           including
-          [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and
+          [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and
           `senderPublicKey`. To calculate a sponsored fee, specify `feeAssetId`.
           `fee` and `sender` are ignored.
         content:
@@ -1355,7 +1355,7 @@ paths:
       description: >-
         Sign a transaction with the private key corresponding to a given
         address. The address must exist in the [node's
-        wallet](https://docs.waves.tech/en/waves-node/how-to-work-with-node-wallet)
+        wallet](https://decentralchain.io/documentacion/en/dcc-node/how-to-work-with-node-wallet)
       operationId: signTxWithAddress
       parameters:
         - name: signerAddress
@@ -1368,9 +1368,9 @@ paths:
       requestBody:
         description: >-
           Transaction [data in
-          JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation)
+          JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation)
           including
-          [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and
+          [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and
           `sender`. If `timestamp` is omitted, current node's time is used.
           `senderPublicKey` is ignored.
         content:
@@ -1395,7 +1395,7 @@ paths:
       tags:
         - transactions
       summary: Broadcast transaction
-      description: Broadcast a signed transaction.<br>Check out [how to use this endpoint](https://docs.waves.tech/en/waves-node/node-api/transactions#step-4-broadcast-transaction)
+      description: Broadcast a signed transaction.<br>Check out [how to use this endpoint](https://decentralchain.io/documentacion/en/dcc-node/node-api/transactions#step-4-broadcast-transaction)
       operationId: broadcastSignedTx
       parameters:
         - name: trace
@@ -1407,9 +1407,9 @@ paths:
       requestBody:
         description: >-
           Transaction [data in
-          JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation)
+          JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation)
           including
-          [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and
+          [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/) and
           `signature`/`proofs`
         content:
           application/json:
@@ -1431,7 +1431,7 @@ paths:
       summary: Merkle proofs
       description: >-
         Get [merkle
-        proofs](https://docs.waves.tech/en/blockchain/block/merkle-root#proof-of-transaction-in-block)
+        proofs](https://decentralchain.io/documentacion/en/blockchain/block/merkle-root#proof-of-transaction-in-block)
         for given transactions. For dozens of transactions, better use the POST
         method
       operationId: getMerkleProofs
@@ -1459,7 +1459,7 @@ paths:
       summary: Merkle proofs
       description: >-
         Get [merkle
-        proofs](https://docs.waves.tech/en/blockchain/block/merkle-root#proof-of-transaction-in-block)
+        proofs](https://decentralchain.io/documentacion/en/blockchain/block/merkle-root#proof-of-transaction-in-block)
         for given transactions
       operationId: getMerkleProofsViaPost
       requestBody:
@@ -1690,7 +1690,7 @@ paths:
                     type: integer
                     format: int64
                     description: >-
-                      [Complexity](https://docs.waves.tech/en/ride/base-concepts/complexity)
+                      [Complexity](https://decentralchain.io/documentacion/en/ride/base-concepts/complexity)
                       of the account or asset script or the verifier function of
                       the dApp script
                   callableComplexities:
@@ -1830,9 +1830,9 @@ paths:
       requestBody:
         description: >-
           Transaction [data in
-          JSON](https://docs.waves.tech/en/blockchain/transaction/#json-representation)
+          JSON](https://decentralchain.io/documentacion/en/blockchain/transaction/#json-representation)
           including
-          [`type`](https://docs.waves.tech/en/blockchain/transaction-type/)
+          [`type`](https://decentralchain.io/documentacion/en/blockchain/transaction-type/)
         content:
           application/json:
             schema:
@@ -1976,7 +1976,7 @@ paths:
                           nullable: true
                           description: >-
                             For [sponsored
-                            asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee)
+                            asset](https://decentralchain.io/documentacion/en/blockchain/dcc-protocol/sponsored-fee)
                             only: the equivalent of 0.001 DCC
                         sponsorBalance:
                           type: integer
@@ -1984,7 +1984,7 @@ paths:
                           nullable: true
                           description: >-
                             For [sponsored
-                            asset](https://docs.waves.tech/en/blockchain/waves-protocol/sponsored-fee)
+                            asset](https://decentralchain.io/documentacion/en/blockchain/dcc-protocol/sponsored-fee)
                             only: the sponsor balance in DCC
                         quantity:
                           type: integer
@@ -1999,7 +1999,7 @@ paths:
       summary: Information about asset
       description: >-
         Get detailed information about a given asset. See [fields
-        descriptions](https://docs.waves.tech/en/blockchain/token/#custom-token-parameters)
+        descriptions](https://decentralchain.io/documentacion/en/blockchain/token/#custom-token-parameters)
       operationId: getAssetDetails
       parameters:
         - $ref: '#/components/parameters/assetId'
@@ -2022,7 +2022,7 @@ paths:
       summary: Information about multiple assets
       description: >-
         Get detailed information about given assets. See [fields
-        descriptions](https://docs.waves.tech/en/blockchain/token/#custom-token-parameters)
+        descriptions](https://decentralchain.io/documentacion/en/blockchain/token/#custom-token-parameters)
       operationId: getMultipleAssetDetails
       parameters:
         - name: id
@@ -2145,12 +2145,12 @@ paths:
       summary: Account NFTs
       description: >-
         Get a list of [non-fungible
-        tokens](https://docs.waves.tech/en/blockchain/token/non-fungible-token)
+        tokens](https://decentralchain.io/documentacion/en/blockchain/token/non-fungible-token)
         at a given address. Max for 1000 tokens. For pagination, use the field
         {after}. See [fields
-        descriptions](https://docs.waves.tech/en/blockchain/token/#custom-token-parameters).<br>Since
+        descriptions](https://decentralchain.io/documentacion/en/blockchain/token/#custom-token-parameters).<br>Since
         activation of [feature
-        #15](https://docs.waves.tech/en/waves-node/features/) this method
+        #15](https://decentralchain.io/documentacion/en/dcc-node/features/) this method
         returns only tokens that are issued as NFT (amount: 1, decimal places:
         0, reissuable: false) after activation of feature #13. Before activation
         of feature #15 the method returned all the assets that are issued as
@@ -2297,7 +2297,7 @@ paths:
       summary: Feature activation status
       description: >-
         Activation statuses of [blockchain
-        features](https://docs.waves.tech/en/waves-node/features/)
+        features](https://decentralchain.io/documentacion/en/dcc-node/features/)
       operationId: getFeatureStatuses
       responses:
         '200':
@@ -2728,7 +2728,7 @@ paths:
                     balance:
                       type: integer
                       format: int64
-  '/debug/stateWaves/{height}':
+  '/debug/stateDCC/{height}':
     get:
       tags:
         - debug
@@ -2915,7 +2915,7 @@ paths:
       tags:
         - node
       summary: Version
-      description: Get Waves node version
+      description: Get DCC node version
       operationId: getNodeVersion
       responses:
         '200':
@@ -3243,7 +3243,7 @@ components:
           type: integer
           format: int64
           description: >-
-            [Complexity](https://docs.waves.tech/en/ride/base-concepts/complexity)
+            [Complexity](https://decentralchain.io/documentacion/en/ride/base-concepts/complexity)
             of an account or asset script or the verifier function of the dApp
             script
         callableComplexities:
@@ -3431,7 +3431,7 @@ components:
         - minIncrement
         - nextCheck
         - term
-        - totalWavesAmount
+        - totalDCCAmount
         - votes
         - votingInterval
         - votingIntervalStart
@@ -3440,7 +3440,7 @@ components:
       properties:
         height:
           $ref: '#/components/schemas/Height'
-        totalWavesAmount:
+        totalDCCAmount:
           $ref: '#/components/schemas/Amount'
         currentReward:
           $ref: '#/components/schemas/Amount'
@@ -3513,7 +3513,7 @@ components:
         * `succeeded`: transaction is successful
         * `script_execution_failed`: the dApp script or the asset script failed
 
-        See [Transaction Validation](https://docs.waves.tech/en/blockchain/transaction/transaction-validation) for details.
+        See [Transaction Validation](https://decentralchain.io/documentacion/en/blockchain/transaction/transaction-validation) for details.
     LeaseStatus:
       type: string
       enum:
@@ -3547,7 +3547,7 @@ components:
         amount:
           type: integer
           format: int32
-          description: Leased Waves amount
+          description: Leased DCC amount
         height:
           $ref: '#/components/schemas/Height'
           description: >-
