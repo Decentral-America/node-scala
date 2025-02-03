@@ -2,8 +2,8 @@ package com.wavesplatform.network
 
 import java.net.InetSocketAddress
 
-import com.wavesplatform.common.utils.EitherExt2
-import com.wavesplatform.network.message.{MessageSpec, Message => ScorexMessage}
+import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.network.message.{MessageSpec, Message as ScorexMessage}
 import com.wavesplatform.test.FreeSpec
 import com.wavesplatform.transaction.Asset.Waves
 import com.wavesplatform.transaction.assets.UpdateAssetInfoTransaction

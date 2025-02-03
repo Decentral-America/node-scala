@@ -12,7 +12,8 @@ import com.wavesplatform.api.http.RewardApiRoute.RewardStatus
 import com.wavesplatform.api.http.requests.{IssueRequest, TransferRequest}
 import com.wavesplatform.api.http.{ConnectReq, DebugMessage, RollbackParams, `X-Api-Key`}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, Base64, EitherExt2}
+import com.wavesplatform.common.utils.{Base58, Base64}
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.features.api.{ActivationStatus, activationStatusFormat}
 import com.wavesplatform.it.Node
 import com.wavesplatform.it.sync.invokeExpressionFee
@@ -55,7 +56,7 @@ import play.api.libs.json.*
 import play.api.libs.json.Json.{stringify, toJson}
 
 import scala.collection.immutable.VectorMap
-import scala.compat.java8.FutureConverters.*
+import scala.jdk.FutureConverters.*
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.Future.traverse
@@ -176,6 +177,10 @@ object AsyncHttpApi extends Assertions {
       Json.parse(r.getResponseBody).as[Seq[BlacklistedPeer]]
     }
 
+    def allPeers: Future[Seq[KnownPeer]] = get("/peers/all").map { r =>
+      (Json.parse(r.getResponseBody) \ "peers").as[Seq[KnownPeer]]
+    }
+
     def connect(address: InetSocketAddress): Future[Unit] =
       postJson("/peers/connect", ConnectReq(address.getHostName, address.getPort)).map(_ => ())
 
@@ -192,7 +197,7 @@ object AsyncHttpApi extends Assertions {
         n.client
           .executeRequest(request)
           .toCompletableFuture
-          .toScala
+          .asScala
           .map(Option(_))
           .recoverWith { case _: IOException | _: TimeoutException =>
             Future(None)
@@ -911,7 +916,7 @@ object AsyncHttpApi extends Assertions {
             }
           )
           .toCompletableFuture
-          .toScala
+          .asScala
           .recoverWith {
             case e: UnexpectedStatusCodeException if e.statusCode == 503 || waitForStatus =>
               n.log.debug(s"[$id] Failed to execute request '$r' with error: ${e.getMessage}")

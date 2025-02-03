@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import com.wavesplatform.account.Address
 import com.wavesplatform.common.state.ByteStr
 import pureconfig.*
-import pureconfig.generic.auto.*
+import pureconfig.generic.semiauto.deriveReader
 
 import scala.concurrent.duration.*
 
@@ -16,7 +16,7 @@ case class RewardsSettings(
     initial: Long,
     minIncrement: Long,
     votingInterval: Int
-) {
+) derives ConfigReader {
   require(initial >= 0, "initial must be greater than or equal to 0")
   require(minIncrement > 0, "minIncrement must be greater than 0")
   require(term > 0, "term must be greater than 0")
@@ -79,7 +79,7 @@ case class FunctionalitySettings(
     lightNodeBlockFieldsAbsenceInterval: Int = 1000,
     blockRewardBoostPeriod: Int = 1000,
     paymentsCheckHeight: Int = 0,
-    unitsRegistryAddress: Option[String] = None
+    unitsRegistryAddress: Option[String] = None,
 ) {
   val allowLeasedBalanceTransferUntilHeight: Int              = blockVersion3AfterHeight
   val allowTemporaryNegativeUntil: Long                       = lastTimeBasedForkParameter
@@ -121,6 +121,11 @@ case class FunctionalitySettings(
 }
 
 object FunctionalitySettings {
+  // This given is required for default args to work.
+  // Details: https://github.com/pureconfig/pureconfig/issues/1673 
+  // Note: the proposed approach with `extension` doesn't work.
+  given ConfigReader[FunctionalitySettings] = deriveReader
+
   val MAINNET: FunctionalitySettings = apply(
     featureCheckBlocksPeriod = 5000,
     blocksForFeatureActivation = 4000,
@@ -173,7 +178,7 @@ object FunctionalitySettings {
   )
 }
 
-case class GenesisTransactionSettings(recipient: String, amount: Long)
+case class GenesisTransactionSettings(recipient: String, amount: Long) derives ConfigReader
 
 case class GenesisSettings(
     blockTimestamp: Long,
@@ -183,7 +188,7 @@ case class GenesisSettings(
     transactions: Seq[GenesisTransactionSettings],
     initialBaseTarget: Long,
     averageBlockDelay: FiniteDuration
-)
+) derives ConfigReader
 
 object GenesisSettings { // TODO: Move to network-defaults.conf
   val MAINNET: GenesisSettings = GenesisSettings(
@@ -252,7 +257,7 @@ object BlockchainSettings {
   def fromRootConfig(config: Config): BlockchainSettings =
     ConfigSource.fromConfig(config).at("waves.blockchain").loadOrThrow[BlockchainSettings]
 
-  implicit val configReader: ConfigReader[BlockchainSettings] = ConfigReader.fromCursor(cur =>
+  given ConfigReader[BlockchainSettings] = ConfigReader.fromCursor(cur =>
     for {
       objCur               <- cur.asObjectCursor
       blockchainTypeString <- objCur.atKey("type").flatMap(_.asString).map(_.toUpperCase)

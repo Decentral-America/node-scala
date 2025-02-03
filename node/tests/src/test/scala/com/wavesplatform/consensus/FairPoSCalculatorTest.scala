@@ -6,13 +6,14 @@ import scala.util.Random
 import cats.data.NonEmptyList
 import com.wavesplatform.account.{KeyPair, PrivateKey, PublicKey}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, EitherExt2}
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.test.PropSpec
 
 class FairPoSCalculatorTest extends PropSpec {
-  import FairPoSCalculatorTest._
-  import PoSCalculator._
+  import FairPoSCalculatorTest.*
+  import PoSCalculator.*
 
   val pos: PoSCalculator = FairPoSCalculator.V1
 
@@ -137,9 +138,9 @@ class FairPoSCalculatorTest extends PropSpec {
 }
 
 object FairPoSCalculatorTest {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
-  import play.api.libs.json.Reads._
+  import play.api.libs.functional.syntax.*
+  import play.api.libs.json.*
+  import play.api.libs.json.Reads.*
 
   case class Input(
       privateKey: PrivateKey,
@@ -163,7 +164,7 @@ object FairPoSCalculatorTest {
       (JsPath \ "time").read[Long] and
       (JsPath \ "vrf").read[String].map(value => ByteStr(Base58.decode(value))) and
       (JsPath \ "genSig").read[String].map(value => ByteStr(Base58.decode(value)))
-  )(Input.apply _)
+  )(Input.apply)
 
   implicit val privateKeyWrites: Writes[PrivateKey] = Writes(k => JsString(Base58.encode(k.arr)))
   implicit val publicKeyWrites: Writes[PublicKey]   = Writes(k => JsString(Base58.encode(k.arr)))

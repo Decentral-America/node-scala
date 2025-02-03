@@ -7,7 +7,8 @@ import com.wavesplatform.api.http.*
 import com.wavesplatform.api.http.ApiError.{CustomValidationError, ScriptCompilerError, TooBigArrayAllocation}
 import com.wavesplatform.api.http.requests.ScriptWithImportsRequest
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.*
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.features.BlockchainFeatures.{RideV6, SynchronousCalls}
@@ -248,7 +249,7 @@ case class UtilsApiRoute(
       complete(apiResult ++ request ++ Json.obj("address" -> address.toString))
     }
 
-  private[this] val ScriptedAddress: PathMatcher1[Address] = AddrSegment.map {
+  private val ScriptedAddress: PathMatcher1[Address] = AddrSegment.map {
     case address: Address if blockchain.hasAccountScript(address) => address
     case other                                                    => throw ApiException(CustomValidationError(s"Address $other is not dApp"))
   }

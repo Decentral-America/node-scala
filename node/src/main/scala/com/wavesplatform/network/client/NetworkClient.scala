@@ -1,18 +1,17 @@
 package com.wavesplatform.network.client
 
-import java.io.IOException
-import java.net.InetSocketAddress
-
 import com.wavesplatform.Version
 import com.wavesplatform.network.{Handshake, TrafficLogger}
-import com.wavesplatform.settings._
+import com.wavesplatform.settings.*
 import com.wavesplatform.utils.ScorexLogging
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel._
+import io.netty.channel.*
 import io.netty.channel.group.ChannelGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioSocketChannel
 
+import java.io.IOException
+import java.net.InetSocketAddress
 import scala.concurrent.{Future, Promise}
 
 class NetworkClient(trafficLoggerSettings: TrafficLogger.Settings, chainId: Char, nodeName: String, nonce: Long, allChannels: ChannelGroup)
@@ -31,10 +30,10 @@ class NetworkClient(trafficLoggerSettings: TrafficLogger.Settings, chainId: Char
 
     log.debug(s"Connecting to $remoteAddress")
     val channelFuture = bootstrap.connect(remoteAddress)
-    channelFuture.addListener((_: io.netty.util.concurrent.Future[Void]) => {
+    channelFuture.addListener { (_: ChannelFuture) =>
       log.debug(s"Connected to $remoteAddress")
       channelFuture.channel().write(p)
-    })
+    }
 
     val channel = channelFuture.channel()
     allChannels.add(channel)

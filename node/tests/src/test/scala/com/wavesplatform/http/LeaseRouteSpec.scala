@@ -7,7 +7,7 @@ import com.wavesplatform.api.common.CommonAccountsApi
 import com.wavesplatform.api.http.RouteTimeout
 import com.wavesplatform.api.http.leasing.LeaseApiRoute
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithState
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.lang.directives.values.{V5, V6}
@@ -181,10 +181,9 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
           i.value
         }
         .value
-
       val expectedDetails = Seq(
         leaseId -> LeaseDetails(
-          LeaseStaticInfo(dappAddress.publicKey, leaseRecipient, TxPositiveAmount(10_000_00000000L), invoke.id(), 1),
+          LeaseStaticInfo(dappAddress.publicKey, leaseRecipient, TxPositiveAmount.unsafeFrom(10_000_00000000L), invoke.id(), 1),
           LeaseDetails.Status.Active
         )
       )
@@ -218,7 +217,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val expectedDetails =
         Seq(
           leaseId -> LeaseDetails(
-            LeaseStaticInfo(dappAddress.publicKey, leaseRecipient, TxPositiveAmount(10_000_00000000L), invoke.id(), 1),
+            LeaseStaticInfo(dappAddress.publicKey, leaseRecipient, TxPositiveAmount.unsafeFrom(10_000_00000000L), invoke.id(), 1),
             LeaseDetails.Status.Active
           )
         )
@@ -262,7 +261,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val expectedDetails =
         Seq(
           leaseId -> LeaseDetails(
-            LeaseStaticInfo(sender.publicKey, recipient, TxPositiveAmount(10_000_00000000L), invoke.id(), 1),
+            LeaseStaticInfo(sender.publicKey, recipient, TxPositiveAmount.unsafeFrom(10_000_00000000L), invoke.id(), 1),
             LeaseDetails.Status.Active
           )
         )
@@ -315,7 +314,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val expectedDetails =
         Seq(
           leaseId -> LeaseDetails(
-            LeaseStaticInfo(dApp.publicKey, recipient, TxPositiveAmount(10_000_00000000L), invoke.id(), 1),
+            LeaseStaticInfo(dApp.publicKey, recipient, TxPositiveAmount.unsafeFrom(10_000_00000000L), invoke.id(), 1),
             LeaseDetails.Status.Active
           )
         )
@@ -382,7 +381,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val expectedDetails =
         Seq(
           leaseId -> LeaseDetails(
-            LeaseStaticInfo(target.publicKey, recipient.toAddress, TxPositiveAmount(10_000_00000000L), ist.id(), 1),
+            LeaseStaticInfo(target.publicKey, recipient.toAddress, TxPositiveAmount.unsafeFrom(10_000_00000000L), ist.id(), 1),
             LeaseDetails.Status.Active
           )
         )

@@ -6,7 +6,7 @@ import com.wavesplatform.account.{Address, KeyPair}
 import com.wavesplatform.block.Block
 import com.wavesplatform.block.Block.{GenesisBlockVersion, GenesisGenerationSignature, GenesisGenerator, GenesisReference}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.database.{KeyTags, RDB, RocksDBWriter, TestStorageFactory, loadActiveLeases}
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.events.BlockchainUpdateTriggers
@@ -36,7 +36,7 @@ import java.nio.file.Files
 import scala.concurrent.duration.*
 import scala.util.Using
 
-trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers with NTPTime { _: Suite =>
+trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers with NTPTime { suite: Suite =>
   protected val ignoreBlockchainUpdateTriggers: BlockchainUpdateTriggers = BlockchainUpdateTriggers.noop
 
   private val path  = Files.createTempDirectory(s"rocks-temp-${getClass.getSimpleName}").toAbsolutePath
@@ -369,7 +369,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
   }
 }
 
-trait WithDomain extends WithState { _: Suite =>
+trait WithDomain extends WithState { suite: Suite =>
   val DomainPresets = com.wavesplatform.test.DomainPresets
   import DomainPresets.*
 

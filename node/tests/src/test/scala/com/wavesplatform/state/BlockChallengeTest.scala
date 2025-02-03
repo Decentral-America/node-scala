@@ -10,7 +10,7 @@ import com.wavesplatform.api.http.TransactionsApiRoute.{ApplicationStatus, Statu
 import com.wavesplatform.block.{Block, ChallengedHeader, MicroBlock}
 import com.wavesplatform.common.merkle.Merkle
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto.DigestLength
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
@@ -1636,7 +1636,7 @@ class BlockChallengeTest
           }
         )
       val appender =
-        BlockAppender(d.blockchain, testTime, d.utxPool, d.posSelector, channels, PeerDatabase.NoOp, blockChallenger, appenderScheduler) _
+        BlockAppender(d.blockchain, testTime, d.utxPool, d.posSelector, channels, PeerDatabase.NoOp, blockChallenger, appenderScheduler)
 
       val route = new TransactionsApiRoute(
         d.settings.restAPISettings,

@@ -5,7 +5,7 @@ import cats.syntax.either.*
 import com.google.common.primitives.{Ints, Longs, UnsignedBytes}
 import com.wavesplatform.account.{Address, KeyPair}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.state.TxMeta.Status
@@ -131,7 +131,7 @@ object TxStateSnapshotHashBuilder {
       isChallenging: Boolean,
       blockchain: Blockchain
   ): TracedResult[ValidationError, ByteStr] = {
-    val txDiffer = TransactionDiffer(prevBlockTimestamp, currentBlockTimestamp) _
+    val txDiffer = TransactionDiffer(prevBlockTimestamp, currentBlockTimestamp)
 
     txs
       .foldLeft[TracedResult[ValidationError, (ByteStr, StateSnapshot)]](TracedResult.wrapValue(initStateHash -> initSnapshot)) {

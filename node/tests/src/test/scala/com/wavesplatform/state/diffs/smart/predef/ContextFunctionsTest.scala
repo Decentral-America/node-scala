@@ -4,7 +4,8 @@ import cats.syntax.semigroup.*
 import com.wavesplatform.account.Address
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, Base64, EitherExt2}
+import com.wavesplatform.common.utils.{Base58, Base64}
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.features.BlockchainFeatures
@@ -12,10 +13,11 @@ import com.wavesplatform.features.BlockchainFeatures.BlockV5
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.lang.Global
 import com.wavesplatform.lang.Testing.*
+import com.wavesplatform.lang.ThrownError
 import com.wavesplatform.lang.directives.values.*
 import com.wavesplatform.lang.directives.{DirectiveDictionary, DirectiveSet}
 import com.wavesplatform.lang.script.ContractScript
-import com.wavesplatform.lang.v1.compiler.Terms.CONST_LONG
+import com.wavesplatform.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_LONG}
 import com.wavesplatform.lang.v1.compiler.{ContractCompiler, TestCompiler}
 import com.wavesplatform.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.wavesplatform.lang.v1.evaluator.ctx.impl.waves.WavesContext
@@ -33,7 +35,6 @@ import com.wavesplatform.transaction.{TxHelpers, TxVersion}
 import com.wavesplatform.utils.*
 import org.scalatest.Assertion
 import org.scalatest.OptionValues.convertOptionToValuable
-import shapeless.Coproduct
 
 class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
   import DomainPresets.*
@@ -88,7 +89,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
         val bool = tx.data(1)
         val bin  = tx.data(2)
         val str  = tx.data(3)
-        val result = runScript(
+        val result = runScript[CONST_BOOLEAN](
           s"""
              |match tx {
              | case tx: DataTransaction => {
@@ -128,7 +129,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
              | case _ => throw()
              |}
              |""".stripMargin,
-          Coproduct(tx),
+          tx,
           version
         )
         result shouldBe evaluated(true)
@@ -143,7 +144,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
     val bool = tx.data(1)
     val bin  = tx.data(2)
     val str  = tx.data(3)
-    val ok = runScript(
+    val ok = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case tx: DataTransaction => {
@@ -171,7 +172,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
          | case _ => throw()
          |}
          |""".stripMargin,
-      Coproduct(tx)
+      tx
     )
     ok shouldBe evaluated(true)
 
@@ -182,7 +183,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
          | case _ => false
          |}
          |""".stripMargin,
-      Coproduct(tx)
+      tx
     )
     outOfBounds shouldBe Left(s"Index $badIndex out of bounds for length ${tx.data.size}")
   }

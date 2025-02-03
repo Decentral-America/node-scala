@@ -4,7 +4,7 @@ import cats.Order as _
 import com.wavesplatform.account.{Address, AddressScheme, KeyPair, PrivateKey}
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto.EthereumKeyLength
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
@@ -1924,8 +1924,8 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
         defaultSigner.publicKey,
         AssetPair(issue.asset, Waves),
         OrderType.BUY,
-        TxExchangeAmount(1),
-        TxOrderPrice(1),
+        TxExchangeAmount.unsafeFrom(1),
+        TxOrderPrice.unsafeFrom(1),
         System.currentTimeMillis(),
         System.currentTimeMillis() + 10.hours.toMillis,
         TxMatcherFee.unsafeFrom(0.003.waves)
@@ -1990,8 +1990,8 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
         defaultSigner.publicKey,
         AssetPair(issue.asset, Waves),
         OrderType.BUY,
-        TxExchangeAmount(1),
-        TxOrderPrice(1),
+        TxExchangeAmount.unsafeFrom(1),
+        TxOrderPrice.unsafeFrom(1),
         System.currentTimeMillis(),
         System.currentTimeMillis() + 10.hours.toMillis,
         TxMatcherFee.unsafeFrom(0.003.waves)
@@ -2174,7 +2174,6 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
           } else true
 
         isBuyerReceiveAmountGreaterThanFee && isSellerReceiveAmountGreaterThanFee
-      case _ => true
     }
   }
 

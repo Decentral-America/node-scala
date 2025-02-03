@@ -5,7 +5,8 @@ import com.wavesplatform.account.{AddressScheme, PublicKey}
 import com.wavesplatform.api.http.ApiError.WrongJson
 import com.wavesplatform.api.http.requests.TransferRequest
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, EitherExt2}
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.it.{NTPTime, NodeConfigs}
 import com.wavesplatform.it.NodeConfigs.Default
@@ -261,7 +262,7 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
         "type"    -> DataTransaction.typeId,
         "version" -> 1,
         "sender"  -> firstAddress,
-        "data" -> List[DataEntry[_]](
+        "data" -> List[DataEntry[?]](
           IntegerDataEntry("int", 923275292849183L),
           BooleanDataEntry("bool", value = true),
           BinaryDataEntry("blob", ByteStr(Array.tabulate(445)(_.toByte))),

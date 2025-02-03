@@ -1,8 +1,8 @@
 package com.wavesplatform.state.diffs.smart.predef
 
-import cats.syntax.either._
+import cats.syntax.either.*
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.lang.Testing
 import com.wavesplatform.lang.directives.DirectiveDictionary
@@ -19,7 +19,6 @@ import com.wavesplatform.test.*
 import com.wavesplatform.transaction.{Transaction, TxHelpers}
 import com.wavesplatform.transaction.smart.script.{ScriptCompiler, ScriptRunner}
 import com.wavesplatform.utils.EmptyBlockchain
-import shapeless.Coproduct
 
 class ScriptVersionsTest extends FreeSpec {
   private def eval[T <: EVALUATED](
@@ -42,7 +41,7 @@ class ScriptVersionsTest extends FreeSpec {
       tx: Transaction,
       blockchain: Blockchain
   ): Either[String, EVALUATED] =
-    ScriptRunner(Coproduct(tx), blockchain, script, isAssetScript = false, null, enableExecutionLog = false)._3.leftMap(_.message)
+    ScriptRunner(tx, blockchain, script, isAssetScript = false, null, enableExecutionLog = false)._3.leftMap(_.message)
 
   private val duplicateNames =
     """
