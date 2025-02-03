@@ -1,6 +1,6 @@
 package com.wavesplatform.state.diffs.smart.predef
 
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.lang.contract.DApp
@@ -143,7 +143,7 @@ class DAppVerifierRestrictionsTest extends PropSpec with WithDomain with EitherV
 
   property("sync calls are prohibited from dApp verifier both before and after fix") {
     for {
-      contract <- List(verifierContract1 _, verifierContract2 _, verifierContract3 _, verifierContract4 _, verifierContract5 _)
+      contract <- List(verifierContract1, verifierContract2, verifierContract3, verifierContract4, verifierContract5)
       features <- List(RideV5, RideV6)
     } {
       val (balances, setInvoke, setReentrantInvoke) = scenario(contract)

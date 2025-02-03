@@ -9,7 +9,7 @@ import com.wavesplatform.account.{AddressScheme, PublicKey}
 import com.wavesplatform.block.validation.Validators
 import com.wavesplatform.block.{Block, BlockHeader}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto.*
 import com.wavesplatform.database.protobuf as pb
 import com.wavesplatform.database.protobuf.DataEntry.Value
@@ -28,7 +28,6 @@ import monix.eval.Task
 import monix.reactive.Observable
 import org.rocksdb.*
 import sun.nio.ch.Util
-import supertagged.TaggedType
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -61,7 +60,7 @@ package object database {
   }
 
   def writeIntSeq(values: Seq[Int]): Array[Byte] = {
-    values.foldLeft(ByteBuffer.allocate(4 * values.length))(_ putInt _).array()
+    values.foldLeft(ByteBuffer.allocate(4 * values.length))(_ `putInt` _).array()
   }
 
   def readIntSeq(data: Array[Byte]): Seq[Int] = Option(data).fold(Seq.empty[Int]) { d =>
@@ -655,7 +654,7 @@ package object database {
   def writeTransaction(v: (TxMeta, Transaction)): Array[Byte] = {
     val (m, tx) = v
     val ptx = tx match {
-      case lps: PBSince with Versioned if PBSince.affects(lps) => TD.WavesTransaction(PBTransactions.protobuf(tx))
+      case lps: (PBSince & Versioned) if PBSince.affects(lps) => TD.WavesTransaction(PBTransactions.protobuf(tx))
       case et: EthereumTransaction                             => TD.EthereumTransaction(ByteString.copyFrom(et.bytes()))
       case _                                                   => TD.LegacyBytes(ByteString.copyFrom(tx.bytes()))
     }
@@ -749,14 +748,17 @@ package object database {
     leaseIds.toSet
   }
 
-  object AddressId extends TaggedType[Long] {
-    def fromByteArray(bs: Array[Byte]): Type = AddressId(Longs.fromByteArray(bs))
-  }
+  opaque type AddressId = Long
 
-  type AddressId = AddressId.Type
+  object AddressId {
+    def apply(l: Long): AddressId = l
+    def raw(x: AddressId): Long   = x
+    def fromByteArray(bs: Array[Byte]): AddressId = Longs.fromByteArray(bs)
 
-  implicit final class Ops(private val value: AddressId) extends AnyVal {
-    def toByteArray: Array[Byte] = Longs.toByteArray(AddressId.raw(value))
+    extension (x: AddressId) {
+      def toByteArray: Array[Byte] = Longs.toByteArray(x)
+      def toLong: Long = x
+    }
   }
 
   implicit class LongExt(val l: Long) extends AnyVal {

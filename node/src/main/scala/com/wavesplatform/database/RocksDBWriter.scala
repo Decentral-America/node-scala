@@ -11,7 +11,7 @@ import com.wavesplatform.api.common.WavesBalanceIterator
 import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.BlockSnapshot
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.database
 import com.wavesplatform.database.patch.DisableHijackedAliases
 import com.wavesplatform.database.protobuf.{BlockMetaExt, StaticAssetInfo, TransactionMeta, BlockMeta as PBBlockMeta}
@@ -151,9 +151,9 @@ class RocksDBWriter(
     with AutoCloseable {
   import rdb.db as writableDB
 
-  private[this] val log = LoggerFacade(LoggerFactory.getLogger(classOf[RocksDBWriter]))
+  private val log = LoggerFacade(LoggerFactory.getLogger(classOf[RocksDBWriter]))
 
-  private[this] var disabledAliases = writableDB.get(Keys.disabledAliases)
+  private var disabledAliases = writableDB.get(Keys.disabledAliases)
 
   import RocksDBWriter.*
 
@@ -165,7 +165,7 @@ class RocksDBWriter(
 
   private[database] def readOnly[A](f: ReadOnlyDB => A): A = writableDB.readOnly(f)
 
-  private[this] def readWrite[A](f: RW => A): A = writableDB.readWrite(f)
+  private def readWrite[A](f: RW => A): A = writableDB.readWrite(f)
 
   override protected def loadMaxAddressId(): Long = writableDB.get(Keys.lastAddressId).getOrElse(0L)
 
@@ -804,7 +804,7 @@ class RocksDBWriter(
       val continue   = currHeight < toExclusive
       if (continue)
         changedFromKey.parse(e.getValue).foreach { addressId =>
-          lastUpdateAt.updateWith(addressId) { orig =>
+          lastUpdateAt.updateWith(addressId.toLong) { orig =>
             if (orig.isEmpty) {
               updateAt.addOne(addressId -> currHeight)
               updateAtKeys.addOne(Keys.wavesBalanceAt(addressId, currHeight))
@@ -831,7 +831,7 @@ class RocksDBWriter(
           else x.prevHeight
         }
 
-        val lastDeleteHeight = lastUpdateAt(addressId)
+        val lastDeleteHeight = lastUpdateAt(addressId.toLong)
         if (firstDeleteHeight != lastDeleteHeight)
           rw.deleteRange(
             Keys.wavesBalanceAt(addressId, firstDeleteHeight),

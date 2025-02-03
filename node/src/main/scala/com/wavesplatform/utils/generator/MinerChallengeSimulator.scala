@@ -26,7 +26,6 @@ import monix.eval.Task
 import monix.execution.schedulers.SchedulerService
 import monix.reactive.subjects.ConcurrentSubject
 import pureconfig.ConfigSource
-import pureconfig.generic.auto.*
 import org.apache.commons.io.FileUtils
 
 import java.io.{File, FileNotFoundException}
@@ -83,7 +82,7 @@ object MinerChallengeSimulator {
     val challengingMiner = miners(challengingMinerIdx)
 
     val wallet: Wallet = new Wallet {
-      private[this] val map                                            = miners.map(kp => kp.toAddress -> kp).toMap
+      private val map                                                  = miners.map(kp => kp.toAddress -> kp).toMap
       override def seed: Array[Byte]                                   = Array.emptyByteArray
       override def nonce: Int                                          = miners.length
       override def privateKeyAccounts: Seq[SeedKeyPair]                = miners
@@ -126,7 +125,7 @@ object MinerChallengeSimulator {
       rdb: RDB,
       miner: MinerImpl,
       blockAppender: (Block, Option[BlockSnapshotResponse]) => Task[Either[ValidationError, BlockApplyResult]],
-      fakeTime: Time & Object { var time: Long },
+      fakeTime: FakeTime,
       isChallenging: Boolean
   ) {
     def forgeAndAppendBlock(miners: List[SeedKeyPair], challengingMiner: SeedKeyPair, maliciousMiner: SeedKeyPair): Option[BigInt] = {
@@ -253,19 +252,13 @@ object MinerChallengeSimulator {
         scheduler,
         utxEvents.collect { case _: UtxEvent.TxAdded => () }
       )
-      val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, scheduler, verify = false) _
+      val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, scheduler, verify = false)
 
       miner -> blockAppender
     }
 
     private def createFakeTime(startTime: Long) =
-      new Time {
-        @volatile
-        var time: Long = startTime
-
-        override def correctedTime(): Long = time
-        override def getTimestamp(): Long  = time
-      }
+      new FakeTime(startTime)
   }
 
   private def readConfFile(f: File) = ConfigFactory.parseFile(f, ConfigParseOptions.defaults().setAllowMissing(false))

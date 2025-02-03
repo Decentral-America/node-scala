@@ -4,7 +4,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import com.wavesplatform.account.{Address, AddressScheme, KeyPair, SeedKeyPair}
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.consensus.PoSCalculator.{generationSignature, hit}
 import com.wavesplatform.consensus.{FairPoSCalculator, NxtPoSCalculator}
 import com.wavesplatform.crypto.*
@@ -13,8 +13,8 @@ import com.wavesplatform.settings.*
 import com.wavesplatform.transaction.{GenesisTransaction, TxNonNegativeAmount}
 import com.wavesplatform.utils.*
 import com.wavesplatform.wallet.Wallet
-import pureconfig.ConfigSource
-import pureconfig.generic.auto.*
+import pureconfig.*
+import pureconfig.generic.semiauto.deriveReader
 
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Files
@@ -30,6 +30,13 @@ object GenesisBlockGenerator {
 
   case class DistributionItem(seedText: String, nonce: Int, amount: Share, miner: Boolean = true)
 
+  object DistributionItem {
+    // This given is required for default args to work.
+    // Details: https://github.com/pureconfig/pureconfig/issues/1673 
+    // Note: the proposed approach with `extension` doesn't work.
+    given ConfigReader[DistributionItem] = deriveReader
+  }
+
   case class Settings(
       networkType: String,
       baseTarget: Option[Long],
@@ -39,7 +46,7 @@ object GenesisBlockGenerator {
       preActivatedFeatures: Option[List[Int]],
       minBlockTime: Option[FiniteDuration],
       delayDelta: Option[Int]
-  ) {
+  ) derives ConfigReader {
 
     val initialBalance: Share = distributions.map(_.amount).sum
 
@@ -260,8 +267,8 @@ object GenesisBlockGenerator {
             minerShares,
             { case (miner, balance) =>
               val (hit, newHitSource) = getHitWithSource(miner.account, currentHitSource)
-              val delay               = posCalculator.calculateDelay(hit, baseTargets.head, balance)
-              (delay, newHitSource)
+              val delay1              = posCalculator.calculateDelay(hit, baseTargets.head, balance)
+              (delay1, newHitSource)
             },
             _._1
           )

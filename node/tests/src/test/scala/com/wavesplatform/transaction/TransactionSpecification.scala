@@ -1,9 +1,9 @@
 package com.wavesplatform.transaction
 
 import com.wavesplatform.account.KeyPair
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.test.PropSpec
-import com.wavesplatform.transaction.transfer._
+import com.wavesplatform.transaction.transfer.*
 
 class TransactionSpecification extends PropSpec {
 

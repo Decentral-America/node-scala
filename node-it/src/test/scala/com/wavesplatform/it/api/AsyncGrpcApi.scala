@@ -6,7 +6,8 @@ import com.google.protobuf.empty.Empty
 import com.wavesplatform.account.{AddressScheme, Alias, KeyPair}
 import com.wavesplatform.api.grpc.BalanceResponse.WavesBalances
 import com.wavesplatform.api.grpc.{TransactionStatus as PBTransactionStatus, *}
-import com.wavesplatform.common.utils.{Base58, EitherExt2}
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.it.Node
 import com.wavesplatform.it.sync.invokeExpressionFee
@@ -39,10 +40,10 @@ object AsyncGrpcApi {
     import com.wavesplatform.protobuf.transaction.{Transaction as PBTransaction, *}
     import monix.execution.Scheduler.Implicits.global
 
-    private[this] lazy val assets       = AssetsApiGrpc.stub(n.grpcChannel)
-    private[this] lazy val accounts     = AccountsApiGrpc.stub(n.grpcChannel)
-    private[this] lazy val blocks       = BlocksApiGrpc.stub(n.grpcChannel)
-    private[this] lazy val transactions = TransactionsApiGrpc.stub(n.grpcChannel)
+    private lazy val assets       = AssetsApiGrpc.stub(n.grpcChannel)
+    private lazy val accounts     = AccountsApiGrpc.stub(n.grpcChannel)
+    private lazy val blocks       = BlocksApiGrpc.stub(n.grpcChannel)
+    private lazy val transactions = TransactionsApiGrpc.stub(n.grpcChannel)
 
     val chainId: Byte = AddressScheme.current.chainId
 

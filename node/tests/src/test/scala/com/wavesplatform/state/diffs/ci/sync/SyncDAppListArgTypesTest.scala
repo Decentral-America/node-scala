@@ -2,7 +2,7 @@ package com.wavesplatform.state.diffs.ci.sync
 
 import com.wavesplatform.TransactionGenBase
 import com.wavesplatform.account.Address
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.features.BlockchainFeatures.*
 import com.wavesplatform.lang.directives.values.V5
@@ -60,7 +60,7 @@ class SyncDAppListArgTypesTest extends PropSpec with WithDomain with Transaction
   private def assert(forbidAfterActivation: Boolean, args: String) = {
     withDomain(domainSettingsWithFS(settings)) { d =>
       val (preparingTxs, invoke) = scenario(args)
-      d.appendBlock(preparingTxs: _*)
+      d.appendBlock(preparingTxs*)
 
       val invoke1 = invoke()
       d.appendBlock(invoke1)

@@ -7,7 +7,7 @@ import com.typesafe.config.ConfigFactory
 import com.wavesplatform.WithNewDBForEachTest
 import com.wavesplatform.account.KeyPair
 import com.wavesplatform.block.Block
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.consensus.PoSSelector
 import com.wavesplatform.db.DBCacheSettings
 import com.wavesplatform.features.BlockchainFeatures
@@ -176,7 +176,7 @@ object BlockWithMaxBaseTargetTest {
   final case class Env(
       settings: WavesSettings,
       pos: PoSSelector,
-      bcu: Blockchain with BlockchainUpdater with NG,
+      bcu: Blockchain & BlockchainUpdater & NG,
       utxPool: UtxPoolImpl,
       schedulerService: SchedulerService,
       miner: KeyPair,

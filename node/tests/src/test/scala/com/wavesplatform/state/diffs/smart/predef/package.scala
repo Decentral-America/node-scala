@@ -1,12 +1,13 @@
 package com.wavesplatform.state.diffs.smart
 
-import cats.syntax.either._
+import cats.syntax.either.*
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base64, EitherExt2}
+import com.wavesplatform.common.utils.Base64
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.lang.directives.DirectiveSet
-import com.wavesplatform.lang.directives.values._
-import com.wavesplatform.lang.utils._
+import com.wavesplatform.lang.directives.values.*
+import com.wavesplatform.lang.utils.*
 import com.wavesplatform.lang.v1.compiler.ExpressionCompiler
 import com.wavesplatform.lang.v1.compiler.Terms.EVALUATED
 import com.wavesplatform.lang.v1.evaluator.EvaluatorV1
@@ -19,7 +20,6 @@ import com.wavesplatform.transaction.transfer.TransferTransaction
 import com.wavesplatform.transaction.{Authorized, DataTransaction, EthereumTransaction, Proofs, ProvenTransaction, Transaction, Versioned}
 import com.wavesplatform.utils.EmptyBlockchain
 import monix.eval.Coeval
-import shapeless.Coproduct
 
 package object predef {
   val chainId: Byte = 'u'
@@ -33,18 +33,18 @@ package object predef {
       evalContext <- BlockchainContext.build(
         version,
         chainId,
-        Coeval.evalOnce(buildThisValue(t, blockchain, directives, Coproduct[Environment.Tthis](Environment.AssetId(Array())))).map(_.explicitGet()),
+        Coeval.evalOnce(buildThisValue(t, blockchain, directives, Environment.AssetId(Array()))).map(_.explicitGet()),
         Coeval.evalOnce(blockchain.height),
         blockchain,
         isTokenContext = false,
         isContract = false,
-        Coproduct[Environment.Tthis](Environment.AssetId(Array())),
+        Environment.AssetId(Array()),
         ByteStr.empty,
         fixUnicodeFunctions = true,
         useNewPowPrecision = true,
         fixBigScriptField = true
       )
-      r <- EvaluatorV1().apply[T](evalContext, typedExpr).leftMap(_.message)
+      r <- EvaluatorV1.apply().apply[T](evalContext, typedExpr).leftMap(_.message)
     } yield r
   }
 
@@ -55,15 +55,14 @@ package object predef {
     runScript[T](script, V1, t, EmptyBlockchain, chainId)
 
   def runScript[T <: EVALUATED](script: String, tx: Transaction, blockchain: Blockchain): Either[String, T] =
-    runScript[T](script, V1, Coproduct(tx), blockchain, chainId)
+    runScript[T](script, V1, tx, blockchain, chainId)
 
   def runScriptWithCustomContext[T <: EVALUATED](
       script: String,
       tx: Transaction,
       v: StdLibVersion = V1,
       blockchain: Blockchain = EmptyBlockchain
-  ): Either[String, T] =
-    runScript[T](script, v, Coproduct(tx), blockchain, 'T'.toByte)
+  ): Either[String, T] = runScript[T](script, v, tx, blockchain, 'T'.toByte)
 
   private def dropLastLine(str: String): String = str.replace("\r", "").split('\n').init.mkString("\n")
 
@@ -206,7 +205,7 @@ package object predef {
   def letProof(p: Proofs, prefix: String)(i: Int): String =
     s"let ${prefix.replace(".", "")}proof$i = $prefix.proofs[$i] == base58'${p.proofs.applyOrElse(i, (_: Int) => ByteStr.empty).toString}'"
 
-  def provenPart(t: Transaction with Authorized, emptyBodyBytes: Boolean = false, checkProofs: Boolean = true): String = {
+  def provenPart(t: Transaction & Authorized, emptyBodyBytes: Boolean = false, checkProofs: Boolean = true): String = {
     val version = t match {
       case _: EthereumTransaction  => 0
       case v: Versioned => v.version

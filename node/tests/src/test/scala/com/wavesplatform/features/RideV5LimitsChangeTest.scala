@@ -1,7 +1,7 @@
 package com.wavesplatform.features
 
 import com.wavesplatform.block.Block
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.lang.directives.values.*
@@ -81,7 +81,7 @@ class RideV5LimitsChangeTest extends FlatSpec with WithDomain {
     }
   }
 
-  private[this] val contract: Script =
+  private val contract: Script =
     TestCompiler(V4).compileContract(
       s"""
          | {-#STDLIB_VERSION 4 #-}

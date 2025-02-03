@@ -3,7 +3,7 @@ package com.wavesplatform.history
 import com.wavesplatform.*
 import com.wavesplatform.account.{Address, KeyPair}
 import com.wavesplatform.block.{Block, MicroBlock}
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.history.Domain.BlockchainUpdaterExt
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.test.PropSpec
@@ -64,9 +64,9 @@ class BlockchainUpdaterKeyAndMicroBlockConflictTest
     }
   }
 
-  private[this] object Preconditions {
-    import QuickTX._
-    import UnsafeBlocks._
+  private object Preconditions {
+    import QuickTX.*
+    import UnsafeBlocks.*
 
     def conflictingTransfers(): Gen[(Block, Block, Seq[MicroBlock], Block)] = {
       for {

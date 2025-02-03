@@ -5,7 +5,7 @@ import java.nio.file.Files
 import com.typesafe.config.ConfigFactory
 import com.wavesplatform.account.KeyPair
 import com.wavesplatform.block.Block
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.database.{RDB, RocksDBWriter}
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.mining.MiningConstraint
@@ -32,10 +32,10 @@ trait BaseState {
 
   val state: RocksDBWriter = TestRocksDB.withFunctionalitySettings(rdb, fsSettings)
 
-  private var _richAccount: KeyPair = _
+  private var _richAccount: KeyPair = scala.compiletime.uninitialized
   def richAccount: KeyPair          = _richAccount
 
-  private var _lastBlock: Block = _
+  private var _lastBlock: Block = scala.compiletime.uninitialized
   def lastBlock: Block          = _lastBlock
 
   protected def waves(n: Float): Long = (n * 100000000L).toLong

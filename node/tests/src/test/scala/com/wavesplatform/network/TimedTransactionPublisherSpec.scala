@@ -2,7 +2,7 @@ package com.wavesplatform.network
 import java.util.concurrent.CountDownLatch
 
 import com.wavesplatform.account.PublicKey
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.test.FreeSpec
 import com.wavesplatform.transaction.smart.script.trace.TracedResult
@@ -13,11 +13,11 @@ import io.netty.util.HashedWheelTimer
 import monix.execution.atomic.AtomicInt
 import org.scalatest.BeforeAndAfterAll
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class TimedTransactionPublisherSpec extends FreeSpec with BeforeAndAfterAll {
-  private[this] val timer     = new HashedWheelTimer
-  private[this] val scheduler = Schedulers.timeBoundedFixedPool(timer, 1.second, 1, "test-utx-sync")
+  private val timer     = new HashedWheelTimer
+  private val scheduler = Schedulers.timeBoundedFixedPool(timer, 1.second, 1, "test-utx-sync")
 
   "UtxPoolSynchronizer" - {
     val latch   = new CountDownLatch(5)

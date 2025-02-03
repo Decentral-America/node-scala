@@ -4,7 +4,7 @@ import com.google.common.primitives.Ints
 import com.wavesplatform.TestValues
 import com.wavesplatform.account.*
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.*
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.lang.directives.values.*
 import com.wavesplatform.lang.script.ContractScript.ContractScriptImpl
 import com.wavesplatform.lang.script.Script
@@ -55,7 +55,7 @@ object TxHelpers {
 
   val matcher: SeedKeyPair = defaultSigner
 
-  private[this] val lastTimestamp = AtomicLong(System.currentTimeMillis())
+  private val lastTimestamp = AtomicLong(System.currentTimeMillis())
   def timestamp: Long             = lastTimestamp.getAndIncrement()
 
   @throws[IllegalArgumentException]

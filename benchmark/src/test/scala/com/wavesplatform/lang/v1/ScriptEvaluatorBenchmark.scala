@@ -2,7 +2,8 @@ package com.wavesplatform.lang.v1
 
 import cats.implicits.catsSyntaxSemigroup
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, EitherExt2}
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto.Curve25519
 import com.wavesplatform.lang.directives.values.StdLibVersion
 import com.wavesplatform.lang.v1.EnvironmentFunctionsBenchmark.{curve25519, randomBytes}
@@ -18,7 +19,6 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.SECONDS
 import scala.util.Random
 
 object ScriptEvaluatorBenchmark {
@@ -33,8 +33,8 @@ object ScriptEvaluatorBenchmark {
 @BenchmarkMode(Array(Mode.AverageTime))
 @Threads(1)
 @Fork(1)
-@Warmup(iterations = 10, time = 1, timeUnit = SECONDS)
-@Measurement(iterations = 10, time = 1, timeUnit = SECONDS)
+@Warmup(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS)
 class ScriptEvaluatorBenchmark {
   @Benchmark
   def bigSum(st: BigSum, bh: Blackhole): Unit = bh.consume(eval(context, st.expr))

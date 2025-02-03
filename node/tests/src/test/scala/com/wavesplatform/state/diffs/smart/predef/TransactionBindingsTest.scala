@@ -3,12 +3,14 @@ package com.wavesplatform.state.diffs.smart.predef
 import cats.syntax.either.*
 import com.wavesplatform.account.{Address, Alias, KeyPair}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, EitherExt2}
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.lang.Testing.evaluated
+import com.wavesplatform.lang.ThrownError
 import com.wavesplatform.lang.directives.values.{Asset as AssetType, *}
 import com.wavesplatform.lang.directives.{DirectiveDictionary, DirectiveSet}
 import com.wavesplatform.lang.script.v1.ExprScript
@@ -38,7 +40,6 @@ import monix.eval.Coeval
 import org.scalamock.scalatest.PathMockFactory
 import org.scalatest.EitherValues
 import play.api.libs.json.Json
-import shapeless.Coproduct
 
 import scala.util.Random
 
@@ -51,7 +52,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
       TxHelpers.transfer(version = TxVersion.V1)
     ).foreach { tx =>
       // `version`  is not properly bound yet
-      val result = runScript(
+      val result = runScript[CONST_BOOLEAN](
         s"""
            |match tx {
            | case t : TransferTransaction  =>
@@ -72,7 +73,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
            | case _ => throw()
            | }
            |""".stripMargin,
-        Coproduct(tx),
+        tx,
         T
       )
       result shouldBe evaluated(true)
@@ -98,9 +99,9 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | }
          |""".stripMargin
 
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -108,7 +109,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
   property("BurnTransaction binding") {
     val tx = TxHelpers.burn(IssuedAsset(ByteStr.fromLong(1)))
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : BurnTransaction =>
@@ -119,7 +120,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -127,7 +128,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
   property("ReissueTransaction binding") {
     val tx = TxHelpers.reissue(IssuedAsset(ByteStr.fromLong(1)))
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : ReissueTransaction =>
@@ -139,7 +140,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -147,7 +148,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
   property("CreateAliasTransaction binding") {
     val tx = TxHelpers.createAlias("alias")
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : CreateAliasTransaction =>
@@ -157,7 +158,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -165,7 +166,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
   property("LeaseTransaction binding") {
     val tx = TxHelpers.lease()
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : LeaseTransaction =>
@@ -179,7 +180,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -187,7 +188,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
   property("LeaseCancelTransaction binding") {
     val tx = TxHelpers.leaseCancel(ByteStr.fill(32)(1))
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : LeaseCancelTransaction =>
@@ -197,7 +198,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -208,7 +209,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
       TxHelpers.sponsor(IssuedAsset(ByteStr.fromLong(1))),
       TxHelpers.sponsor(IssuedAsset(ByteStr.fromLong(1)), None)
     ).foreach { tx =>
-      val result = runScript(
+      val result = runScript[CONST_BOOLEAN](
         s"""
            |match tx {
            | case t : SponsorFeeTransaction =>
@@ -220,7 +221,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
            | case _ => throw()
            | }
            |""".stripMargin,
-        Coproduct(tx),
+        tx,
         T
       )
       result shouldBe evaluated(true)
@@ -229,7 +230,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
   property("SetScriptTransaction binding") {
     val tx = TxHelpers.setScript(TxHelpers.defaultSigner, ExprScript(CONST_BOOLEAN(true)).explicitGet())
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : SetScriptTransaction =>
@@ -241,7 +242,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -262,7 +263,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | }
          |""".stripMargin
 
-    runScript(scriptSource, Coproduct(tx), V4, T) shouldBe evaluated(true)
+    runScript[CONST_BOOLEAN](scriptSource, tx, V4, T) shouldBe evaluated(true)
   }
 
   property("InvokeScriptTransaction binding") {
@@ -315,7 +316,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin
-    val result = runScriptWithCustomContext(script, tx, V3)
+    val result = runScriptWithCustomContext[CONST_BOOLEAN](script, tx, V3)
     result shouldBe evaluated(true)
   }
 
@@ -358,7 +359,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
     (() => blockchain.activatedFeatures).when().returning(Map(BlockchainFeatures.BlockV5.id -> 0))
     (() => blockchain.settings).when().returning(WavesSettings.default().blockchainSettings)
 
-    val result = runScriptWithCustomContext(script, tx, V4, blockchain)
+    val result = runScriptWithCustomContext[CONST_BOOLEAN](script, tx, V4, blockchain)
     result shouldBe evaluated(true)
   }
 
@@ -456,13 +457,13 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
     val tx1     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, Waves, Random.nextLong()).explicitGet()
     val tx2     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, asset, Random.nextLong()).explicitGet()
 
-    runScriptWithCustomContext(script(tx1), tx1, V6) shouldBe evaluated(true)
-    runScriptWithCustomContext(script(tx2), tx2, V6) shouldBe evaluated(true)
+    runScriptWithCustomContext[CONST_BOOLEAN](script(tx1), tx1, V6) shouldBe evaluated(true)
+    runScriptWithCustomContext[CONST_BOOLEAN](script(tx2), tx2, V6) shouldBe evaluated(true)
   }
 
   property("SetAssetScriptTransaction binding") {
     val tx = TxHelpers.setAssetScript(TxHelpers.defaultSigner, IssuedAsset(ByteStr.fill(32)(1)), ExprScript(CONST_BOOLEAN(true)).explicitGet())
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case t : SetAssetScriptTransaction =>
@@ -475,7 +476,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
          | case _ => throw()
          | }
          |""".stripMargin,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -551,7 +552,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
            | }
           """.stripMargin
 
-      val result = runScript(script, Coproduct(tx), ctxV = version, chainId = T)
+      val result = runScript[CONST_BOOLEAN](script, tx, ctxV = version, chainId = T)
 
       if (useV4Check && version < V4 && tx.data.nonEmpty)
         result should produce("Compilation failed: Undefined type")
@@ -597,9 +598,9 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
                     | }
                     |""".stripMargin
 
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       script,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -671,9 +672,9 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
                 | }
                 |""".stripMargin
 
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s,
-      Coproduct(tx),
+      tx,
       T
     )
     result shouldBe evaluated(true)
@@ -711,9 +712,9 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
                | }
                |""".stripMargin
 
-    val result = runScript(
+    val result = runScript[CONST_BOOLEAN](
       s,
-      Coproduct[In](order),
+      order,
       T
     )
     result shouldBe evaluated(true)
@@ -735,8 +736,8 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
            |}
        """.stripMargin
 
-      runScript(src, Coproduct[In](ord), T) shouldBe an[Left[?, ?]]
-      runWithSmartTradingActivated(src, Coproduct[In](ord), 'T') shouldBe evaluated(true)
+      runScript(src, ord, T) shouldBe an[Left[?, ?]]
+      runWithSmartTradingActivated(src, ord, 'T') shouldBe evaluated(true)
     }
   }
 
@@ -774,8 +775,8 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
       runForAsset(src2).left.value
 
-      runScript[EVALUATED](src1, Coproduct[In](order)) shouldBe Right(CONST_BOOLEAN(true))
-      runScript[EVALUATED](src2, Coproduct[In](order)) shouldBe Right(CONST_LONG(1))
+      runScript[EVALUATED](src1, order) shouldBe Right(CONST_BOOLEAN(true))
+      runScript[EVALUATED](src2, order) shouldBe Right(CONST_LONG(1))
     }
   }
 
@@ -877,14 +878,14 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
       Coeval(???),
       null,
       EmptyBlockchain,
-      Coproduct[Environment.Tthis](Environment.AssetId(Array())),
+      Environment.AssetId(Array()),
       directives,
       ByteStr.empty
     )
     for {
       compileResult <- compiler.ExpressionCompiler(ctx.compilerContext, V3, expr)
       (typedExpr, _) = compileResult
-      r <- EvaluatorV1().apply[EVALUATED](ctx.evaluationContext(environment), typedExpr).leftMap(_.message)
+      r <- EvaluatorV1.apply().apply[EVALUATED](ctx.evaluationContext(environment), typedExpr).leftMap(_.message)
     } yield r
   }
 
@@ -905,10 +906,10 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
 
     val env = WavesEnvironment(
       chainId,
-      Coeval(buildThisValue(t, blockchain, directives, Coproduct[Environment.Tthis](Environment.AssetId(Array()))).explicitGet()),
+      Coeval(buildThisValue(t, blockchain, directives, Environment.AssetId(Array())).explicitGet()),
       null,
       EmptyBlockchain,
-      Coproduct[Environment.Tthis](Environment.AssetId(Array())),
+      Environment.AssetId(Array()),
       directives,
       ByteStr.empty
     )
@@ -916,7 +917,7 @@ class TransactionBindingsTest extends PropSpec with PathMockFactory with EitherV
     for {
       compileResult <- ExpressionCompiler(ctx.compilerContext, V2, expr)
       (typedExpr, _) = compileResult
-      r <- EvaluatorV1().apply[EVALUATED](ctx.evaluationContext(env), typedExpr).leftMap(_.message)
+      r <- EvaluatorV1.apply().apply[EVALUATED](ctx.evaluationContext(env), typedExpr).leftMap(_.message)
     } yield r
   }
 }
