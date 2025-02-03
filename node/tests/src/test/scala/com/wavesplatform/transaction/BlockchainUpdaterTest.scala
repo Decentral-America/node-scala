@@ -1,7 +1,7 @@
 package com.wavesplatform.transaction
 
 import com.wavesplatform.block.Block
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.features.BlockchainFeatureStatus
 import com.wavesplatform.history
@@ -35,7 +35,7 @@ class BlockchainUpdaterTest extends FreeSpec with HistoryTest with WithDomain {
     )
   )
 
-  def appendBlock(block: Block, blockchainUpdater: BlockchainUpdater with Blockchain): Unit = {
+  def appendBlock(block: Block, blockchainUpdater: BlockchainUpdater & Blockchain): Unit = {
     blockchainUpdater.processBlock(block)
   }
 

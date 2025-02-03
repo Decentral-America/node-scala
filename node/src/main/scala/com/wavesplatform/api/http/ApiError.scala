@@ -18,7 +18,7 @@ object ApiErrorResponse {
 
 trait ApiError {
   val id: Int
-  val message: String
+  def message: String
   val code: StatusCode
 
   lazy val json: JsObject = Json.obj("error" -> id, "message" -> message)
@@ -318,6 +318,7 @@ object ApiError {
     val id: Int                      = 314
     val message: String              = s"Asset does not exist. ${ids.map(_.id.toString).mkString(", ")}"
     val code: StatusCode             = StatusCodes.BadRequest
+    implicit val assetWrites: Writes[IssuedAsset] = Asset.assetWrites
     override lazy val json: JsObject = Json.obj("error" -> id, "message" -> message, "ids" -> ids)
   }
 

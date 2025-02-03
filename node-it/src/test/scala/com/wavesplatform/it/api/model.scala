@@ -27,6 +27,12 @@ object Peer {
   implicit val peerFormat: Format[Peer] = Json.format
 }
 
+case class KnownPeer(address: String, lastSeen: Long)
+
+object KnownPeer {
+  implicit val peerFormat: Format[KnownPeer] = Json.format
+}
+
 case class Address(address: String)
 object Address {
   implicit val addressFormat: Format[Address] = Json.format
@@ -128,7 +134,7 @@ class Transaction(
     val buyMatcherFee: Option[Long],
     val sellOrderMatcherFee: Option[Long],
     val buyOrderMatcherFee: Option[Long],
-    val data: Option[Seq[DataEntry[_]]],
+    val data: Option[Seq[DataEntry[?]]],
     val minSponsoredAssetFee: Option[Long],
     val transfers: Option[Seq[Transfer]],
     val totalAmount: Option[Long],
@@ -139,7 +145,7 @@ class Transaction(
     val feeAssetId: Option[String],
     val expression: Option[String]
 ) {
-  import Transaction._
+  import Transaction.*
   override def toString: String = Json.toJson(this).toString
   override def equals(x: Any): Boolean = {
     x match {
@@ -167,7 +173,7 @@ object Transaction {
       buyMatcherFee: Option[Long],
       sellOrderMatcherFee: Option[Long],
       buyOrderMatcherFee: Option[Long],
-      data: Option[Seq[DataEntry[_]]],
+      data: Option[Seq[DataEntry[?]]],
       minSponsoredAssetFee: Option[Long],
       transfers: Option[Seq[Transfer]],
       totalAmount: Option[Long],
@@ -228,7 +234,7 @@ object Transaction {
         buyMatcherFee        <- (jsv \ "buyMatcherFee").validateOpt[Long]
         sellOrderMatcherFee  <- (jsv \ "order2" \ "matcherFee").validateOpt[Long]
         buyOrderMatcherFee   <- (jsv \ "order1" \ "matcherFee").validateOpt[Long]
-        data                 <- (jsv \ "data").validateOpt[Seq[DataEntry[_]]]
+        data                 <- (jsv \ "data").validateOpt[Seq[DataEntry[?]]]
         minSponsoredAssetFee <- (jsv \ "minSponsoredAssetFee").validateOpt[Long]
         transfers            <- (jsv \ "transfers").validateOpt[Seq[Transfer]]
         totalAmount          <- (jsv \ "totalAmount").validateOpt[Long]
@@ -329,7 +335,7 @@ case class TransactionInfo(
     recipient: Option[String],
     script: Option[String],
     version: Option[Byte],
-    data: Option[Seq[DataEntry[_]]],
+    data: Option[Seq[DataEntry[?]]],
     transfers: Option[Seq[Transfer]],
     totalAmount: Option[Long],
     expression: Option[String],
@@ -359,7 +365,7 @@ object TransactionInfo {
         buyMatcherFee        <- (jsv \ "buyMatcherFee").validateOpt[Long]
         sellOrderMatcherFee  <- (jsv \ "order2" \ "matcherFee").validateOpt[Long]
         buyOrderMatcherFee   <- (jsv \ "order1" \ "matcherFee").validateOpt[Long]
-        data                 <- (jsv \ "data").validateOpt[Seq[DataEntry[_]]]
+        data                 <- (jsv \ "data").validateOpt[Seq[DataEntry[?]]]
         transfers            <- (jsv \ "transfers").validateOpt[Seq[Transfer]]
         totalAmount          <- (jsv \ "totalAmount").validateOpt[Long]
         expression           <- (jsv \ "expression").validateOpt[String]

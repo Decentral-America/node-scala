@@ -2,7 +2,7 @@ package com.wavesplatform.transaction.assets.exchange
 
 import com.wavesplatform.NTPTime
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.protobuf.transaction.PBOrders
 import com.wavesplatform.test.*
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
@@ -298,7 +298,7 @@ class OrderSpecification extends PropSpec with ValidationMatcher with NTPTime {
     checkFieldsEquality(recovered, order)
   }
 
-  private[this] def checkFieldsEquality(left: Order, right: Order): Assertion = {
+  private def checkFieldsEquality(left: Order, right: Order): Assertion = {
     if (left.version == Order.V4) {
       left.bodyBytes() shouldEqual right.bodyBytes()
     } else {

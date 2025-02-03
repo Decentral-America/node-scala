@@ -4,7 +4,7 @@ import cats.syntax.traverse.*
 import com.google.protobuf.ByteString
 import com.wavesplatform.account.{AddressOrAlias, PublicKey}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.lang.script.ScriptReader
 import com.wavesplatform.lang.script.v1.ExprScript
@@ -65,7 +65,7 @@ object PBTransactions {
     )
 
   def vanillaUnsafe(signedTx: PBSignedTransaction): VanillaTransaction = {
-    import com.wavesplatform.common.utils.*
+    import com.wavesplatform.common.utils.EitherExt2.*
     vanilla(signedTx, unsafe = true).explicitGet()
   }
 
@@ -114,7 +114,7 @@ object PBTransactions {
         } yield tx
     }
 
-  private[this] def createVanilla(
+  private def createVanilla(
       version: Int,
       chainId: Byte,
       sender: PublicKey,
@@ -292,11 +292,6 @@ object PBTransactions {
             .left
             .map(e => GenericError(s"Invalid InvokeScript function call: $e"))
 
-          _ <- fcOpt match {
-            case None | Some(Terms.FUNCTION_CALL(_, _)) => Right(())
-            case Some(expr)                             => Left(GenericError(s"Not a function call: $expr"))
-          }
-
           tx <- vt.smart.InvokeScriptTransaction.create(
             version.toByte,
             sender,
@@ -351,7 +346,7 @@ object PBTransactions {
     result
   }
 
-  private[this] def createVanillaUnsafe(
+  private def createVanillaUnsafe(
       version: Int,
       chainId: Byte,
       sender: PublicKey,
@@ -361,7 +356,7 @@ object PBTransactions {
       proofs: Proofs,
       data: PBTransaction.Data
   ): VanillaTransaction = {
-    import com.wavesplatform.common.utils.*
+    import com.wavesplatform.common.utils.EitherExt2.*
 
     val signature = proofs.toSignature
     data match {
@@ -732,7 +727,7 @@ object PBTransactions {
   }
 
   def toVanillaScript(script: ByteString): Option[com.wavesplatform.lang.script.Script] = {
-    import com.wavesplatform.common.utils.*
+    import com.wavesplatform.common.utils.EitherExt2.*
     if (script.isEmpty) None else Some(ScriptReader.fromBytes(script.toByteArray).explicitGet())
   }
 

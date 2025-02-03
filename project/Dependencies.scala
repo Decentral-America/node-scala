@@ -8,9 +8,9 @@ object Dependencies {
   private[this] val protoSchemasLib =
     "com.wavesplatform" % "protobuf-schemas" % "1.5.2" classifier "protobuf-src" intransitive ()
 
-  private def akkaModule(module: String) = "com.typesafe.akka" %% s"akka-$module" % "2.6.21"
+  private def akkaModule(module: String) = ("com.typesafe.akka" %% s"akka-$module" % "2.6.21").cross(CrossVersion.for3Use2_13)
 
-  private def akkaHttpModule(module: String) = "com.typesafe.akka" %% module % "10.2.10"
+  private def akkaHttpModule(module: String) = ("com.typesafe.akka" %% module % "10.2.10").cross(CrossVersion.for3Use2_13)
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.7.5"
 
@@ -22,8 +22,6 @@ object Dependencies {
 
   private def grpcModule(module: String) = "io.grpc" % module % "1.68.0"
 
-  val kindProjector = compilerPlugin("org.typelevel" % "kind-projector" % "0.13.3" cross CrossVersion.full)
-
   val akkaHttp        = akkaHttpModule("akka-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.4.0-jre"
   val kamonCore       = kamonModule("core")
@@ -34,43 +32,33 @@ object Dependencies {
   val curve25519      = "com.wavesplatform"   % "curve25519-java"   % "0.6.6"
   val nettyHandler    = "io.netty"            % "netty-handler"     % "4.1.116.Final"
 
-  val shapeless = Def.setting("com.chuusai" %%% "shapeless" % "2.3.12")
-
-  val playJson = "com.typesafe.play" %% "play-json" % "2.10.6"
+  val playJson = "org.playframework" %% "play-json" % "3.0.4"
 
   val scalaTest   = "org.scalatest" %% "scalatest" % "3.2.19" % Test
   val scalaJsTest = Def.setting("com.lihaoyi" %%% "utest" % "0.8.5" % Test)
 
-  val sttp3      = "com.softwaremill.sttp.client3"  % "core_2.13" % "3.10.2"
-  val sttp3Monix = "com.softwaremill.sttp.client3" %% "monix"     % "3.10.2"
+  val sttp3      = "com.softwaremill.sttp.client3" %% "core"  % "3.10.2"
+  val sttp3Monix = "com.softwaremill.sttp.client3" %% "monix" % "3.10.2"
 
-  val bouncyCastleProvider = "org.bouncycastle" % s"bcprov-jdk18on" % "1.79"
+  val bouncyCastleProvider = "org.bouncycastle" % s"bcprov-jdk18on" % "1.80"
 
   val console = Seq("com.github.scopt" %% "scopt" % "4.1.0")
-
-  val langCompilerPlugins = Def.setting(
-    Seq(
-      compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-      kindProjector
-    )
-  )
 
   val lang = Def.setting(
     Seq(
       // defined here because %%% can only be used within a task or setting macro
       // explicit dependency can likely be removed when monix 3 is released
       monixModule("eval").value,
-      "org.typelevel" %%% s"cats-core" % "2.12.0",
+      "org.typelevel" %%% s"cats-core" % "2.13.0",
       "com.lihaoyi"   %%% "fastparse"  % "3.1.1",
-      shapeless.value,
-      "org.typelevel" %%% "cats-mtl" % "1.5.0",
-      "ch.obermuhlner"  % "big-math" % "2.3.2",
+      "org.typelevel" %%% "cats-mtl"   % "1.5.0",
+      "ch.obermuhlner"  % "big-math"   % "2.3.2",
       googleGuava, // BaseEncoding.base16()
       curve25519,
       bouncyCastleProvider,
       "com.wavesplatform" % "zwaves" % "0.2.1",
       web3jModule("crypto").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on"))
-    ) ++ langCompilerPlugins.value ++ scalapbRuntime.value ++ protobuf.value
+    ) ++ scalapbRuntime.value ++ protobuf.value
   )
 
   lazy val it = scalaTest +: Seq(
@@ -100,16 +88,19 @@ object Dependencies {
     akkaModule("slf4j") % Runtime
   )
 
-  private val rocksdb = "org.rocksdb" % "rocksdbjni" % "9.8.4"
+  private val rocksdb = "org.rocksdb" % "rocksdbjni" % "9.10.0"
 
   lazy val node = Def.setting(
     Seq(
       rocksdb,
-      ("org.rudogma"       %%% "supertagged"              % "2.0-RC2").exclude("org.scala-js", "scalajs-library_2.13"),
-      "commons-net"          % "commons-net"              % "3.11.1",
-      "commons-io"           % "commons-io"               % "2.18.0",
-      "com.github.pureconfig" %% "pureconfig" % "0.17.8",
-      "net.logstash.logback" % "logstash-logback-encoder" % "8.0" % Runtime,
+      ("org.rudogma" %%% "supertagged" % "2.0-RC2")
+        .exclude("org.scala-js", "scalajs-library_2.13")
+        .cross(CrossVersion.for3Use2_13),
+      "commons-net"            % "commons-net"               % "3.11.1",
+      "commons-io"             % "commons-io"                % "2.18.0",
+      "com.github.pureconfig" %% "pureconfig-core"           % "0.17.8",
+      "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.8",
+      "net.logstash.logback"   % "logstash-logback-encoder"  % "8.0" % Runtime,
       kamonCore,
       kamonModule("system-metrics"),
       kamonModule("influxdb"),
@@ -123,7 +114,6 @@ object Dependencies {
       akkaModule("stream"),
       akkaHttp,
       "org.bitlet" % "weupnp" % "0.1.4",
-      kindProjector,
       monixModule("reactive").value,
       nettyHandler,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
@@ -131,7 +121,7 @@ object Dependencies {
       "com.esaulpaugh"              % "headlong"      % "12.3.3",
       "com.github.jbellis"          % "jamm"          % "0.4.0", // Weighing caches
       web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on"))
-    ) ++ console ++ logDeps ++ protobuf.value ++ langCompilerPlugins.value
+    ) ++ console ++ logDeps ++ protobuf.value
   )
 
   lazy val nodeTests = Seq(
@@ -139,7 +129,7 @@ object Dependencies {
     akkaHttpModule("akka-http-testkit") % Test
   ) ++ test
 
-  val gProto = "com.google.protobuf" % "protobuf-java" % "3.25.5" // grpc 1.64.0 still requires 3.25
+  val gProto = "com.google.protobuf" % "protobuf-java" % "3.25.6" // grpc 1.64.0 still requires 3.25
 
   lazy val scalapbRuntime = Def.setting(
     Seq(
@@ -164,7 +154,7 @@ object Dependencies {
   lazy val rideRunner = Def.setting(
     Seq(
       rocksdb,
-      "com.github.ben-manes.caffeine" % "caffeine"                 % "3.1.8",
+      "com.github.ben-manes.caffeine" % "caffeine"                 % "3.2.0",
       "net.logstash.logback"          % "logstash-logback-encoder" % "8.0" % Runtime,
       kamonModule("caffeine"),
       kamonModule("prometheus"),

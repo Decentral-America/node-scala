@@ -46,7 +46,7 @@ trait ApiMarshallers extends JsonFormats {
         )
       )
 
-  private[this] lazy val jsonStringUnmarshaller =
+  private lazy val jsonStringUnmarshaller =
     Unmarshaller.byteStringUnmarshaller
       .forContentTypes(`application/json`)
       .mapWithCharset {
@@ -54,16 +54,16 @@ trait ApiMarshallers extends JsonFormats {
         case (data, charset)       => data.decodeString(charset.nioCharset.name)
       }
 
-  private[this] lazy val jsonByteStringMarshaller =
+  private lazy val jsonByteStringMarshaller =
     Marshaller.byteStringMarshaller(`application/json`)
 
-  private[this] lazy val customJsonByteStringMarshaller =
+  private lazy val customJsonByteStringMarshaller =
     Marshaller.byteStringMarshaller(CustomJson.jsonWithNumbersAsStrings)
 
-  private[this] lazy val jsonStringMarshaller =
+  private lazy val jsonStringMarshaller =
     Marshaller.stringMarshaller(`application/json`)
 
-  private[this] lazy val customJsonStringMarshaller =
+  private lazy val customJsonStringMarshaller =
     Marshaller.stringMarshaller(CustomJson.jsonWithNumbersAsStrings)
 
   implicit def playJsonUnmarshaller[A](implicit reads: Reads[A]): FromEntityUnmarshaller[A] =
@@ -84,22 +84,28 @@ trait ApiMarshallers extends JsonFormats {
   implicit val stringUnmarshaller: FromEntityUnmarshaller[String] = PredefinedFromEntityUnmarshallers.stringUnmarshaller
   implicit val intUnmarshaller: FromEntityUnmarshaller[Int]       = stringUnmarshaller.map(_.toInt)
 
-  implicit def playJsonMarshaller[A](implicit writes: Writes[A], jsValueToString: JsValue => String = Json.stringify): ToEntityMarshaller[A] =
-    Marshaller.oneOf(
-      jsonStringMarshaller
-        .compose(jsValueToString)
-        .compose(writes.writes),
-      customJsonStringMarshaller
-        .compose(CustomJson.writeValueAsString)
-        .compose(writes.writes)
-    )
+  implicit def playJsonMarshaller[A](implicit
+      writes: Writes[A]
+  ): ToEntityMarshaller[A] = playJsonMarshaller2(writes, Json.stringify)
+
+  implicit def playJsonMarshaller2[A](implicit
+      writes: Writes[A],
+      jsValueToString: JsValue => String
+  ): ToEntityMarshaller[A] = Marshaller.oneOf(
+    jsonStringMarshaller
+      .compose(jsValueToString)
+      .compose(writes.writes),
+    customJsonStringMarshaller
+      .compose(CustomJson.writeValueAsString)
+      .compose(writes.writes)
+  )
 
   implicit def jacksonMarshaller[A](implicit ser: Boolean => JsonSerializer[A]): ToEntityMarshaller[A] =
     Marshaller.oneOf(
       jsonByteStringMarshaller
-        .compose(v => ByteString.fromArrayUnsafe(writeToBytes[A](v)(ser(false)))),
+        .compose((v: A) => ByteString.fromArrayUnsafe(writeToBytes[A](v)(ser(false)))),
       customJsonByteStringMarshaller
-        .compose(v => ByteString.fromArrayUnsafe(writeToBytes[A](v)(ser(true))))
+        .compose((v: A) => ByteString.fromArrayUnsafe(writeToBytes[A](v)(ser(true))))
     )
 
   // preserve support for using plain strings as request entities

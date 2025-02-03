@@ -4,8 +4,8 @@ import com.wavesplatform.account.PublicKey
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.transaction.Proofs
 import com.wavesplatform.transaction.assets.BurnTransaction
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 object SignedBurnV1Request {
   implicit val reads: Reads[SignedBurnV1Request] = (
@@ -15,7 +15,7 @@ object SignedBurnV1Request {
       (JsPath \ "fee").read[Long] and
       (JsPath \ "timestamp").read[Long] and
       (JsPath \ "signature").read[String]
-  )(SignedBurnV1Request.apply _)
+  )(SignedBurnV1Request.apply)
 
   implicit val writes: Writes[SignedBurnV1Request] = Json.writes[SignedBurnV1Request]
 }

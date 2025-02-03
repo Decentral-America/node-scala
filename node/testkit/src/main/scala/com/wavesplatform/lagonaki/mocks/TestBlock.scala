@@ -3,7 +3,7 @@ package com.wavesplatform.lagonaki.mocks
 import com.wavesplatform.account.KeyPair
 import com.wavesplatform.block.*
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto.*
 import com.wavesplatform.transaction.Transaction
 
@@ -42,10 +42,10 @@ object TestBlock {
   def create(txs: Seq[Transaction]): BlockWithSigner = create(defaultSigner, txs)
 
   def create(txs: Seq[Transaction], version: Byte): BlockWithSigner =
-    create(time = Try(txs.map(_.timestamp).max).getOrElse(0), ref = randomSignature(), txs = txs, version = version)
+    create(time = Try(txs.map(_.timestamp).max).getOrElse(0L), ref = randomSignature(), txs = txs, version = version)
 
   def create(signer: KeyPair, txs: Seq[Transaction]): BlockWithSigner =
-    create(time = Try(txs.map(_.timestamp).max).getOrElse(0), txs = txs, signer = signer)
+    create(time = Try(txs.map(_.timestamp).max).getOrElse(0L), txs = txs, signer = signer)
 
   def create(signer: KeyPair, txs: Seq[Transaction], features: Seq[Short]): BlockWithSigner =
     create(time = Try(txs.map(_.timestamp).max).getOrElse(0), ref = randomSignature(), txs = txs, signer = signer, version = 3, features = features)

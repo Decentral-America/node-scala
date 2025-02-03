@@ -7,7 +7,7 @@ import com.wavesplatform.api.BlockMeta
 import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.{Block, BlockSnapshot, MicroBlock, MicroBlockSnapshot, SignedBlockHeader}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.database.RocksDBWriter
 import com.wavesplatform.events.BlockchainUpdateTriggers
 import com.wavesplatform.features.BlockchainFeatures
@@ -59,10 +59,10 @@ class BlockchainUpdaterImpl(
   private lazy val maxBlockReadinessAge = wavesSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis
 
   @volatile
-  private[this] var ngState: Option[NgState] = Option.empty
+  private var ngState: Option[NgState] = Option.empty
 
   @volatile
-  private[this] var restTotalConstraint: MiningConstraint = MiningConstraints(rocksdb, rocksdb.height).total
+  private var restTotalConstraint: MiningConstraint = MiningConstraints(rocksdb, rocksdb.height).total
 
   private val internalLastBlockInfo = ReplaySubject.createLimited[LastBlockInfo](1)
 
@@ -838,7 +838,7 @@ class BlockchainUpdaterImpl(
   }
 
   // noinspection ScalaStyle,TypeAnnotation
-  private[this] object metrics {
+  private object metrics {
     val blockMicroForkStats       = Kamon.counter("blockchain-updater.block-micro-fork").withoutTags()
     val microMicroForkStats       = Kamon.counter("blockchain-updater.micro-micro-fork").withoutTags()
     val microBlockForkStats       = Kamon.counter("blockchain-updater.micro-block-fork").withoutTags()

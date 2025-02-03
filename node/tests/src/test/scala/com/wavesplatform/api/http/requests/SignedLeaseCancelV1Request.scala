@@ -4,8 +4,8 @@ import com.wavesplatform.account.PublicKey
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.transaction.Proofs
 import com.wavesplatform.transaction.lease.LeaseCancelTransaction
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 case class SignedLeaseCancelV1Request(
     senderPublicKey: String,
@@ -30,7 +30,7 @@ object SignedLeaseCancelV1Request {
       (JsPath \ "timestamp").read[Long] and
       (JsPath \ "signature").read[String] and
       (JsPath \ "fee").read[Long]
-  )(SignedLeaseCancelV1Request.apply _)
+  )(SignedLeaseCancelV1Request.apply)
 
   implicit val writes: Writes[SignedLeaseCancelV1Request] = Json.writes[SignedLeaseCancelV1Request]
 }
