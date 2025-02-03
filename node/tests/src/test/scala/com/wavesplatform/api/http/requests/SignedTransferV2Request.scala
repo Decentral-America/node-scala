@@ -1,13 +1,13 @@
 package com.wavesplatform.api.http.requests
 
-import cats.instances.list._
-import cats.syntax.traverse._
+import cats.instances.list.*
+import cats.syntax.traverse.*
 import com.wavesplatform.account.{AddressOrAlias, PublicKey}
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.transaction.Proofs
-import com.wavesplatform.transaction.transfer._
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import com.wavesplatform.transaction.transfer.*
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 object SignedTransferV2Request {
 
@@ -24,7 +24,7 @@ object SignedTransferV2Request {
       (JsPath \ "timestamp").read[Long] and
       (JsPath \ "attachment").readNullable[String] and
       (JsPath \ "proofs").read[List[ProofStr]]
-  )(SignedTransferV2Request.apply _)
+  )(SignedTransferV2Request.apply)
 }
 
 case class SignedTransferV2Request(

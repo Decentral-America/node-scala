@@ -2,7 +2,8 @@ package com.wavesplatform.transaction.assets.exchange
 
 import com.wavesplatform.account.{KeyPair, PublicKey}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, EitherExt2}
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.test.PropSpec
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.assets.exchange.OrderJson.*
@@ -265,8 +266,7 @@ class OrderJsonSpecification extends PropSpec with JsonMatchers with EthHelpers 
         Json.parse(rawJson).validate[Order] match {
           case e: JsError =>
             fail("Error: " + JsError.toJson(e).toString())
-          case s: JsSuccess[Order] =>
-            val o = s.get
+          case JsSuccess(o, _) =>
             o.assetPair.amountAsset shouldBe Waves
             o.assetPair.priceAsset shouldBe Waves
         }

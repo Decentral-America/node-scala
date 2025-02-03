@@ -1,12 +1,12 @@
 package com.wavesplatform.api.http.requests
 
-import cats.syntax.traverse._
+import cats.syntax.traverse.*
 import com.wavesplatform.account.PublicKey
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.transaction.Proofs
 import com.wavesplatform.transaction.assets.BurnTransaction
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 case class SignedBurnV2Request(
     senderPublicKey: String,
@@ -35,7 +35,7 @@ object SignedBurnV2Request {
       (JsPath \ "fee").read[Long] and
       (JsPath \ "timestamp").read[Long] and
       (JsPath \ "proofs").read[List[ProofStr]]
-  )(SignedBurnV2Request.apply _)
+  )(SignedBurnV2Request.apply)
 
   implicit val writes: Writes[SignedBurnV2Request] =
     Json.writes[SignedBurnV2Request].transform((request: JsObject) => request + ("version" -> JsNumber(2)))

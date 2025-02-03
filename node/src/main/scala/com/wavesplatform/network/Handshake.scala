@@ -2,7 +2,6 @@ package com.wavesplatform.network
 
 import com.wavesplatform.utils.*
 import io.netty.buffer.ByteBuf
-
 import java.net.{InetAddress, InetSocketAddress}
 import java.nio.charset.StandardCharsets
 

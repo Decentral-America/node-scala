@@ -6,7 +6,7 @@ import com.google.common.base.Throwables
 import com.google.protobuf.ByteString
 import com.wavesplatform.account.{Address, AddressOrAlias, PublicKey}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.features.BlockchainFeatures.*
 import com.wavesplatform.features.EstimatorProvider.*
@@ -39,7 +39,6 @@ import com.wavesplatform.transaction.smart.script.trace.{AssetVerifierTrace, Tra
 import com.wavesplatform.transaction.validation.impl.{DataTxValidator, LeaseCancelTxValidator, LeaseTxValidator, SponsorFeeTxValidator}
 import com.wavesplatform.transaction.{Asset, AssetIdLength, ERC20Address, PBSince, TransactionType}
 import com.wavesplatform.utils.*
-import shapeless.Coproduct
 
 import scala.collection.immutable.VectorMap
 import scala.util.{Failure, Right, Success, Try}
@@ -727,17 +726,17 @@ object InvokeDiffsCommon {
   ): Either[FailedTransactionError, StateSnapshot] =
     Try {
       val (log, evaluatedComplexity, result) = ScriptRunner(
-        Coproduct[TxOrd](pseudoTx),
+        pseudoTx,
         blockchain,
         script,
         isAssetScript = true,
         scriptContainerAddress =
-          if (blockchain.passCorrectAssetId) Coproduct[Environment.Tthis](Environment.AssetId(assetId.arr))
-          else Coproduct[Environment.Tthis](Environment.AssetId(tx.dApp.bytes)),
+          if (blockchain.passCorrectAssetId) Environment.AssetId(assetId.arr)
+          else Environment.AssetId(tx.dApp.bytes),
         enableExecutionLog = enableExecutionLog,
         complexityLimit
       )
-      val complexity = if (blockchain.storeEvaluatedComplexity) evaluatedComplexity else estimatedComplexity
+      val complexity: Long = if (blockchain.storeEvaluatedComplexity) evaluatedComplexity else estimatedComplexity
       result match {
         case Left(error)  => Left(FailedTransactionError.assetExecutionInAction(error.message, complexity, log, assetId))
         case Right(FALSE) => Left(FailedTransactionError.notAllowedByAssetInAction(complexity, log, assetId))

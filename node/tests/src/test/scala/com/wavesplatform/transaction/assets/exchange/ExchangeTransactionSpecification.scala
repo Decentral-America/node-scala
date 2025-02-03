@@ -2,7 +2,8 @@ package com.wavesplatform.transaction.assets.exchange
 
 import com.wavesplatform.account.{KeyPair, PublicKey}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base64, EitherExt2}
+import com.wavesplatform.common.utils.Base64
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.test.PropSpec
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
@@ -277,39 +278,39 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
       buy.version shouldBe buyV
       sell.version shouldBe sellV
 
-      create() shouldBe an[Right[_, _]]
-      create(fee = pow(10, 18).toLong) shouldBe an[Right[_, _]]
-      create(amount = Order.MaxAmount) shouldBe an[Right[_, _]]
+      create() shouldBe an[Right[?, ?]]
+      create(fee = pow(10, 18).toLong) shouldBe an[Right[?, ?]]
+      create(amount = Order.MaxAmount) shouldBe an[Right[?, ?]]
 
-      create(fee = -1) shouldBe an[Left[_, _]]
-      create(amount = -1) shouldBe an[Left[_, _]]
-      create(amount = Order.MaxAmount + 1) shouldBe an[Left[_, _]]
-      create(price = -1) shouldBe an[Left[_, _]]
-      create(sellMatcherFee = Order.MaxAmount + 1) shouldBe an[Left[_, _]]
-      create(buyMatcherFee = Order.MaxAmount + 1) shouldBe an[Left[_, _]]
-      create(fee = Order.MaxAmount + 1) shouldBe an[Left[_, _]]
+      create(fee = -1) shouldBe an[Left[?, ?]]
+      create(amount = -1) shouldBe an[Left[?, ?]]
+      create(amount = Order.MaxAmount + 1) shouldBe an[Left[?, ?]]
+      create(price = -1) shouldBe an[Left[?, ?]]
+      create(sellMatcherFee = Order.MaxAmount + 1) shouldBe an[Left[?, ?]]
+      create(buyMatcherFee = Order.MaxAmount + 1) shouldBe an[Left[?, ?]]
+      create(fee = Order.MaxAmount + 1) shouldBe an[Left[?, ?]]
 
       create(buyOrder = buy.copy(orderType = OrderType.SELL)) shouldBe Left(GenericError("order1 should have OrderType.BUY"))
-      create(buyOrder = buy.copy(assetPair = buy.assetPair.copy(amountAsset = sell.assetPair.priceAsset))) shouldBe an[Left[_, _]]
-      create(buyOrder = buy.copy(expiration = 1L)) shouldBe an[Left[_, _]]
-      create(buyOrder = buy.copy(expiration = buy.expiration + 1)) shouldBe an[Left[_, _]]
-      create(buyOrder = buy.copy(matcherPublicKey = sender2.publicKey)) shouldBe an[Left[_, _]]
+      create(buyOrder = buy.copy(assetPair = buy.assetPair.copy(amountAsset = sell.assetPair.priceAsset))) shouldBe an[Left[?, ?]]
+      create(buyOrder = buy.copy(expiration = 1L)) shouldBe an[Left[?, ?]]
+      create(buyOrder = buy.copy(expiration = buy.expiration + 1)) shouldBe an[Left[?, ?]]
+      create(buyOrder = buy.copy(matcherPublicKey = sender2.publicKey)) shouldBe an[Left[?, ?]]
 
       create(sellOrder = sell.copy(orderType = OrderType.BUY)) shouldBe Left(GenericError("sellOrder should has OrderType.SELL"))
-      create(sellOrder = sell.copy(assetPair = sell.assetPair.copy(priceAsset = buy.assetPair.amountAsset))) shouldBe an[Left[_, _]]
-      create(sellOrder = sell.copy(expiration = 1L)) shouldBe an[Left[_, _]]
-      create(sellOrder = sell.copy(expiration = sell.expiration + 1)) shouldBe an[Left[_, _]]
-      create(sellOrder = sell.copy(matcherPublicKey = sender2.publicKey)) shouldBe an[Left[_, _]]
+      create(sellOrder = sell.copy(assetPair = sell.assetPair.copy(priceAsset = buy.assetPair.amountAsset))) shouldBe an[Left[?, ?]]
+      create(sellOrder = sell.copy(expiration = 1L)) shouldBe an[Left[?, ?]]
+      create(sellOrder = sell.copy(expiration = sell.expiration + 1)) shouldBe an[Left[?, ?]]
+      create(sellOrder = sell.copy(matcherPublicKey = sender2.publicKey)) shouldBe an[Left[?, ?]]
 
       create(sellOrder = buy, buyOrder = sell) shouldBe Left(GenericError("order1 should have OrderType.BUY"))
-      create(version = TxVersion.V3, sellOrder = buy, buyOrder = sell) shouldBe an[Right[_, _]]
+      create(version = TxVersion.V3, sellOrder = buy, buyOrder = sell) shouldBe an[Right[?, ?]]
       create(version = TxVersion.V3, sellOrder = sell, buyOrder = sell) shouldBe Left(GenericError("buyOrder should has OrderType.BUY"))
       create(version = TxVersion.V3, sellOrder = buy, buyOrder = buy) shouldBe Left(GenericError("sellOrder should has OrderType.SELL"))
 
       create(
         buyOrder = buy.copy(assetPair = buy.assetPair.copy(amountAsset = Waves)),
         sellOrder = sell.copy(assetPair = sell.assetPair.copy(priceAsset = IssuedAsset(ByteStr(Array(1: Byte)))))
-      ) shouldBe an[Left[_, _]]
+      ) shouldBe an[Left[?, ?]]
     }
   }
 
@@ -387,7 +388,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
           )
           .explicitGet()
 
-      createExTx(buy, sell, sellPrice, matcher, exchangeV) shouldBe an[Right[_, _]]
+      createExTx(buy, sell, sellPrice, matcher, exchangeV) shouldBe an[Right[?, ?]]
 
       val sell1 =
         if (sellV == 3) {

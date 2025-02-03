@@ -3,15 +3,16 @@ package com.wavesplatform.transaction
 import com.wavesplatform.account.PublicKey
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base64, EitherExt2}
+import com.wavesplatform.common.utils.Base64
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.db.WithState
 import com.wavesplatform.features.BlockchainFeatures
-import com.wavesplatform.features.BlockchainFeatures._
-import com.wavesplatform.lagonaki.mocks.TestBlock.{create => block}
+import com.wavesplatform.features.BlockchainFeatures.*
+import com.wavesplatform.lagonaki.mocks.TestBlock.{create as block}
 import com.wavesplatform.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings}
-import com.wavesplatform.state.diffs._
-import com.wavesplatform.test._
+import com.wavesplatform.state.diffs.*
+import com.wavesplatform.test.*
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.assets.{IssueTransaction, SponsorFeeTransaction}
 import com.wavesplatform.transaction.serialization.impl.SponsorFeeTxSerializer
@@ -261,7 +262,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       issue = IssueTransaction
         .selfSigned(TxVersion.V1, acc, new String(name), new String(desc), quantity, decimals, reissuable, script = None, fee, ts)
         .explicitGet()
-      minFee <- Gen.choose(1, issue.quantity.value / 11)
+      minFee <- Gen.choose(1L, issue.quantity.value / 11)
 
       sponsor1 = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer1 = TransferTransaction
@@ -293,7 +294,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       issue = IssueTransaction
         .selfSigned(TxVersion.V1, acc, new String(name), new String(desc), quantity, decimals, reissuable, script = None, fee, ts)
         .explicitGet()
-      minSponsoredAssetFee <- Gen.choose(1, issue.quantity.value / 11)
+      minSponsoredAssetFee <- Gen.choose(1L, issue.quantity.value / 11)
       minFee               <- Gen.choose(One / 1000, One - 1)
       sponsor = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minSponsoredAssetFee), minFee, ts).explicitGet()
     } yield (genesis, issue, sponsor, minFee)

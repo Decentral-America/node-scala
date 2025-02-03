@@ -1,7 +1,7 @@
 package com.wavesplatform.state.diffs.freecall
 
 import com.wavesplatform.account.{Address, KeyPair}
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.lang.directives.DirectiveDictionary
@@ -328,7 +328,7 @@ class InvokeExpressionTest extends PropSpec with ScalaCheckPropertyChecks with W
     }
   }
 
-  private[this] def checkAsset(
+  private def checkAsset(
       invoke: InvokeExpressionTransaction,
       static: AssetStaticInfo,
       info: AssetInfo,

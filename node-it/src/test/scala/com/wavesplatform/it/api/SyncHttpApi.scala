@@ -8,7 +8,7 @@ import com.wavesplatform.api.http.RewardApiRoute.RewardStatus
 import com.wavesplatform.api.http.requests.IssueRequest
 import com.wavesplatform.api.http.{ApiError, DebugMessage}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.features.api.{ActivationStatus, FeatureActivationStatus}
 import com.wavesplatform.it.Node
 import com.wavesplatform.it.sync.*
@@ -642,6 +642,9 @@ object SyncHttpApi extends Assertions with matchers.should.Matchers {
     def blacklistedPeers: Seq[BlacklistedPeer] =
       sync(async(n).blacklistedPeers)
 
+    def allPeers: Seq[KnownPeer] =
+      sync(async(n).allPeers)
+
     def waitFor[A](desc: String)(f: Node => A, cond: A => Boolean, retryInterval: FiniteDuration): A =
       sync(async(n).waitFor[A](desc)(x => Future.successful(f(x.n)), cond, retryInterval), 5.minutes)
 
@@ -753,7 +756,7 @@ object SyncHttpApi extends Assertions with matchers.should.Matchers {
     private val TxInBlockchainAwaitTime = 8 * nodes.head.blockDelay
     private val ConditionAwaitTime      = 5.minutes
 
-    private[this] def withTxIdMessage[T](transactionId: String)(f: => T): T =
+    private def withTxIdMessage[T](transactionId: String)(f: => T): T =
       try f
       catch { case NonFatal(cause) => throw new RuntimeException(s"Error awaiting transaction: $transactionId", cause) }
 

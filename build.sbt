@@ -11,9 +11,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(GitVersioning)
 
 git.uncommittedSignifier       := Some("DIRTY")
-git.useGitDescribe             := true
 ThisBuild / git.useGitDescribe := true
-ThisBuild / PB.protocVersion   := "3.25.5" // https://protobuf.dev/support/version-support/#java
+ThisBuild / PB.protocVersion   := "3.25.6" // https://protobuf.dev/support/version-support/#java
 
 lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
@@ -36,6 +35,7 @@ lazy val lang =
     )
 
 lazy val `lang-jvm` = lang.jvm
+  .enablePlugins(PublishedModule)
   .settings(
     name                                  := "RIDE Compiler",
     normalizedName                        := "lang",
@@ -47,8 +47,9 @@ lazy val `lang-js` = lang.js
   .enablePlugins(VersionObject)
 
 lazy val `lang-testkit` = project
-  .dependsOn(`lang-jvm`)
   .in(file("lang/testkit"))
+  .dependsOn(`lang-jvm`)
+  .enablePlugins(PublishedModule)
   .settings(
     libraryDependencies ++=
       Dependencies.test.map(_.withConfigurations(Some("compile"))) ++ Dependencies.qaseReportDeps ++ Dependencies.logDeps ++ Seq(
@@ -74,6 +75,7 @@ lazy val node = project.dependsOn(`lang-jvm`)
 lazy val `node-testkit` = project
   .in(file("node/testkit"))
   .dependsOn(`node`, `lang-testkit`)
+  .enablePlugins(PublishedModule)
 
 lazy val `node-tests` = project
   .in(file("node/tests"))
@@ -82,13 +84,12 @@ lazy val `node-tests` = project
 
 lazy val `grpc-server` =
   project.dependsOn(node % "compile;runtime->provided", `node-testkit`, `node-tests` % "test->test")
+
 lazy val `ride-runner` = project.dependsOn(node, `grpc-server`, `node-tests` % "test->test")
-lazy val `node-it`     = project.dependsOn(`repl-jvm`, `grpc-server`, `node-tests` % "test->test")
-lazy val `node-generator` = project
-  .dependsOn(node, `node-testkit`, `node-tests` % "compile->test")
-  .settings(
-    libraryDependencies += "com.iheart" %% "ficus" % "1.5.2"
-  )
+lazy val `node-it`     = project.dependsOn(`repl-jvm`, `grpc-server`, `lang-testkit` % "test->test", `node-testkit`)
+
+lazy val `node-generator` = project.dependsOn(node, `node-testkit`, `node-testkit`)
+
 lazy val benchmark = project.dependsOn(node, `node-tests` % "test->test")
 
 lazy val repl = crossProject(JSPlatform, JVMPlatform)
@@ -97,7 +98,6 @@ lazy val repl = crossProject(JSPlatform, JVMPlatform)
   .settings(
     libraryDependencies ++=
       Dependencies.protobuf.value ++
-        Dependencies.langCompilerPlugins.value ++
         Dependencies.circe.value,
     inConfig(Compile)(
       Seq(
@@ -142,33 +142,30 @@ lazy val `waves-node` = (project in file("."))
     `node-tests`,
     `node-generator`,
     benchmark,
-    `repl-js`,
-    `repl-jvm`,
     `ride-runner`
   )
 
 inScope(Global)(
   Seq(
-    scalaVersion         := "2.13.16",
+    scalaVersion         := "3.6.3",
     organization         := "com.wavesplatform",
     organizationName     := "Waves Platform",
     organizationHomepage := Some(url("https://wavesplatform.com")),
     licenses             := Seq(("MIT", url("https://github.com/wavesplatform/Waves/blob/master/LICENSE"))),
     publish / skip       := true,
     scalacOptions ++= Seq(
-      "-Xsource:3",
       "-feature",
       "-deprecation",
       "-unchecked",
       "-language:higherKinds",
       "-language:implicitConversions",
       "-language:postfixOps",
-      "-Ywarn-unused:-implicits",
-      "-Xlint",
-      "-Wconf:cat=deprecation&site=com.wavesplatform.api.grpc.*:s",                                // Ignore gRPC warnings
-      "-Wconf:cat=deprecation&site=com.wavesplatform.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
-      "-Wconf:cat=deprecation&site=com.wavesplatform.state.InvokeScriptResult.*:s",
-      "-Wconf:cat=deprecation&site=com\\.wavesplatform\\.(lang\\..*|JsApiUtils)&origin=com\\.wavesplatform\\.lang\\.v1\\.compiler\\.Terms\\.LET_BLOCK:s"
+      "-Xkind-projector",
+      "-Wconf:cat=deprecation&origin=com.wavesplatform.api.grpc.*:s",                                // Ignore gRPC warnings
+      "-Wconf:cat=deprecation&origin=com.wavesplatform.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
+      "-Wconf:cat=deprecation&origin=com.wavesplatform.state.InvokeScriptResult.*:s",
+      "-Wconf:cat=deprecation&origin=com\\.wavesplatform\\.(lang\\..*|JsApiUtils)&origin=com\\.wavesplatform\\.lang\\.v1\\.compiler\\.Terms\\.LET_BLOCK:s",
+      "-Wconf:src=src_managed/.*:s"
     ),
     crossPaths        := false,
     cancelable        := true,
@@ -185,7 +182,7 @@ inScope(Global)(
     testOptions += Tests.Setup(_ => sys.props("sbt-testing") = "true"),
     network         := Network.default(),
     instrumentation := false,
-    resolvers ++= Resolver.sonatypeOssRepos("releases") ++ Resolver.sonatypeOssRepos("snapshots") ++ Seq(Resolver.mavenLocal),
+    resolvers ++= Resolver.sonatypeOssRepos("releases") ++ Resolver.sonatypeOssRepos("snapshots") ++ Seq(Resolver.mavenLocal, "Akka library repository".at("https://repo.akka.io/maven")),
     Compile / packageDoc / publishArtifact := false,
     concurrentRestrictions                 := Seq(Tags.limit(Tags.Test, math.min(EvaluateTask.SystemProcessors, 8))),
     excludeLintKeys ++= Set(
@@ -240,7 +237,7 @@ checkPRRaw := Def
       (`node-it` / Test / compile).value
       (benchmark / Test / compile).value
       (`node-generator` / Compile / compile).value
-      (`ride-runner` / Test / compile).value
+      (`ride-runner` / Test / test).value
     }
   )
   .value

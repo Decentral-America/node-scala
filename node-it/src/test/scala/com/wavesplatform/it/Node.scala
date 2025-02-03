@@ -4,7 +4,7 @@ import java.net.{InetSocketAddress, URL}
 import scala.concurrent.duration.FiniteDuration
 import com.typesafe.config.Config
 import com.wavesplatform.account.{KeyPair, PublicKey, SeedKeyPair}
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.it.util.GlobalTimer
 import com.wavesplatform.settings.WavesSettings
 import com.wavesplatform.state.diffs.FeeValidation
@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
 
 abstract class Node(val config: Config) extends AutoCloseable {
   lazy val log: LoggerFacade =
-    LoggerFacade(LoggerFactory.getLogger(s"${getClass.getCanonicalName}.${this.name}"))
+    LoggerFacade(LoggerFactory.getLogger(this.name))
 
   val settings: WavesSettings = WavesSettings.fromRootConfig(config)
   val client: AsyncHttpClient = asyncHttpClient(
@@ -32,7 +32,7 @@ abstract class Node(val config: Config) extends AutoCloseable {
     .usePlaintext()
     .build()
 
-  private[this] val wallet = Wallet(settings.walletSettings.copy(file = None))
+  private val wallet = Wallet(settings.walletSettings.copy(file = None))
   wallet.generateNewAccounts(1)
 
   def generateKeyPair(): SeedKeyPair = wallet.synchronized {

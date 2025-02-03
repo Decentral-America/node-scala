@@ -2,17 +2,17 @@ package com.wavesplatform.state.diffs.smart.predef
 
 import com.wavesplatform.account.{Address, Alias}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.lang.Testing.*
-import com.wavesplatform.lang.v1.compiler.Terms.CONST_BYTESTR
+import com.wavesplatform.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, CaseObj}
 import com.wavesplatform.lang.v1.evaluator.ctx.impl.*
 import com.wavesplatform.state.IntegerDataEntry
 import com.wavesplatform.test.*
+import com.wavesplatform.lang.ThrownError
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.transfer.MassTransferTransaction
 import com.wavesplatform.transaction.{TxHelpers, TxVersion}
 import org.scalatest.Assertions
-import shapeless.Coproduct
 
 import scala.util.Try
 
@@ -28,7 +28,7 @@ class CommonFunctionsTest extends PropSpec {
         | case _ => throw()
         | }
         |""".stripMargin,
-      Coproduct(transfer)
+      transfer
     )
     transfer.assetId match {
       case IssuedAsset(v) => result.explicitGet().asInstanceOf[CONST_BYTESTR].bs.arr sameElements v.arr
@@ -46,7 +46,7 @@ class CommonFunctionsTest extends PropSpec {
         | case _ => throw()
         | }
         |""".stripMargin,
-      Coproduct(transfer)
+      transfer
     )
     result shouldEqual evaluated(transfer.assetId != Waves)
   }
@@ -54,34 +54,34 @@ class CommonFunctionsTest extends PropSpec {
   property("Some/None/extract/isDefined") {
     val some3 = "if true then 3 else unit"
     val none  = "if false then 3 else unit"
-    runScript(some3) shouldBe evaluated(3L)
-    runScript(none) shouldBe evaluated(unit)
-    runScript(s"isDefined($some3)") shouldBe evaluated(true)
-    runScript(s"isDefined($none)") shouldBe evaluated(false)
-    runScript(s"extract($some3)") shouldBe evaluated(3L)
+    runScript[CONST_LONG](some3) shouldBe evaluated(3L)
+    runScript[CaseObj](none) shouldBe evaluated(unit)
+    runScript[CONST_BOOLEAN](s"isDefined($some3)") shouldBe evaluated(true)
+    runScript[CONST_BOOLEAN](s"isDefined($none)") shouldBe evaluated(false)
+    runScript[CONST_LONG](s"extract($some3)") shouldBe evaluated(3L)
     runScript(s"extract($none)") should produce("extract() called on unit")
   }
 
   property("size()") {
     val arr = Array(1: Byte, 2: Byte, 3: Byte)
-    runScript("size(base58'')".stripMargin) shouldBe evaluated(0L)
-    runScript(s"size(base58'${ByteStr(arr).toString}')".stripMargin) shouldBe evaluated(3L)
+    runScript[CONST_LONG]("size(base58'')".stripMargin) shouldBe evaluated(0L)
+    runScript[CONST_LONG](s"size(base58'${ByteStr(arr).toString}')".stripMargin) shouldBe evaluated(3L)
   }
 
   property("getTransfer should extract MassTransfer transfers") {
     val massTransfer = createMassTransfer()
 
-    val resultAmount = runScript(
+    val resultAmount = runScript[CONST_LONG](
       """
         |match tx {
         | case mttx : MassTransferTransaction  =>  mttx.transfers[0].amount
         | case _ => throw()
         | }
         |""".stripMargin,
-      Coproduct(massTransfer)
+      massTransfer
     )
     resultAmount shouldBe evaluated(massTransfer.transfers(0).amount.value)
-    val resultAddress = runScript(
+    val resultAddress = runScript[CONST_BYTESTR](
       """
         |match tx {
         | case mttx : MassTransferTransaction  =>
@@ -92,23 +92,23 @@ class CommonFunctionsTest extends PropSpec {
         | case _ => throw()
         | }
         |""".stripMargin,
-      Coproduct(massTransfer)
+      massTransfer
     )
     resultAddress shouldBe evaluated(ByteStr(massTransfer.transfers(0).address.bytes))
-    val resultLen = runScript(
+    val resultLen = runScript[CONST_LONG](
       """
         |match tx {
         | case mttx : MassTransferTransaction  =>  size(mttx.transfers)
         | case _ => throw()
         | }
         |""".stripMargin,
-      Coproduct(massTransfer)
+      massTransfer
     )
     resultLen shouldBe evaluated(massTransfer.transfers.size.toLong)
   }
 
   property("+ should check overflow") {
-    runScript("2 + 3") shouldBe evaluated(5L)
+    runScript[CONST_LONG]("2 + 3") shouldBe evaluated(5L)
     runScript(s"1 + ${Long.MaxValue}") should produce("long overflow")
   }
 
@@ -119,7 +119,7 @@ class CommonFunctionsTest extends PropSpec {
       TxHelpers.issue(version = TxVersion.V1),
       createMassTransfer()
     ).foreach { tx =>
-      val result = runScript(
+      val result = runScript[CONST_BOOLEAN](
         s"""
            |match tx {
            | case tx : TransferTransaction  => tx.id == base58'${tx.id().toString}'
@@ -128,7 +128,7 @@ class CommonFunctionsTest extends PropSpec {
            | case _ => throw()
            | }
            |""".stripMargin,
-        Coproduct(tx)
+        tx
       )
       result shouldBe evaluated(true)
     }
@@ -151,7 +151,7 @@ class CommonFunctionsTest extends PropSpec {
              | case _ => throw()
              | }
              |""".stripMargin,
-          Coproduct(tx)
+          tx
         )
       }.recover[Any] {
         case ex: MatchError =>
@@ -183,7 +183,7 @@ class CommonFunctionsTest extends PropSpec {
       TxHelpers.issue(version = TxVersion.V1)
     ).foreach { tx =>
       val result =
-        runScript(
+        runScript[CONST_BOOLEAN](
           s"""
              |match tx {
              | case tx: TransferTransaction | IssueTransaction => {
@@ -195,7 +195,7 @@ class CommonFunctionsTest extends PropSpec {
              | case _ => throw()
              |}
              |""".stripMargin,
-          Coproduct(tx)
+          tx
         )
       result shouldBe evaluated(true)
     }
@@ -226,7 +226,7 @@ class CommonFunctionsTest extends PropSpec {
       case addr: Address => s"tx.recipient == Address(base58'${addr.toString}')"
       case alias: Alias  => s"""tx.recipient == Alias("${alias.name}")"""
     }
-    val transferResult = runScript(
+    val transferResult = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          |  case tx: TransferTransaction =>
@@ -239,12 +239,12 @@ class CommonFunctionsTest extends PropSpec {
          |  case _ => throw()
          |}
          |""".stripMargin,
-      Coproduct(transfer)
+      transfer
     )
     transferResult shouldBe evaluated(true)
 
     val dataTx = TxHelpers.data(sender, Seq(entry))
-    val dataResult = runScript(
+    val dataResult = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          |  case tx: DataTransaction =>
@@ -260,7 +260,7 @@ class CommonFunctionsTest extends PropSpec {
          |  case _ => throw()
          |}
        """.stripMargin,
-      Coproduct(dataTx)
+      dataTx
     )
     dataResult shouldBe evaluated(true)
   }

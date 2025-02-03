@@ -3,7 +3,7 @@ package com.wavesplatform.api.http
 import com.wavesplatform.account.{Address, PublicKey}
 import com.wavesplatform.api.http.ApiError.ScriptExecutionError
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.lang.v1.FunctionHeader.User
 import com.wavesplatform.lang.v1.compiler.Terms.{CONST_LONG, CONST_STRING, FUNCTION_CALL}
 import com.wavesplatform.lang.v1.evaluator.ScriptResultV3
@@ -38,7 +38,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
     } yield tx
   ).explicitGet()
 
-  def json[E, A](result: TracedResult[E, A])(implicit ev1: E => ApiError, ev2: A => Transaction): JsObject = {
+  def json(result: TracedResult[ApiError, Transaction]): JsObject = {
     val resultJson = result.resultE match {
       case Right(value) => value.json()
       case Left(e)      => e.json
@@ -46,7 +46,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
     resultJson ++ Json.obj("trace" -> result.trace.map(_.json))
   }
 
-  def loggedJson[E, A](result: TracedResult[E, A])(implicit ev1: E => ApiError, ev2: A => Transaction): JsObject =
+  def loggedJson(result: TracedResult[ApiError, Transaction]): JsObject =
     json(result) ++ Json.obj("trace" -> result.trace.map(_.loggedJson))
 
   property("suitable TracedResult json") {

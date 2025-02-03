@@ -3,7 +3,8 @@ package com.wavesplatform.transaction.assets.exchange
 import com.google.protobuf.ByteString
 import com.wavesplatform.TestValues
 import com.wavesplatform.account.AddressScheme
-import com.wavesplatform.common.utils.*
+import com.wavesplatform.common.utils.Base58
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.protobuf.order.AssetPair as PBAssetPair
 import com.wavesplatform.protobuf.transaction.{PBAmounts, PBOrder, PBOrders}
 import com.wavesplatform.test.FlatSpec
@@ -11,7 +12,7 @@ import com.wavesplatform.transaction.Asset.Waves
 import com.wavesplatform.transaction.smart.Verifier
 
 class PBOrdersSpecification extends FlatSpec {
-  private[this] val protoOrder = PBOrder(
+  private val protoOrder = PBOrder(
     AddressScheme.current.chainId.toInt,
     ByteString.copyFrom(TestValues.keyPair.publicKey.arr),
     Some(PBAssetPair(PBAmounts.toPBAssetId(TestValues.asset), PBAmounts.toPBAssetId(Waves))),
@@ -94,7 +95,7 @@ class PBOrdersSpecification extends FlatSpec {
     reserializedProtoOrder shouldBe protoOrder
   }
 
-  private[this] def validate(protoOrder: PBOrder): Validation = {
+  private def validate(protoOrder: PBOrder): Validation = {
     val order = PBOrders.vanilla(protoOrder).explicitGet()
     order.isValid(order.timestamp)
   }

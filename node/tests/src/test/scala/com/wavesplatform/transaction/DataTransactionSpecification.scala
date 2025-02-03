@@ -4,15 +4,16 @@ import com.google.common.primitives.Shorts
 import com.wavesplatform.account.PublicKey
 import com.wavesplatform.api.http.requests.SignedDataRequest
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, Base64, EitherExt2}
+import com.wavesplatform.common.utils.{Base58, Base64}
+import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto
 import com.wavesplatform.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry}
-import com.wavesplatform.state.DataEntry._
+import com.wavesplatform.state.DataEntry.*
 import com.wavesplatform.test.PropSpec
 import com.wavesplatform.transaction.TxValidationError.GenericError
 import com.wavesplatform.transaction.serialization.impl.DataTxSerializer
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest._
+import org.scalatest.*
 import play.api.libs.json.Json
 
 class DataTransactionSpecification extends PropSpec {
@@ -119,7 +120,6 @@ class DataTransactionSpecification extends PropSpec {
               v shouldEqual te.value
             case _: DataEntry[_] =>
               re shouldEqual te
-            case _ => fail()
           }
       }
     }
@@ -127,10 +127,10 @@ class DataTransactionSpecification extends PropSpec {
 
   property("positive validation cases") {
     import DataTransaction.MaxEntryCount
-    import com.wavesplatform.state._
+    import com.wavesplatform.state.*
     forAll(dataTransactionGen, dataEntryGen(500)) {
       case (DataTransaction(version, sender, _, fee, timestamp, proofs, chainId), _) =>
-        def check(data: List[DataEntry[_]]): Assertion = {
+        def check(data: List[DataEntry[?]]): Assertion = {
           val txEi = DataTransaction.create(version, sender, data, fee.value, timestamp, proofs)
           txEi shouldBe Right(DataTransaction(version, sender, data, fee, timestamp, proofs, chainId))
           checkSerialization(txEi.explicitGet())

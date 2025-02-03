@@ -1,12 +1,12 @@
 package com.wavesplatform.api.http.requests
 
-import cats.instances.list._
-import cats.syntax.traverse._
+import cats.instances.list.*
+import cats.syntax.traverse.*
 import com.wavesplatform.account.PublicKey
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.transaction.Proofs
 import com.wavesplatform.transaction.assets.ReissueTransaction
-import play.api.libs.functional.syntax._
+import play.api.libs.functional.syntax.*
 import play.api.libs.json.{JsPath, Reads}
 
 case class SignedReissueV2Request(
@@ -37,5 +37,5 @@ object SignedReissueV2Request {
       (JsPath \ "fee").read[Long] and
       (JsPath \ "timestamp").read[Long] and
       (JsPath \ "proofs").read[List[ProofStr]]
-  )(SignedReissueV2Request.apply _)
+  )(SignedReissueV2Request.apply)
 }
