@@ -27,10 +27,9 @@ import scala.util.{Failure, Random, Success}
 
 object TransactionsGeneratorApp extends ScoptImplicits {
 
-
   def main(args: Array[String]): Unit = {
     implicit val httpClient: AsyncHttpClient = asyncHttpClient()
-    val log = LoggerFacade(LoggerFactory.getLogger("generator"))
+    val log                                  = LoggerFacade(LoggerFactory.getLogger("generator"))
 
     val parser = new OptionParser[GeneratorSettings]("generator") {
       head("TransactionsGenerator - Waves load testing transactions generator")
@@ -172,22 +171,23 @@ object TransactionsGeneratorApp extends ScoptImplicits {
         val estimator = wavesSettings.estimator
 
         val (universe, initialUniTransactions, initialTailTransactions) = preconditions
-          .fold((UniverseHolder(), List.empty[Transaction], List.empty[Transaction]))(Preconditions.mk(_, time, estimator))
+          .fold((UniverseHolder(), List.empty[Transaction], List.empty[Transaction]))(
+            Preconditions.mk(_, finalConfig.privateKeyAccounts, time, estimator)
+          )
 
-        Universe.Accounts = universe.accounts
         Universe.IssuedAssets = universe.issuedAssets
         Universe.Leases = universe.leases
 
         val generator: TransactionGenerator = finalConfig.mode match {
-          case Mode.NARROW => NarrowTransactionGenerator(finalConfig.narrow, finalConfig.privateKeyAccounts, time, estimator)
-          case Mode.WIDE => new WideTransactionGenerator(finalConfig.wide, finalConfig.privateKeyAccounts)
+          case Mode.NARROW   => NarrowTransactionGenerator(finalConfig.narrow, finalConfig.privateKeyAccounts, time, estimator)
+          case Mode.WIDE     => new WideTransactionGenerator(finalConfig.wide, finalConfig.privateKeyAccounts)
           case Mode.DYN_WIDE => new DynamicWideTransactionGenerator(finalConfig.dynWide, finalConfig.privateKeyAccounts)
           case Mode.MULTISIG => new MultisigTransactionGenerator(finalConfig.multisig, finalConfig.privateKeyAccounts, estimator)
-          case Mode.ORACLE => new OracleTransactionGenerator(finalConfig.oracle, finalConfig.privateKeyAccounts, estimator)
-          case Mode.SWARM => new SmartGenerator(finalConfig.swarm, finalConfig.privateKeyAccounts, estimator)
+          case Mode.ORACLE   => new OracleTransactionGenerator(finalConfig.oracle, finalConfig.privateKeyAccounts, estimator)
+          case Mode.SWARM    => new SmartGenerator(finalConfig.swarm, finalConfig.privateKeyAccounts, estimator)
         }
 
-        val threadPool = Executors.newFixedThreadPool(Math.max(1, finalConfig.sendTo.size))
+        val threadPool                            = Executors.newFixedThreadPool(Math.max(1, finalConfig.sendTo.size))
         implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(threadPool)
 
         val sender = new NetworkSender(wavesSettings.networkSettings.trafficLogger, finalConfig.addressScheme, "generator", nonce = Random.nextLong())
@@ -211,7 +211,7 @@ object TransactionsGeneratorApp extends ScoptImplicits {
           }
         }
 
-        val initialGenTransactions = generator.initial
+        val initialGenTransactions     = generator.initial
         val initialGenTailTransactions = generator.tailInitial
 
         log.info(s"Universe precondition transactions size: ${initialUniTransactions.size}")
