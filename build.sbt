@@ -59,7 +59,7 @@ lazy val `lang-testkit` = project
 
 lazy val `lang-tests` = project
   .in(file("lang/tests"))
-  .dependsOn(`lang-testkit` % "test;test->test")
+  .dependsOn(`lang-testkit`)
 
 lazy val `lang-tests-js` = project
   .in(file("lang/tests-js"))
@@ -76,21 +76,22 @@ lazy val `node-testkit` = project
   .in(file("node/testkit"))
   .dependsOn(`node`, `lang-testkit`)
   .enablePlugins(PublishedModule)
+  .settings(libraryDependencies ++= Dependencies.nodeTests)
 
 lazy val `node-tests` = project
   .in(file("node/tests"))
-  .dependsOn(`lang-testkit` % "test->test", `node-testkit`)
-  .settings(libraryDependencies ++= Dependencies.nodeTests)
+  .dependsOn(`node-testkit`)
+  .settings(libraryDependencies ++= Dependencies.logDeps)
 
 lazy val `grpc-server` =
-  project.dependsOn(node % "compile;runtime->provided", `node-testkit`, `node-tests` % "test->test")
+  project.dependsOn(node % "compile;runtime->provided", `node-testkit`)
 
-lazy val `ride-runner` = project.dependsOn(node, `grpc-server`, `node-tests` % "test->test")
-lazy val `node-it`     = project.dependsOn(`repl-jvm`, `grpc-server`, `lang-testkit` % "test->test", `node-testkit`)
+lazy val `ride-runner` = project.dependsOn(node, `grpc-server`, `node-testkit`)
+lazy val `node-it`     = project.dependsOn(`repl-jvm`, `grpc-server`, `node-testkit`)
 
-lazy val `node-generator` = project.dependsOn(node, `node-testkit`, `node-testkit`)
+lazy val `node-generator` = project.dependsOn(node, `node-testkit`)
 
-lazy val benchmark = project.dependsOn(node, `node-tests` % "test->test")
+lazy val benchmark = project.dependsOn(node, `node-testkit`)
 
 lazy val repl = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -111,7 +112,7 @@ lazy val repl = crossProject(JSPlatform, JVMPlatform)
   )
 
 lazy val `repl-jvm` = repl.jvm
-  .dependsOn(`lang-jvm`, `lang-testkit` % "test;test->test")
+  .dependsOn(`lang-jvm`, `lang-testkit`)
   .settings(
     libraryDependencies ++= Dependencies.circe.value ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % Provided,
