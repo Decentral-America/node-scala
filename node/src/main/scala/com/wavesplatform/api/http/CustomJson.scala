@@ -1,8 +1,8 @@
 package com.wavesplatform.api.http
 
 import java.io.IOException
-import akka.http.scaladsl.model.MediaTypes.`application/json`
-import akka.http.scaladsl.model.{MediaRange, MediaType}
+import org.apache.pekko.http.scaladsl.model.MediaTypes.`application/json`
+import org.apache.pekko.http.scaladsl.model.{MediaRange, MediaType}
 import com.fasterxml.jackson.core.io.SegmentedStringWriter
 import com.fasterxml.jackson.core.util.BufferRecyclers
 import com.fasterxml.jackson.core.{JsonGenerator, JsonProcessingException}
@@ -18,9 +18,9 @@ object NumberAsStringSerializer extends JsonSerializer[JsValue] {
   private def serializeWithNumberAsStrings(value: JsValue, json: JsonGenerator, provider: SerializerProvider, insideStringifiedField: Boolean): Unit =
     value match {
       case JsNumber(v) if insideStringifiedField => json.writeString(v.bigDecimal.toPlainString)
-      case JsNumber(v) => json.writeNumber(v.bigDecimal)
-      case JsString(v) => json.writeString(v)
-      case v: JsBoolean => json.writeBoolean(v.value)
+      case JsNumber(v)                           => json.writeNumber(v.bigDecimal)
+      case JsString(v)                           => json.writeString(v)
+      case v: JsBoolean                          => json.writeBoolean(v.value)
 
       case JsArray(elements) =>
         json.writeStartArray()

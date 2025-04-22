@@ -1,8 +1,8 @@
 package com.wavesplatform.api.http
 
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.server.Route
+import org.apache.pekko.http.scaladsl.model.StatusCodes
+import org.apache.pekko.http.scaladsl.model.headers.Accept
+import org.apache.pekko.http.scaladsl.server.Route
 import com.typesafe.config.{ConfigObject, ConfigRenderOptions}
 import com.wavesplatform.Version
 import com.wavesplatform.account.{Address, PKKeyPair}
@@ -196,7 +196,7 @@ case class DebugApiRoute(
 
   def validate: Route =
     path("validate")(jsonPost[JsObject] { jsv =>
-      val startTime     = System.nanoTime()
+      val startTime = System.nanoTime()
 
       val parsedTransaction = TransactionFactory.fromSignedRequest(jsv)
 

@@ -6,7 +6,6 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.wavesplatform.account.{KeyPair, SeedKeyPair}
 import com.wavesplatform.generator.GeneratorSettings.NodeAddress
 import com.wavesplatform.generator.config.ConfigReaders
-import com.wavesplatform.settings.*
 import pureconfig.ConfigReader
 import pureconfig.generic.derivation.*
 
@@ -26,7 +25,7 @@ case class GeneratorSettings(
     multisig: MultisigTransactionGenerator.Settings,
     oracle: OracleTransactionGenerator.Settings,
     swarm: SmartGenerator.Settings
-                            )derives ConfigReader {
+) derives ConfigReader {
   val addressScheme: Char                  = chainId.head
   val privateKeyAccounts: Seq[SeedKeyPair] = accounts.map(s => GeneratorSettings.toKeyPair(s))
 }
@@ -41,7 +40,7 @@ object GeneratorSettings extends ConfigReaders {
 
   given ConfigReader[URL] = ConfigReader[String].map(str => new URL(str))
 
-  case class NodeAddress(networkAddress: InetSocketAddress, apiAddress: URL)derives ConfigReader
+  case class NodeAddress(networkAddress: InetSocketAddress, apiAddress: URL) derives ConfigReader
 
   implicit val toPrintable: Show[GeneratorSettings] = { x =>
     import x.*

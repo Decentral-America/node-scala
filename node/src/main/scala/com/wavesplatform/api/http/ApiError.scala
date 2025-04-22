@@ -1,6 +1,6 @@
 package com.wavesplatform.api.http
 
-import akka.http.scaladsl.model.{StatusCode, StatusCodes}
+import org.apache.pekko.http.scaladsl.model.{StatusCode, StatusCodes}
 import com.wavesplatform.account.{Address, Alias}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.lang.ValidationError
@@ -315,11 +315,11 @@ object ApiError {
   }
 
   case class AssetsDoesNotExist(ids: Seq[IssuedAsset]) extends ApiError {
-    val id: Int                      = 314
-    val message: String              = s"Asset does not exist. ${ids.map(_.id.toString).mkString(", ")}"
-    val code: StatusCode             = StatusCodes.BadRequest
+    val id: Int                                   = 314
+    val message: String                           = s"Asset does not exist. ${ids.map(_.id.toString).mkString(", ")}"
+    val code: StatusCode                          = StatusCodes.BadRequest
     implicit val assetWrites: Writes[IssuedAsset] = Asset.assetWrites
-    override lazy val json: JsObject = Json.obj("error" -> id, "message" -> message, "ids" -> ids)
+    override lazy val json: JsObject              = Json.obj("error" -> id, "message" -> message, "ids" -> ids)
   }
 
   final case class NegativeAmount(msg: String) extends ApiError {
