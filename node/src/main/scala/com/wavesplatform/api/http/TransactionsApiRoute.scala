@@ -1,7 +1,7 @@
 package com.wavesplatform.api.http
 
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.server.Route
+import org.apache.pekko.http.scaladsl.marshalling.ToResponseMarshallable
+import org.apache.pekko.http.scaladsl.server.Route
 import cats.instances.either.*
 import cats.instances.list.*
 import cats.syntax.alternative.*
@@ -259,7 +259,7 @@ object TransactionsApiRoute {
     def apply(bool: Boolean): LeaseStatus = if (bool) active else canceled
   }
 
-  implicit val leaseStatusWrites: Writes[LeaseStatus] = Writes { 
+  implicit val leaseStatusWrites: Writes[LeaseStatus] = Writes {
     case LeaseStatus.active   => JsString("active")
     case LeaseStatus.canceled => JsString("canceled")
   }
