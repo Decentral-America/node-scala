@@ -16,14 +16,22 @@ import com.wavesplatform.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.wavesplatform.ride.runner.*
 import com.wavesplatform.ride.runner.input.RideRunnerBlockchainState
 import com.wavesplatform.settings.BlockchainSettings
-import com.wavesplatform.state.{AccountScriptInfo, AssetDescription, AssetScriptInfo, BalanceSnapshot, DataEntry, Height, LeaseBalance, StateSnapshot, TxMeta}
+import com.wavesplatform.state.{
+  AccountScriptInfo,
+  AssetDescription,
+  AssetScriptInfo,
+  BalanceSnapshot,
+  DataEntry,
+  Height,
+  LeaseBalance,
+  StateSnapshot,
+  TxMeta
+}
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.TxValidationError.AliasDoesNotExist
 import com.wavesplatform.transaction.transfer.{TransferTransaction, TransferTransactionLike}
 import com.wavesplatform.transaction.{Asset, Proofs, Transaction, TxPositiveAmount}
 import com.wavesplatform.common.utils.EitherExt2.explicitGet
-
-import scala.util.chaining.scalaUtilChainingOps
 
 class ImmutableBlockchain(override val settings: BlockchainSettings, input: RideRunnerBlockchainState) extends SupportedBlockchain { blockchain =>
   private val chainId: Byte = settings.addressSchemeCharacter.toByte

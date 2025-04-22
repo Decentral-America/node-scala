@@ -32,7 +32,6 @@ import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.TxValidationError.*
 import com.wavesplatform.transaction.smart.DAppEnvironment.ActionLimits
 import com.wavesplatform.transaction.smart.script.ScriptRunner
-import com.wavesplatform.transaction.smart.script.ScriptRunner.TxOrd
 import com.wavesplatform.transaction.smart.script.trace.CoevalR.traced
 import com.wavesplatform.transaction.smart.script.trace.{AssetVerifierTrace, CoevalR, TracedResult}
 import com.wavesplatform.transaction.smart.{DApp as DAppTarget, *}
@@ -192,28 +191,30 @@ object InvokeScriptDiff {
                 )
                 val (paymentsPartInsideDApp, paymentsPartToResolve) =
                   if (version < V5) (StateSnapshot.empty, paymentsPart) else (paymentsPart, StateSnapshot.empty)
-                val environment = wrapDAppEnv(new DAppEnvironment(
-                  AddressScheme.current.chainId,
-                  Coeval.evalOnce(input),
-                  Coeval(height),
-                  blockchain,
-                  tthis,
-                  directives,
-                  rootVersion,
-                  tx.root,
-                  tx.dApp,
-                  pk,
-                  calledAddresses,
-                  limitedExecution,
-                  enableExecutionLog,
-                  totalComplexityLimit,
-                  remainingCalls - 1,
-                  remainingActions,
-                  remainingPayments - tx.payments.size,
-                  paymentsPartInsideDApp,
-                  invocationRoot,
-                  wrapDAppEnv
-                ))
+                val environment = wrapDAppEnv(
+                  new DAppEnvironment(
+                    AddressScheme.current.chainId,
+                    Coeval.evalOnce(input),
+                    Coeval(height),
+                    blockchain,
+                    tthis,
+                    directives,
+                    rootVersion,
+                    tx.root,
+                    tx.dApp,
+                    pk,
+                    calledAddresses,
+                    limitedExecution,
+                    enableExecutionLog,
+                    totalComplexityLimit,
+                    remainingCalls - 1,
+                    remainingActions,
+                    remainingPayments - tx.payments.size,
+                    paymentsPartInsideDApp,
+                    invocationRoot,
+                    wrapDAppEnv
+                  )
+                )
                 for {
                   _ <-
                     if (
