@@ -14,7 +14,7 @@ git.uncommittedSignifier       := Some("DIRTY")
 ThisBuild / git.useGitDescribe := true
 ThisBuild / PB.protocVersion   := "4.31.1"
 
-ThisBuild / dependencyOverrides ++= Dependencies.overrides
+ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
 
 lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
@@ -151,7 +151,7 @@ lazy val `waves-node` = (project in file("."))
 
 inScope(Global)(
   Seq(
-    scalaVersion         := "3.6.4",
+    scalaVersion         := "3.7.1",
     organization         := "com.wavesplatform",
     organizationName     := "Waves Platform",
     organizationHomepage := Some(url("https://wavesplatform.com")),
@@ -164,7 +164,6 @@ inScope(Global)(
       "-language:higherKinds",
       "-language:implicitConversions",
       "-language:postfixOps",
-      "-Xkind-projector",
       "-Wunused:all",
       "-Wconf:cat=deprecation&origin=com.wavesplatform.api.grpc.*:s",                                // Ignore gRPC warnings
       "-Wconf:cat=deprecation&origin=com.wavesplatform.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
