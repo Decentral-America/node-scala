@@ -12,9 +12,17 @@ enablePlugins(GitVersioning)
 
 git.uncommittedSignifier       := Some("DIRTY")
 ThisBuild / git.useGitDescribe := true
-ThisBuild / PB.protocVersion   := "4.31.1"
+ThisBuild / PB.protocVersion   := Dependencies.gProtoVersion
 
 ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
+
+ThisBuild / pomIncludeRepository := { _ => false }
+ThisBuild / publishMavenStyle    := true
+ThisBuild / publishTo := {
+  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+  if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
+  else localStaging.value
+}
 
 lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
@@ -39,14 +47,21 @@ lazy val lang =
 lazy val `lang-jvm` = lang.jvm
   .enablePlugins(PublishedModule)
   .settings(
-    name                                  := "RIDE Compiler",
-    normalizedName                        := "lang",
-    description                           := "The RIDE smart contract language compiler",
-    libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % Provided
+    name           := "RIDE Compiler",
+    normalizedName := "lang",
+    description    := "The RIDE smart contract language compiler",
+    libraryDependencies ++= Seq(
+      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % Provided,
+      Dependencies.gProto,
+      Dependencies.gProto % "protobuf"
+    )
   )
 
 lazy val `lang-js` = lang.js
   .enablePlugins(VersionObject)
+  .settings(
+    libraryDependencies ++= Dependencies.scalapbRuntimeJS.value
+  )
 
 lazy val `lang-testkit` = project
   .in(file("lang/testkit"))
@@ -54,9 +69,8 @@ lazy val `lang-testkit` = project
   .enablePlugins(PublishedModule)
   .settings(
     libraryDependencies ++=
-      Dependencies.test.map(_.withConfigurations(Some("compile"))) ++ Dependencies.qaseReportDeps ++ Dependencies.logDeps ++ Seq(
-        "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
-      )
+      Dependencies.test.map(_.withConfigurations(Some("compile"))) ++ Dependencies.qaseReportDeps ++ Dependencies.logDeps :+
+        Dependencies.scalaLogging
   )
 
 lazy val `lang-tests` = project
@@ -99,16 +113,17 @@ lazy val repl = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Full)
   .settings(
-    libraryDependencies ++=
-      Dependencies.protobuf.value ++
-        Dependencies.circe.value,
+    libraryDependencies ++= Dependencies.circe.value ++ Seq(
+      Dependencies.protoSchemasLib % "protobuf"
+    ),
     inConfig(Compile)(
       Seq(
         PB.targets += scalapb.gen(flatPackage = true) -> sourceManaged.value,
         PB.protoSources += PB.externalIncludePath.value,
         PB.generate / includeFilter := { (f: File) =>
           (** / "waves" / "*.proto").matches(f.toPath)
-        }
+        },
+        PB.deleteTargetDirectory := false
       )
     )
   )
@@ -116,7 +131,7 @@ lazy val repl = crossProject(JSPlatform, JVMPlatform)
 lazy val `repl-jvm` = repl.jvm
   .dependsOn(`lang-jvm`, `lang-testkit`)
   .settings(
-    libraryDependencies ++= Dependencies.circe.value ++ Seq(
+    libraryDependencies ++= Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % Provided,
       Dependencies.sttp3
     )
@@ -125,7 +140,9 @@ lazy val `repl-jvm` = repl.jvm
 lazy val `repl-js` = repl.js
   .dependsOn(`lang-js`)
   .settings(
-    libraryDependencies += "org.scala-js" %%% "scala-js-macrotask-executor" % "1.1.1"
+    libraryDependencies ++= Dependencies.scalapbRuntimeJS.value ++ Seq(
+      "org.scala-js" %%% "scala-js-macrotask-executor" % "1.1.1"
+    )
   )
 
 lazy val `curve25519-test` = project.dependsOn(node)
@@ -151,7 +168,7 @@ lazy val `waves-node` = (project in file("."))
 
 inScope(Global)(
   Seq(
-    scalaVersion         := "3.7.2",
+    scalaVersion         := "3.7.3",
     organization         := "com.wavesplatform",
     organizationName     := "Waves Platform",
     organizationHomepage := Some(url("https://wavesplatform.com")),
@@ -229,19 +246,22 @@ buildRIDERunnerForDocker := {
 lazy val checkPRRaw = taskKey[Unit]("Build a project and run unit tests")
 checkPRRaw := Def
   .sequential(
-    `waves-node` / clean,
+    clean,
     Def.task {
       (`lang-tests` / Test / test).value
       (`repl-jvm` / Test / test).value
-      (`lang-js` / Compile / fastOptJS).value
+      (`lang-js` / Compile / fullOptJS).value
       (`lang-tests-js` / Test / test).value
       (`grpc-server` / Test / test).value
       (`node-tests` / Test / test).value
-      (`repl-js` / Compile / fastOptJS).value
+      (`repl-js` / Compile / fullOptJS).value
       (`node-it` / Test / compile).value
       (benchmark / Test / compile).value
       (`node-generator` / Compile / compile).value
       (`ride-runner` / Test / test).value
+      (node / assembly).value
+      buildTarballsForDocker.value
+      (`lang-jvm` / assembly).value
     }
   )
   .value
