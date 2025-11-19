@@ -41,7 +41,7 @@ object AddressTransactions {
   ): Option[InvokeScriptResult] =
     for {
       tm           <- resource.get(Keys.transactionMetaById(TransactionId(txId), txMetaHandle))
-      scriptResult <- resource.get(Keys.invokeScriptResult(tm.height, TxNum(tm.num.toShort), apiHandle))
+      scriptResult <- resource.get(Keys.invokeScriptResult(Height(tm.height), TxNum(tm.num.toShort), apiHandle))
     } yield scriptResult
 
   def loadInvokeScriptResult(db: RocksDB, txMetaHandle: RDB.TxMetaHandle, apiHandle: RDB.ApiHandle, txId: ByteStr): Option[InvokeScriptResult] =
@@ -129,8 +129,8 @@ object AddressTransactions {
       txHandle: RDB.TxHandle,
       apiHandle: RDB.ApiHandle,
       addressId: AddressId,
-      maxHeight: Int,
-      maxTxNum: Int,
+      maxHeight: Height,
+      maxTxNum: TxNum,
       sender: Option[Address],
       types: Set[Transaction.Type]
   ) extends AbstractIterator[Seq[(TxMeta, Transaction, TxNum)]] {
