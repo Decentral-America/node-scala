@@ -13,7 +13,7 @@ import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
 import com.wavesplatform.features.EstimatorProvider.*
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.lang.script.Script
-import com.wavesplatform.protobuf.ByteStringExt
+import com.wavesplatform.protobuf.{toPublicKey, toAddress}
 import com.wavesplatform.protobuf.transaction.PBTransactions.toVanillaScript
 import com.wavesplatform.protobuf.transaction.SignedTransaction.Transaction
 import com.wavesplatform.protobuf.transaction.Transaction.Data
@@ -25,18 +25,7 @@ import com.wavesplatform.ride.runner.estimate
 import com.wavesplatform.ride.runner.stats.RideRunnerStats
 import com.wavesplatform.ride.runner.stats.RideRunnerStats.*
 import com.wavesplatform.settings.BlockchainSettings
-import com.wavesplatform.state.{
-  AccountScriptInfo,
-  AssetDescription,
-  AssetScriptInfo,
-  BalanceSnapshot,
-  DataEntry,
-  Height,
-  LeaseBalance,
-  StateSnapshot,
-  TransactionId,
-  TxMeta
-}
+import com.wavesplatform.state.*
 import com.wavesplatform.transaction
 import com.wavesplatform.transaction.Asset
 import com.wavesplatform.transaction.Asset.IssuedAsset
@@ -123,10 +112,10 @@ class LazyBlockchain[TagT] private (
   }
 
   // Ride: wavesBalance, height, lastBlock
-  override def height: Int = heightUntagged
+  override def height: Int = heightUntagged.toInt
 
   // Ride: environment initialization
-  override def activatedFeatures: ActivatedFeatures = currentActivatedFeatures.get()
+  override def activatedFeatures: ActivatedFeatures = currentActivatedFeatures.get().view.mapValues(_.toInt).toMap
 
   // Ride: assetInfo
   override def assetDescription(asset: IssuedAsset): Option[AssetDescription] = db
@@ -202,7 +191,7 @@ class LazyBlockchain[TagT] private (
     // NOTE: This code leads to a wrong generating balance, but we see no use-cases for now
     val lb           = leaseBalance(address)
     val wavesBalance = balance(address, Asset.Waves)
-    List(BalanceSnapshot(height, wavesBalance, lb.in, lb.out))
+    List(BalanceSnapshot(Height(height), wavesBalance, lb.in, lb.out))
   }
 
   // Ride: transactionHeightById
@@ -393,7 +382,7 @@ class LazyBlockchain[TagT] private (
 
   private def rollback(toHeight: Height, rollback: BlockchainUpdated.Rollback)(implicit ctx: ReadWrite): AffectedTags[TagT] =
     RideRunnerStats.rollbackProcessingTime.measure {
-      removeAllFromCtx(Height(toHeight + 1))
+      removeAllFromCtx(toHeight + 1)
 
       val stateUpdate = rollback.getRollbackStateUpdate
       getAffectedTags(MemCacheKey.Height) ++
