@@ -7,6 +7,7 @@ import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.{BlockHeader, SignedBlockHeader}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.explicitGet
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.features.EstimatorProvider.EstimatorBlockchainExt
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.lang.script.Script
@@ -66,16 +67,17 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
       SignedBlockHeader(
         header = BlockHeader(
           version = 5,
-          timestamp = blockInfo.timestamp,
+          blockInfo.timestamp,
           reference = ByteStr(Array.emptyByteArray),
-          baseTarget = blockInfo.baseTarget,
-          generationSignature = blockInfo.generationSignature,
-          generator = blockInfo.generatorPublicKey,
+          blockInfo.baseTarget,
+          blockInfo.generationSignature,
+          blockInfo.generatorPublicKey,
           featureVotes = Nil,
           rewardVote = -1,
           transactionsRoot = ByteStr(Array.emptyByteArray),
-          None,
-          None
+          stateHash = None,
+          challengedHeader = None,
+          finalizationVoting = None
         ),
         signature = ByteStr(Array.emptyByteArray)
       )
@@ -95,7 +97,12 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
   // Ride: wavesBalance, height, lastBlock
   override def height: Int = input.height
 
-  override val activatedFeatures: ActivatedFeatures = settings.functionalitySettings.preActivatedFeatures ++ input.features.map(id => id -> height)
+  override def finalizedHeight: Option[Height] = ???
+
+  override def finalizedHeightAt(at: Height): Option[Height] = ???
+
+  override val activatedFeatures: ActivatedFeatures =
+    (settings.functionalitySettings.preActivatedFeatures ++ input.features.map(id => id -> height)).map((k, v) => k -> Height(v))
 
   private val assets = mkCache[IssuedAsset, Option[AssetDescription]] { assetId =>
     input.assets.get(assetId).map { info =>
@@ -152,7 +159,7 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
       .flatMap { addressState => addressState.generatingBalance.map(_.value).orElse(addressState.balance(Waves)) }
       .getOrElse(0L)
 
-    Seq(BalanceSnapshot(Height(height), generatingBalance, 0, 0))
+    Seq(BalanceSnapshot(Height(height), generatingBalance, 0, 0, 0))
   }
 
   // Ride: wavesBalance (specifies to=None)
@@ -190,6 +197,10 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
   override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] = ???
 
   override def effectiveBalanceBanHeights(address: Address): Seq[Int] = Seq.empty
+
+  override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = IndexedSeq.empty
+
+  override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = ConflictGenerators.empty
 
   override def lastStateHash(refId: Option[BlockId]): BlockId = ???
 

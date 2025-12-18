@@ -12,7 +12,7 @@ import com.wavesplatform.mining.Miner.MaxTransactionsPerMicroblock
 import com.wavesplatform.mining.MiningConstraints
 import com.wavesplatform.network.message.*
 import com.wavesplatform.network.message.Message.*
-import com.wavesplatform.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, SignedMicroBlock}
+import com.wavesplatform.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, SignedMicroBlock, EndorseBlock as PBEndorseBlock}
 import com.wavesplatform.protobuf.snapshot.{BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
 import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.wavesplatform.transaction.{DataTransaction, EthereumTransaction, Transaction, TransactionParsers}
@@ -22,6 +22,8 @@ import java.net.{InetAddress, InetSocketAddress}
 import java.util
 import scala.reflect.ClassTag
 import scala.util.Try
+
+// For protobuf see https://protobuf.dev/programming-guides/encoding/#varints
 
 object GetPeersSpec extends MessageSpec[GetPeers.type] {
   override val messageCode: Message.MessageCode = 1: Byte
@@ -361,6 +363,17 @@ object MicroBlockSnapshotResponseSpec extends MessageSpec[MicroBlockSnapshotResp
   override val maxLength: Int = NetworkServer.MaxFrameLength
 }
 
+object EndorseBlockSpec extends MessageSpec[EndorseBlock] {
+  override val messageCode: MessageCode = 38: Byte
+
+  override def deserializeData(bytes: Array[Byte]): Try[EndorseBlock] =
+    Try(EndorseBlock.fromProtobuf(PBEndorseBlock.parseFrom(bytes)))
+
+  override def serializeData(data: EndorseBlock): Array[Byte] = data.toProtobuf.toByteArray
+
+  override val maxLength: Int = 238 // 4 + 32*2 (or 64*2 for old blocks) + 4 + 96 + 4 tags + 2 varint max overhead
+}
+
 // Virtual, only for logs
 object HandshakeSpec {
   val messageCode: MessageCode = 101: Byte
@@ -389,7 +402,8 @@ object BasicMessagesRepo {
     GetSnapsnotSpec,
     MicroSnapshotRequestSpec,
     BlockSnapshotResponseSpec,
-    MicroBlockSnapshotResponseSpec
+    MicroBlockSnapshotResponseSpec,
+    EndorseBlockSpec
   )
 
   val specsByCodes: Map[Byte, Spec]       = specs.map(s => s.messageCode -> s).toMap

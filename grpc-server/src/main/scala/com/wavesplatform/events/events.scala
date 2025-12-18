@@ -626,7 +626,7 @@ object BlockAppended {
     val updatedWavesAmount =
       wavesAmount + reward.filter(_ => height > 0).getOrElse(0L) * blockchainBeforeWithReward.blockRewardBoost(Height(height + 1))
     val activatedFeatures = blockchainBeforeWithReward.activatedFeatures.collect {
-      case (id, activationHeight) if activationHeight == height + 1 => id.toInt
+      case (id, activationHeight) if activationHeight == Height(height + 1) => id.toInt
     }.toSeq
 
     val rewardShares =

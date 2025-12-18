@@ -1,15 +1,16 @@
 package com.wavesplatform.protobuf.block
 
-import scala.util.Try
 import com.google.protobuf.ByteString
 import com.wavesplatform.account.AddressScheme
 import com.wavesplatform.block.{BlockHeader, ChallengedHeader}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.protobuf.{toPublicKey, toByteStr, toByteString}
 import com.wavesplatform.protobuf.block.Block.Header as PBHeader
 import com.wavesplatform.protobuf.transaction.PBTransactions
 import com.wavesplatform.protobuf.transaction.SignedTransaction.Transaction
+import com.wavesplatform.protobuf.{toByteStr, toByteString, toPublicKey}
+
+import scala.util.Try
 
 object PBBlocks {
   def vanilla(header: PBBlock.Header): BlockHeader =
@@ -33,9 +34,11 @@ object PBBlocks {
           ch.generator.toPublicKey,
           ch.rewardVote,
           Option.unless(ch.stateHash.isEmpty)(ch.stateHash.toByteStr),
-          ch.headerSignature.toByteStr
+          ch.headerSignature.toByteStr,
+          ch.finalizationVoting.map(PBFinalizationVotings.vanilla(_).get)
         )
-      }
+      },
+      header.finalizationVoting.map(PBFinalizationVotings.vanilla(_).get)
     )
 
   def vanilla(block: PBBlock, unsafe: Boolean = false): Try[VanillaBlock] = Try {
@@ -43,7 +46,7 @@ object PBBlocks {
     VanillaBlock(vanilla(block.getHeader), block.signature.toByteStr, block.transactions.map(PBTransactions.vanilla(_, unsafe).explicitGet()))
   }
 
-  def protobuf(header: BlockHeader): PBHeader = PBBlock.Header(
+  def protobuf(header: BlockHeader): PBHeader = PBBlock.Header.of(
     AddressScheme.current.chainId,
     header.reference.toByteString,
     header.baseTarget,
@@ -56,7 +59,7 @@ object PBBlocks {
     header.transactionsRoot.toByteString,
     header.stateHash.getOrElse(ByteStr.empty).toByteString,
     header.challengedHeader.map { ch =>
-      PBBlock.Header.ChallengedHeader(
+      PBBlock.Header.ChallengedHeader.of(
         ch.baseTarget,
         ch.generationSignature.toByteString,
         ch.featureVotes.map(_.toInt),
@@ -64,9 +67,11 @@ object PBBlocks {
         ch.generator.toByteString,
         ch.rewardVote,
         ch.stateHash.getOrElse(ByteStr.empty).toByteString,
-        ch.headerSignature.toByteString
+        ch.headerSignature.toByteString,
+        ch.finalizationVoting.map(PBFinalizationVotings.protobuf)
       )
-    }
+    },
+    header.finalizationVoting.map(PBFinalizationVotings.protobuf)
   )
 
   def protobuf(block: VanillaBlock): PBBlock = {

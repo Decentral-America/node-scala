@@ -68,8 +68,8 @@ object ExtensionAppender extends ScorexLogging {
                           extension.snapshots.get(b.id())
                         )
                           .map {
-                            case (Applied(_, _), height) => BlockStats.applied(b, BlockStats.Source.Ext, height)
-                            case _                       =>
+                            case (_: Applied, height) => BlockStats.applied(b, BlockStats.Source.Ext, height)
+                            case _                    =>
                           }
                       }
                       .zipWithIndex
@@ -97,7 +97,9 @@ object ExtensionAppender extends ScorexLogging {
                   forkApplicationResultEi match {
                     case Left(e) =>
                       blockchainUpdater.removeAfter(lastCommonBlockId).explicitGet()
-                      droppedBlocks.foreach { case (b, gp, sn) => blockchainUpdater.processBlock(b, gp, sn).explicitGet() }
+                      droppedBlocks.foreach { x =>
+                        blockchainUpdater.processBlock(x.block, x.hitSource, x.snapshot, x.generatorBalances).explicitGet()
+                      }
                       Left(e)
 
                     case Right(_) =>

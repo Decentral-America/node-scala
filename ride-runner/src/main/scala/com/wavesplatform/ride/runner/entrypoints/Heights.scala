@@ -12,7 +12,7 @@ object Heights {
     val (lastKnownHardenedHeight, workingHeight) = localHeight match {
       case Some(h) =>
         (
-          (h - 100 - 1).max(0),
+          (h - 100 - 1).max(Height(0)),
           lastHeightAtStart.max(h)
         )
 
@@ -33,7 +33,7 @@ object Heights {
           case None =>
             // to guarantee the right generatingBalance
             (
-              (lastHeightAtStart - depth - 1).max(0),
+              (lastHeightAtStart - depth - 1).max(Height(0)),
               lastHeightAtStart
             )
         }

@@ -23,17 +23,18 @@ object TestBlock {
   def sign(signer: KeyPair, b: Block): BlockWithSigner = {
     val x = Block
       .buildAndSign(
-        version = b.header.version,
-        timestamp = b.header.timestamp,
-        reference = b.header.reference,
-        baseTarget = b.header.baseTarget,
-        generationSignature = b.header.generationSignature,
-        txs = b.transactionData,
-        signer = signer,
-        featureVotes = b.header.featureVotes,
-        rewardVote = b.header.rewardVote,
-        stateHash = b.header.stateHash,
-        challengedHeader = b.header.challengedHeader
+        b.header.version,
+        b.header.timestamp,
+        b.header.reference,
+        b.header.baseTarget,
+        b.header.generationSignature,
+        b.transactionData,
+        signer,
+        b.header.featureVotes,
+        b.header.rewardVote,
+        b.header.stateHash,
+        b.header.challengedHeader,
+        b.header.finalizationVoting
       )
 
     BlockWithSigner(x.explicitGet(), signer)
@@ -81,7 +82,8 @@ object TestBlock {
         rewardVote = rewardVote,
         transactionData = txs,
         stateHash = stateHash,
-        challengedHeader = challengedHeader
+        challengedHeader = challengedHeader,
+        finalizationVoting = None
       )
     )
 
@@ -90,17 +92,18 @@ object TestBlock {
       defaultSigner,
       Block(
         BlockHeader(
-          1.toByte,
-          0,
+          version = 1.toByte,
+          timestamp = 0,
           ref,
-          2L,
+          baseTarget = 2L,
           randomOfLength(Block.GenerationSignatureLength),
           defaultSigner.publicKey,
-          Seq.empty,
-          -1L,
-          ByteStr.empty,
-          None,
-          None
+          featureVotes = Seq.empty,
+          rewardVote = -1L,
+          transactionsRoot = ByteStr.empty,
+          stateHash = None,
+          challengedHeader = None,
+          finalizationVoting = None
         ),
         ByteStr.empty,
         Seq.empty
@@ -111,17 +114,18 @@ object TestBlock {
     sign(
       defaultSigner,
       Block.create(
-        3.toByte,
-        0,
+        version = 3.toByte,
+        timestamp = 0,
         ref,
-        2L,
+        baseTarget = 2L,
         randomOfLength(Block.GenerationSignatureLength),
         defaultSigner.publicKey,
         features,
-        -1L,
-        Seq.empty,
-        None,
-        None
+        rewardVote = -1L,
+        transactionData = Seq.empty,
+        stateHash = None,
+        challengedHeader = None,
+        finalizationVoting = None
       )
     )
 }

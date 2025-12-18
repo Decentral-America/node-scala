@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigFactory
 import com.wavesplatform.account.{Address, Alias}
 import com.wavesplatform.block.SignedBlockHeader
 import com.wavesplatform.common.state.ByteStr
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.settings.BlockchainSettings
 import com.wavesplatform.state.*
@@ -16,7 +17,11 @@ import com.wavesplatform.transaction.{Asset, ERC20Address, Transaction}
 trait EmptyBlockchain extends Blockchain {
   override lazy val settings: BlockchainSettings = BlockchainSettings.fromRootConfig(ConfigFactory.load())
 
-  override def height: Int = 0
+  override def height: Int = GenesisBlockHeight.toInt
+
+  override def finalizedHeight: Option[Height] = None
+
+  override def finalizedHeightAt(at: Height): Option[Height] = None
 
   override def score: BigInt = 0
 
@@ -29,11 +34,11 @@ trait EmptyBlockchain extends Blockchain {
   override def heightOf(blockId: ByteStr): Option[Int] = None
 
   /** Features related */
-  override def approvedFeatures: Map[Short, Int] = Map.empty
+  override def approvedFeatures: Map[Short, Height] = Map.empty
 
-  override def activatedFeatures: Map[Short, Int] = Map.empty
+  override def activatedFeatures: Map[Short, Height] = Map.empty
 
-  override def featureVotes(height: Int): Map[Short, Int] = Map.empty
+  override def featureVotes(height: Height): Map[Short, Int] = Map.empty
 
   /** Block reward related */
   override def blockReward(height: Int): Option[Long] = None
@@ -91,6 +96,10 @@ trait EmptyBlockchain extends Blockchain {
   override def resolveERC20Address(address: ERC20Address): Option[IssuedAsset] = None
 
   override def lastStateHash(refId: Option[ByteStr]): ByteStr = TxStateSnapshotHashBuilder.InitStateHash
+
+  override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = IndexedSeq.empty
+
+  override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = ConflictGenerators.empty
 }
 
 object EmptyBlockchain extends EmptyBlockchain

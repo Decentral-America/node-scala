@@ -3,7 +3,8 @@ package com.wavesplatform.state.diffs
 import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.wavesplatform.account.Address
-import com.wavesplatform.block.{Block, BlockSnapshot, MicroBlock, MicroBlockSnapshot}
+import com.wavesplatform.block.Block.BlockId
+import com.wavesplatform.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.lang.ValidationError
@@ -20,7 +21,15 @@ import com.wavesplatform.transaction.smart.InvokeScriptTransaction
 import com.wavesplatform.transaction.smart.script.trace.TracedResult
 import com.wavesplatform.transaction.transfer.MassTransferTransaction.ParsedTransfer
 import com.wavesplatform.transaction.transfer.{MassTransferTransaction, TransferTransaction}
-import com.wavesplatform.transaction.{Asset, Authorized, BlockchainUpdater, GenesisTransaction, PaymentTransaction, Transaction}
+import com.wavesplatform.transaction.{
+  Asset,
+  Authorized,
+  BlockchainUpdater,
+  CommitToGenerationTransaction,
+  GenesisTransaction,
+  PaymentTransaction,
+  Transaction
+}
 
 import scala.collection.immutable.VectorMap
 
@@ -113,11 +122,11 @@ object BlockDiffer {
       enableExecutionLog: Boolean,
       txSignParCheck: Boolean
   ): TracedResult[ValidationError, Result] = {
-    val stateHeight        = blockchain.height
+    val stateHeight        = Height(blockchain.height)
     val heightWithNewBlock = stateHeight + 1
 
     // height switch is next after activation
-    val ngHeight          = blockchain.featureActivationHeight(BlockchainFeatures.NG.id).getOrElse(Int.MaxValue)
+    val ngHeight          = blockchain.featureActivationHeight(BlockchainFeatures.NG).getOrElse(Height(Int.MaxValue))
     val sponsorshipHeight = Sponsorship.sponsoredFeesSwitchHeight(blockchain)
 
     val feeFromPreviousBlockE =
@@ -175,8 +184,13 @@ object BlockDiffer {
         totalMinerPortfolio = Map(block.sender.toAddress -> totalMinerReward)
         nonMinerRewardPortfolios <- Portfolio.combine(daoPortfolio, xtnBuybackPortfolio)
         totalRewardPortfolios    <- Portfolio.combine(totalMinerPortfolio, nonMinerRewardPortfolios)
+        penalties <- maybePrevBlock match {
+          case Some(prevBlock) => calculatePenalties(blockchain, prevBlock)
+          case None            => Map.empty[Address, Portfolio].asRight[String]
+        }
+        withPenaltiesPortfolios <- Portfolio.combine(penalties, totalRewardPortfolios)
         patchesSnapshot = leasePatchesSnapshot(blockchainWithNewBlock)
-        resultSnapshot <- patchesSnapshot.addBalances(totalRewardPortfolios, blockchainWithNewBlock)
+        resultSnapshot <- patchesSnapshot.addBalances(withPenaltiesPortfolios, blockchainWithNewBlock)
       } yield resultSnapshot
 
     for {
@@ -276,6 +290,52 @@ object BlockDiffer {
     } yield r
   }
 
+  private def calculatePenalties(blockchain: Blockchain, prevBlockId: BlockId): Either[String, Map[Address, Portfolio]] = {
+    val empty = Map.empty[Address, Portfolio].asRight[String]
+    val parentBlockInfo = for {
+      prevHeight <- blockchain.heightOf(prevBlockId)
+      period     <- blockchain.generationPeriodOf(Height(prevHeight))
+      voting     <- blockchain.blockHeader(prevHeight).flatMap(_.header.finalizationVoting)
+    } yield (period, voting)
+
+    parentBlockInfo.fold(empty) { case (period, voting) =>
+      calculatePenalties(blockchain, period, voting)
+    }
+  }
+
+  private def calculatePenalties(blockchain: Blockchain, prevBlock: Block): Either[String, Map[Address, Portfolio]] = {
+    val empty = Map.empty[Address, Portfolio].asRight[String]
+    val parentBlockInfo = for {
+      voting     <- prevBlock.header.finalizationVoting
+      prevHeight <- blockchain.heightOf(prevBlock.id())
+      period     <- blockchain.generationPeriodOf(Height(prevHeight))
+    } yield (period, voting)
+
+    parentBlockInfo.fold(empty) { case (period, voting) =>
+      calculatePenalties(blockchain, period, voting)
+    }
+  }
+
+  private def calculatePenalties(
+      blockchain: Blockchain,
+      prevBlockPeriod: GenerationPeriod,
+      prevBlockVoting: FinalizationVoting
+  ): Either[String, Map[Address, Portfolio]] = {
+    val empty          = Map.empty[Address, Portfolio].asRight[String]
+    lazy val committed = blockchain.committedGenerators(prevBlockPeriod)
+    prevBlockVoting.conflict.foldLeft(empty) {
+      case (r @ Left(_), _) => r
+      case (Right(r), endorsement) =>
+        committed.lift(endorsement.endorserIndex.toInt) match {
+          case None => Left(s"Invalid endorsement index in $endorsement, valid: [0; ${committed.size}]")
+          case Some((addr, _)) =>
+            val orig    = r.getOrElse(addr, Portfolio.empty)
+            val updated = orig.combine(Portfolio.waves(-CommitToGenerationTransaction.DepositInWavelets))
+            updated.map(r.updated(addr, _))
+        }
+    }
+  }
+
   def maybeApplySponsorship(blockchain: Blockchain, sponsorshipEnabled: Boolean, transactionFee: (Asset, Long)): (Asset, Long) =
     transactionFee match {
       case (ia: IssuedAsset, fee) if sponsorshipEnabled =>
@@ -295,24 +355,22 @@ object BlockDiffer {
     val xtnBuybackAddress = blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
 
     val rewardShares = BlockRewardCalculator.getBlockRewardShares(
-      blockchain.height + 1,
+      Height(blockchain.height + 1),
       blockchainUpdater.computeNextReward.getOrElse(0),
       daoAddress,
       xtnBuybackAddress,
       blockchain
     )
 
-    Portfolio
-      .waves(rewardShares.miner)
-      .combine(feeFromPreviousBlock)
-      .leftMap(GenericError(_))
-      .flatMap { minerReward =>
-        val resultPf = Map(miner -> minerReward) ++
-          daoAddress.map(_ -> Portfolio.waves(rewardShares.daoAddress)) ++
-          xtnBuybackAddress.map(_ -> Portfolio.waves(rewardShares.xtnBuybackAddress))
-
-        StateSnapshot.build(blockchain, portfolios = resultPf.filter(!_._2.isEmpty))
-      }
+    for {
+      minerReward <- Portfolio.waves(rewardShares.miner).combine(feeFromPreviousBlock).leftMap(GenericError(_))
+      resultPf = Map(miner -> minerReward) ++
+        daoAddress.map(_ -> Portfolio.waves(rewardShares.daoAddress)) ++
+        xtnBuybackAddress.map(_ -> Portfolio.waves(rewardShares.xtnBuybackAddress))
+      withRewards   <- StateSnapshot.build(blockchain, portfolios = resultPf.filterNot(_._2.isEmpty))
+      penaltiesPf   <- calculatePenalties(blockchain, reference).leftMap(GenericError(_))
+      withPenalties <- withRewards.addBalances(penaltiesPf, blockchain).leftMap(GenericError(_))
+    } yield withPenalties
   }
 
   def computeInitialStateHash(blockchain: Blockchain, initSnapshot: StateSnapshot, prevStateHash: ByteStr): ByteStr = {
@@ -437,7 +495,7 @@ object BlockDiffer {
   }
 
   private def computeTxFeeInfo(blockchain: Blockchain, tx: Transaction, hasNg: Boolean): TxFeeInfo = {
-    val hasSponsorship        = blockchain.height >= Sponsorship.sponsoredFeesSwitchHeight(blockchain)
+    val hasSponsorship        = Height(blockchain.height) >= Sponsorship.sponsoredFeesSwitchHeight(blockchain)
     val (feeAsset, feeAmount) = maybeApplySponsorship(blockchain, hasSponsorship, tx.assetFee)
     val currentBlockFee       = CurrentBlockFeePart(feeAmount)
 

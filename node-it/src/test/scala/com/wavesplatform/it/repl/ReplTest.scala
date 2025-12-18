@@ -8,13 +8,13 @@ import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.it.api.SyncHttpApi.*
 import com.wavesplatform.it.sync.transactions.{FailedTransactionSuiteLike, OverflowBlock}
 import com.wavesplatform.it.transactions.BaseTransactionSuite
-import com.wavesplatform.test.*
 import com.wavesplatform.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.wavesplatform.lang.v1.repl.Repl
 import com.wavesplatform.lang.v1.repl.node.http.NodeConnectionSettings
 import com.wavesplatform.state.*
-import com.wavesplatform.transaction.TxVersion
+import com.wavesplatform.test.*
 import com.wavesplatform.transaction.smart.script.ScriptCompiler
+import com.wavesplatform.transaction.{TxHelpers, TxVersion}
 
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
@@ -26,15 +26,15 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
   override def nodeConfigs: Seq[Config] =
     com.wavesplatform.it.NodeConfigs.newBuilder
       .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures(BlockchainFeatures.BlockV5.id.toInt -> 0))
+      .overrideBase(_.preactivatedFeatures(BlockchainFeatures.BlockV5.id.toInt -> Height(0)))
       .withDefault(1)
       .buildNonConflicting()
 
   def await[A](f: Future[A]): A = Await.result(f, 2 seconds)
 
   test("waves context") {
-    val issuer = miner.createKeyPair()
-    val sample = miner.createKeyPair()
+    val issuer = TxHelpers.signer(1000)
+    val sample = TxHelpers.signer(1001)
     val trans  = miner.transfer(miner.keyPair, issuer.toAddress.toString, 100.waves, 1.waves, version = TxVersion.V3, waitForTx = true)
     miner.transfer(miner.keyPair, sample.toAddress.toString, 100.waves, 1.waves, waitForTx = true)
     miner.createAlias(miner.keyPair, "aaaa", waitForTx = true)
@@ -42,25 +42,25 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
     val failDApp = ScriptCompiler
       .compile(
         s"""
-               |{-# STDLIB_VERSION 4 #-}
-               |{-# CONTENT_TYPE DAPP #-}
-               |{-# SCRIPT_TYPE ACCOUNT #-}
-               |
-               |@Callable(i)
-               |func default() = {
-               |  let action = valueOrElse(getString(this, "crash"), "no")
-               |  let check = ${"sigVerify(base58'', base58'', base58'') ||" * 10} true
-               |
-               |  if (action == "yes")
-               |  then {
-               |    if (check)
-               |    then throw("Crashed by dApp")
-               |    else throw("Crashed by dApp")
-               |  }
-               |  else []
-               |}
-               |
-               |""".stripMargin,
+           |{-# STDLIB_VERSION 4 #-}
+           |{-# CONTENT_TYPE DAPP #-}
+           |{-# SCRIPT_TYPE ACCOUNT #-}
+           |
+           |@Callable(i)
+           |func default() = {
+           |  let action = valueOrElse(getString(this, "crash"), "no")
+           |  let check = ${"sigVerify(base58'', base58'', base58'') ||" * 10} true
+           |
+           |  if (action == "yes")
+           |  then {
+           |    if (check)
+           |    then throw("Crashed by dApp")
+           |    else throw("Crashed by dApp")
+           |  }
+           |  else []
+           |}
+           |
+           |""".stripMargin,
         ScriptEstimatorV3.latest
       )
       .explicitGet()
@@ -71,12 +71,12 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
     val assetScript = ScriptCompiler
       .compile(
         """
-               |{-# STDLIB_VERSION 2 #-}
-               |{-# CONTENT_TYPE EXPRESSION #-}
-               |{-# SCRIPT_TYPE ASSET #-}
-               |
-               | false
-               |""".stripMargin,
+          |{-# STDLIB_VERSION 2 #-}
+          |{-# CONTENT_TYPE EXPRESSION #-}
+          |{-# SCRIPT_TYPE ASSET #-}
+          |
+          | false
+          |""".stripMargin,
         ScriptEstimatorV3.latest
       )
       .explicitGet()

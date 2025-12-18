@@ -24,7 +24,7 @@ import org.asynchttpclient.Dsl.*
 import pureconfig.ConfigSource
 
 import java.io.{FileOutputStream, IOException}
-import java.net.{InetAddress, InetSocketAddress, URL}
+import java.net.{InetAddress, InetSocketAddress, URI, URL}
 import java.nio.file.{Files, Path, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, Duration as JDuration}
@@ -569,7 +569,9 @@ object Docker {
   private val jsonMapper  = new ObjectMapper
   private val propsMapper = new JavaPropsMapper
 
-  val configTemplate: Config = parseResources("template.conf")
+  val configTemplate: Config   = parseResources("template.conf")
+  val initialWavesAmount: Long = configTemplate.getLong("waves.blockchain.custom.genesis.initial-balance")
+
   def genesisOverride(featuresConfig: Option[Config] = None): Config = {
     val genesisTs: Long = System.currentTimeMillis()
 
@@ -621,7 +623,7 @@ object Docker {
       .mkString(" ")
 
   case class NodeInfo(restApiPort: Int, networkPort: Int, wavesIpAddress: String, ports: JMap[String, JList[PortBinding]]) {
-    val nodeApiEndpoint: URL                       = new URL(s"http://localhost:${externalPort(restApiPort)}")
+    val nodeApiEndpoint: URL                       = URI.create(s"http://localhost:${externalPort(restApiPort)}").toURL
     val hostNetworkAddress: InetSocketAddress      = new InetSocketAddress("localhost", externalPort(networkPort))
     val containerNetworkAddress: InetSocketAddress = new InetSocketAddress(wavesIpAddress, networkPort)
 

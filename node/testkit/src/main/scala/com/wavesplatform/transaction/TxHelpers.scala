@@ -3,8 +3,11 @@ package com.wavesplatform.transaction
 import com.google.common.primitives.Ints
 import com.wavesplatform.TestValues
 import com.wavesplatform.account.*
+import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.crypto.bls.{BlsKeyPair, BlsPublicKey}
+import com.wavesplatform.crypto.{DigestLength, SignatureLength}
 import com.wavesplatform.lang.directives.values.*
 import com.wavesplatform.lang.script.ContractScript.ContractScriptImpl
 import com.wavesplatform.lang.script.Script
@@ -16,7 +19,7 @@ import com.wavesplatform.lang.v1.compiler.TestCompiler
 import com.wavesplatform.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.wavesplatform.state.diffs.ENOUGH_AMT
 import com.wavesplatform.state.diffs.FeeValidation.{FeeConstants, FeeUnit, ScriptExtraFee}
-import com.wavesplatform.state.{DataEntry, StringDataEntry}
+import com.wavesplatform.state.{DataEntry, Height, StringDataEntry, TransactionId}
 import com.wavesplatform.test.*
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.assets.*
@@ -31,6 +34,8 @@ import com.wavesplatform.transaction.utils.EthConverters.*
 import com.wavesplatform.transaction.utils.Signed
 import monix.execution.atomic.AtomicLong
 import org.web3j.crypto.ECKeyPair
+
+import java.util.concurrent.ThreadLocalRandom
 
 object TxHelpers {
   def signer(i: Int): SeedKeyPair = KeyPair(Ints.toByteArray(i))
@@ -460,8 +465,31 @@ object TxHelpers {
     CreateAliasTransaction.selfSigned(version, sender, name, fee, timestamp, chainId).explicitGet()
   }
 
+  def commitToGeneration(
+      generationPeriodStart: Height,
+      sender: KeyPair = defaultSigner,
+      endorserPublicKey: BlsPublicKey = BlsKeyPair(defaultSigner.privateKey).publicKey,
+      timestamp: TxTimestamp = timestamp,
+      fee: Long = TestValues.commitToGenerationFee,
+      chainId: Byte = AddressScheme.current.chainId,
+      version: TxVersion = TxVersion.V1
+  ): CommitToGenerationTransaction = CommitToGenerationTransaction
+    .selfSigned(
+      version,
+      sender,
+      endorserPublicKey,
+      generationPeriodStart,
+      timestamp,
+      fee,
+      chainId
+    )
+    .explicitGet()
+
   def ciFee(sc: Int = 0, nonNftIssue: Int = 0, freeCall: Boolean = false): Long =
     invokeFee(freeCall) + (sc + 1) * ScriptExtraFee - 1 + nonNftIssue * FeeConstants(TransactionType.Issue) * FeeUnit
+
+  def randomId: TransactionId = TransactionId(ByteStr(Array.fill(DigestLength)(ThreadLocalRandom.current().nextInt(Byte.MaxValue).toByte)))
+  def randomBlockId: BlockId  = ByteStr(Array.fill(SignatureLength)(ThreadLocalRandom.current().nextInt(Byte.MaxValue).toByte))
 
   private def invokeFee(freeCall: Boolean) =
     if (freeCall)
