@@ -1,26 +1,26 @@
 package com.wavesplatform.state
 
+import com.wavesplatform.BlockGen
 import com.wavesplatform.account.{Address, AddressOrAlias, KeyPair}
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.db.{InterferableDB, WithDomain}
 import com.wavesplatform.history.Domain
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.settings.{Constants, GenesisSettings, GenesisTransactionSettings}
-import com.wavesplatform.transaction.transfer.TransferTransaction
-import com.wavesplatform.transaction.{GenesisTransaction, Transaction, TransactionType, TxHelpers, TxVersion}
-import com.wavesplatform.BlockGen
-import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.test.DomainPresets.RideV5
 import com.wavesplatform.test.FreeSpec
 import com.wavesplatform.transaction.TxHelpers.{defaultAddress, issue, secondSigner}
+import com.wavesplatform.transaction.transfer.TransferTransaction
+import com.wavesplatform.transaction.{GenesisTransaction, Transaction, TransactionType, TxHelpers, TxVersion}
 import org.scalactic.source.Position
 
 import java.util.concurrent.locks.ReentrantLock
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.*
+import scala.concurrent.{Await, Future}
 
 class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
   def transfers(sender: KeyPair, rs: AddressOrAlias, amount: Long): Seq[TransferTransaction] =
@@ -31,7 +31,7 @@ class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
 
   def mkBlock(sender: KeyPair, reference: ByteStr, transactions: Seq[Transaction]): Block =
     Block
-      .buildAndSign(3.toByte, ntpNow, reference, 1000, ByteStr(new Array[Byte](32)), transactions, sender, Seq.empty, -1L, None, None)
+      .buildAndSign(3.toByte, ntpNow, reference, 1000, ByteStr(new Array[Byte](32)), transactions, sender, Seq.empty, -1L, None, None, None)
       .explicitGet()
 
   val setup: Seq[(KeyPair, KeyPair, KeyPair, Seq[Block])] = {
@@ -73,7 +73,7 @@ class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
     setup.foreach { case (sender, r1, r2, blocks) =>
       withDomain() { d =>
         for (b <- blocks) {
-          d.blockchainUpdater.processBlock(b, b.header.generationSignature, None, verify = false)
+          d.blockchainUpdater.processBlock(b, b.header.generationSignature, snapshot = None, generatorBalances = Seq.empty, verify = false)
         }
 
         Seq[Address](sender.toAddress, r1.toAddress, r2.toAddress).foreach(f(_, blocks, d))
@@ -81,7 +81,8 @@ class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
         d.blockchainUpdater.processBlock(
           TestBlock.create(System.currentTimeMillis(), blocks.last.signature, Seq.empty).block,
           ByteStr(new Array[Byte](32)),
-          None,
+          snapshot = None,
+          generatorBalances = Seq.empty,
           verify = false
         )
 

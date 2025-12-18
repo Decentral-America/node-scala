@@ -10,11 +10,11 @@ import com.wavesplatform.mining.MiningConstraint
 import com.wavesplatform.network.{BlockSnapshotResponse, ExtensionBlocks, InvalidBlockStorage, PeerDatabase}
 import com.wavesplatform.protobuf.PBSnapshots
 import com.wavesplatform.settings.WavesSettings
-import com.wavesplatform.test.DomainPresets.WavesSettingsOps
 import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.wavesplatform.state.appender.{BlockAppender, ExtensionAppender}
 import com.wavesplatform.state.diffs.BlockDiffer
 import com.wavesplatform.test.*
+import com.wavesplatform.test.DomainPresets.WavesSettingsOps
 import com.wavesplatform.transaction.TxHelpers
 import com.wavesplatform.transaction.TxValidationError.InvalidStateHash
 import io.netty.channel.embedded.EmbeddedChannel
@@ -70,7 +70,7 @@ class LightNodeTest extends PropSpec with WithDomain {
     }
   }
 
-  property(" NODE-1143. Rollback returns discarded block snapshots only for light node") {
+  property("NODE-1143. Rollback returns discarded block snapshots only for light node") {
     val sender    = TxHelpers.signer(1)
     val recipient = TxHelpers.address(2)
 
@@ -96,10 +96,10 @@ class LightNodeTest extends PropSpec with WithDomain {
 
         val blockSnapshots  = newBlocks(10)
         val discardedBlocks = d.rollbackTo(genesisSignature)
-        discardedBlocks.head._1.header.reference shouldBe genesisSignature
-        discardedBlocks.flatMap(_._3).toList shouldBe maybeExpectedSnapshots.getOrElse(blockSnapshots)
-        discardedBlocks.foreach { case (block, _, snapshot) =>
-          d.appendBlockE(block, snapshot) should beRight
+        discardedBlocks.head.block.header.reference shouldBe genesisSignature
+        discardedBlocks.flatMap(_.snapshot).toList shouldBe maybeExpectedSnapshots.getOrElse(blockSnapshots)
+        discardedBlocks.foreach { x =>
+          d.appendBlockE(x.block, x.snapshot) should beRight
         }
       }
     }
@@ -177,11 +177,18 @@ class LightNodeTest extends PropSpec with WithDomain {
       val challengingBlock = d.createChallengingBlock(challengingMiner, invalidBlock, strictTime = true)
       val txSnapshots      = getTxSnapshots(d, challengingBlock)
 
-      val appender = BlockAppender(d.blockchainUpdater, TestTime(challengingBlock.header.timestamp), d.utxPool, d.posSelector, Scheduler.global)
+      val appender = BlockAppender(
+        d.blockchainUpdater,
+        TestTime(challengingBlock.header.timestamp),
+        d.utxPool,
+        d.posSelector,
+        BlockEndorser.Disabled,
+        Scheduler.global
+      )
 
       val sr = BlockSnapshotResponse(challengingBlock.id(), txSnapshots.map { case (s, m) => PBSnapshots.toProtobuf(s, m) })
       appender(challengingBlock, Some(sr)).runSyncUnsafe() shouldBe Right(
-        Applied(Seq.empty, d.blockchain.score)
+        Applied(Seq.empty, d.blockchain.score, Seq.empty)
       )
       d.lastBlock shouldBe challengingBlock
     }

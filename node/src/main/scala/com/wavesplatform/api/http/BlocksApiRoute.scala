@@ -1,20 +1,21 @@
 package com.wavesplatform.api.http
 
-import scala.annotation.tailrec
-import scala.util.Try
-import org.apache.pekko.http.scaladsl.server.{Route, StandardRoute}
 import cats.syntax.either.*
 import com.wavesplatform.api.BlockMeta
 import com.wavesplatform.api.common.CommonBlocksApi
 import com.wavesplatform.api.http.ApiError.{BlockDoesNotExist, TooBigArrayAllocation}
 import com.wavesplatform.block.Block
 import com.wavesplatform.settings.RestAPISettings
-import com.wavesplatform.state.{TxMeta, Height}
+import com.wavesplatform.state.{Height, TxMeta}
 import com.wavesplatform.transaction.Asset.Waves
 import com.wavesplatform.transaction.Transaction
 import com.wavesplatform.transaction.TxValidationError.GenericError
 import com.wavesplatform.utils.Time
+import org.apache.pekko.http.scaladsl.server.{Route, StandardRoute}
 import play.api.libs.json.*
+
+import scala.annotation.tailrec
+import scala.util.Try
 
 case class BlocksApiRoute(settings: RestAPISettings, commonApi: CommonBlocksApi, time: Time, routeTimeout: RouteTimeout) extends ApiRoute {
   import BlocksApiRoute.*
@@ -39,6 +40,8 @@ case class BlocksApiRoute(settings: RestAPISettings, commonApi: CommonBlocksApi,
             .toRight(BlockDoesNotExist)
         )
       }
+    } ~ path("height" / "finalized") {
+      complete(Json.obj("height" -> commonApi.currentFinalizedHeight))
     } ~ path("height" / BlockId) { signature =>
       complete(for {
         meta <- commonApi.meta(signature).toRight(BlockDoesNotExist)
@@ -61,8 +64,14 @@ case class BlocksApiRoute(settings: RestAPISettings, commonApi: CommonBlocksApi,
         seq(Height(start), Height(end), includeTransactions = false)
       } ~ path("last") {
         at(commonApi.currentHeight, includeTransactions = false)
+      } ~ path("finalized") {
+        at(commonApi.currentFinalizedHeight, includeTransactions = false)
       } ~ path(BlockId) { id =>
         complete(commonApi.meta(id).map(_.json()).toRight(BlockDoesNotExist))
+      }
+    } ~ pathPrefix("finalized") {
+      path("at" / IntNumber) { height =>
+        complete(Json.obj("height" -> commonApi.finalizedHeightAt(Height(height))))
       }
     } ~ path("heightByTimestamp" / LongNumber) { timestamp =>
       val heightE = for {

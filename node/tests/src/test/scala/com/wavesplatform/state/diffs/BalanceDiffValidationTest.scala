@@ -1,16 +1,17 @@
 package com.wavesplatform.state.diffs
 
+import com.wavesplatform.TestValues
 import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithState
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.settings.TestFunctionalitySettings
+import com.wavesplatform.state.Height
 import com.wavesplatform.test.*
-import com.wavesplatform.transaction.{GenesisTransaction, TxHelpers, TxVersion}
 import com.wavesplatform.transaction.lease.LeaseTransaction
 import com.wavesplatform.transaction.transfer.*
+import com.wavesplatform.transaction.{CommitToGenerationTransaction, GenesisTransaction, TxHelpers, TxVersion}
 
 class BalanceDiffValidationTest extends PropSpec with WithState {
-
   val ownLessThatLeaseOut: (GenesisTransaction, TransferTransaction, LeaseTransaction, LeaseTransaction, TransferTransaction) = {
     val master = TxHelpers.signer(1)
     val alice  = TxHelpers.signer(2)
@@ -61,6 +62,41 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
       settings
     ) { snapshotEi =>
       snapshotEi should produce("trying to spend leased money")
+    }
+  }
+
+  property("commit to generation") {
+    val settings = DomainPresets.DeterministicFinality.blockchainSettings.functionalitySettings.copy(generationPeriodLength = 3)
+
+    val notBlockedAmount = 100_000.waves
+    val initBalance      = notBlockedAmount + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
+
+    assertDiffEiTraced(
+      Seq(TestBlock.create(Seq(TxHelpers.genesis(TxHelpers.defaultAddress, amount = initBalance)))),
+      TestBlock.create(Seq(TxHelpers.commitToGeneration(Height(4)))),
+      settings
+    ) { snapshotEi =>
+      snapshotEi.resultE.explicitGet()
+    }
+  }
+
+  property("cannot transfer more than own-generationDeposit") {
+    val settings = DomainPresets.DeterministicFinality.blockchainSettings.functionalitySettings.copy(generationPeriodLength = 3)
+
+    val notBlockedAmount = 100_000.waves
+    val initBalance =
+      notBlockedAmount + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee + TestValues.fee // for transfer
+
+    val transferAmount = notBlockedAmount + 1
+    assertDiffEiTraced(
+      Seq(
+        TestBlock.create(Seq(TxHelpers.genesis(TxHelpers.defaultAddress, amount = initBalance))),
+        TestBlock.create(Seq(TxHelpers.commitToGeneration(Height(4))))
+      ),
+      TestBlock.create(Seq(TxHelpers.transfer(amount = transferAmount))),
+      settings
+    ) { snapshotEi =>
+      snapshotEi.resultE should produce("trying to spend a deposit")
     }
   }
 }

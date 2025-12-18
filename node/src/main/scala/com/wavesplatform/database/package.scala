@@ -11,6 +11,7 @@ import com.wavesplatform.block.{Block, BlockHeader}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.crypto.*
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.database.protobuf as pb
 import com.wavesplatform.database.protobuf.DataEntry.Value
 import com.wavesplatform.database.protobuf.TransactionData.Transaction as TD
@@ -18,7 +19,7 @@ import com.wavesplatform.lang.script.ScriptReader
 import com.wavesplatform.protobuf.block.PBBlocks
 import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
 import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions}
-import com.wavesplatform.protobuf.{PBSnapshots, toPublicKey, toByteStr, toByteString}
+import com.wavesplatform.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
 import com.wavesplatform.state.*
 import com.wavesplatform.state.StateHash.SectionId
 import com.wavesplatform.transaction.Asset.IssuedAsset
@@ -184,20 +185,20 @@ package object database {
   def writeVolumeAndFee(vf: CurrentVolumeAndFee): Array[Byte] =
     Longs.toByteArray(vf.volume) ++ Longs.toByteArray(vf.fee) ++ vf.height.toByteArray ++ vf.prevHeight.toByteArray
 
-  def readFeatureMap(data: Array[Byte]): Map[Short, Int] = Option(data).fold(Map.empty[Short, Int]) { _ =>
+  def readFeatureMap(data: Array[Byte]): Map[Short, Height] = Option(data).fold(Map.empty) { _ =>
     val b        = ByteBuffer.wrap(data)
-    val features = Map.newBuilder[Short, Int]
+    val features = Map.newBuilder[Short, Height]
     while (b.hasRemaining) {
-      features += b.getShort -> b.getInt
+      features += b.getShort -> Height(b.getInt)
     }
 
     features.result()
   }
 
-  def writeFeatureMap(features: Map[Short, Int]): Array[Byte] = {
+  def writeFeatureMap(features: Map[Short, Height]): Array[Byte] = {
     val b = ByteBuffer.allocate(features.size * 6)
     for ((featureId, height) <- features)
-      b.putShort(featureId).putInt(height)
+      b.putShort(featureId).putInt(height.toInt)
 
     b.array()
   }
@@ -357,6 +358,52 @@ package object database {
 
   def writeBalanceNode(balance: BalanceNode): Array[Byte] =
     Longs.toByteArray(balance.balance) ++ balance.prevHeight.toByteArray
+
+  def readGeneratorBalances(data: Array[Byte]): Seq[(GeneratorIndex, Long)] = {
+    val bs = ByteBuffer.wrap(data)
+    Seq.fill(data.length / 12)(GeneratorIndex(bs.getInt) -> bs.getLong)
+  }
+
+  def writeGeneratorBalances(data: Seq[(GeneratorIndex, Long)]): Array[Byte] =
+    data
+      .foldLeft(ByteBuffer.allocate(data.length * 12)) { case (bs, (idx, balance)) =>
+        bs.putInt(idx.toInt).putLong(balance)
+      }
+      .array()
+
+  def readCommittedGenerators(data: Array[Byte]): Seq[(AddressId, BlsPublicKey)] = {
+    val addressSize = Longs.BYTES
+    data
+      .grouped(addressSize + BlsPublicKey.SizeInBytes)
+      .map { data =>
+        val (addressIdBytes, blsPublicKeyBytes) = data.splitAt(addressSize)
+        (
+          Longs.fromByteArray(addressIdBytes),
+          BlsPublicKey(blsPublicKeyBytes)
+        )
+      }
+      .toSeq
+  }
+
+  def writeCommittedGenerators(data: Seq[(AddressId, BlsPublicKey)]): Array[Byte] =
+    data.view.flatMap { (addressId, blsPublicKey) => Longs.toByteArray(addressId) ++ blsPublicKey.arr }.toArray
+
+  def readConflictGenerators(data: Array[Byte]): Seq[GeneratorIndex] = data
+    .grouped(Ints.BYTES)
+    .map { bytes => GeneratorIndex(Ints.fromByteArray(bytes)) }
+    .toSeq
+
+  def writeConflictGenerators(data: Seq[GeneratorIndex]): Array[Byte] = data.view.flatMap(i => Ints.toByteArray(i.toInt)).toArray
+
+  def readCommitmentTransactions(data: Array[Byte]): Seq[TransactionId] = {
+    val transactionSize = DigestLength
+    data
+      .grouped(transactionSize)
+      .map { bytes => TransactionId(ByteStr(bytes)) }
+      .toSeq
+  }
+
+  def writeCommitmentTransactions(data: Seq[TransactionId]): Array[Byte] = data.view.flatMap(_.arr).toArray
 
   def getKeyBuffersFromKeys(keys: collection.IndexedSeq[Key[?]]): collection.IndexedSeq[ByteBuffer] =
     keys.map { k =>

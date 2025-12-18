@@ -12,8 +12,8 @@ import com.wavesplatform.mining.*
 import com.wavesplatform.mining.microblocks.MicroBlockMinerImpl.*
 import com.wavesplatform.network.{MicroBlockInv, *}
 import com.wavesplatform.settings.MinerSettings
-import com.wavesplatform.state.Blockchain
 import com.wavesplatform.state.appender.MicroblockAppender
+import com.wavesplatform.state.{Blockchain, EndorsementStorage}
 import com.wavesplatform.transaction.{BlockchainUpdater, Transaction}
 import com.wavesplatform.utils.ScorexLogging
 import com.wavesplatform.utx.UtxPool
@@ -21,7 +21,7 @@ import com.wavesplatform.utx.UtxPool.PackStrategy
 import io.netty.channel.group.ChannelGroup
 import kamon.Kamon
 import monix.eval.Task
-import monix.execution.schedulers.SchedulerService
+import monix.execution.Scheduler
 import monix.reactive.Observable
 
 import scala.concurrent.duration.*
@@ -31,9 +31,10 @@ class MicroBlockMinerImpl(
     allChannels: ChannelGroup,
     blockchainUpdater: BlockchainUpdater & Blockchain,
     utx: UtxPool,
+    endorsementStorage: EndorsementStorage,
     settings: MinerSettings,
-    minerScheduler: SchedulerService,
-    appenderScheduler: SchedulerService,
+    minerScheduler: Scheduler,
+    appenderScheduler: Scheduler,
     transactionAdded: Observable[Unit]
 ) extends MicroBlockMiner
     with ScorexLogging {
@@ -158,6 +159,8 @@ class MicroBlockMinerImpl(
       stateHash: Option[ByteStr]
   ): Either[MicroBlockMiningError, (Block, MicroBlock)] =
     microBlockBuildTimeStats.measureSuccessful {
+      val currentFinalizationVoting = endorsementStorage.tryCollectAndClear(accumulatedBlock.header.reference)
+      // TODO: collect balances and write log
       for {
         signedBlock <- Block
           .buildAndSign(
@@ -171,11 +174,20 @@ class MicroBlockMinerImpl(
             featureVotes = accumulatedBlock.header.featureVotes,
             rewardVote = accumulatedBlock.header.rewardVote,
             stateHash = if (blockchainUpdater.supportsLightNodeBlockFields()) stateHash else None,
-            challengedHeader = None
+            challengedHeader = None,
+            finalizationVoting = currentFinalizationVoting.orElse(accumulatedBlock.header.finalizationVoting)
           )
           .leftMap(BlockBuildError.apply)
         microBlock <- MicroBlock
-          .buildAndSign(signedBlock.header.version, account, unconfirmed, accumulatedBlock.id(), signedBlock.signature, stateHash)
+          .buildAndSign(
+            signedBlock.header.version,
+            account,
+            unconfirmed,
+            accumulatedBlock.id(),
+            signedBlock.signature,
+            stateHash,
+            finalizationVoting = currentFinalizationVoting
+          )
           .leftMap(MicroBlockBuildError.apply)
       } yield (signedBlock, microBlock)
     }

@@ -5,6 +5,7 @@ import cats.syntax.traverse.*
 import com.typesafe.config.Config
 import com.wavesplatform.account.Address
 import com.wavesplatform.common.state.ByteStr
+import com.wavesplatform.state.Height
 import pureconfig.*
 import pureconfig.generic.semiauto.deriveReader
 
@@ -18,17 +19,17 @@ case class RewardsSettings(
     votingInterval: Int
 ) derives ConfigReader {
   require(initial >= 0, "initial must be greater than or equal to 0")
-  require(minIncrement > 0, "minIncrement must be greater than 0")
+  require(minIncrement > 0, "min-increment must be greater than 0")
   require(term > 0, "term must be greater than 0")
-  require(votingInterval > 0, "votingInterval must be greater than 0")
-  require(votingInterval <= term, s"votingInterval must be less than or equal to term($term)")
-  require(termAfterCappedRewardFeature > 0, "termAfterCappedRewardFeature must be greater than 0")
+  require(votingInterval > 0, "voting-interval must be greater than 0")
+  require(votingInterval <= term, s"voting-interval must be less than or equal to term($term)")
+  require(termAfterCappedRewardFeature > 0, "term-after-capped-reward-feature must be greater than 0")
   require(
     votingInterval <= termAfterCappedRewardFeature,
-    s"votingInterval must be less than or equal to termAfterCappedRewardFeature($termAfterCappedRewardFeature)"
+    s"voting-interval must be less than or equal to term-after-capped-reward-feature($termAfterCappedRewardFeature)"
   )
 
-  def nearestTermEnd(activatedAt: Int, height: Int, modifyTerm: Boolean): Int = {
+  def nearestTermEnd(activatedAt: Height, height: Height, modifyTerm: Boolean): Height = {
     require(height >= activatedAt)
     val diff         = height - activatedAt + 1
     val modifiedTerm = if (modifyTerm) termAfterCappedRewardFeature else term
@@ -37,9 +38,9 @@ case class RewardsSettings(
   }
 
   def votingWindow(activatedAt: Int, height: Int, modifyTerm: Boolean): Range = {
-    val end   = nearestTermEnd(activatedAt, height, modifyTerm)
+    val end   = nearestTermEnd(Height(activatedAt), Height(height), modifyTerm)
     val start = end - votingInterval + 1
-    if (height >= start) Range.inclusive(start, height)
+    if (Height(height) >= start) Range.inclusive(start.toInt, height)
     else Range(0, 0)
   }
 }
@@ -79,7 +80,9 @@ case class FunctionalitySettings(
     lightNodeBlockFieldsAbsenceInterval: Int = 1000,
     blockRewardBoostPeriod: Int = 1000,
     paymentsCheckHeight: Int = 0,
-    unitsRegistryAddress: Option[String] = None
+    unitsRegistryAddress: Option[String] = None,
+    maxEndorsements: Int = 5,
+    generationPeriodLength: Int = 1001
 ) {
   val allowLeasedBalanceTransferUntilHeight: Int              = blockVersion3AfterHeight
   val allowTemporaryNegativeUntil: Long                       = lastTimeBasedForkParameter
@@ -96,12 +99,13 @@ case class FunctionalitySettings(
   lazy val unitsRegistryAddressParsed: Either[String, Option[Address]] =
     unitsRegistryAddress.traverse(Address.fromString(_)).leftMap(_ => "Incorrect units-registry-address")
 
-  require(featureCheckBlocksPeriod > 0, "featureCheckBlocksPeriod must be greater than 0")
+  require(featureCheckBlocksPeriod > 0, "feature-check-blocks-period must be greater than 0")
   require(
     (blocksForFeatureActivation > 0) && (blocksForFeatureActivation <= featureCheckBlocksPeriod),
-    s"blocksForFeatureActivation must be in range 1 to $featureCheckBlocksPeriod"
+    s"blocks-for-feature-activation must be in range 1 to $featureCheckBlocksPeriod"
   )
-  require(minAssetInfoUpdateInterval >= 0, "minAssetInfoUpdateInterval must be greater than or equal to 0")
+  require(minAssetInfoUpdateInterval >= 0, "min-asset-info-update-interval must be greater than or equal to 0")
+  require(generationPeriodLength > 0, "generation-period-length must be greater than 0")
 
   def activationWindowSize(height: Int): Int =
     featureCheckBlocksPeriod * (if (height <= doubleFeaturesPeriodsAfterHeight) 1 else 2)
@@ -142,7 +146,9 @@ object FunctionalitySettings {
     xtnBuybackRewardPeriod = 100000,
     blockRewardBoostPeriod = 300_000,
     paymentsCheckHeight = 4303300,
-    unitsRegistryAddress = Some("3P8LfPXcveST7WKkV3UACQNdr6J3shPYong")
+    unitsRegistryAddress = Some("3P8LfPXcveST7WKkV3UACQNdr6J3shPYong"),
+    maxEndorsements = 128, // BLS has much worse performance from 129
+    generationPeriodLength = 10_000
   )
 
   val TESTNET: FunctionalitySettings = apply(
@@ -159,7 +165,9 @@ object FunctionalitySettings {
     xtnBuybackAddress = Some("3N13KQpdY3UU7JkWUBD9kN7t7xuUgeyYMTT"),
     xtnBuybackRewardPeriod = 2000,
     blockRewardBoostPeriod = 2_000,
-    unitsRegistryAddress = Some("3N9fwNGJcUcAbhh7YPr6mrpuGJD4tApZFsT")
+    unitsRegistryAddress = Some("3N9fwNGJcUcAbhh7YPr6mrpuGJD4tApZFsT"),
+    maxEndorsements = 64,
+    generationPeriodLength = 3000
   )
 
   val STAGENET: FunctionalitySettings = apply(
@@ -174,7 +182,9 @@ object FunctionalitySettings {
     daoAddress = Some("3MaFVH1vTv18FjBRugSRebx259D7xtRh9ic"),
     xtnBuybackAddress = Some("3MbhiRiLFLJ1EVKNP9npRszcLLQDjwnFfZM"),
     xtnBuybackRewardPeriod = 1000,
-    paymentsCheckHeight = 2195900
+    paymentsCheckHeight = 2195900,
+    maxEndorsements = 32,
+    generationPeriodLength = 1000
   )
 }
 
@@ -274,7 +284,7 @@ object BlockchainSettings {
             genesis       <- customObjCur.atKey("genesis").flatMap(ConfigReader[GenesisSettings].from)
             rewards       <- customObjCur.atKey("rewards").flatMap(ConfigReader[RewardsSettings].from)
           } yield {
-            require(functionality.minBlockTime <= genesis.averageBlockDelay, "minBlockTime should be <= averageBlockDelay")
+            require(functionality.minBlockTime <= genesis.averageBlockDelay, "min-block-time should be <= average-block-delay")
             (networkId, functionality, genesis, rewards)
           }
       }

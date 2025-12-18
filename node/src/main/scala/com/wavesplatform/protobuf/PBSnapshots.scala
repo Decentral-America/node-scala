@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString
 import com.wavesplatform.account.{Address, Alias, PublicKey}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.lang.script.ScriptReader
 import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
 import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot.NewAsset
@@ -70,7 +71,10 @@ object PBSnapshots {
       sponsorships.collect { case (asset, SponsorshipValue(minFee)) =>
         S.Sponsorship(asset.id.toByteString, minFee)
       }.toSeq,
-      txStatus.protobuf
+      txStatus.protobuf,
+      nextCommittedGenerators.map { case (pk, blsPk) =>
+        S.GenerationCommitment(pk.toByteString, blsPk.byteStr.toByteString)
+      }.headOption
     )
   }
 
@@ -168,6 +172,10 @@ object PBSnapshots {
         data.address.toAddress() -> entries
       }.toMap
 
+    val nextCommittedGenerators = pbSnapshot.generationCommitment.map { x =>
+      x.senderPublicKey.toPublicKey -> BlsPublicKey(x.endorserPublicKey.toByteArray)
+    }.toSeq
+
     (
       StateSnapshot(
         VectorMap(),
@@ -183,7 +191,8 @@ object PBSnapshots {
         aliases,
         orderFills,
         accountScripts,
-        accountData
+        accountData,
+        nextCommittedGenerators = nextCommittedGenerators
       ),
       TxMeta.Status.fromProtobuf(pbSnapshot.transactionStatus)
     )

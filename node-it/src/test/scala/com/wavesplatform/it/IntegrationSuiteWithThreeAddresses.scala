@@ -8,6 +8,7 @@ import com.wavesplatform.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.wavesplatform.transaction.smart.SetScriptTransaction
 import com.wavesplatform.transaction.smart.script.ScriptCompiler
 import com.wavesplatform.transaction.transfer.*
+import com.wavesplatform.state.Height
 import com.wavesplatform.utils.ScorexLogging
 import org.scalatest.*
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -15,13 +16,13 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 trait IntegrationSuiteWithThreeAddresses extends BaseSuite with ScalaFutures with IntegrationPatience with RecoverMethods with ScorexLogging {
   this: TestSuite & Nodes =>
 
-  protected lazy val firstKeyPair: SeedKeyPair = sender.createKeyPair()
+  protected lazy val firstKeyPair: SeedKeyPair = SeedKeyPair("firstKeyPair".getBytes())
   protected lazy val firstAddress: String      = firstKeyPair.toAddress.toString
 
-  protected lazy val secondKeyPair: KeyPair = sender.createKeyPair()
+  protected lazy val secondKeyPair: KeyPair = SeedKeyPair("secondKeyPair".getBytes())
   protected lazy val secondAddress: String  = secondKeyPair.toAddress.toString
 
-  protected lazy val thirdKeyPair: KeyPair = sender.createKeyPair()
+  protected lazy val thirdKeyPair: KeyPair = SeedKeyPair("thirdKeyPair".getBytes())
   protected lazy val thirdAddress: String  = thirdKeyPair.toAddress.toString
 
   abstract protected override def beforeAll(): Unit = {
@@ -37,7 +38,7 @@ trait IntegrationSuiteWithThreeAddresses extends BaseSuite with ScalaFutures wit
       val accounts = Seq(firstKeyPair, secondKeyPair, thirdKeyPair)
 
       withClue("waitForTxsToReachAllNodes") {
-        nodes.waitForHeight(makeTransfers(accounts).map(ts => nodes.waitForTransaction(ts).height).max + 1)
+        nodes.waitForHeight(Height(makeTransfers(accounts).map(ts => nodes.waitForTransaction(ts).height).max + 1))
       }
     }
 

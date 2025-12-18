@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString
 import com.wavesplatform.account.AddressOrAlias
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.crypto.bls.{BlsPublicKey, BlsSignature}
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.lang.script.ScriptReader
 import com.wavesplatform.lang.script.v1.ExprScript
@@ -14,7 +15,7 @@ import com.wavesplatform.protobuf.*
 import com.wavesplatform.protobuf.transaction.Transaction.Data
 import com.wavesplatform.protobuf.utils.PBImplicitConversions.*
 import com.wavesplatform.serialization.Deser
-import com.wavesplatform.state.{BinaryDataEntry, BooleanDataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
+import com.wavesplatform.state.{BinaryDataEntry, BooleanDataEntry, EmptyDataEntry, Height, IntegerDataEntry, StringDataEntry}
 import com.wavesplatform.transaction as vt
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.TxValidationError.{GenericError, NegativeAmount}
@@ -25,6 +26,7 @@ import com.wavesplatform.transaction.smart.InvokeScriptTransaction.Payment
 import com.wavesplatform.transaction.transfer.MassTransferTransaction
 import com.wavesplatform.transaction.transfer.MassTransferTransaction.ParsedTransfer
 import com.wavesplatform.transaction.{
+  CommitToGenerationTransaction,
   EthereumTransaction,
   Proofs,
   TxDecimals,
@@ -324,6 +326,22 @@ object PBTransactions {
           chainId
         )
 
+      case Data.CommitToGeneration(CommitToGenerationTransactionData(generationPeriodStart, endorserPublicKey, commitmentSignature, `empty`)) =>
+        for {
+          sig <- BlsSignature(commitmentSignature.toByteArray)
+          tx <- CommitToGenerationTransaction.create(
+            version.toByte,
+            sender.toPublicKey,
+            BlsPublicKey(endorserPublicKey.toByteStr),
+            Height(generationPeriodStart),
+            timestamp,
+            feeAmount,
+            sig,
+            proofs,
+            chainId
+          )
+        } yield tx
+
       case Data.InvokeExpression(InvokeExpressionTransactionData(expressionBytes, `empty`)) =>
         for {
           expression <- toVanillaScript(expressionBytes) match {
@@ -592,6 +610,19 @@ object PBTransactions {
           chainId
         )
 
+      case Data.CommitToGeneration(CommitToGenerationTransactionData(generationPeriodStart, endorserPublicKey, commitmentSignature, `empty`)) =>
+        CommitToGenerationTransaction(
+          version.toByte,
+          sender.toPublicKey,
+          BlsPublicKey(endorserPublicKey.toByteStr),
+          Height(generationPeriodStart),
+          timestamp,
+          TxPositiveAmount.unsafeFrom(feeAmount),
+          BlsSignature.mayBeEmpty(commitmentSignature.toByteStr).explicitGet(),
+          proofs,
+          chainId
+        )
+
       case other =>
         throw new IllegalArgumentException(s"Unsupported transaction data: $other")
     }
@@ -696,6 +727,17 @@ object PBTransactions {
       case tx @ InvokeExpressionTransaction(version, sender, _, fee, feeAssetId, timestamp, proofs, chainId) =>
         val data = Data.InvokeExpression(InvokeExpressionTransactionData(tx.expressionBytes.toByteString))
         PBTransactions.create(sender, chainId, fee.value, feeAssetId, timestamp, version, proofs, data)
+
+      case tx: CommitToGenerationTransaction =>
+        import tx.*
+        val data = Data.CommitToGeneration(
+          CommitToGenerationTransactionData(
+            generationPeriodStart.toInt,
+            endorserPublicKey.byteStr.toByteString,
+            commitmentSignature.byteStr.toByteString
+          )
+        )
+        PBTransactions.create(sender, chainId, fee.value, Waves, timestamp, tx.version, proofs.proofs, data)
 
       case et: EthereumTransaction =>
         PBSignedTransaction(PBSignedTransaction.Transaction.EthereumTransaction(ByteString.copyFrom(et.bytes())))

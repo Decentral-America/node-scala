@@ -57,7 +57,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
                 allTags = new CacheKeyTags[Tag]
               )
 
-              blockchain.activatedFeatures shouldBe DefaultBlockchainSettings.functionalitySettings.preActivatedFeatures
+              blockchain.activatedFeatures shouldBe DefaultBlockchainSettings.functionalitySettings.preActivatedFeatures.view.mapValues(Height.apply).toMap
 
               val newFeatureId = Short.MaxValue
               blockchain.process(
@@ -68,8 +68,8 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
                 )
               )
 
-              blockchain.activatedFeatures shouldBe DefaultBlockchainSettings.functionalitySettings.preActivatedFeatures
-                .updated(newFeatureId, 1)
+              blockchain.activatedFeatures shouldBe DefaultBlockchainSettings.functionalitySettings.preActivatedFeatures.view.mapValues(Height.apply).toMap
+                .updated(newFeatureId, Height(1))
             }
           }
         }

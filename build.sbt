@@ -181,6 +181,8 @@ inScope(Global)(
       "-language:higherKinds",
       "-language:implicitConversions",
       "-language:postfixOps",
+      "-Xmax-inlines",
+      "50", // Required for FunctionalitySettings compilation
       "-Wunused:all",
       "-Wconf:cat=deprecation&origin=com.wavesplatform.api.grpc.*:s",                                // Ignore gRPC warnings
       "-Wconf:cat=deprecation&origin=com.wavesplatform.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
@@ -311,4 +313,36 @@ lazy val buildReleaseArtifacts: Command = Command("buildReleaseArtifacts")(_ => 
   state
 }
 
-commands ++= Seq(checkPR, buildReleaseArtifacts)
+/** Command: generateGenesis <path-to-config>
+  * Runs: node / runMain com.wavesplatform.GenesisBlockGenerator <path>
+  * Path is always resolved relative to build root, output without "[info]".
+  */
+def generateGenesisCommand: Command =
+  Command.single("generateGenesis") { (state, rawPath) =>
+    val ex = Project.extract(state)
+
+    val rootBase = ex.get(LocalRootProject / baseDirectory)
+    val absFile = {
+      val f = file(rawPath)
+      if (f.isAbsolute) f else rootBase / rawPath
+    }
+
+    val stateWithSettings = ex.appendWithoutSession(
+      Seq(
+        ThisBuild / useSuperShell             := false,
+        node / Compile / run / outputStrategy := Some(StdoutOutput),
+        node / Compile / run / logLevel       := Level.Error
+      ),
+      state
+    )
+
+    val input = s" com.wavesplatform.GenesisBlockGenerator ${absFile.getAbsolutePath}"
+
+    Project
+      .extract(stateWithSettings)
+      .runInputTask(node / Compile / runMain, input, stateWithSettings)
+
+    state
+  }
+
+commands ++= Seq(checkPR, buildReleaseArtifacts, generateGenesisCommand)

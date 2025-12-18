@@ -1,6 +1,5 @@
 package com.wavesplatform.http
 
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import com.typesafe.config.ConfigObject
 import com.wavesplatform.*
 import com.wavesplatform.account.KeyPair
@@ -10,6 +9,7 @@ import com.wavesplatform.api.http.{DebugApiRoute, RouteTimeout}
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.db.WithState.AddrWithBalance
+import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.lang.directives.values.{V4, V5, V6}
 import com.wavesplatform.lang.v1.compiler.TestCompiler
@@ -21,7 +21,7 @@ import com.wavesplatform.network.PeerDatabase
 import com.wavesplatform.settings.WavesSettings
 import com.wavesplatform.state.StateHash.SectionId
 import com.wavesplatform.state.diffs.ENOUGH_AMT
-import com.wavesplatform.state.{Blockchain, StateHash, Height}
+import com.wavesplatform.state.{Blockchain, Height, StateHash}
 import com.wavesplatform.test.*
 import com.wavesplatform.transaction.TxHelpers.*
 import com.wavesplatform.transaction.assets.exchange.OrderType
@@ -30,6 +30,7 @@ import com.wavesplatform.transaction.smart.InvokeScriptTransaction.Payment
 import com.wavesplatform.transaction.{Transaction, TxHelpers, TxVersion}
 import com.wavesplatform.utils.SharedSchedulerMixin
 import monix.eval.Task
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import org.scalatest.OptionValues
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 
@@ -51,22 +52,27 @@ class DebugApiRouteSpec
     dbSettings = DomainPresets.ContinuationTransaction.dbSettings.copy(storeStateHashes = true),
     restAPISettings = restAPISettings
   )
+
   private val configObject: ConfigObject = settings.config.root()
 
-  private val richAccount                            = TxHelpers.signer(905)
+  private val richAccount = TxHelpers.signer(905)
+
   override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50_000.waves))
 
   val miner: Miner & MinerDebugInfo = new Miner with MinerDebugInfo {
-    override def scheduleMining(blockchain: Option[Blockchain]): Unit                           = ()
+    override def scheduleMining(blockchain: Option[Blockchain]): Unit = ()
+
     override def getNextBlockGenerationOffset(account: KeyPair): Either[String, FiniteDuration] = Right(FiniteDuration(0, TimeUnit.SECONDS))
-    override def state: MinerDebugInfo.State                                                    = MinerDebugInfo.Disabled
+
+    override def state: MinerDebugInfo.State = MinerDebugInfo.Disabled
   }
 
   val block: Block = TestBlock.create(Nil).block
   val testStateHash: StateHash = {
     import com.wavesplatform.utils.byteStrOrdering
     def randomHash: ByteStr = ByteStr(Array.fill(32)(Random.nextInt(256).toByte))
-    val hashes              = SectionId.values.map((_, randomHash)).toMap
+
+    val hashes = SectionId.values.map((_, randomHash)).toMap
     StateHash(randomHash, hashes)
   }
 
@@ -81,7 +87,7 @@ class DebugApiRouteSpec
       domain.assetsApi,
       PeerDatabase.NoOp,
       new ConcurrentHashMap(),
-      (_, _) => Task.raiseError(new NotImplementedError("")),
+      (blockId, _) => Task(domain.blockchain.removeAfter(blockId).map(_ => ())),
       domain.utxPool,
       miner,
       null,
@@ -168,15 +174,29 @@ class DebugApiRouteSpec
           domain.appendBlock()
         }
 
-        val lastButOneHeight    = domain.blockchain.height - 1
-        val lastButOneHeader    = domain.blockchain.blockHeader(lastButOneHeight.toInt).value
-        val lastButOneStateHash = domain.rocksDBWriter.loadStateHash(Height(lastButOneHeight)).value
-        val expectedResponse = Json.toJson(lastButOneStateHash).as[JsObject] ++ Json.obj(
-          "snapshotHash" -> domain.rocksDBWriter.snapshotStateHash(lastButOneHeight),
-          "blockId"      -> lastButOneHeader.id().toString,
-          "baseTarget"   -> lastButOneHeader.header.baseTarget,
-          "height"       -> lastButOneHeight,
-          "version"      -> Version.VersionString
+        val lastButOneHeight               = domain.blockchain.height - 1
+        val lastButOneHeader               = domain.blockchain.blockHeader(lastButOneHeight.toInt).value
+        val lastButOneStateHash            = domain.rocksDBWriter.loadStateHash(Height(lastButOneHeight)).value
+        val deterministicFinalityActivated = domain.blockchain.isFeatureActivated(BlockchainFeatures.DeterministicFinality, lastButOneHeight)
+        val lastButOneStateHashJson        = StateHash.toJson(lastButOneStateHash, deterministicFinalityActivated)
+        def field(name: String)            = (lastButOneStateHashJson \ name).as[String]
+
+        val expectedResponse = Json.obj(
+          "stateHash"         -> field("stateHash"),
+          "wavesBalanceHash"  -> field("wavesBalanceHash"),
+          "assetBalanceHash"  -> field("assetBalanceHash"),
+          "dataEntryHash"     -> field("dataEntryHash"),
+          "accountScriptHash" -> field("accountScriptHash"),
+          "assetScriptHash"   -> field("assetScriptHash"),
+          "leaseBalanceHash"  -> field("leaseBalanceHash"),
+          "leaseStatusHash"   -> field("leaseStatusHash"),
+          "sponsorshipHash"   -> field("sponsorshipHash"),
+          "aliasHash"         -> field("aliasHash"),
+          "snapshotHash"      -> domain.rocksDBWriter.snapshotStateHash(lastButOneHeight),
+          "blockId"           -> lastButOneHeader.id().toString,
+          "baseTarget"        -> lastButOneHeader.header.baseTarget,
+          "height"            -> lastButOneHeight,
+          "version"           -> Version.VersionString
         )
 
         Get(routePath(s"/stateHash/last")) ~> route ~> check {
@@ -340,1184 +360,1190 @@ class DebugApiRouteSpec
         }
       }
 
-      testPayment(tx => s"""[ {
-                           |  "type" : "verifier",
-                           |  "id" : "${invoker.toAddress}",
-                           |  "result" : "success",
-                           |  "error" : null
-                           |}, {
-                           |  "type" : "dApp",
-                           |  "id" : "${dapp.toAddress}",
-                           |  "function" : "default",
-                           |  "args" : [ ],
-                           |  "invocations" : [ ],
-                           |  "result" : {
-                           |    "data" : [ ],
-                           |    "transfers" : [ ],
-                           |    "issues" : [ ],
-                           |    "reissues" : [ ],
-                           |    "burns" : [ ],
-                           |    "sponsorFees" : [ ],
-                           |    "leases" : [ ],
-                           |    "leaseCancels" : [ ],
-                           |    "invokes" : [ ]
-                           |  },
-                           |  "error" : null,
-                           |  "vars" : [ {
-                           |    "name" : "i",
-                           |    "type" : "Invocation",
-                           |    "value" : {
-                           |      "payments" : {
-                           |        "type" : "Array",
-                           |        "value" : [ {
-                           |          "type" : "AttachedPayment",
-                           |          "value" : {
-                           |            "amount" : {
-                           |              "type" : "Int",
-                           |              "value" : 1
-                           |            },
-                           |            "assetId" : {
-                           |              "type" : "ByteVector",
-                           |              "value" : "${issue.asset}"
-                           |            }
-                           |          }
-                           |        } ]
-                           |      },
-                           |      "callerPublicKey" : {
-                           |        "type" : "ByteVector",
-                           |        "value" : "${invoker.publicKey}"
-                           |      },
-                           |      "feeAssetId" : {
-                           |        "type" : "Unit",
-                           |        "value" : { }
-                           |      },
-                           |      "transactionId" : {
-                           |        "type" : "ByteVector",
-                           |        "value" : "${tx.id()}"
-                           |      },
-                           |      "caller" : {
-                           |        "type" : "Address",
-                           |        "value" : {
-                           |          "bytes" : {
-                           |            "type" : "ByteVector",
-                           |            "value" : "${invoker.toAddress}"
-                           |          }
-                           |        }
-                           |      },
-                           |      "fee" : {
-                           |        "type" : "Int",
-                           |        "value" : 1300000
-                           |      }
-                           |    }
-                           |  }, {
-                           |    "name" : "default.@args",
-                           |    "type" : "Array",
-                           |    "value" : [ ]
-                           |  }, {
-                           |    "name" : "default.@complexity",
-                           |    "type" : "Int",
-                           |    "value" : 1
-                           |  }, {
-                           |    "name" : "@complexityLimit",
-                           |    "type" : "Int",
-                           |    "value" : 51998
-                           |  } ]
-                           |}, {
-                           |  "type" : "asset",
-                           |  "context" : "payment",
-                           |  "id" : "${issue.id()}",
-                           |  "result" : "failure",
-                           |  "vars" : [ {
-                           |    "name" : "test",
-                           |    "type" : "Boolean",
-                           |    "value" : true
-                           |  }, {
-                           |    "name" : "throw.@args",
-                           |    "type" : "Array",
-                           |    "value" : [ {
-                           |      "type" : "String",
-                           |      "value" : "error"
-                           |    } ]
-                           |  }, {
-                           |    "name" : "throw.@complexity",
-                           |    "type" : "Int",
-                           |    "value" : 1
-                           |  }, {
-                           |    "name" : "@complexityLimit",
-                           |    "type" : "Int",
-                           |    "value" : 2147483646
-                           |  } ],
-                           |  "error" : "error"
-                           |} ]""".stripMargin)
+      testPayment(tx =>
+        s"""[ {
+           |  "type" : "verifier",
+           |  "id" : "${invoker.toAddress}",
+           |  "result" : "success",
+           |  "error" : null
+           |}, {
+           |  "type" : "dApp",
+           |  "id" : "${dapp.toAddress}",
+           |  "function" : "default",
+           |  "args" : [ ],
+           |  "invocations" : [ ],
+           |  "result" : {
+           |    "data" : [ ],
+           |    "transfers" : [ ],
+           |    "issues" : [ ],
+           |    "reissues" : [ ],
+           |    "burns" : [ ],
+           |    "sponsorFees" : [ ],
+           |    "leases" : [ ],
+           |    "leaseCancels" : [ ],
+           |    "invokes" : [ ]
+           |  },
+           |  "error" : null,
+           |  "vars" : [ {
+           |    "name" : "i",
+           |    "type" : "Invocation",
+           |    "value" : {
+           |      "payments" : {
+           |        "type" : "Array",
+           |        "value" : [ {
+           |          "type" : "AttachedPayment",
+           |          "value" : {
+           |            "amount" : {
+           |              "type" : "Int",
+           |              "value" : 1
+           |            },
+           |            "assetId" : {
+           |              "type" : "ByteVector",
+           |              "value" : "${issue.asset}"
+           |            }
+           |          }
+           |        } ]
+           |      },
+           |      "callerPublicKey" : {
+           |        "type" : "ByteVector",
+           |        "value" : "${invoker.publicKey}"
+           |      },
+           |      "feeAssetId" : {
+           |        "type" : "Unit",
+           |        "value" : { }
+           |      },
+           |      "transactionId" : {
+           |        "type" : "ByteVector",
+           |        "value" : "${tx.id()}"
+           |      },
+           |      "caller" : {
+           |        "type" : "Address",
+           |        "value" : {
+           |          "bytes" : {
+           |            "type" : "ByteVector",
+           |            "value" : "${invoker.toAddress}"
+           |          }
+           |        }
+           |      },
+           |      "fee" : {
+           |        "type" : "Int",
+           |        "value" : 1300000
+           |      }
+           |    }
+           |  }, {
+           |    "name" : "default.@args",
+           |    "type" : "Array",
+           |    "value" : [ ]
+           |  }, {
+           |    "name" : "default.@complexity",
+           |    "type" : "Int",
+           |    "value" : 1
+           |  }, {
+           |    "name" : "@complexityLimit",
+           |    "type" : "Int",
+           |    "value" : 51998
+           |  } ]
+           |}, {
+           |  "type" : "asset",
+           |  "context" : "payment",
+           |  "id" : "${issue.id()}",
+           |  "result" : "failure",
+           |  "vars" : [ {
+           |    "name" : "test",
+           |    "type" : "Boolean",
+           |    "value" : true
+           |  }, {
+           |    "name" : "throw.@args",
+           |    "type" : "Array",
+           |    "value" : [ {
+           |      "type" : "String",
+           |      "value" : "error"
+           |    } ]
+           |  }, {
+           |    "name" : "throw.@complexity",
+           |    "type" : "Int",
+           |    "value" : 1
+           |  }, {
+           |    "name" : "@complexityLimit",
+           |    "type" : "Int",
+           |    "value" : 2147483646
+           |  } ],
+           |  "error" : "error"
+           |} ]""".stripMargin
+      )
 
       testFunction(
         "dataAndTransfer",
-        tx => s"""[ {
-                 |  "type" : "verifier",
-                 |  "id" : "${invoker.toAddress}",
-                 |  "result" : "success",
-                 |  "error" : null
-                 |}, {
-                 |  "type" : "dApp",
-                 |  "id" : "${dapp.toAddress}",
-                 |  "function" : "dataAndTransfer",
-                 |  "args" : [ ],
-                 |  "invocations" : [ ],
-                 |  "result" : {
-                 |    "data" : [ {
-                 |      "key" : "key",
-                 |      "type" : "integer",
-                 |      "value" : 1
-                 |    }, {
-                 |      "key" : "key",
-                 |      "type" : "boolean",
-                 |      "value" : true
-                 |    }, {
-                 |      "key" : "key",
-                 |      "type" : "string",
-                 |      "value" : "str"
-                 |    }, {
-                 |      "key" : "key",
-                 |      "type" : "binary",
-                 |      "value" : "base64:"
-                 |    }, {
-                 |      "key" : "key",
-                 |      "value" : null
-                 |    } ],
-                 |    "transfers" : [ {
-                 |      "address" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
-                 |      "asset" : "${issue.asset}",
-                 |      "amount" : 1
-                 |    } ],
-                 |    "issues" : [ ],
-                 |    "reissues" : [ ],
-                 |    "burns" : [ ],
-                 |    "sponsorFees" : [ ],
-                 |    "leases" : [ ],
-                 |    "leaseCancels" : [ ],
-                 |    "invokes" : [ ]
-                 |  },
-                 |  "error" : null,
-                 |  "vars" : [ {
-                 |    "name" : "i",
-                 |    "type" : "Invocation",
-                 |    "value" : {
-                 |      "payments" : {
-                 |        "type" : "Array",
-                 |        "value" : [ ]
-                 |      },
-                 |      "callerPublicKey" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${invoker.publicKey}"
-                 |      },
-                 |      "feeAssetId" : {
-                 |        "type" : "Unit",
-                 |        "value" : { }
-                 |      },
-                 |      "transactionId" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${tx.id()}"
-                 |      },
-                 |      "caller" : {
-                 |        "type" : "Address",
-                 |        "value" : {
-                 |          "bytes" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${invoker.toAddress}"
-                 |          }
-                 |        }
-                 |      },
-                 |      "fee" : {
-                 |        "type" : "Int",
-                 |        "value" : 102500000
-                 |      }
-                 |    }
-                 |  }, {
-                 |    "name" : "dataAndTransfer.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ ]
-                 |  }, {
-                 |    "name" : "IntegerEntry.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "key"
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 1
-                 |    } ]
-                 |  }, {
-                 |    "name" : "IntegerEntry.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51999
-                 |  }, {
-                 |    "name" : "BooleanEntry.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "key"
-                 |    }, {
-                 |      "type" : "Boolean",
-                 |      "value" : true
-                 |    } ]
-                 |  }, {
-                 |    "name" : "BooleanEntry.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51998
-                 |  }, {
-                 |    "name" : "StringEntry.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "key"
-                 |    }, {
-                 |      "type" : "String",
-                 |      "value" : "str"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "StringEntry.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51997
-                 |  }, {
-                 |    "name" : "BinaryEntry.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "key"
-                 |    }, {
-                 |      "type" : "ByteVector",
-                 |      "value" : ""
-                 |    } ]
-                 |  }, {
-                 |    "name" : "BinaryEntry.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51996
-                 |  }, {
-                 |    "name" : "DeleteEntry.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "key"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "DeleteEntry.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51995
-                 |  }, {
-                 |    "name" : "Address.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "ByteVector",
-                 |      "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "Address.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51994
-                 |  }, {
-                 |    "name" : "ScriptTransfer.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "Address",
-                 |      "value" : {
-                 |        "bytes" : {
-                 |          "type" : "ByteVector",
-                 |          "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 1
-                 |    }, {
-                 |      "type" : "ByteVector",
-                 |      "value" : "${issue.asset}"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "ScriptTransfer.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51993
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "ScriptTransfer",
-                 |      "value" : {
-                 |        "recipient" : {
-                 |          "type" : "Address",
-                 |          "value" : {
-                 |            "bytes" : {
-                 |              "type" : "ByteVector",
-                 |              "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |            }
-                 |          }
-                 |        },
-                 |        "amount" : {
-                 |          "type" : "Int",
-                 |          "value" : 1
-                 |        },
-                 |        "asset" : {
-                 |          "type" : "ByteVector",
-                 |          "value" : "${issue.asset}"
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51992
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "DeleteEntry",
-                 |      "value" : {
-                 |        "key" : {
-                 |          "type" : "String",
-                 |          "value" : "key"
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ {
-                 |        "type" : "ScriptTransfer",
-                 |        "value" : {
-                 |          "recipient" : {
-                 |            "type" : "Address",
-                 |            "value" : {
-                 |              "bytes" : {
-                 |                "type" : "ByteVector",
-                 |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |              }
-                 |            }
-                 |          },
-                 |          "amount" : {
-                 |            "type" : "Int",
-                 |            "value" : 1
-                 |          },
-                 |          "asset" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${issue.asset}"
-                 |          }
-                 |        }
-                 |      } ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51991
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "BinaryEntry",
-                 |      "value" : {
-                 |        "key" : {
-                 |          "type" : "String",
-                 |          "value" : "key"
-                 |        },
-                 |        "value" : {
-                 |          "type" : "ByteVector",
-                 |          "value" : ""
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ {
-                 |        "type" : "DeleteEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "ScriptTransfer",
-                 |        "value" : {
-                 |          "recipient" : {
-                 |            "type" : "Address",
-                 |            "value" : {
-                 |              "bytes" : {
-                 |                "type" : "ByteVector",
-                 |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |              }
-                 |            }
-                 |          },
-                 |          "amount" : {
-                 |            "type" : "Int",
-                 |            "value" : 1
-                 |          },
-                 |          "asset" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${issue.asset}"
-                 |          }
-                 |        }
-                 |      } ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51990
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "StringEntry",
-                 |      "value" : {
-                 |        "key" : {
-                 |          "type" : "String",
-                 |          "value" : "key"
-                 |        },
-                 |        "value" : {
-                 |          "type" : "String",
-                 |          "value" : "str"
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ {
-                 |        "type" : "BinaryEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          },
-                 |          "value" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : ""
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "DeleteEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "ScriptTransfer",
-                 |        "value" : {
-                 |          "recipient" : {
-                 |            "type" : "Address",
-                 |            "value" : {
-                 |              "bytes" : {
-                 |                "type" : "ByteVector",
-                 |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |              }
-                 |            }
-                 |          },
-                 |          "amount" : {
-                 |            "type" : "Int",
-                 |            "value" : 1
-                 |          },
-                 |          "asset" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${issue.asset}"
-                 |          }
-                 |        }
-                 |      } ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51989
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "BooleanEntry",
-                 |      "value" : {
-                 |        "key" : {
-                 |          "type" : "String",
-                 |          "value" : "key"
-                 |        },
-                 |        "value" : {
-                 |          "type" : "Boolean",
-                 |          "value" : true
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ {
-                 |        "type" : "StringEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          },
-                 |          "value" : {
-                 |            "type" : "String",
-                 |            "value" : "str"
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "BinaryEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          },
-                 |          "value" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : ""
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "DeleteEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "ScriptTransfer",
-                 |        "value" : {
-                 |          "recipient" : {
-                 |            "type" : "Address",
-                 |            "value" : {
-                 |              "bytes" : {
-                 |                "type" : "ByteVector",
-                 |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |              }
-                 |            }
-                 |          },
-                 |          "amount" : {
-                 |            "type" : "Int",
-                 |            "value" : 1
-                 |          },
-                 |          "asset" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${issue.asset}"
-                 |          }
-                 |        }
-                 |      } ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51988
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "IntegerEntry",
-                 |      "value" : {
-                 |        "key" : {
-                 |          "type" : "String",
-                 |          "value" : "key"
-                 |        },
-                 |        "value" : {
-                 |          "type" : "Int",
-                 |          "value" : 1
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ {
-                 |        "type" : "BooleanEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          },
-                 |          "value" : {
-                 |            "type" : "Boolean",
-                 |            "value" : true
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "StringEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          },
-                 |          "value" : {
-                 |            "type" : "String",
-                 |            "value" : "str"
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "BinaryEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          },
-                 |          "value" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : ""
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "DeleteEntry",
-                 |        "value" : {
-                 |          "key" : {
-                 |            "type" : "String",
-                 |            "value" : "key"
-                 |          }
-                 |        }
-                 |      }, {
-                 |        "type" : "ScriptTransfer",
-                 |        "value" : {
-                 |          "recipient" : {
-                 |            "type" : "Address",
-                 |            "value" : {
-                 |              "bytes" : {
-                 |                "type" : "ByteVector",
-                 |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
-                 |              }
-                 |            }
-                 |          },
-                 |          "amount" : {
-                 |            "type" : "Int",
-                 |            "value" : 1
-                 |          },
-                 |          "asset" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${issue.asset}"
-                 |          }
-                 |        }
-                 |      } ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51987
-                 |  } ]
-                 |}, {
-                 |  "type" : "asset",
-                 |  "context" : "transfer",
-                 |  "id" : "${issue.asset}",
-                 |  "result" : "failure",
-                 |  "vars" : [ {
-                 |    "name" : "test",
-                 |    "type" : "Boolean",
-                 |    "value" : true
-                 |  }, {
-                 |    "name" : "throw.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "error"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "throw.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 2147483646
-                 |  } ],
-                 |  "error" : "error"
-                 |} ]""".stripMargin
+        tx =>
+          s"""[ {
+             |  "type" : "verifier",
+             |  "id" : "${invoker.toAddress}",
+             |  "result" : "success",
+             |  "error" : null
+             |}, {
+             |  "type" : "dApp",
+             |  "id" : "${dapp.toAddress}",
+             |  "function" : "dataAndTransfer",
+             |  "args" : [ ],
+             |  "invocations" : [ ],
+             |  "result" : {
+             |    "data" : [ {
+             |      "key" : "key",
+             |      "type" : "integer",
+             |      "value" : 1
+             |    }, {
+             |      "key" : "key",
+             |      "type" : "boolean",
+             |      "value" : true
+             |    }, {
+             |      "key" : "key",
+             |      "type" : "string",
+             |      "value" : "str"
+             |    }, {
+             |      "key" : "key",
+             |      "type" : "binary",
+             |      "value" : "base64:"
+             |    }, {
+             |      "key" : "key",
+             |      "value" : null
+             |    } ],
+             |    "transfers" : [ {
+             |      "address" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+             |      "asset" : "${issue.asset}",
+             |      "amount" : 1
+             |    } ],
+             |    "issues" : [ ],
+             |    "reissues" : [ ],
+             |    "burns" : [ ],
+             |    "sponsorFees" : [ ],
+             |    "leases" : [ ],
+             |    "leaseCancels" : [ ],
+             |    "invokes" : [ ]
+             |  },
+             |  "error" : null,
+             |  "vars" : [ {
+             |    "name" : "i",
+             |    "type" : "Invocation",
+             |    "value" : {
+             |      "payments" : {
+             |        "type" : "Array",
+             |        "value" : [ ]
+             |      },
+             |      "callerPublicKey" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${invoker.publicKey}"
+             |      },
+             |      "feeAssetId" : {
+             |        "type" : "Unit",
+             |        "value" : { }
+             |      },
+             |      "transactionId" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${tx.id()}"
+             |      },
+             |      "caller" : {
+             |        "type" : "Address",
+             |        "value" : {
+             |          "bytes" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${invoker.toAddress}"
+             |          }
+             |        }
+             |      },
+             |      "fee" : {
+             |        "type" : "Int",
+             |        "value" : 102500000
+             |      }
+             |    }
+             |  }, {
+             |    "name" : "dataAndTransfer.@args",
+             |    "type" : "Array",
+             |    "value" : [ ]
+             |  }, {
+             |    "name" : "IntegerEntry.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "key"
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 1
+             |    } ]
+             |  }, {
+             |    "name" : "IntegerEntry.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51999
+             |  }, {
+             |    "name" : "BooleanEntry.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "key"
+             |    }, {
+             |      "type" : "Boolean",
+             |      "value" : true
+             |    } ]
+             |  }, {
+             |    "name" : "BooleanEntry.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51998
+             |  }, {
+             |    "name" : "StringEntry.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "key"
+             |    }, {
+             |      "type" : "String",
+             |      "value" : "str"
+             |    } ]
+             |  }, {
+             |    "name" : "StringEntry.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51997
+             |  }, {
+             |    "name" : "BinaryEntry.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "key"
+             |    }, {
+             |      "type" : "ByteVector",
+             |      "value" : ""
+             |    } ]
+             |  }, {
+             |    "name" : "BinaryEntry.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51996
+             |  }, {
+             |    "name" : "DeleteEntry.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "key"
+             |    } ]
+             |  }, {
+             |    "name" : "DeleteEntry.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51995
+             |  }, {
+             |    "name" : "Address.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "ByteVector",
+             |      "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |    } ]
+             |  }, {
+             |    "name" : "Address.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51994
+             |  }, {
+             |    "name" : "ScriptTransfer.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "Address",
+             |      "value" : {
+             |        "bytes" : {
+             |          "type" : "ByteVector",
+             |          "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 1
+             |    }, {
+             |      "type" : "ByteVector",
+             |      "value" : "${issue.asset}"
+             |    } ]
+             |  }, {
+             |    "name" : "ScriptTransfer.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51993
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "ScriptTransfer",
+             |      "value" : {
+             |        "recipient" : {
+             |          "type" : "Address",
+             |          "value" : {
+             |            "bytes" : {
+             |              "type" : "ByteVector",
+             |              "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |            }
+             |          }
+             |        },
+             |        "amount" : {
+             |          "type" : "Int",
+             |          "value" : 1
+             |        },
+             |        "asset" : {
+             |          "type" : "ByteVector",
+             |          "value" : "${issue.asset}"
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51992
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "DeleteEntry",
+             |      "value" : {
+             |        "key" : {
+             |          "type" : "String",
+             |          "value" : "key"
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ {
+             |        "type" : "ScriptTransfer",
+             |        "value" : {
+             |          "recipient" : {
+             |            "type" : "Address",
+             |            "value" : {
+             |              "bytes" : {
+             |                "type" : "ByteVector",
+             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |              }
+             |            }
+             |          },
+             |          "amount" : {
+             |            "type" : "Int",
+             |            "value" : 1
+             |          },
+             |          "asset" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${issue.asset}"
+             |          }
+             |        }
+             |      } ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51991
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "BinaryEntry",
+             |      "value" : {
+             |        "key" : {
+             |          "type" : "String",
+             |          "value" : "key"
+             |        },
+             |        "value" : {
+             |          "type" : "ByteVector",
+             |          "value" : ""
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ {
+             |        "type" : "DeleteEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "ScriptTransfer",
+             |        "value" : {
+             |          "recipient" : {
+             |            "type" : "Address",
+             |            "value" : {
+             |              "bytes" : {
+             |                "type" : "ByteVector",
+             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |              }
+             |            }
+             |          },
+             |          "amount" : {
+             |            "type" : "Int",
+             |            "value" : 1
+             |          },
+             |          "asset" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${issue.asset}"
+             |          }
+             |        }
+             |      } ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51990
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "StringEntry",
+             |      "value" : {
+             |        "key" : {
+             |          "type" : "String",
+             |          "value" : "key"
+             |        },
+             |        "value" : {
+             |          "type" : "String",
+             |          "value" : "str"
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ {
+             |        "type" : "BinaryEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          },
+             |          "value" : {
+             |            "type" : "ByteVector",
+             |            "value" : ""
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "DeleteEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "ScriptTransfer",
+             |        "value" : {
+             |          "recipient" : {
+             |            "type" : "Address",
+             |            "value" : {
+             |              "bytes" : {
+             |                "type" : "ByteVector",
+             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |              }
+             |            }
+             |          },
+             |          "amount" : {
+             |            "type" : "Int",
+             |            "value" : 1
+             |          },
+             |          "asset" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${issue.asset}"
+             |          }
+             |        }
+             |      } ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51989
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "BooleanEntry",
+             |      "value" : {
+             |        "key" : {
+             |          "type" : "String",
+             |          "value" : "key"
+             |        },
+             |        "value" : {
+             |          "type" : "Boolean",
+             |          "value" : true
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ {
+             |        "type" : "StringEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          },
+             |          "value" : {
+             |            "type" : "String",
+             |            "value" : "str"
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "BinaryEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          },
+             |          "value" : {
+             |            "type" : "ByteVector",
+             |            "value" : ""
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "DeleteEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "ScriptTransfer",
+             |        "value" : {
+             |          "recipient" : {
+             |            "type" : "Address",
+             |            "value" : {
+             |              "bytes" : {
+             |                "type" : "ByteVector",
+             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |              }
+             |            }
+             |          },
+             |          "amount" : {
+             |            "type" : "Int",
+             |            "value" : 1
+             |          },
+             |          "asset" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${issue.asset}"
+             |          }
+             |        }
+             |      } ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51988
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "IntegerEntry",
+             |      "value" : {
+             |        "key" : {
+             |          "type" : "String",
+             |          "value" : "key"
+             |        },
+             |        "value" : {
+             |          "type" : "Int",
+             |          "value" : 1
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ {
+             |        "type" : "BooleanEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          },
+             |          "value" : {
+             |            "type" : "Boolean",
+             |            "value" : true
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "StringEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          },
+             |          "value" : {
+             |            "type" : "String",
+             |            "value" : "str"
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "BinaryEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          },
+             |          "value" : {
+             |            "type" : "ByteVector",
+             |            "value" : ""
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "DeleteEntry",
+             |        "value" : {
+             |          "key" : {
+             |            "type" : "String",
+             |            "value" : "key"
+             |          }
+             |        }
+             |      }, {
+             |        "type" : "ScriptTransfer",
+             |        "value" : {
+             |          "recipient" : {
+             |            "type" : "Address",
+             |            "value" : {
+             |              "bytes" : {
+             |                "type" : "ByteVector",
+             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |              }
+             |            }
+             |          },
+             |          "amount" : {
+             |            "type" : "Int",
+             |            "value" : 1
+             |          },
+             |          "asset" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${issue.asset}"
+             |          }
+             |        }
+             |      } ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51987
+             |  } ]
+             |}, {
+             |  "type" : "asset",
+             |  "context" : "transfer",
+             |  "id" : "${issue.asset}",
+             |  "result" : "failure",
+             |  "vars" : [ {
+             |    "name" : "test",
+             |    "type" : "Boolean",
+             |    "value" : true
+             |  }, {
+             |    "name" : "throw.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "error"
+             |    } ]
+             |  }, {
+             |    "name" : "throw.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 2147483646
+             |  } ],
+             |  "error" : "error"
+             |} ]""".stripMargin
       )
 
       testFunction(
         "issue",
-        tx => s"""[ {
-                 |  "type" : "verifier",
-                 |  "id" : "${invoker.toAddress}",
-                 |  "result" : "success",
-                 |  "error" : null
-                 |}, {
-                 |  "type" : "dApp",
-                 |  "id" : "${dapp.toAddress}",
-                 |  "function" : "issue",
-                 |  "args" : [ ],
-                 |  "invocations" : [ ],
-                 |  "result" : {
-                 |    "data" : [ ],
-                 |    "transfers" : [ ],
-                 |    "issues" : [ {
-                 |      "assetId" : "${Issue.calculateId(4, "description", isReissuable = true, "name", 1000, 0, tx.id())}",
-                 |      "name" : "name",
-                 |      "description" : "description",
-                 |      "quantity" : 1000,
-                 |      "decimals" : 4,
-                 |      "isReissuable" : true,
-                 |      "compiledScript" : null,
-                 |      "nonce" : 0
-                 |    } ],
-                 |    "reissues" : [ ],
-                 |    "burns" : [ ],
-                 |    "sponsorFees" : [ ],
-                 |    "leases" : [ ],
-                 |    "leaseCancels" : [ ],
-                 |    "invokes" : [ ]
-                 |  },
-                 |  "error" : null,
-                 |  "vars" : [ {
-                 |    "name" : "i",
-                 |    "type" : "Invocation",
-                 |    "value" : {
-                 |      "payments" : {
-                 |        "type" : "Array",
-                 |        "value" : [ ]
-                 |      },
-                 |      "callerPublicKey" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${invoker.publicKey}"
-                 |      },
-                 |      "feeAssetId" : {
-                 |        "type" : "Unit",
-                 |        "value" : { }
-                 |      },
-                 |      "transactionId" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${tx.id()}"
-                 |      },
-                 |      "caller" : {
-                 |        "type" : "Address",
-                 |        "value" : {
-                 |          "bytes" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${invoker.toAddress}"
-                 |          }
-                 |        }
-                 |      },
-                 |      "fee" : {
-                 |        "type" : "Int",
-                 |        "value" : 102500000
-                 |      }
-                 |    }
-                 |  }, {
-                 |    "name" : "issue.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ ]
-                 |  }, {
-                 |    "name" : "decimals",
-                 |    "type" : "Int",
-                 |    "value" : 4
-                 |  }, {
-                 |    "name" : "Issue.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "name"
-                 |    }, {
-                 |      "type" : "String",
-                 |      "value" : "description"
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 1000
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 4
-                 |    }, {
-                 |      "type" : "Boolean",
-                 |      "value" : true
-                 |    }, {
-                 |      "type" : "Unit",
-                 |      "value" : { }
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 0
-                 |    } ]
-                 |  }, {
-                 |    "name" : "Issue.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51999
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "Issue",
-                 |      "value" : {
-                 |        "isReissuable" : {
-                 |          "type" : "Boolean",
-                 |          "value" : true
-                 |        },
-                 |        "nonce" : {
-                 |          "type" : "Int",
-                 |          "value" : 0
-                 |        },
-                 |        "description" : {
-                 |          "type" : "String",
-                 |          "value" : "description"
-                 |        },
-                 |        "decimals" : {
-                 |          "type" : "Int",
-                 |          "value" : 4
-                 |        },
-                 |        "compiledScript" : {
-                 |          "type" : "Unit",
-                 |          "value" : { }
-                 |        },
-                 |        "name" : {
-                 |          "type" : "String",
-                 |          "value" : "name"
-                 |        },
-                 |        "quantity" : {
-                 |          "type" : "Int",
-                 |          "value" : 1000
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51998
-                 |  } ]
-                 |} ]""".stripMargin
+        tx =>
+          s"""[ {
+             |  "type" : "verifier",
+             |  "id" : "${invoker.toAddress}",
+             |  "result" : "success",
+             |  "error" : null
+             |}, {
+             |  "type" : "dApp",
+             |  "id" : "${dapp.toAddress}",
+             |  "function" : "issue",
+             |  "args" : [ ],
+             |  "invocations" : [ ],
+             |  "result" : {
+             |    "data" : [ ],
+             |    "transfers" : [ ],
+             |    "issues" : [ {
+             |      "assetId" : "${Issue.calculateId(4, "description", isReissuable = true, "name", 1000, 0, tx.id())}",
+             |      "name" : "name",
+             |      "description" : "description",
+             |      "quantity" : 1000,
+             |      "decimals" : 4,
+             |      "isReissuable" : true,
+             |      "compiledScript" : null,
+             |      "nonce" : 0
+             |    } ],
+             |    "reissues" : [ ],
+             |    "burns" : [ ],
+             |    "sponsorFees" : [ ],
+             |    "leases" : [ ],
+             |    "leaseCancels" : [ ],
+             |    "invokes" : [ ]
+             |  },
+             |  "error" : null,
+             |  "vars" : [ {
+             |    "name" : "i",
+             |    "type" : "Invocation",
+             |    "value" : {
+             |      "payments" : {
+             |        "type" : "Array",
+             |        "value" : [ ]
+             |      },
+             |      "callerPublicKey" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${invoker.publicKey}"
+             |      },
+             |      "feeAssetId" : {
+             |        "type" : "Unit",
+             |        "value" : { }
+             |      },
+             |      "transactionId" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${tx.id()}"
+             |      },
+             |      "caller" : {
+             |        "type" : "Address",
+             |        "value" : {
+             |          "bytes" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${invoker.toAddress}"
+             |          }
+             |        }
+             |      },
+             |      "fee" : {
+             |        "type" : "Int",
+             |        "value" : 102500000
+             |      }
+             |    }
+             |  }, {
+             |    "name" : "issue.@args",
+             |    "type" : "Array",
+             |    "value" : [ ]
+             |  }, {
+             |    "name" : "decimals",
+             |    "type" : "Int",
+             |    "value" : 4
+             |  }, {
+             |    "name" : "Issue.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "name"
+             |    }, {
+             |      "type" : "String",
+             |      "value" : "description"
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 1000
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 4
+             |    }, {
+             |      "type" : "Boolean",
+             |      "value" : true
+             |    }, {
+             |      "type" : "Unit",
+             |      "value" : { }
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 0
+             |    } ]
+             |  }, {
+             |    "name" : "Issue.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51999
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "Issue",
+             |      "value" : {
+             |        "isReissuable" : {
+             |          "type" : "Boolean",
+             |          "value" : true
+             |        },
+             |        "nonce" : {
+             |          "type" : "Int",
+             |          "value" : 0
+             |        },
+             |        "description" : {
+             |          "type" : "String",
+             |          "value" : "description"
+             |        },
+             |        "decimals" : {
+             |          "type" : "Int",
+             |          "value" : 4
+             |        },
+             |        "compiledScript" : {
+             |          "type" : "Unit",
+             |          "value" : { }
+             |        },
+             |        "name" : {
+             |          "type" : "String",
+             |          "value" : "name"
+             |        },
+             |        "quantity" : {
+             |          "type" : "Int",
+             |          "value" : 1000
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51998
+             |  } ]
+             |} ]""".stripMargin
       )
 
       testFunction(
         "reissue",
-        tx => s"""[ {
-                 |  "type" : "verifier",
-                 |  "id" : "${invoker.toAddress}",
-                 |  "result" : "success",
-                 |  "error" : null
-                 |}, {
-                 |  "type" : "dApp",
-                 |  "id" : "${dapp.toAddress}",
-                 |  "function" : "reissue",
-                 |  "args" : [ ],
-                 |  "invocations" : [ ],
-                 |  "result" : {
-                 |    "data" : [ ],
-                 |    "transfers" : [ ],
-                 |    "issues" : [ ],
-                 |    "reissues" : [ {
-                 |      "assetId" : "${issue.asset}",
-                 |      "isReissuable" : false,
-                 |      "quantity" : 1
-                 |    } ],
-                 |    "burns" : [ ],
-                 |    "sponsorFees" : [ ],
-                 |    "leases" : [ ],
-                 |    "leaseCancels" : [ ],
-                 |    "invokes" : [ ]
-                 |  },
-                 |  "error" : null,
-                 |  "vars" : [ {
-                 |    "name" : "i",
-                 |    "type" : "Invocation",
-                 |    "value" : {
-                 |      "payments" : {
-                 |        "type" : "Array",
-                 |        "value" : [ ]
-                 |      },
-                 |      "callerPublicKey" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${invoker.publicKey}"
-                 |      },
-                 |      "feeAssetId" : {
-                 |        "type" : "Unit",
-                 |        "value" : { }
-                 |      },
-                 |      "transactionId" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${tx.id()}"
-                 |      },
-                 |      "caller" : {
-                 |        "type" : "Address",
-                 |        "value" : {
-                 |          "bytes" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${invoker.toAddress}"
-                 |          }
-                 |        }
-                 |      },
-                 |      "fee" : {
-                 |        "type" : "Int",
-                 |        "value" : 102500000
-                 |      }
-                 |    }
-                 |  }, {
-                 |    "name" : "reissue.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ ]
-                 |  }, {
-                 |    "name" : "Reissue.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "ByteVector",
-                 |      "value" : "${issue.asset}"
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 1
-                 |    }, {
-                 |      "type" : "Boolean",
-                 |      "value" : false
-                 |    } ]
-                 |  }, {
-                 |    "name" : "Reissue.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51999
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "Reissue",
-                 |      "value" : {
-                 |        "assetId" : {
-                 |          "type" : "ByteVector",
-                 |          "value" : "${issue.asset}"
-                 |        },
-                 |        "quantity" : {
-                 |          "type" : "Int",
-                 |          "value" : 1
-                 |        },
-                 |        "isReissuable" : {
-                 |          "type" : "Boolean",
-                 |          "value" : false
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51998
-                 |  } ]
-                 |}, {
-                 |  "type" : "asset",
-                 |  "context" : "reissue",
-                 |  "id" : "${issue.asset}",
-                 |  "result" : "failure",
-                 |  "vars" : [ {
-                 |    "name" : "test",
-                 |    "type" : "Boolean",
-                 |    "value" : true
-                 |  }, {
-                 |    "name" : "throw.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "error"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "throw.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 2147483646
-                 |  } ],
-                 |  "error" : "error"
-                 |} ]""".stripMargin
+        tx =>
+          s"""[ {
+             |  "type" : "verifier",
+             |  "id" : "${invoker.toAddress}",
+             |  "result" : "success",
+             |  "error" : null
+             |}, {
+             |  "type" : "dApp",
+             |  "id" : "${dapp.toAddress}",
+             |  "function" : "reissue",
+             |  "args" : [ ],
+             |  "invocations" : [ ],
+             |  "result" : {
+             |    "data" : [ ],
+             |    "transfers" : [ ],
+             |    "issues" : [ ],
+             |    "reissues" : [ {
+             |      "assetId" : "${issue.asset}",
+             |      "isReissuable" : false,
+             |      "quantity" : 1
+             |    } ],
+             |    "burns" : [ ],
+             |    "sponsorFees" : [ ],
+             |    "leases" : [ ],
+             |    "leaseCancels" : [ ],
+             |    "invokes" : [ ]
+             |  },
+             |  "error" : null,
+             |  "vars" : [ {
+             |    "name" : "i",
+             |    "type" : "Invocation",
+             |    "value" : {
+             |      "payments" : {
+             |        "type" : "Array",
+             |        "value" : [ ]
+             |      },
+             |      "callerPublicKey" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${invoker.publicKey}"
+             |      },
+             |      "feeAssetId" : {
+             |        "type" : "Unit",
+             |        "value" : { }
+             |      },
+             |      "transactionId" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${tx.id()}"
+             |      },
+             |      "caller" : {
+             |        "type" : "Address",
+             |        "value" : {
+             |          "bytes" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${invoker.toAddress}"
+             |          }
+             |        }
+             |      },
+             |      "fee" : {
+             |        "type" : "Int",
+             |        "value" : 102500000
+             |      }
+             |    }
+             |  }, {
+             |    "name" : "reissue.@args",
+             |    "type" : "Array",
+             |    "value" : [ ]
+             |  }, {
+             |    "name" : "Reissue.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "ByteVector",
+             |      "value" : "${issue.asset}"
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 1
+             |    }, {
+             |      "type" : "Boolean",
+             |      "value" : false
+             |    } ]
+             |  }, {
+             |    "name" : "Reissue.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51999
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "Reissue",
+             |      "value" : {
+             |        "assetId" : {
+             |          "type" : "ByteVector",
+             |          "value" : "${issue.asset}"
+             |        },
+             |        "quantity" : {
+             |          "type" : "Int",
+             |          "value" : 1
+             |        },
+             |        "isReissuable" : {
+             |          "type" : "Boolean",
+             |          "value" : false
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51998
+             |  } ]
+             |}, {
+             |  "type" : "asset",
+             |  "context" : "reissue",
+             |  "id" : "${issue.asset}",
+             |  "result" : "failure",
+             |  "vars" : [ {
+             |    "name" : "test",
+             |    "type" : "Boolean",
+             |    "value" : true
+             |  }, {
+             |    "name" : "throw.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "error"
+             |    } ]
+             |  }, {
+             |    "name" : "throw.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 2147483646
+             |  } ],
+             |  "error" : "error"
+             |} ]""".stripMargin
       )
 
       testFunction(
         "burn",
-        tx => s"""[ {
-                 |  "type" : "verifier",
-                 |  "id" : "${invoker.toAddress}",
-                 |  "result" : "success",
-                 |  "error" : null
-                 |}, {
-                 |  "type" : "dApp",
-                 |  "id" : "${dapp.toAddress}",
-                 |  "function" : "burn",
-                 |  "args" : [ ],
-                 |  "invocations" : [ ],
-                 |  "result" : {
-                 |    "data" : [ ],
-                 |    "transfers" : [ ],
-                 |    "issues" : [ ],
-                 |    "reissues" : [ ],
-                 |    "burns" : [ {
-                 |      "assetId" : "${issue.asset}",
-                 |      "quantity" : 1
-                 |    } ],
-                 |    "sponsorFees" : [ ],
-                 |    "leases" : [ ],
-                 |    "leaseCancels" : [ ],
-                 |    "invokes" : [ ]
-                 |  },
-                 |  "error" : null,
-                 |  "vars" : [ {
-                 |    "name" : "i",
-                 |    "type" : "Invocation",
-                 |    "value" : {
-                 |      "payments" : {
-                 |        "type" : "Array",
-                 |        "value" : [ ]
-                 |      },
-                 |      "callerPublicKey" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${invoker.publicKey}"
-                 |      },
-                 |      "feeAssetId" : {
-                 |        "type" : "Unit",
-                 |        "value" : { }
-                 |      },
-                 |      "transactionId" : {
-                 |        "type" : "ByteVector",
-                 |        "value" : "${tx.id()}"
-                 |      },
-                 |      "caller" : {
-                 |        "type" : "Address",
-                 |        "value" : {
-                 |          "bytes" : {
-                 |            "type" : "ByteVector",
-                 |            "value" : "${invoker.toAddress}"
-                 |          }
-                 |        }
-                 |      },
-                 |      "fee" : {
-                 |        "type" : "Int",
-                 |        "value" : 102500000
-                 |      }
-                 |    }
-                 |  }, {
-                 |    "name" : "burn.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ ]
-                 |  }, {
-                 |    "name" : "Burn.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "ByteVector",
-                 |      "value" : "${issue.asset}"
-                 |    }, {
-                 |      "type" : "Int",
-                 |      "value" : 1
-                 |    } ]
-                 |  }, {
-                 |    "name" : "Burn.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51999
-                 |  }, {
-                 |    "name" : "cons.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "Burn",
-                 |      "value" : {
-                 |        "assetId" : {
-                 |          "type" : "ByteVector",
-                 |          "value" : "${issue.asset}"
-                 |        },
-                 |        "quantity" : {
-                 |          "type" : "Int",
-                 |          "value" : 1
-                 |        }
-                 |      }
-                 |    }, {
-                 |      "type" : "Array",
-                 |      "value" : [ ]
-                 |    } ]
-                 |  }, {
-                 |    "name" : "cons.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 51998
-                 |  } ]
-                 |}, {
-                 |  "type" : "asset",
-                 |  "context" : "burn",
-                 |  "id" : "${issue.asset}",
-                 |  "result" : "failure",
-                 |  "vars" : [ {
-                 |    "name" : "test",
-                 |    "type" : "Boolean",
-                 |    "value" : true
-                 |  }, {
-                 |    "name" : "throw.@args",
-                 |    "type" : "Array",
-                 |    "value" : [ {
-                 |      "type" : "String",
-                 |      "value" : "error"
-                 |    } ]
-                 |  }, {
-                 |    "name" : "throw.@complexity",
-                 |    "type" : "Int",
-                 |    "value" : 1
-                 |  }, {
-                 |    "name" : "@complexityLimit",
-                 |    "type" : "Int",
-                 |    "value" : 2147483646
-                 |  } ],
-                 |  "error" : "error"
-                 |} ]""".stripMargin
+        tx =>
+          s"""[ {
+             |  "type" : "verifier",
+             |  "id" : "${invoker.toAddress}",
+             |  "result" : "success",
+             |  "error" : null
+             |}, {
+             |  "type" : "dApp",
+             |  "id" : "${dapp.toAddress}",
+             |  "function" : "burn",
+             |  "args" : [ ],
+             |  "invocations" : [ ],
+             |  "result" : {
+             |    "data" : [ ],
+             |    "transfers" : [ ],
+             |    "issues" : [ ],
+             |    "reissues" : [ ],
+             |    "burns" : [ {
+             |      "assetId" : "${issue.asset}",
+             |      "quantity" : 1
+             |    } ],
+             |    "sponsorFees" : [ ],
+             |    "leases" : [ ],
+             |    "leaseCancels" : [ ],
+             |    "invokes" : [ ]
+             |  },
+             |  "error" : null,
+             |  "vars" : [ {
+             |    "name" : "i",
+             |    "type" : "Invocation",
+             |    "value" : {
+             |      "payments" : {
+             |        "type" : "Array",
+             |        "value" : [ ]
+             |      },
+             |      "callerPublicKey" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${invoker.publicKey}"
+             |      },
+             |      "feeAssetId" : {
+             |        "type" : "Unit",
+             |        "value" : { }
+             |      },
+             |      "transactionId" : {
+             |        "type" : "ByteVector",
+             |        "value" : "${tx.id()}"
+             |      },
+             |      "caller" : {
+             |        "type" : "Address",
+             |        "value" : {
+             |          "bytes" : {
+             |            "type" : "ByteVector",
+             |            "value" : "${invoker.toAddress}"
+             |          }
+             |        }
+             |      },
+             |      "fee" : {
+             |        "type" : "Int",
+             |        "value" : 102500000
+             |      }
+             |    }
+             |  }, {
+             |    "name" : "burn.@args",
+             |    "type" : "Array",
+             |    "value" : [ ]
+             |  }, {
+             |    "name" : "Burn.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "ByteVector",
+             |      "value" : "${issue.asset}"
+             |    }, {
+             |      "type" : "Int",
+             |      "value" : 1
+             |    } ]
+             |  }, {
+             |    "name" : "Burn.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51999
+             |  }, {
+             |    "name" : "cons.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "Burn",
+             |      "value" : {
+             |        "assetId" : {
+             |          "type" : "ByteVector",
+             |          "value" : "${issue.asset}"
+             |        },
+             |        "quantity" : {
+             |          "type" : "Int",
+             |          "value" : 1
+             |        }
+             |      }
+             |    }, {
+             |      "type" : "Array",
+             |      "value" : [ ]
+             |    } ]
+             |  }, {
+             |    "name" : "cons.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 51998
+             |  } ]
+             |}, {
+             |  "type" : "asset",
+             |  "context" : "burn",
+             |  "id" : "${issue.asset}",
+             |  "result" : "failure",
+             |  "vars" : [ {
+             |    "name" : "test",
+             |    "type" : "Boolean",
+             |    "value" : true
+             |  }, {
+             |    "name" : "throw.@args",
+             |    "type" : "Array",
+             |    "value" : [ {
+             |      "type" : "String",
+             |      "value" : "error"
+             |    } ]
+             |  }, {
+             |    "name" : "throw.@complexity",
+             |    "type" : "Int",
+             |    "value" : 1
+             |  }, {
+             |    "name" : "@complexityLimit",
+             |    "type" : "Int",
+             |    "value" : 2147483646
+             |  } ],
+             |  "error" : "error"
+             |} ]""".stripMargin
       )
 
     }
@@ -1617,7 +1643,7 @@ class DebugApiRouteSpec
              |  "error" : null
              |}, {
              |  "type" : "dApp",
-             |  "id" : "${dAppAddress}",
+             |  "id" : "$dAppAddress",
              |  "function" : "default",
              |  "args" : [ ],
              |  "invocations" : [ ],

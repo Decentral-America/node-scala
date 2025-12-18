@@ -28,7 +28,7 @@ object GenesisBlockGenerator {
   private type SeedText = String
   private type Share    = Long
 
-  case class DistributionItem(seedText: String, nonce: Int, amount: Share, miner: Boolean = true)
+  case class DistributionItem(seedText: String, amount: Share, nonce: Int = 0, miner: Boolean = true)
 
   object DistributionItem {
     // This given is required for default args to work.
@@ -53,7 +53,10 @@ object GenesisBlockGenerator {
     val chainId: Byte = networkType.head.toByte
 
     private val features: Map[Short, Int] =
-      preActivatedFeatures.getOrElse(List(BlockchainFeatures.FairPoS.id.toInt, BlockchainFeatures.BlockV5.id.toInt)).map(f => f.toShort -> 0).toMap
+      preActivatedFeatures
+        .getOrElse(List(BlockchainFeatures.FairPoS.id.toInt, BlockchainFeatures.BlockV5.id.toInt))
+        .map(f => f.toShort -> 0)
+        .toMap
 
     val functionalitySettings: FunctionalitySettings = FunctionalitySettings(
       Int.MaxValue,
@@ -186,7 +189,8 @@ object GenesisBlockGenerator {
           featureVotes = Seq.empty,
           rewardVote = -1L,
           stateHash = None,
-          challengedHeader = None
+          challengedHeader = None,
+          finalizationVoting = None
         )
         .explicitGet()
 

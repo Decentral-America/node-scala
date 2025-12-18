@@ -11,6 +11,8 @@ import com.wavesplatform.lang.script.v1.ExprScript
 import com.wavesplatform.lang.v1.compiler.Terms.*
 import com.wavesplatform.mining.MiningConstraint
 import com.wavesplatform.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings}
+import com.wavesplatform.state.GenesisBlockHeight
+import com.wavesplatform.state.Height
 import com.wavesplatform.test.*
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.assets.exchange.OrderType
@@ -56,10 +58,12 @@ class CommonValidationTest extends PropSpec with WithState {
           preconditionDiff,
           preconditionFees,
           totalFee,
-          None,
+          reward = None,
           genesisBlock.header.generationSignature,
           computedStateHash,
-          genesisBlock
+          genesisBlock,
+          newFinalizedHeight = GenesisBlockHeight,
+          generatorBalances = Seq.empty
         )
 
         f(FeeValidation(blockchain, transferTx))
@@ -81,7 +85,17 @@ class CommonValidationTest extends PropSpec with WithState {
     withRocksDBWriter(settings) { blockchain =>
       val BlockDiffer.Result(preconditionDiff, preconditionFees, totalFee, _, _, computedStateHash) =
         BlockDiffer.fromBlock(blockchain, None, genesisBlock, None, MiningConstraint.Unlimited, genesisBlock.header.generationSignature).explicitGet()
-      blockchain.append(preconditionDiff, preconditionFees, totalFee, None, genesisBlock.header.generationSignature, computedStateHash, genesisBlock)
+      blockchain.append(
+        preconditionDiff,
+        preconditionFees,
+        totalFee,
+        reward = None,
+        genesisBlock.header.generationSignature,
+        computedStateHash,
+        genesisBlock,
+        newFinalizedHeight = GenesisBlockHeight,
+        generatorBalances = Seq.empty
+      )
 
       f(FeeValidation(blockchain, transferTx))
     }
@@ -156,7 +170,17 @@ class CommonValidationTest extends PropSpec with WithState {
     withRocksDBWriter(settings) { blockchain =>
       val BlockDiffer.Result(preconditionDiff, preconditionFees, totalFee, _, _, computedStateHash) =
         BlockDiffer.fromBlock(blockchain, None, genesisBlock, None, MiningConstraint.Unlimited, genesisBlock.header.generationSignature).explicitGet()
-      blockchain.append(preconditionDiff, preconditionFees, totalFee, None, genesisBlock.header.generationSignature, computedStateHash, genesisBlock)
+      blockchain.append(
+        preconditionDiff,
+        preconditionFees,
+        totalFee,
+        reward = None,
+        genesisBlock.header.generationSignature,
+        computedStateHash,
+        genesisBlock,
+        newFinalizedHeight = GenesisBlockHeight,
+        generatorBalances = Seq.empty
+      )
 
       f(FeeValidation(blockchain, transferTx))
     }
@@ -205,7 +229,8 @@ class CommonValidationTest extends PropSpec with WithState {
         TxHelpers.reissue(asset, master, amount, chainId = invChainId),
         TxHelpers.sponsor(asset, Some(amount), master, version = TxVersion.V2, chainId = invChainId),
         TxHelpers.updateAssetInfo(asset.id, sender = master, chainId = invChainId),
-        TxHelpers.dataV2(master, Seq.empty, chainId = invChainId)
+        TxHelpers.dataV2(master, Seq.empty, chainId = invChainId),
+        TxHelpers.commitToGeneration(Height(3000), chainId = invChainId)
       ).map(genesis -> _)
     }
 

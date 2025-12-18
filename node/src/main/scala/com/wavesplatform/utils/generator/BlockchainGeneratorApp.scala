@@ -1,10 +1,7 @@
 package com.wavesplatform.utils.generator
 
-import java.io.{File, FileOutputStream, PrintWriter}
-import java.util.concurrent.TimeUnit
 import cats.implicits.*
 import com.typesafe.config.{ConfigFactory, ConfigParseOptions}
-import com.wavesplatform.{GenesisBlockGenerator, Version}
 import com.wavesplatform.account.{Address, SeedKeyPair}
 import com.wavesplatform.block.Block
 import com.wavesplatform.consensus.PoSSelector
@@ -12,19 +9,23 @@ import com.wavesplatform.database.RDB
 import com.wavesplatform.events.{BlockchainUpdateTriggers, UtxEvent}
 import com.wavesplatform.history.StorageFactory
 import com.wavesplatform.lang.ValidationError
-import com.wavesplatform.mining.{Miner, MinerImpl}
+import com.wavesplatform.mining.{ForgeAttemptResult, Miner, MinerImpl}
 import com.wavesplatform.settings.*
 import com.wavesplatform.state.appender.BlockAppender
+import com.wavesplatform.state.{BlockEndorser, EndorsementStorage}
 import com.wavesplatform.transaction.TxValidationError.GenericError
 import com.wavesplatform.utils.{Schedulers, ScorexLogging, Time}
 import com.wavesplatform.utx.UtxPoolImpl
 import com.wavesplatform.wallet.Wallet
+import com.wavesplatform.{GenesisBlockGenerator, Version}
 import io.netty.channel.group.DefaultChannelGroup
 import monix.reactive.subjects.ConcurrentSubject
-import pureconfig.ConfigSource
 import play.api.libs.json.Json
+import pureconfig.ConfigSource
 import scopt.OParser
 
+import java.io.{File, FileOutputStream, PrintWriter}
+import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.*
 import scala.language.reflectiveCalls
@@ -159,13 +160,15 @@ object BlockchainGeneratorApp extends ScorexLogging {
       wavesSettings,
       fakeTime,
       utx,
+      BlockEndorser.Disabled,
+      EndorsementStorage.Disabled,
       wallet,
       posSelector,
       scheduler,
       scheduler,
       utxEvents.collect { case _: UtxEvent.TxAdded => () }
     )
-    val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, scheduler, verify = false)(_, None)
+    val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, BlockEndorser.Disabled, scheduler, verify = false)(_, None)
 
     object Output {
       private var first = true
@@ -246,7 +249,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
       fakeTime.time = nextTime
 
       miner.forgeBlock(bestMiner) match {
-        case Right((block, _)) =>
+        case ForgeAttemptResult.Success(block, _) =>
           blockAppender(block).runSyncUnsafe() match {
             case Right(_) =>
               blocks += block
@@ -258,7 +261,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
               sys.exit(1)
           }
 
-        case Left(err) =>
+        case err =>
           log.error(s"Error generating block: $err")
           sys.exit(1)
       }

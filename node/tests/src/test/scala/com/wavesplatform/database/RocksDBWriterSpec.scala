@@ -5,6 +5,7 @@ import com.wavesplatform.TestValues
 import com.wavesplatform.account.{Address, KeyPair}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.database.RocksDBWriter.{merge3, slice}
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.features.BlockchainFeatures
@@ -27,20 +28,43 @@ import scala.util.{Random, Using}
 class RocksDBWriterSpec extends FreeSpec with WithDomain {
   "Slice" - {
     "drops tail" in {
-      RocksDBWriter.slice(Seq(H(10), H(7), H(4)), H(7), H(10)) shouldEqual Seq(10, 7).map(H.apply)
+      slice(H.seq(10, 7, 4), H(7), H(10)) shouldEqual H.seq(10, 7)
     }
     "drops head" in {
-      RocksDBWriter.slice(Seq(10, 7, 4).map(H.apply), H(4), H(8)) shouldEqual Seq(7, 4).map(H.apply)
+      slice(H.seq(10, 7, 4), H(4), H(8)) shouldEqual H.seq(7, 4)
     }
     "includes Genesis" in {
-      RocksDBWriter.slice(Seq(H(10), H(7)), H(5), H(11)) shouldEqual Seq(10, 7, 1).map(H.apply)
+      slice(H.seq(10, 7), H(5), H(11)) shouldEqual H.seq(10, 7, 1)
+    }
+    "with zero" in {
+      slice(H.seq(10, 7, 0), H(5), H(11)) shouldEqual H.seq(10, 7, 0)
     }
   }
   "Merge" - {
     "correctly joins height ranges" in {
-      RocksDBWriter.merge(Seq(15, 12, 3).map(H.apply), Seq(12, 5).map(H.apply)) shouldEqual Seq((H(15), H(12)), (H(12), H(12)), (H(3), H(5)))
-      RocksDBWriter.merge(Seq(12, 5).map(H.apply), Seq(15, 12, 3).map(H.apply)) shouldEqual Seq((H(12), H(15)), (H(12), H(12)), (H(5), H(3)))
-      RocksDBWriter.merge(Seq(8, 4).map(H.apply), Seq(8, 4).map(H.apply)) shouldEqual Seq((H(8), H(8)), (H(4), H(4)))
+      merge3(H.seq(15, 12, 3), H.seq(12, 5), H.seq(3, 1)) shouldEqual Seq(H.tuple(15, 12, 3), H.tuple(12, 12, 3), H.tuple(3, 5, 3), H.tuple(3, 5, 1))
+      merge3(H.seq(12, 5), H.seq(15, 12, 3), H.seq(9, 6)) shouldEqual Seq(H.tuple(12, 15, 9), H.tuple(12, 12, 9), H.tuple(5, 3, 9), H.tuple(5, 3, 6))
+      merge3(H.seq(8, 4), H.seq(8, 4), H.seq(1)) shouldEqual Seq(H.tuple(8, 8, 1), H.tuple(4, 4, 1))
+    }
+
+    "zeroes" in {
+      merge3(H.seq(1), H.seq(0), H.seq(0)) shouldEqual Seq(H.tuple(1, 0, 0))
+      merge3(H.seq(0), H.seq(0), H.seq(0)) shouldEqual Seq(H.tuple(0, 0, 0))
+      merge3(H.seq(0), H.seq(2), H.seq(0)) shouldEqual Seq(H.tuple(0, 2, 0))
+      merge3(H.seq(4, 2, 1), H.seq(0), H.seq(0)) shouldEqual Seq(H.tuple(4, 0, 0), H.tuple(2, 0, 0), H.tuple(1, 0, 0))
+      merge3(H.seq(4, 2, 1), H.seq(0), H.seq(6, 4, 2)) shouldEqual Seq(H.tuple(4, 0, 6), H.tuple(4, 0, 4), H.tuple(2, 0, 2), H.tuple(1, 0, 2))
+    }
+
+    "one sequence longer than others, exhausted sequences keep head steady" in {
+      merge3(H.seq(9, 8), H.seq(3), H.seq(2)) shouldBe Seq(H.tuple(9, 3, 2), H.tuple(8, 3, 2))
+    }
+
+    "all heads equal but only some have tails" in {
+      merge3(H.seq(5, 4), H.seq(5), H.seq(5, 1)) shouldBe Seq(H.tuple(5, 5, 5), H.tuple(4, 5, 1))
+    }
+
+    "strictly descending and all tails exhausted at different times" in {
+      merge3(H.seq(4, 2, 1), H.seq(6, 3), H.seq(5)) shouldBe Seq(H.tuple(4, 6, 5), H.tuple(4, 3, 5), H.tuple(2, 3, 5), H.tuple(1, 3, 5))
     }
   }
 
@@ -319,15 +343,15 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
         d.blockchain.height shouldBe 10
 
         d.blockchain.balanceAtHeight(account1.toAddress, 10) shouldBe Some(9 -> 11.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress,  9) shouldBe Some(9 -> 11.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress,  8) shouldBe Some(6 -> 10.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress,  6) shouldBe Some(6 -> 10.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress,  5) shouldBe None
+        d.blockchain.balanceAtHeight(account1.toAddress, 9) shouldBe Some(9 -> 11.waves)
+        d.blockchain.balanceAtHeight(account1.toAddress, 8) shouldBe Some(6 -> 10.waves)
+        d.blockchain.balanceAtHeight(account1.toAddress, 6) shouldBe Some(6 -> 10.waves)
+        d.blockchain.balanceAtHeight(account1.toAddress, 5) shouldBe None
 
         d.blockchain.balanceAtHeight(account1.toAddress, 10, issueTx.asset) shouldBe Some(10 -> 600)
-        d.blockchain.balanceAtHeight(account1.toAddress,  9, issueTx.asset) shouldBe Some(7  -> 100)
-        d.blockchain.balanceAtHeight(account1.toAddress,  8, issueTx.asset) shouldBe Some(7  -> 100)
-        d.blockchain.balanceAtHeight(account1.toAddress,  6, issueTx.asset) shouldBe None
+        d.blockchain.balanceAtHeight(account1.toAddress, 9, issueTx.asset) shouldBe Some(7 -> 100)
+        d.blockchain.balanceAtHeight(account1.toAddress, 8, issueTx.asset) shouldBe Some(7 -> 100)
+        d.blockchain.balanceAtHeight(account1.toAddress, 6, issueTx.asset) shouldBe None
 
         d.appendBlock(TxHelpers.transfer(richAccount, account2.toAddress, 20.waves))
         d.appendBlock(TxHelpers.transfer(richAccount, account2.toAddress, 700, issueTx.asset))

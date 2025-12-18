@@ -1,20 +1,21 @@
 package com.wavesplatform.block.serialization
 
-import java.nio.ByteBuffer
 import com.google.common.io.ByteStreams.newDataOutput
 import com.google.common.primitives.{Bytes, Ints, Longs, Shorts}
 import com.wavesplatform.account.PublicKey
 import com.wavesplatform.block.Block.{NgBlockVersion, ProtoBlockVersion, RewardBlockVersion}
-import com.wavesplatform.block.{Block, BlockHeader}
+import com.wavesplatform.block.{Block, BlockHeader, FinalizationVoting}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.crypto.SignatureLength
 import com.wavesplatform.protobuf.block.PBBlocks
 import com.wavesplatform.protobuf.utils.PBUtils
 import com.wavesplatform.serialization.ByteBufferOps
+import com.wavesplatform.state.{GeneratorIndex, Height}
 import com.wavesplatform.transaction.Asset.Waves
 import com.wavesplatform.transaction.Transaction
 import play.api.libs.json.{JsArray, JsNumber, JsObject, Json}
 
+import java.nio.ByteBuffer
 import scala.util.Try
 
 object BlockHeaderSerializer {
@@ -58,6 +59,25 @@ object BlockHeaderSerializer {
         case None     => JsObject.empty
       }
 
+    def createFinalizationJson(finalizationVoting: Option[FinalizationVoting]): JsObject = finalizationVoting match {
+      case None => JsObject.empty
+      case Some(fv) =>
+        val builder = Json.newBuilder
+        if (fv.valid.nonEmpty) builder += "endorserIndexes"                                 -> GeneratorIndex.toInts(fv.valid)
+        if (fv.aggregatedEndorsement.isDefined) builder += "aggregatedEndorsementSignature" -> fv.aggregatedEndorsement.base58
+        if (fv.finalizedHeight > Height(0)) builder += "finalizedHeight"                    -> fv.finalizedHeight
+        if (fv.conflict.nonEmpty) builder += "conflictEndorsements" -> fv.conflict.map { c =>
+          Json.obj(
+            "endorserIndex"    -> c.endorserIndex.toInt,
+            "finalizedBlockId" -> c.finalizedId.toString,
+            "finalizedHeight"  -> c.finalizedHeight.toInt,
+            "signature"        -> c.signature.base58
+          )
+        }
+
+        Json.obj("finalizationVoting" -> builder.result())
+    }
+
     val consensusJson =
       Json.obj(
         "nxt-consensus" -> Json.obj(
@@ -77,20 +97,24 @@ object BlockHeaderSerializer {
       blockHeader.challengedHeader match {
         case Some(ch) =>
           Json.obj(
-            "challengedHeader" -> (Json.obj(
-              "headerSignature" -> ch.headerSignature.toString
-            ) ++ createFeaturesJson(ch.featureVotes) ++ createGeneratorJson(ch.generator) ++ createRewardVoteJson(
-              ch.rewardVote
-            ) ++ createStateHashJson(ch.stateHash))
+            "challengedHeader" -> {
+              Json.obj(
+                "headerSignature" -> ch.headerSignature.toString
+              ) ++ createFeaturesJson(ch.featureVotes) ++ createGeneratorJson(ch.generator) ++ createRewardVoteJson(
+                ch.rewardVote
+              ) ++ createStateHashJson(ch.stateHash) ++ createFinalizationJson(ch.finalizationVoting)
+            }
           )
         case None => JsObject.empty
       }
+
+    val finalizationHeaderJson = createFinalizationJson(blockHeader.finalizationVoting)
 
     Json.obj(
       "version"   -> blockHeader.version,
       "timestamp" -> blockHeader.timestamp,
       "reference" -> blockHeader.reference.toString
-    ) ++ consensusJson ++ featuresJson ++ rewardJson ++ generatorJson ++ stateHashJson ++ challengedHeaderJson
+    ) ++ consensusJson ++ featuresJson ++ rewardJson ++ generatorJson ++ stateHashJson ++ challengedHeaderJson ++ finalizationHeaderJson
   }
 
   def toJson(header: BlockHeader, blockSize: Int, transactionCount: Int, signature: ByteStr): JsObject =
@@ -161,8 +185,20 @@ object BlockSerializer {
       val transactionData                                                          = parseTxs(buf, version)
       val Suffix(generator, featureVotes, rewardVote, transactionsRoot, signature) = parseSuffix(buf, version)
 
-      val header =
-        BlockHeader(version, timestamp, reference, baseTarget, generationSignature, generator, featureVotes, rewardVote, transactionsRoot, None, None)
+      val header = BlockHeader(
+        version,
+        timestamp,
+        reference,
+        baseTarget,
+        generationSignature,
+        generator,
+        featureVotes,
+        rewardVote,
+        transactionsRoot,
+        stateHash = None,
+        challengedHeader = None,
+        finalizationVoting = None
+      )
 
       Block(header, signature, transactionData)
     }

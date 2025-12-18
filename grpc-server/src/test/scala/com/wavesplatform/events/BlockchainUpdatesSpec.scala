@@ -849,7 +849,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
         val daoAddress        = d.settings.blockchainSettings.functionalitySettings.daoAddressParsed.toOption.flatten
         val xtnBuybackAddress = d.settings.blockchainSettings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
         val blockRewards = BlockRewardCalculator.getBlockRewardShares(
-          2,
+          Height(2),
           d.settings.blockchainSettings.rewardsSettings.initial,
           daoAddress,
           xtnBuybackAddress,
