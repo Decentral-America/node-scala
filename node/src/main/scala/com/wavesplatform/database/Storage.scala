@@ -1,8 +1,9 @@
 package com.wavesplatform.database
 
-import com.wavesplatform.block.{Block, BlockSnapshot}
+import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.state.{Height, StateSnapshot}
+import com.wavesplatform.state.{GeneratorBalances, Height, StateSnapshot}
+import com.wavesplatform.transaction.DiscardedBlocks
 
 trait Storage {
   def append(
@@ -12,9 +13,11 @@ trait Storage {
       reward: Option[Long],
       hitSource: ByteStr,
       computedBlockStateHash: ByteStr,
-      block: Block
+      block: Block,
+      newFinalizedHeight: Height,
+      generatorBalances: GeneratorBalances
   ): Unit
   def lastBlock: Option[Block]
-  def rollbackTo(height: Height): Either[String, Seq[(Block, ByteStr, Option[BlockSnapshot])]]
+  def rollbackTo(height: Height): Either[String, DiscardedBlocks]
   def safeRollbackHeight: Height
 }

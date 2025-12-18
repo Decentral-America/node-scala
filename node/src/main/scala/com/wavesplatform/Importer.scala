@@ -5,7 +5,7 @@ import cats.syntax.apply.*
 import com.google.common.io.ByteStreams
 import com.google.common.primitives.{Ints, Longs}
 import com.wavesplatform.Exporter.Formats
-import com.wavesplatform.api.common.{CommonAccountsApi, CommonAssetsApi, CommonBlocksApi, CommonTransactionsApi}
+import com.wavesplatform.api.common.*
 import com.wavesplatform.block.{Block, BlockHeader}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.consensus.PoSSelector
@@ -23,7 +23,7 @@ import com.wavesplatform.settings.WavesSettings
 import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.wavesplatform.state.ParSignatureChecker.sigverify
 import com.wavesplatform.state.appender.BlockAppender
-import com.wavesplatform.state.{Blockchain, BlockchainUpdaterImpl, Height, ParSignatureChecker}
+import com.wavesplatform.state.{BlockEndorser, Blockchain, BlockchainUpdaterImpl, Height, ParSignatureChecker}
 import com.wavesplatform.transaction.TxValidationError.GenericError
 import com.wavesplatform.transaction.smart.script.trace.TracedResult
 import com.wavesplatform.transaction.{DiscardedBlocks, Transaction}
@@ -37,7 +37,7 @@ import monix.reactive.Observable
 import scopt.OParser
 
 import java.io.*
-import java.net.{MalformedURLException, URL}
+import java.net.{MalformedURLException, URI}
 import java.time
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -150,6 +150,7 @@ object Importer extends ScorexLogging {
             )
           override def blocksApi: CommonBlocksApi =
             CommonBlocksApi(
+              settings.synchronizationSettings.maxRollback,
               blockchainUpdater,
               Application.loadBlockMetaAt(rdb.db, blockchainUpdater),
               Application.loadBlockInfoAt(rdb, blockchainUpdater)
@@ -158,6 +159,8 @@ object Importer extends ScorexLogging {
             CommonAccountsApi(() => blockchainUpdater.snapshotBlockchain, rdb, blockchainUpdater)
           override def assetsApi: CommonAssetsApi =
             CommonAssetsApi(() => blockchainUpdater.bestLiquidSnapshot.orEmpty, rdb.db, blockchainUpdater)
+          override def generatorsApi: CommonGeneratorsApi =
+            CommonGeneratorsApi(rdb, blockchainUpdater)
         }
       }
 
@@ -328,7 +331,7 @@ object Importer extends ScorexLogging {
         case _ =>
           System.setProperty("http.agent", s"waves-node/${Version.VersionString}")
           try {
-            val url        = new URL(file)
+            val url        = URI.create(file).toURL
             val connection = url.openConnection()
             if (offset > 0) connection.setRequestProperty("Range", s"bytes=$offset-")
             connection.connect()
@@ -351,7 +354,7 @@ object Importer extends ScorexLogging {
     val utxPool = new UtxPoolImpl(time, blockchainUpdater, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
     val pos     = PoSSelector(blockchainUpdater, settings.synchronizationSettings.maxBaseTarget)
     val extAppender: (Block, Option[BlockSnapshotResponse]) => Task[Either[ValidationError, BlockApplyResult]] =
-      BlockAppender(blockchainUpdater, time, utxPool, pos, scheduler, importOptions.verify, txSignParCheck = false)
+      BlockAppender(blockchainUpdater, time, utxPool, pos, BlockEndorser.Disabled, scheduler, importOptions.verify, txSignParCheck = false)
 
     val extensions = initExtensions(settings, blockchainUpdater, scheduler, time, utxPool, rdb)
     checkGenesis(settings, blockchainUpdater, Miner.Disabled)
@@ -400,16 +403,17 @@ object Importer extends ScorexLogging {
               lastHeader.baseTarget,
               lastHeader.generationSignature,
               lastHeader.generator,
-              Nil,
-              0,
-              ByteStr.empty,
-              None,
-              None
+              featureVotes = Nil,
+              rewardVote = 0,
+              transactionsRoot = ByteStr.empty,
+              stateHash = None,
+              challengedHeader = None,
+              finalizationVoting = None
             ),
             ByteStr.empty,
             Nil
           )
-          blockchainUpdater.processBlock(pseudoBlock, ByteStr.empty, None, verify = false)
+          blockchainUpdater.processBlock(pseudoBlock, hitSource = ByteStr.empty, snapshot = None, generatorBalances = Seq.empty, verify = false)
         }
 
         // Terminate appender

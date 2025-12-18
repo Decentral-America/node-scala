@@ -145,7 +145,7 @@ class Repo(db: RocksDB, blocksApi: CommonBlocksApi)(implicit s: Scheduler)
         Seq(ba.block),
         ba.block.transactionData.map(_.id()).reverse,
         ba.reverseStateUpdate,
-        blockchainBefore.activatedFeatures.collect { case (id, activationHeight) if activationHeight == ba.height => id.toInt }.toSeq
+        blockchainBefore.activatedFeatures.collect { case (id, activationHeight) if activationHeight == Height(ba.height) => id.toInt }.toSeq
       ),
       StateUpdate.referencedAssets(blockchainBefore, ba.transactionStateUpdates)
     )

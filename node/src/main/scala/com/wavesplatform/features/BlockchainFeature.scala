@@ -29,6 +29,7 @@ object BlockchainFeatures {
   val BoostBlockReward                = BlockchainFeature(23, "Boost Block Reward")
   val EcrecoverFix                    = BlockchainFeature(24, "ecrecover fix")
   val DeterministicFinality           = BlockchainFeature(25, "Deterministic Finality & RIDE V9")
+
   // Not exposed
   val ContinuationTransaction = BlockchainFeature(26, "Continuation Transaction")
   val LeaseExpiration         = BlockchainFeature(27, "Lease Expiration")

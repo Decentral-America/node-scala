@@ -9,10 +9,11 @@ import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.mining.MiningConstraint
 import com.wavesplatform.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings}
+import com.wavesplatform.state.GenesisBlockHeight
 import com.wavesplatform.test.*
 import com.wavesplatform.transaction.Asset.IssuedAsset
-import com.wavesplatform.transaction.{GenesisTransaction, TxHelpers, TxVersion}
 import com.wavesplatform.transaction.assets.ReissueTransaction
+import com.wavesplatform.transaction.{GenesisTransaction, TxHelpers, TxVersion}
 import org.scalatest.EitherValues
 
 class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValues {
@@ -85,11 +86,22 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
   private def checkFee(preconditions: Seq[Block], txs: TransactionsForCheck)(f: ValidationResults => Any): Unit =
     withRocksDBWriter(fs) { blockchain =>
       preconditions.foreach { block =>
-        val BlockDiffer.Result(preconditionDiff, preconditionFees, totalFee, _, _, computedStateHash) =
+        val BlockDiffer.Result(snapshot, carryFee, totalFee, _, _, computedStateHash) =
           BlockDiffer
             .fromBlock(blockchain, blockchain.lastBlock, block, None, MiningConstraint.Unlimited, block.header.generationSignature)
             .explicitGet()
-        blockchain.append(preconditionDiff, preconditionFees, totalFee, None, block.header.generationSignature, computedStateHash, block)
+        // TODO: how about to apply from BlockDiffer.Result
+        blockchain.append(
+          snapshot,
+          carryFee,
+          totalFee,
+          reward = None,
+          block.header.generationSignature,
+          computedStateHash,
+          block,
+          newFinalizedHeight = GenesisBlockHeight,
+          generatorBalances = Seq.empty
+        )
       }
       f((FeeValidation(blockchain, txs._1), FeeValidation(blockchain, txs._2), FeeValidation(blockchain, txs._3)))
     }

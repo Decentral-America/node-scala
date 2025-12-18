@@ -69,10 +69,11 @@ package object history {
         generationSignature = correctGenerationSignature(version),
         txs = txs,
         signer = signer,
-        Seq.empty,
-        -1L,
-        None,
-        None
+        featureVotes = Seq.empty,
+        rewardVote = -1L,
+        stateHash = None,
+        challengedHeader = None,
+        finalizationVoting = None
       )
       .explicitGet()
 
@@ -92,7 +93,8 @@ package object history {
         transactionData = txs,
         reference = prevTotal.id(),
         totalResBlockSig = newTotalBlock.signature,
-        newTotalBlock.header.stateHash
+        stateHash = newTotalBlock.header.stateHash,
+        finalizationVoting = None // TODO: endorsements
       )
       .explicitGet()
     (newTotalBlock, new MicroBlockWithTotalId(nonSigned, newTotalBlock.id()))
@@ -107,7 +109,8 @@ package object history {
         transactionData = txs,
         reference = prevTotal.id(),
         totalResBlockSig = newTotalBlock.signature,
-        stateHash = newTotalBlock.header.stateHash
+        stateHash = newTotalBlock.header.stateHash,
+        finalizationVoting = None // TODO: endorsements
       )
       .explicitGet()
     (newTotalBlock, new MicroBlockWithTotalId(nonSigned, newTotalBlock.id()))

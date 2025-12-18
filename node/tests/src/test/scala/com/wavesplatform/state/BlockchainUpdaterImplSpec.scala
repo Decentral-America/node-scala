@@ -35,7 +35,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
   private val FEE_AMT = 1000000L
 
   def baseTest(setup: Time => (KeyPair, Seq[Block]), enableNg: Boolean = false, triggers: BlockchainUpdateTriggers = BlockchainUpdateTriggers.noop)(
-      f: (BlockchainUpdaterImpl, KeyPair) => Unit
+      f: (CompleteBlockchainUpdater, KeyPair) => Unit
   ): Unit = withDomain(if (enableNg) NG else SettingsFromDefaultConfig) { d =>
     d.triggers = d.triggers :+ triggers
 
@@ -306,7 +306,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
 
       val scheduler = Schedulers.singleThread("appender")
       val appender =
-        BlockAppender(d.blockchainUpdater, SystemTime, d.utxPool, d.posSelector, scheduler, verify = false)(_, None)
+        BlockAppender(d.blockchainUpdater, SystemTime, d.utxPool, d.posSelector, BlockEndorser.Disabled, scheduler, verify = false)(_, None)
 
       appender(worseBlock).runSyncUnsafe(1.minute) shouldBe Left(
         BlockAppendError(

@@ -6,7 +6,7 @@ import com.wavesplatform.api.http.RewardApiRoute
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.database.{Keys, DBExt}
+import com.wavesplatform.database.{DBExt, Keys}
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.features.BlockchainFeatures
@@ -16,7 +16,7 @@ import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.mining.MiningConstraint
 import com.wavesplatform.settings.{Constants, FunctionalitySettings, RewardsSettings}
 import com.wavesplatform.state.diffs.BlockDiffer
-import com.wavesplatform.state.{BlockRewardCalculator, Blockchain, Height}
+import com.wavesplatform.state.{BlockRewardCalculator, Blockchain, GenesisBlockHeight, Height}
 import com.wavesplatform.test.*
 import com.wavesplatform.test.DomainPresets.{RideV6, WavesSettingsOps, BlockRewardDistribution as BlockRewardDistributionSettings}
 import com.wavesplatform.transaction.Asset.Waves
@@ -271,7 +271,17 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
       withDomain(rewardSettings) { d =>
         b2s.foldLeft[Option[Block]](None) { (prevBlock, curBlock) =>
           val BlockDiffer.Result(snapshot, carryFee, totalFee, _, _, computedStateHash) = differ(d.rocksDBWriter, prevBlock, curBlock)
-          d.rocksDBWriter.append(snapshot, carryFee, totalFee, None, curBlock.header.generationSignature, computedStateHash, curBlock)
+          d.rocksDBWriter.append(
+            snapshot,
+            carryFee,
+            totalFee,
+            reward = None,
+            curBlock.header.generationSignature,
+            computedStateHash,
+            curBlock,
+            newFinalizedHeight = GenesisBlockHeight,
+            generatorBalances = Seq.empty
+          )
           Some(curBlock)
         }
 
@@ -436,8 +446,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
       d.blockchainUpdater.height shouldBe 15
 
       val calcSettings = calcRewardSettings.blockchainSettings.rewardsSettings
-      calcSettings.nearestTermEnd(4, 9, modifyTerm = false) shouldBe 15
-      calcSettings.nearestTermEnd(4, 10, modifyTerm = false) shouldBe 15
+      calcSettings.nearestTermEnd(Height(4), Height(9), modifyTerm = false) shouldBe Height(15)
+      calcSettings.nearestTermEnd(Height(4), Height(10), modifyTerm = false) shouldBe Height(15)
 
       val route = RewardApiRoute(d.blockchainUpdater)
 
@@ -447,8 +457,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
       d.blockchainUpdater.processBlock(b4) should beRight
       d.blockchainUpdater.blockReward(16) shouldBe (7 * Constants.UnitsInWave).some
 
-      route.getRewards(9).explicitGet().votes.increase shouldBe 0
-      route.getRewards(10).explicitGet().votes.increase shouldBe 1
+      route.getRewards(Height(9)).explicitGet().votes.increase shouldBe 0
+      route.getRewards(Height(10)).explicitGet().votes.increase shouldBe 1
 
     }
   }
@@ -1325,8 +1335,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
       )
     )
 
-  private val blockMiner                           = TxHelpers.signer(10001)
-  private val initialMinerBalance                  = 100_000.waves
+  private val blockMiner          = TxHelpers.signer(10001)
+  private val initialMinerBalance = 100_000.waves
 
   private def assertBalances(blockchain: Blockchain, expectedBalances: (Address, Long)*)(implicit pos: Position): Unit =
     expectedBalances.foreach { case (address, balance) =>
@@ -1425,10 +1435,12 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     )
 
     d.blockchain.wavesAmount(15) shouldBe
-      BigInt(100_000_000.waves + // 1: genesis
-        3 * 6.waves +            // 2..4: before boost activation
-        5 * 60.waves +           // 5..9: boosted reward before change
-        5 * (6.waves + rewardDelta) * 10 + // 10..14: boosted reward after change
-        6.waves + rewardDelta)   // 15: non-boosted after change
+      BigInt(
+        100_000_000.waves +                  // 1: genesis
+          3 * 6.waves +                      // 2..4: before boost activation
+          5 * 60.waves +                     // 5..9: boosted reward before change
+          5 * (6.waves + rewardDelta) * 10 + // 10..14: boosted reward after change
+          6.waves + rewardDelta
+      ) // 15: non-boosted after change
   }
 }

@@ -1,6 +1,5 @@
 package com.wavesplatform.consensus
 
-import java.nio.file.Files
 import com.typesafe.config.ConfigFactory
 import com.wavesplatform.account.KeyPair
 import com.wavesplatform.block.Block
@@ -20,6 +19,7 @@ import com.wavesplatform.utils.Time
 import com.wavesplatform.{TestHelpers, WithNewDBForEachTest, crypto}
 import org.scalacheck.{Arbitrary, Gen}
 
+import java.nio.file.Files
 import scala.concurrent.duration.*
 import scala.util.Random
 
@@ -239,7 +239,8 @@ class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheS
             crypto
               .verifyVRF(blockToApply.header.generationSignature, blockchain.hitSource(blockCount + 1).get.arr, blockToApply.sender)
               .explicitGet(),
-            None
+            snapshot = None,
+            generatorBalances = Seq.empty
           ) should beRight
 
           blockchain.lastBlockId shouldBe Some(blockToApply.id())
@@ -260,7 +261,8 @@ class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheS
       blockchain.processBlock(
         blockToApply,
         blockchain.blockHeader(2).get.header.generationSignature,
-        None
+        snapshot = None,
+        generatorBalances = Seq.empty
       ) should beRight
 
       blockchain.lastBlockId shouldBe Some(blockToApply.id())
@@ -288,7 +290,12 @@ class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheS
       val (accounts, blocks) = gen(ntpTime).sample.get
 
       blocks.foreach { block =>
-        bcu.processBlock(block, block.header.generationSignature.take(Block.HitSourceLength), None) should beRight
+        bcu.processBlock(
+          block,
+          block.header.generationSignature.take(Block.HitSourceLength),
+          snapshot = None,
+          generatorBalances = Seq.empty
+        ) should beRight
       }
 
       f(Env(pos, bcu, accounts, blocks))
@@ -372,12 +379,13 @@ object FPPoSSelectorTest {
           forkChain.head._1.id(),
           bt,
           gs,
-          Seq.empty,
+          txs = Seq.empty,
           miner,
-          Seq.empty,
-          -1L,
-          None,
-          None
+          featureVotes = Seq.empty,
+          rewardVote = -1L,
+          stateHash = None,
+          challengedHeader = None,
+          finalizationVoting = None
         )
         .explicitGet()
 
@@ -424,12 +432,13 @@ object FPPoSSelectorTest {
         lastBlockHeader.id(),
         updateBT(cData.baseTarget),
         updateGS(cData.generationSignature),
-        Seq.empty,
+        txs = Seq.empty,
         miner,
-        Seq.empty,
-        0.toByte,
-        None,
-        None
+        featureVotes = Seq.empty,
+        rewardVote = 0.toByte,
+        stateHash = None,
+        challengedHeader = None,
+        finalizationVoting = None
       )
       .explicitGet()
   }

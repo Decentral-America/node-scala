@@ -4,6 +4,7 @@ import com.google.common.primitives.{Ints, Longs}
 import com.wavesplatform.account.{Address, Alias}
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.database.protobuf.{EthereumTransactionMeta, StaticAssetInfo, TransactionMeta, BlockMeta as PBBlockMeta}
 import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
 import com.wavesplatform.state.*
@@ -126,8 +127,8 @@ object Keys {
   def addressScript(addressId: AddressId)(height: Height): Key[Option[AccountScriptInfo]] =
     Key.opt(AddressScript, hAddr(height, addressId), readAccountScriptInfo, writeAccountScriptInfo)
 
-  val approvedFeatures: Key[Map[Short, Int]]  = Key(ApprovedFeatures, Array.emptyByteArray, readFeatureMap, writeFeatureMap)
-  val activatedFeatures: Key[Map[Short, Int]] = Key(ActivatedFeatures, Array.emptyByteArray, readFeatureMap, writeFeatureMap)
+  val approvedFeatures: Key[Map[Short, Height]]  = Key(ApprovedFeatures, Array.emptyByteArray, readFeatureMap, writeFeatureMap)
+  val activatedFeatures: Key[Map[Short, Height]] = Key(ActivatedFeatures, Array.emptyByteArray, readFeatureMap, writeFeatureMap)
 
   def data(addressId: AddressId, key: String): Key[CurrentData] =
     Key(Data, addressId.toByteArray ++ key.utf8Bytes, readCurrentData(key), writeCurrentData)
@@ -248,4 +249,50 @@ object Keys {
 
   def maliciousMinerBanHeights(addressBytes: Array[Byte]): Key[Seq[Height]] =
     historyKey(MaliciousMinerBanHeights, addressBytes)
+
+  // Writes only after DeterministicFinality activation
+  val finalizedHeight: Key[Option[Height]] = Key.opt(
+    FinalizedBlockHeight,
+    Array.emptyByteArray,
+    bytes => com.wavesplatform.state.Height(Ints.fromByteArray(bytes)),
+    _.toByteArray
+  )
+
+  def finalizedHeightAt(at: Height): Key[Option[Height]] = Key.opt(
+    FinalizedBlockHeightAt,
+    h(at),
+    bytes => com.wavesplatform.state.Height(Ints.fromByteArray(bytes)),
+    _.toByteArray
+  )
+
+  /** Key: Int(committedPeriod.start) ++ Int(commitmentHeight)
+    * @note
+    *   committedPeriod.start >= commitmentHeight, because a generator can commit only for a next period
+    */
+  def committedGenerators(committedPeriod: GenerationPeriod, commitmentHeight: Height): Key[Option[Seq[(AddressId, BlsPublicKey)]]] =
+    Key.opt(
+      CommittedGenerators,
+      h(committedPeriod.start) ++ h(commitmentHeight),
+      readCommittedGenerators,
+      writeCommittedGenerators
+    )
+
+  def conflictGenerators(committedPeriod: GenerationPeriod, conflictEndorsementHeight: Height): Key[Seq[GeneratorIndex]] =
+    Key(
+      ConflictGenerators,
+      h(committedPeriod.start) ++ h(conflictEndorsementHeight),
+      readConflictGenerators,
+      writeConflictGenerators
+    )
+
+  def commitmentTransactions(committedPeriod: GenerationPeriod, commitmentHeight: Height): Key[Seq[TransactionId]] =
+    Key(
+      CommitmentTransactions,
+      h(committedPeriod.start) ++ h(commitmentHeight),
+      readCommitmentTransactions,
+      writeCommitmentTransactions
+    )
+
+  def generatorBalances(at: Height, cfh: RDB.ApiHandle): Key[Option[Seq[(GeneratorIndex, Long)]]] =
+    Key.opt(GeneratorBalances, h(at), readGeneratorBalances, writeGeneratorBalances, Some(cfh.handle))
 }

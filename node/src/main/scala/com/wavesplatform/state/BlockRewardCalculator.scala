@@ -25,15 +25,15 @@ object BlockRewardCalculator {
   val RewardBoost                 = 10
 
   def getBlockRewardShares(
-      height: Int,
+      height: Height,
       fullBlockReward: Long,
       daoAddress: Option[Address],
       xtnBuybackAddress: Option[Address],
       blockchain: Blockchain
   ): BlockRewardShares = {
-    val blockRewardDistributionHeight = blockchain.featureActivationHeight(BlockchainFeatures.BlockRewardDistribution.id).getOrElse(Int.MaxValue)
-    val cappedRewardHeight            = blockchain.featureActivationHeight(BlockchainFeatures.CappedReward.id).getOrElse(Int.MaxValue)
-    val ceaseXtnBuybackHeight         = blockchain.featureActivationHeight(BlockchainFeatures.CeaseXtnBuyback.id).getOrElse(Int.MaxValue)
+    val blockRewardDistributionHeight = blockchain.featureActivationHeight(BlockchainFeatures.BlockRewardDistribution).getOrElse(Height(Int.MaxValue))
+    val cappedRewardHeight            = blockchain.featureActivationHeight(BlockchainFeatures.CappedReward).getOrElse(Height(Int.MaxValue))
+    val ceaseXtnBuybackHeight         = blockchain.featureActivationHeight(BlockchainFeatures.CeaseXtnBuyback).getOrElse(Height(Int.MaxValue))
 
     if (height >= blockRewardDistributionHeight) {
       val modifiedXtnBuybackAddress = xtnBuybackAddress.filter { _ =>
@@ -57,13 +57,13 @@ object BlockRewardCalculator {
         calculateRewards(fullBlockReward, CurrentBlockRewardPart.apply(fullBlockReward), daoAddress, modifiedXtnBuybackAddress)
       }
     } else BlockRewardShares(fullBlockReward, 0, 0)
-  }.multiply(blockchain.blockRewardBoost(Height(height)))
+  }.multiply(blockchain.blockRewardBoost(height))
 
   def getSortedBlockRewardShares(height: Int, fullBlockReward: Long, generator: Address, blockchain: Blockchain): Seq[(Address, Long)] = {
     val daoAddress        = blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten
     val xtnBuybackAddress = blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
 
-    val rewardShares = getBlockRewardShares(height, fullBlockReward, daoAddress, xtnBuybackAddress, blockchain)
+    val rewardShares = getBlockRewardShares(Height(height), fullBlockReward, daoAddress, xtnBuybackAddress, blockchain)
 
     import com.wavesplatform.utils.byteStrOrdering
 

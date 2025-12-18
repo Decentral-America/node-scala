@@ -43,6 +43,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         null,
         d.blockchainUpdater,
         d.utxPool,
+        d.endorsementStorage,
         d.settings.minerSettings,
         miner.minerScheduler,
         miner.appenderScheduler,
@@ -61,7 +62,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         override def pickBestAccount(accounts: Seq[(SeedKeyPair, Long)]): Either[GenericError, (SeedKeyPair, Long)] = Right((defaultSigner, 0))
       }
       def block(height: Int) = d.blocksApi.blockAtHeight(Height(height)).get._1.header
-      def appendBlock()      = append(miner.forgeBlock(defaultSigner).explicitGet()._1).explicitGet()
+      def appendBlock()      = append(miner.forgeBlock(defaultSigner).toEither.explicitGet().newBlock).explicitGet()
       def appendMicro() = {
         d.utxPool.putIfNew(transfer()).resultE.explicitGet()
         microBlockMiner.generateOneMicroBlockTask(defaultSigner, d.lastBlock, Unlimited, 0).runSyncUnsafe()
@@ -71,6 +72,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         challenger.challengeBlock(invalidBlock, null).runSyncUnsafe()
       }
 
+      log.debug("LightNode activation")
       appendBlock()
       d.blockchain.height shouldBe 2
       d.blockchain.isFeatureActivated(LightNode) shouldBe true
@@ -79,12 +81,12 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
       appendMicro()
       block(2).stateHash shouldBe None
 
-      challengeBlock()
+      appendBlock()
       d.blockchain.height shouldBe 3
       block(3).stateHash shouldBe None
       block(3).challengedHeader shouldBe None
 
-      (1 to 8).foreach(_ => appendBlock())
+      (4 to 11).foreach(_ => appendBlock())
       d.blockchain.height shouldBe 11
       block(11).stateHash shouldBe None
 
@@ -96,16 +98,19 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
       val hash1 = block(12).stateHash
       hash1 shouldBe defined
 
+      log.debug("After lightNodeBlockFieldsAbsenceInterval - 1")
       appendMicro()
       val hash2 = block(12).stateHash
       hash2 shouldBe defined
       hash2 should not be hash1
 
+      log.debug("Rollback before lightNodeBlockFieldsAbsenceInterval")
       d.rollbackTo(10)
-      challengeBlock()
+      appendBlock()
       block(11).stateHash shouldBe None
       block(11).challengedHeader shouldBe None
 
+      log.debug("After lightNodeBlockFieldsAbsenceInterval - 2")
       challengeBlock()
       block(12).stateHash shouldBe defined
       block(12).challengedHeader shouldBe defined
@@ -129,12 +134,13 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         null,
         d.blockchainUpdater,
         d.utxPool,
+        d.endorsementStorage,
         d.settings.minerSettings,
         miner.minerScheduler,
         miner.appenderScheduler,
         Observable.empty
       )
-      def appendBlock(ref: Option[ByteStr]) = append(miner.forgeBlock(signer, ref).explicitGet()._1).explicitGet()
+      def appendBlock(ref: Option[ByteStr]) = append(miner.forgeBlock(signer, ref).toEither.explicitGet().newBlock).explicitGet()
       def appendMicro() = {
         d.utxPool.putIfNew(transfer(from = signer)).resultE.explicitGet()
         microBlockMiner.generateOneMicroBlockTask(signer, d.lastBlock, Unlimited, 0).runSyncUnsafe()

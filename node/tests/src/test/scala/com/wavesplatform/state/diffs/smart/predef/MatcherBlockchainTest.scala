@@ -5,6 +5,7 @@ import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.SignedBlockHeader
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.lang.directives.values.V5
@@ -26,14 +27,16 @@ class MatcherBlockchainTest extends PropSpec with MockFactory with WithDomain {
     val blockchain: Blockchain = new Blockchain {
       override def settings: BlockchainSettings                                                             = ???
       override def height: Int                                                                              = ???
+      override def finalizedHeight: Option[Height]                                                          = ???
+      override def finalizedHeightAt(at: Height): Option[Height]                                            = ???
       override def score: BigInt                                                                            = ???
       override def blockHeader(height: Int): Option[SignedBlockHeader]                                      = ???
       override def hitSource(height: Int): Option[ByteStr]                                                  = ???
       override def carryFee(refId: Option[ByteStr]): Long                                                   = ???
       override def heightOf(blockId: ByteStr): Option[Int]                                                  = ???
-      override def approvedFeatures: Map[Short, Int]                                                        = ???
-      override def activatedFeatures: Map[Short, Int]                                                       = ???
-      override def featureVotes(height: Int): Map[Short, Int]                                               = ???
+      override def approvedFeatures: Map[Short, Height]                                                     = ???
+      override def activatedFeatures: Map[Short, Height]                                                    = ???
+      override def featureVotes(height: Height): Map[Short, Int]                                            = ???
       override def blockReward(height: Int): Option[Long]                                                   = ???
       override def blockRewardVotes(height: Int): Seq[Long]                                                 = ???
       override def wavesAmount(height: Int): BigInt                                                         = ???
@@ -62,6 +65,8 @@ class MatcherBlockchainTest extends PropSpec with MockFactory with WithDomain {
       override def effectiveBalanceBanHeights(address: Address): Seq[Int]                                   = ???
       override def resolveERC20Address(address: ERC20Address): Option[Asset.IssuedAsset]                    = ???
       override def lastStateHash(refId: Option[ByteStr]): BlockId                                           = ???
+      override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)]           = ???
+      override def conflictGenerators(at: GenerationPeriod): ConflictGenerators                             = ???
     }
 
     val tx = TransferTransaction.selfSigned(1.toByte, accountGen.sample.get, accountGen.sample.get.toAddress, Waves, 1, Waves, 1, ByteStr.empty, 0)

@@ -1,21 +1,19 @@
 package com.wavesplatform.http
 
-import org.apache.pekko.http.scaladsl.model.StatusCodes
-import org.apache.pekko.http.scaladsl.model.headers.Accept
-import org.apache.pekko.http.scaladsl.server.Route
 import com.wavesplatform.TestWallet
 import com.wavesplatform.api.BlockMeta
 import com.wavesplatform.api.common.CommonBlocksApi
 import com.wavesplatform.api.http.ApiError.TooBigArrayAllocation
 import com.wavesplatform.api.http.{BlocksApiRoute, CustomJson, RouteTimeout}
 import com.wavesplatform.block.serialization.BlockHeaderSerializer
-import com.wavesplatform.block.{Block, BlockHeader}
+import com.wavesplatform.block.{Block, BlockEndorsement, BlockHeader, FinalizationVoting}
 import com.wavesplatform.common.state.ByteStr
+import com.wavesplatform.crypto.bls.BlsSignature
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.lagonaki.mocks.TestBlock
-import com.wavesplatform.state.{BlockRewardCalculator, Blockchain, Height}
+import com.wavesplatform.state.{BlockRewardCalculator, Blockchain, GeneratorIndex, Height}
 import com.wavesplatform.test.*
 import com.wavesplatform.test.DomainPresets.*
 import com.wavesplatform.transaction.Asset.Waves
@@ -23,6 +21,9 @@ import com.wavesplatform.transaction.assets.exchange.{Order, OrderType}
 import com.wavesplatform.transaction.{TxHelpers, TxVersion}
 import com.wavesplatform.utils.{SharedSchedulerMixin, SystemTime}
 import monix.reactive.Observable
+import org.apache.pekko.http.scaladsl.model.StatusCodes
+import org.apache.pekko.http.scaladsl.model.headers.Accept
+import org.apache.pekko.http.scaladsl.server.Route
 import org.scalactic.source.Position
 import org.scalamock.scalatest.PathMockFactory
 import org.scalatest.Assertion
@@ -43,8 +44,9 @@ class BlocksApiRouteSpec
     BlocksApiRoute(restAPISettings, blocksApi, SystemTime, new RouteTimeout(60.seconds)(using sharedScheduler))
   private val route = blocksApiRoute.route
 
-  private val testBlock1 = TestBlock.create(Nil).block
-  private val testBlock2 = TestBlock.create(Nil, Block.ProtoBlockVersion).block
+  private val testBlock1     = TestBlock.create(Nil).block
+  private val testBlock2     = TestBlock.create(Nil, Block.ProtoBlockVersion).block
+  private val finalizedBlock = TestBlock.create(Nil, Block.ProtoBlockVersion).block
 
   private val testBlock1Json = testBlock1.json() ++ Json.obj("height" -> 1, "totalFee" -> 0L)
   private val testBlock2Json = testBlock2.json() ++ Json.obj(
@@ -68,9 +70,56 @@ class BlocksApiRouteSpec
     "VRF"          -> testBlock2.id().toString
   )
 
+  private val finalizedBlockHeaderJson =
+    BlockHeaderSerializer.toJson(finalizedBlock.header, finalizedBlock.bytes().length, 0, finalizedBlock.signature) ++ Json.obj(
+      "height"       -> 3,
+      "totalFee"     -> 0L,
+      "reward"       -> 5,
+      "rewardShares" -> Json.obj(finalizedBlock.header.generator.toAddress.toString -> 5),
+      "VRF"          -> finalizedBlock.id().toString,
+      "finalizationVoting" -> Json.obj(
+        "endorserIndexes" -> Seq(1, 0),
+        "finalizedHeight" -> 1,
+        "aggregatedEndorsementSignature" -> "M4MkhxYz8oNM4n9E9pcmarkUZ3TS1zvYqdRm8X5jh1ZoPqirwXPp5poiC7u34QrWpqrr7zWGTWDETEiNG4srsh2eEJtuJXU5FKvx4h855vKTMiDNqf2V5bL5HpZmypcXdz",
+        "conflictEndorsements" -> Seq(
+          Json.obj(
+            "endorserIndex"    -> 0,
+            "finalizedBlockId" -> testBlock2.id(),
+            "finalizedHeight"  -> 1,
+            "signature" -> "h7iWQv6yGbjh8ZHTJeEYAiVx75us2zr6gFrXG3AUP28bngSit3ndAecRPEo57pi2egihEz1Xv1RTuURjX8kikP4HTcnoc3w9Veru8PF9AqduiRRkgK3yABf9ae8YxeE4Gy"
+          )
+        )
+      )
+    )
+
   private val testBlock1Meta = BlockMeta.fromBlock(testBlock1, 1, 0L, None, None)
   private val testBlock2Meta =
     BlockMeta.fromBlock(testBlock2, 2, 0L, Some(5), Some(testBlock2.id())).copy(rewardShares = Seq(testBlock2.header.generator.toAddress -> 5))
+
+  private val finalizedBlockMeta = {
+    val orig = BlockMeta.fromBlock(finalizedBlock, 3, 0L, Some(5), Some(finalizedBlock.id()))
+    orig.copy(
+      rewardShares = Seq(finalizedBlock.header.generator.toAddress -> 5),
+      header = orig.header.copy(
+        finalizationVoting = Some(
+          FinalizationVoting(
+            valid = GeneratorIndex.unsafeSeq(Seq(1, 0)),
+            aggregatedEndorsement = BlsSignature.NonEmpty(Array.fill[Byte](BlsSignature.SizeInBytes)(1)),
+            finalizedHeight = Height(1),
+            conflict = Vector(
+              BlockEndorsement(
+                endorserIndex = GeneratorIndex(0),
+                finalizedId = testBlock2.id(),
+                finalizedHeight = Height(1),
+                endorsedId = testBlock1.id(),
+                signature = BlsSignature.NonEmpty(Array.fill[Byte](BlsSignature.SizeInBytes)(2))
+              )
+            )
+          )
+        )
+      )
+    )
+  }
 
   private val invalidBlockId = ByteStr(new Array[Byte](32))
   (blocksApi.block).expects(invalidBlockId).returning(None).anyNumberOfTimes()
@@ -152,6 +201,15 @@ class BlocksApiRouteSpec
     }
   }
 
+  routePath("/headers/finalized") in {
+    (() => blocksApi.currentFinalizedHeight).expects().returning(Height(3)).once()
+    (blocksApi.metaAtHeight).expects(Height(3)).returning(Some(finalizedBlockMeta)).once()
+    Get(routePath("/headers/finalized")) ~> route ~> check {
+      val response = responseAs[JsObject]
+      response shouldBe finalizedBlockHeaderJson
+    }
+  }
+
   routePath("/headers/{id}") in {
     (blocksApi.meta).expects(testBlock1.id()).returning(Some(testBlock1Meta)).once()
     (blocksApi.meta).expects(testBlock2.id()).returning(Some(testBlock2Meta)).once()
@@ -214,17 +272,17 @@ class BlocksApiRouteSpec
   routePath("/delay/{blockId}/{number}") in {
     val blocks = Vector(
       Block(
-        BlockHeader(1, 0, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None),
+        BlockHeader(1, 0, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None, None),
         ByteStr(Random.nextBytes(64)),
         Nil
       ),
       Block(
-        BlockHeader(1, 1000, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None),
+        BlockHeader(1, 1000, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None, None),
         ByteStr(Random.nextBytes(64)),
         Nil
       ),
       Block(
-        BlockHeader(1, 2000, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None),
+        BlockHeader(1, 2000, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None, None),
         ByteStr(Random.nextBytes(64)),
         Nil
       )
@@ -238,7 +296,7 @@ class BlocksApiRouteSpec
         Some(BlockMeta(blocks(height.toInt - 1).header, ByteStr.empty, None, 1, 0, 0, 0, None, Seq.empty, None))
       else None
 
-    val blocksApi = CommonBlocksApi(blockchain, metaAt, _ => None)
+    val blocksApi = CommonBlocksApi(maxSyncRollbackLength = 100, blockchain, metaAt, _ => None)
     val route     = blocksApiRoute.copy(commonApi = blocksApi).route
     Get(routePath(s"/delay/${blocks.last.id()}/3")) ~> route ~> check {
       val delay = (responseAs[JsObject] \ "delay").as[Int]

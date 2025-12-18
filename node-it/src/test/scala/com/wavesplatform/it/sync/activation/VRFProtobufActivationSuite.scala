@@ -13,13 +13,14 @@ import com.wavesplatform.it.api.SyncHttpApi.*
 import com.wavesplatform.it.api.TransactionInfo
 import com.wavesplatform.it.sync.*
 import com.wavesplatform.it.transactions.BaseTransactionSuite
+import com.wavesplatform.state.Height
 import com.wavesplatform.transaction.{TxExchangePrice, TxVersion}
 import com.wavesplatform.transaction.assets.exchange.{AssetPair, Order}
 
 import scala.concurrent.duration.*
 
 class VRFProtobufActivationSuite extends BaseTransactionSuite {
-  val activationHeight = 9
+  val activationHeight = Height(9)
   val updateInterval   = 3
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs
@@ -40,18 +41,18 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
     val (defaultName, defaultDescription) = ("asset", "description")
     assetId =
       sender.broadcastIssue(senderAcc, defaultName, defaultDescription, someAssetAmount, 8, reissuable = true, script = None, waitForTx = true).id
-    sender.waitForHeight(7, 3.minutes)
+    sender.waitForHeight(Height(7), 3.minutes)
     otherAssetId =
       sender.broadcastIssue(senderAcc, defaultName, defaultDescription, someAssetAmount, 8, reissuable = true, script = None, waitForTx = true).id
   }
 
   test("miner generates block v4 before activation") {
-    val blockBeforeActivationHeight        = sender.blockAt(sender.height)
-    val blockHeadersBeforeActivationHeight = sender.blockHeadersAt(sender.height)
+    val blockBeforeActivationHeight       = sender.blockAt(sender.height)
+    val blockHeaderBeforeActivationHeight = sender.blockHeaderAt(sender.height)
     blockBeforeActivationHeight.version.get shouldBe Block.RewardBlockVersion
-    blockHeadersBeforeActivationHeight.version.get shouldBe Block.RewardBlockVersion
+    blockHeaderBeforeActivationHeight.version.get shouldBe Block.RewardBlockVersion
     Base58.decode(blockBeforeActivationHeight.generationSignature.get).length shouldBe Block.GenerationSignatureLength
-    blockBeforeActivationHeight.baseTarget shouldBe blockHeadersBeforeActivationHeight.baseTarget
+    blockBeforeActivationHeight.baseTarget shouldBe blockHeaderBeforeActivationHeight.baseTarget
   }
 
   test("not able to broadcast tx of new versions before activation") {
@@ -107,13 +108,13 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
   }
 
   test("miner generates block v5 after activation") {
-    val blockAtActivationHeight        = sender.blockAt(sender.height)
-    val blockHeadersAtActivationHeight = sender.blockHeadersAt(sender.height)
+    val blockAtActivationHeight       = sender.blockAt(sender.height)
+    val blockHeaderAtActivationHeight = sender.blockHeaderAt(sender.height)
     blockAtActivationHeight.version.get shouldBe Block.ProtoBlockVersion
-    blockHeadersAtActivationHeight.version.get shouldBe Block.ProtoBlockVersion
+    blockHeaderAtActivationHeight.version.get shouldBe Block.ProtoBlockVersion
 
-    val blockHeaderById = sender.blockHeaderForId(blockHeadersAtActivationHeight.id)
-    blockHeaderById shouldBe blockHeadersAtActivationHeight
+    val blockHeaderById = sender.blockHeaderForId(blockHeaderAtActivationHeight.id)
+    blockHeaderById shouldBe blockHeaderAtActivationHeight
   }
 
   test("only able to get block by id (that is not equal to signature) after activation") {
@@ -129,7 +130,7 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
 
   test("able to broadcast UpdateAssetInfoTransaction after activation") {
     val nextTerm = sender.transactionInfo[TransactionInfo](otherAssetId).height + updateInterval + 1
-    sender.waitForHeight(nextTerm, 2.minutes)
+    sender.waitForHeight(Height(nextTerm), 2.minutes)
     secondUpdateAssetTxId = sender.updateAssetInfo(senderAcc, otherAssetId, "updatedName", "updatedDescription", minFee, waitForTx = true)._1.id
   }
 

@@ -4,12 +4,12 @@ import com.wavesplatform.account.PublicKey
 import com.wavesplatform.block.Block
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.metrics.Instrumented
-import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
-import com.wavesplatform.transaction.*
-import com.wavesplatform.transaction.transfer.*
 import com.wavesplatform.crypto
+import com.wavesplatform.metrics.Instrumented
 import com.wavesplatform.test.*
+import com.wavesplatform.transaction.*
+import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
+import com.wavesplatform.transaction.transfer.*
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 
@@ -48,14 +48,15 @@ class BlockSpecification extends PropSpec {
         ByteStr(generationSignature),
         Seq.fill(amt)(paymentTransaction),
         recipient,
-        Seq.empty,
-        -1L,
-        None,
-        None
+        featureVotes = Seq.empty,
+        rewardVote = -1L,
+        stateHash = None,
+        challengedHeader = None,
+        finalizationVoting = None
       )
       .explicitGet()
 
-  property(" block with txs bytes/parse roundtrip version 1,2") {
+  property("block with txs bytes/parse roundtrip version 1,2") {
     Seq[Byte](1, 2).foreach { version =>
       forAll(blockGen) { case (baseTarget, reference, generationSignature, recipient, transactionData) =>
         val block = Block
@@ -67,10 +68,11 @@ class BlockSpecification extends PropSpec {
             generationSignature,
             transactionData,
             recipient,
-            Seq.empty,
-            -1L,
-            None,
-            None
+            featureVotes = Seq.empty,
+            rewardVote = -1L,
+            stateHash = None,
+            challengedHeader = None,
+            finalizationVoting = None
           )
           .explicitGet()
         val parsedBlock = Block.parseBytes(block.bytes()).get
@@ -83,7 +85,7 @@ class BlockSpecification extends PropSpec {
     }
   }
 
-  property(" block version 1,2 could not contain feature votes") {
+  property("block version 1,2 could not contain feature votes") {
     Seq[Byte](1, 2).foreach { version =>
       forAll(blockGen) { case (baseTarget, reference, generationSignature, recipient, transactionData) =>
         Block.buildAndSign(
@@ -94,16 +96,17 @@ class BlockSpecification extends PropSpec {
           generationSignature,
           transactionData,
           recipient,
-          Seq(1),
-          -1L,
-          None,
-          None
+          featureVotes = Seq(1),
+          rewardVote = -1L,
+          stateHash = None,
+          challengedHeader = None,
+          finalizationVoting = None
         ) should produce("could not contain feature votes")
       }
     }
   }
 
-  property(s" feature flags limit is ${Block.MaxFeaturesInBlock}") {
+  property(s"feature flags limit is ${Block.MaxFeaturesInBlock}") {
     val version           = 3.toByte
     val supportedFeatures = (0 to Block.MaxFeaturesInBlock * 2).map(_.toShort)
 
@@ -117,18 +120,19 @@ class BlockSpecification extends PropSpec {
         transactionData,
         recipient,
         supportedFeatures,
-        -1L,
-        None,
-        None
+        rewardVote = -1L,
+        stateHash = None,
+        challengedHeader = None,
+        finalizationVoting = None
       ) should produce(s"Block could not contain more than ${Block.MaxFeaturesInBlock} feature votes")
     }
   }
-  property(" block with txs bytes/parse roundtrip version 3") {
+  property("block with txs bytes/parse roundtrip version 3") {
     val version = 3.toByte
 
-    val faetureSetGen: Gen[Seq[Short]] = Gen.choose(0, Block.MaxFeaturesInBlock).flatMap(fc => Gen.listOfN(fc, arbitrary[Short])).map(_.distinct)
+    val featureSetGen: Gen[Seq[Short]] = Gen.choose(0, Block.MaxFeaturesInBlock).flatMap(fc => Gen.listOfN(fc, arbitrary[Short])).map(_.distinct)
 
-    forAll(blockGen, faetureSetGen) { case ((baseTarget, reference, generationSignature, recipient, transactionData), featureVotes) =>
+    forAll(blockGen, featureSetGen) { case ((baseTarget, reference, generationSignature, recipient, transactionData), featureVotes) =>
       val block = Block
         .buildAndSign(
           version,
@@ -139,9 +143,10 @@ class BlockSpecification extends PropSpec {
           transactionData,
           recipient,
           featureVotes,
-          -1L,
-          None,
-          None
+          rewardVote = -1L,
+          stateHash = None,
+          challengedHeader = None,
+          finalizationVoting = None
         )
         .explicitGet()
       val parsedBlock = Block.parseBytes(block.bytes()).get
@@ -159,17 +164,18 @@ class BlockSpecification extends PropSpec {
     forAll(blockGen) { case (baseTarget, reference, generationSignature, _, transactionData) =>
       val block = Block
         .create(
-          3.toByte,
+          version = 3.toByte,
           time,
           reference,
           baseTarget,
           generationSignature,
           weakAccount,
-          Seq.empty,
-          -1L,
+          featureVotes = Seq.empty,
+          rewardVote = -1L,
           transactionData,
-          None,
-          None
+          stateHash = None,
+          challengedHeader = None,
+          finalizationVoting = None
         )
         .copy(signature = ByteStr(Array.fill(64)(0: Byte)))
       block.signatureValid() shouldBe false
@@ -181,7 +187,7 @@ class BlockSpecification extends PropSpec {
       case (txs, acc, ref, gs) =>
         val (block, _) =
           Instrumented.withTimeMillis(
-            Block.buildAndSign(3.toByte, 1, ByteStr(ref), 1, ByteStr(gs), txs, acc, Seq.empty, -1L, None, None).explicitGet()
+            Block.buildAndSign(3.toByte, 1, ByteStr(ref), 1, ByteStr(gs), txs, acc, Seq.empty, -1L, None, None, None).explicitGet()
           )
         val (bytes, _) = Instrumented.withTimeMillis(block.bytes().dropRight(crypto.SignatureLength))
         val (hash, _)  = Instrumented.withTimeMillis(crypto.fastHash(bytes))
