@@ -4,10 +4,12 @@ import com.google.common.primitives.Longs
 import com.wavesplatform.account.Address
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.crypto.bls.BlsKeyPair
 import com.wavesplatform.lang.v1.estimator.ScriptEstimatorV1
 import com.wavesplatform.state.StateHash.SectionId
 import com.wavesplatform.test.FreeSpec
 import com.wavesplatform.transaction.Asset.IssuedAsset
+import com.wavesplatform.transaction.TxHelpers
 import com.wavesplatform.transaction.smart.script.ScriptCompiler
 
 class StateHashSpec extends FreeSpec {
@@ -19,16 +21,18 @@ class StateHashSpec extends FreeSpec {
     val testScript = ScriptCompiler
       .compile(
         """
-        |{-# STDLIB_VERSION 2 #-}
-        |{-# CONTENT_TYPE EXPRESSION #-}
-        |{-# SCRIPT_TYPE ACCOUNT #-}
-        |true
-        |""".stripMargin,
+          |{-# STDLIB_VERSION 2 #-}
+          |{-# CONTENT_TYPE EXPRESSION #-}
+          |{-# SCRIPT_TYPE ACCOUNT #-}
+          |true
+          |""".stripMargin,
         ScriptEstimatorV1
       )
       .explicitGet()
       ._1
-    val dataEntry = StringDataEntry("test", "test")
+    val dataEntry    = StringDataEntry("test", "test")
+    val wavesAccount = TxHelpers.defaultSigner
+    val blsAccount   = BlsKeyPair(wavesAccount.privateKey)
 
     stateHash.addLeaseBalance(address, 10000L, 10000L)
     stateHash.addAccountScript(address, Some(testScript))
@@ -42,6 +46,8 @@ class StateHashSpec extends FreeSpec {
     stateHash.addAssetBalance(address, assetId, 2000)
     stateHash.addAssetBalance(address1, assetId, 2000)
     stateHash.addWavesBalance(address, 1000)
+    stateHash.addNextCommittedGenerator(wavesAccount.publicKey, blsAccount.publicKey)
+    stateHash.addCommittedGeneratorBalances(Seq(3000))
     val result = stateHash.result()
 
     def hash(bs: Array[Byte]*): ByteStr    = ByteStr(com.wavesplatform.crypto.fastHash(bs.reduce(_ ++ _)))
@@ -121,16 +127,40 @@ class StateHashSpec extends FreeSpec {
           Longs.toByteArray(1000)
         )
       }
+
+      "next generator" in {
+        sect(NextCommittedGenerators) shouldBe hash(
+          wavesAccount.publicKey.arr,
+          blsAccount.publicKey.byteStr.arr
+        )
+      }
+
+      "committed generator balance" in {
+        sect(CommittedGeneratorBalances) shouldBe hash(
+          Longs.toByteArray(3000)
+        )
+      }
     }
 
     "total" in {
-      val allHashes = SectionId.values.toSeq.map(id => result.hashes(id))
-      allHashes shouldBe Seq(WavesBalance, AssetBalance, DataEntry, AccountScript, AssetScript, LeaseBalance, LeaseStatus, Sponsorship, Alias)
-        .map(sect)
+      val allHashes = StateHash.sections(true).map(id => result.hashes(id))
+      allHashes shouldBe Seq(
+        WavesBalance,
+        AssetBalance,
+        DataEntry,
+        AccountScript,
+        AssetScript,
+        LeaseBalance,
+        LeaseStatus,
+        Sponsorship,
+        Alias,
+        NextCommittedGenerators,
+        CommittedGeneratorBalances
+      ).map(sect)
 
       val testPrevHash = sect(SectionId.Alias)
-      result.createStateHash(testPrevHash).totalHash shouldBe hash((testPrevHash.arr +: allHashes.map(_.arr))*)
-      result.copy(hashes = result.hashes - SectionId.WavesBalance).createStateHash(ByteStr.empty).totalHash shouldBe hash(
+      result.createStateHash(testPrevHash, true).totalHash shouldBe hash((testPrevHash.arr +: allHashes.map(_.arr))*)
+      result.copy(hashes = result.hashes - SectionId.WavesBalance).createStateHash(ByteStr.empty, true).totalHash shouldBe hash(
         (StateHashBuilder.EmptySectionHash.arr +: allHashes.tail.map(_.arr))*
       )
     }

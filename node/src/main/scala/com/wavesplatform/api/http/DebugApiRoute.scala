@@ -11,7 +11,7 @@ import com.wavesplatform.mining.{Miner, MinerDebugInfo}
 import com.wavesplatform.network.{PeerDatabase, PeerInfo, *}
 import com.wavesplatform.settings.{RestAPISettings, WavesSettings}
 import com.wavesplatform.state.diffs.TransactionDiffer
-import com.wavesplatform.state.{Blockchain, Height, LeaseBalance, NG, Portfolio, SnapshotBlockchain, TxMeta}
+import com.wavesplatform.state.{Blockchain, Height, LeaseBalance, NG, Portfolio, SnapshotBlockchain, TxMeta, StateHash}
 import com.wavesplatform.transaction.*
 import com.wavesplatform.transaction.Asset.IssuedAsset
 import com.wavesplatform.transaction.TxValidationError.GenericError
@@ -258,13 +258,18 @@ case class DebugApiRoute(
     val result = for {
       sh <- db.loadStateHash(Height(height))
       h  <- blockchain.blockHeader(height)
-    } yield Json.toJson(sh).as[JsObject] ++ Json.obj(
-      "snapshotHash" -> db.snapshotStateHash(height),
-      "blockId"      -> h.id().toString,
-      "baseTarget"   -> h.header.baseTarget,
-      "height"       -> height,
-      "version"      -> Version.VersionString
-    )
+    } yield {
+      val deterministicFinalityActivated =
+        blockchain.isFeatureActivated(com.wavesplatform.features.BlockchainFeatures.DeterministicFinality, height)
+      val stateHashJson = StateHash.toJson(sh, deterministicFinalityActivated)
+      stateHashJson ++ Json.obj(
+        "snapshotHash" -> db.snapshotStateHash(height),
+        "blockId"      -> h.id().toString,
+        "baseTarget"   -> h.header.baseTarget,
+        "height"       -> height,
+        "version"      -> Version.VersionString
+      )
+    }
 
     result match {
       case Some(value) => complete(value)
@@ -326,9 +331,10 @@ object DebugApiRoute {
     Writes { pf =>
       JsObject(
         Map(
-          "balance" -> JsNumber(pf.balance),
-          "lease"   -> Json.toJson(pf.lease),
-          "assets"  -> Json.toJson(pf.assets)
+          "balance"           -> JsNumber(pf.balance),
+          "lease"             -> Json.toJson(pf.lease),
+          "assets"            -> Json.toJson(pf.assets),
+          "generationDeposit" -> JsNumber(pf.generationDeposit)
         )
       )
     }

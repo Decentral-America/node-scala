@@ -4,12 +4,12 @@ import com.wavesplatform.account.KeyPair
 import com.wavesplatform.block.Block
 import com.wavesplatform.mining.{MinerDebugInfo, MiningConstraint}
 import com.wavesplatform.settings.MinerSettings
-import com.wavesplatform.state.Blockchain
+import com.wavesplatform.state.{Blockchain, EndorsementStorage}
 import com.wavesplatform.transaction.BlockchainUpdater
 import com.wavesplatform.utx.UtxPool
 import io.netty.channel.group.ChannelGroup
 import monix.eval.Task
-import monix.execution.schedulers.SchedulerService
+import monix.execution.Scheduler
 import monix.reactive.Observable
 
 trait MicroBlockMiner {
@@ -27,9 +27,10 @@ object MicroBlockMiner {
       allChannels: ChannelGroup,
       blockchainUpdater: BlockchainUpdater & Blockchain,
       utx: UtxPool,
+      endorsementStorage: EndorsementStorage,
       settings: MinerSettings,
-      minerScheduler: SchedulerService,
-      appenderScheduler: SchedulerService,
+      minerScheduler: Scheduler,
+      appenderScheduler: Scheduler,
       transactionAdded: Observable[Unit]
   ): MicroBlockMiner =
     new MicroBlockMinerImpl(
@@ -37,6 +38,7 @@ object MicroBlockMiner {
       allChannels,
       blockchainUpdater,
       utx,
+      endorsementStorage,
       settings,
       minerScheduler,
       appenderScheduler,

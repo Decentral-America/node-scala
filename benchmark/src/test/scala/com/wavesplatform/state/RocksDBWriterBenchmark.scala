@@ -97,7 +97,7 @@ object RocksDBWriterBenchmark {
 
     def loadBlockMetaAt(height: Height): Option[BlockMeta] = rawDB.db.get(Keys.blockMetaAt(height)).flatMap(BlockMeta.fromPb)
 
-    val cba = CommonBlocksApi(db, loadBlockMetaAt, loadBlockInfoAt)
+    val cba = CommonBlocksApi(wavesSettings.synchronizationSettings.maxRollback, db, loadBlockMetaAt, loadBlockInfoAt)
 
     def blockById(id: ByteStr): Option[(BlockMeta, Seq[(TxMeta, Transaction)])] = cba.block(id)
 

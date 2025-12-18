@@ -5,6 +5,7 @@ import com.wavesplatform.common.utils.EitherExt2.*
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.network.{MessageCodec, PBBlockSpec, PeerDatabase, RawBytes}
+import com.wavesplatform.state.BlockEndorser
 import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult.Ignored
 import com.wavesplatform.test.{FlatSpec, TestTime}
 import com.wavesplatform.transaction.TxHelpers
@@ -17,9 +18,8 @@ import monix.execution.schedulers.SchedulerService
 import org.scalatest.BeforeAndAfterAll
 
 class BlockAppenderSpec extends FlatSpec with WithDomain with BeforeAndAfterAll {
-
-  val appenderScheduler: SchedulerService = Schedulers.singleThread("appender")
-  val testTime: TestTime                  = TestTime()
+  private val appenderScheduler: SchedulerService = Schedulers.singleThread("appender")
+  private val testTime: TestTime                  = TestTime()
 
   "BlockAppender" should "not broadcast block that wasn't applied to state" in {
     val sender = TxHelpers.signer(1)
@@ -37,6 +37,7 @@ class BlockAppenderSpec extends FlatSpec with WithDomain with BeforeAndAfterAll 
         channels,
         PeerDatabase.NoOp,
         None,
+        BlockEndorser.Disabled,
         appenderScheduler
       )(channel2, _, None)
 
@@ -54,7 +55,8 @@ class BlockAppenderSpec extends FlatSpec with WithDomain with BeforeAndAfterAll 
           com.wavesplatform.crypto
             .verifyVRF(block.header.generationSignature, d.blockchain.hitSource(1).get.arr, block.sender)
             .explicitGet(),
-          None
+          snapshot = None,
+          generatorBalances = Seq.empty
         )
         .explicitGet() shouldBe Ignored
 

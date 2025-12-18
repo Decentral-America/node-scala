@@ -11,19 +11,20 @@ import com.wavesplatform.events.{BlockchainUpdateTriggers, UtxEvent}
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.history.StorageFactory
 import com.wavesplatform.lang.ValidationError
-import com.wavesplatform.mining.{Miner, MinerImpl}
+import com.wavesplatform.mining.{ForgeAttemptResult, Miner, MinerImpl}
 import com.wavesplatform.settings.{DBSettings, WavesSettings}
 import com.wavesplatform.state.appender.BlockAppender
+import com.wavesplatform.state.{BlockEndorser, EndorsementStorage}
 import com.wavesplatform.test.BlockchainGenerator.{GenBlock, GenTx}
+import com.wavesplatform.transaction.*
 import com.wavesplatform.transaction.TxValidationError.GenericError
 import com.wavesplatform.transaction.assets.*
 import com.wavesplatform.transaction.assets.exchange.ExchangeTransaction
 import com.wavesplatform.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
 import com.wavesplatform.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
 import com.wavesplatform.transaction.transfer.{MassTransferTransaction, TransferTransaction}
-import com.wavesplatform.transaction.*
-import com.wavesplatform.utils.{Schedulers, ScorexLogging, Time}
 import com.wavesplatform.utils.generator.FakeTime
+import com.wavesplatform.utils.{Schedulers, ScorexLogging, Time}
 import com.wavesplatform.utx.UtxPoolImpl
 import com.wavesplatform.wallet.Wallet
 import com.wavesplatform.{Exporter, checkGenesis, crypto}
@@ -41,29 +42,28 @@ import scala.concurrent.duration.Duration
 import scala.language.reflectiveCalls
 import scala.util.{Failure, Success, Using}
 
-// @formatter:off
 /** Usage example: <pre>object Example extends App {
- *  val wavesSettings = Application.loadApplicationConfig(Some(new File("path-to-config-file")))
- *  val generator = new BlockchainGenerator(wavesSettings)
- *  val sender = KeyPair("123".getBytes)
- *  val recipient = Address.fromString("3FddHK1Y3vPdcVKZshWCWea4gS5th6G1UE6").getOrElse(sender.toAddress)
- *  val genBlocks = (1 to 10).map { idx =>
- *    GenBlock(
- *      (1 to 5).map(txIdx => GenTx(TxHelpers.transfer(sender, recipient, amount = (idx * 10 + txIdx) * 100000000L), Right(sender))),
- *      signer = sender
- *    )
- *  }
- *  generator.generateBinaryFile(genBlocks)
- *
- *  // only if you use Application.loadApplicationConfig method to create WavesSettings object
- *  Try(Await.result(Kamon.stopModules(), 10.seconds))
- *  Metrics.shutdown()
- *}
- * </pre>
- */
-// @formatter:on
+  *  val wavesSettings = Application.loadApplicationConfig(Some(new File("path-to-config-file")))
+  *  val generator = new BlockchainGenerator(wavesSettings)
+  *  val sender = KeyPair("123".getBytes)
+  *  val recipient = Address.fromString("3FddHK1Y3vPdcVKZshWCWea4gS5th6G1UE6").getOrElse(sender.toAddress)
+  *  val genBlocks = (1 to 10).map { idx =>
+  *    GenBlock(
+  *      (1 to 5).map(txIdx => GenTx(TxHelpers.transfer(sender, recipient, amount = (idx * 10 + txIdx) * 100000000L), Right(sender))),
+  *      signer = sender
+  *    )
+  *  }
+  *  generator.generateBinaryFile(genBlocks)
+  *
+  *  // only if you use Application.loadApplicationConfig method to create WavesSettings object
+  *  Try(Await.result(Kamon.stopModules(), 10.seconds))
+  *  Metrics.shutdown()
+  * }
+  * </pre>
+  */
 class BlockchainGenerator(wavesSettings: WavesSettings) extends ScorexLogging {
   private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
+
   private val settings: WavesSettings = wavesSettings.copy(minerSettings = wavesSettings.minerSettings.copy(quorum = 0))
 
   def generateDb(genBlocks: Iterator[GenBlock], dbDirPath: String = settings.dbSettings.directory): Unit =
@@ -98,15 +98,15 @@ class BlockchainGenerator(wavesSettings: WavesSettings) extends ScorexLogging {
 
   private def generateBlockchain(genBlocks: Iterator[GenBlock], dbSettings: DBSettings, exportToFile: Block => Unit = _ => ()): Unit = {
     val scheduler = Schedulers.singleThread("appender")
-    val time = new FakeTime(settings.blockchainSettings.genesisSettings.timestamp)
+    val time      = new FakeTime(settings.blockchainSettings.genesisSettings.timestamp)
     Using.Manager { use =>
-      val db = use(RDB.open(dbSettings))
+      val db                         = use(RDB.open(dbSettings))
       val (blockchain, rdbWriterRaw) = StorageFactory(settings, db, time, BlockchainUpdateTriggers.noop)
       use(rdbWriterRaw)
-      val utxPool = use(new UtxPoolImpl(time, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable))
-      val pos = PoSSelector(blockchain, settings.synchronizationSettings.maxBaseTarget)
-      val extAppender = BlockAppender(blockchain, time, utxPool, pos, scheduler)(_, None)
-      val utxEvents = ConcurrentSubject.publish[UtxEvent]
+      val utxPool     = use(new UtxPoolImpl(time, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable))
+      val pos         = PoSSelector(blockchain, settings.synchronizationSettings.maxBaseTarget)
+      val extAppender = BlockAppender(blockchain, time, utxPool, pos, BlockEndorser.Disabled, scheduler)(_, None)
+      val utxEvents   = ConcurrentSubject.publish[UtxEvent]
 
       val miner = new MinerImpl(
         new DefaultChannelGroup("", null),
@@ -114,24 +114,24 @@ class BlockchainGenerator(wavesSettings: WavesSettings) extends ScorexLogging {
         settings,
         time,
         utxPool,
+        BlockEndorser.Disabled,
+        EndorsementStorage.Disabled,
         Wallet(settings.walletSettings),
         PoSSelector(blockchain, None),
         scheduler,
         scheduler,
-        utxEvents.collect { case _: UtxEvent.TxAdded =>
-          ()
-        }
+        utxEvents.collect { case _: UtxEvent.TxAdded => () }
       )
 
       checkGenesis(settings, blockchain, Miner.Disabled)
       val result = genBlocks.foldLeft[Either[ValidationError, Unit]](Right(())) {
-        case (res@Left(_), _) => res
+        case (res @ Left(_), _) => res
         case (_, genBlock) =>
           time.time = miner.nextBlockGenerationTime(blockchain, blockchain.height, blockchain.lastBlockHeader.get, genBlock.signer).explicitGet()
           val correctedTimeTxs = genBlock.txs.map(correctTxTimestamp(_, time))
 
           miner.forgeBlock(genBlock.signer) match {
-            case Right((block, _)) =>
+            case ForgeAttemptResult.Success(block, _) =>
               for {
                 blockWithTxs <- Block.buildAndSign(
                   block.header.version,
@@ -144,13 +144,15 @@ class BlockchainGenerator(wavesSettings: WavesSettings) extends ScorexLogging {
                   block.header.featureVotes,
                   block.header.rewardVote,
                   block.header.stateHash,
-                  block.header.challengedHeader
+                  block.header.challengedHeader,
+                  block.header.finalizationVoting
                 )
                 _ <- Await
                   .result(extAppender(blockWithTxs).runAsyncLogErr, Duration.Inf)
               } yield exportToFile(blockWithTxs)
 
-            case Left(err) => Left(GenericError(err))
+            case ForgeAttemptResult.TemporaryFailure(err) => Left(GenericError(err))
+            case ForgeAttemptResult.PermanentFailure(err) => Left(GenericError(err))
           }
       }
       result match {
@@ -165,16 +167,17 @@ class BlockchainGenerator(wavesSettings: WavesSettings) extends ScorexLogging {
                 lastHeader.baseTarget,
                 lastHeader.generationSignature,
                 lastHeader.generator,
-                Nil,
-                0,
-                ByteStr.empty,
-                None,
-                None
+                featureVotes = Nil,
+                rewardVote = 0,
+                transactionsRoot = ByteStr.empty,
+                stateHash = None,
+                challengedHeader = None,
+                finalizationVoting = None
               ),
               ByteStr.empty,
               Nil
             )
-            blockchain.processBlock(pseudoBlock, ByteStr.empty, None, verify = false)
+            blockchain.processBlock(pseudoBlock, ByteStr.empty, snapshot = None, generatorBalances = Seq.empty, verify = false)
           }
         case Left(err) => log.error(s"Error appending block: $err")
       }

@@ -1,10 +1,11 @@
 package com.wavesplatform.state
 
 import cats.syntax.option.*
-import com.wavesplatform.account.{Address, Alias}
+import com.wavesplatform.account.{Address, Alias, PublicKey}
 import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.{Block, SignedBlockHeader}
 import com.wavesplatform.common.state.ByteStr
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.features.BlockchainFeatures.RideV6
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.settings.BlockchainSettings
@@ -12,7 +13,7 @@ import com.wavesplatform.state.TxMeta.Status
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.TxValidationError.{AliasDoesNotExist, AliasIsDisabled}
 import com.wavesplatform.transaction.transfer.{TransferTransaction, TransferTransactionLike}
-import com.wavesplatform.transaction.{Asset, ERC20Address, Transaction}
+import com.wavesplatform.transaction.{Asset, CommitToGenerationTransaction, ERC20Address, Transaction}
 
 case class SnapshotBlockchain(
     inner: Blockchain,
@@ -20,7 +21,8 @@ case class SnapshotBlockchain(
     blockMeta: Option[(SignedBlockHeader, ByteStr)] = None,
     carry: Long = 0,
     reward: Option[Long] = None,
-    stateHash: Option[ByteStr] = None
+    stateHash: Option[ByteStr] = None,
+    latestGeneratorBalances: Option[GeneratorBalances] = None
 ) extends Blockchain {
   override val settings: BlockchainSettings = inner.settings
   lazy val snapshot: StateSnapshot          = maybeSnapshot.orEmpty
@@ -126,7 +128,11 @@ case class SnapshotBlockchain(
       .map(tx => (tx.snapshot, tx.status))
       .orElse(inner.transactionSnapshot(id))
 
-  override def height: Int = inner.height + blockMeta.fold(0)(_ => 1)
+  override def height: Int = inner.height + blockMeta.size
+
+  override def finalizedHeight: Option[Height] = inner.finalizedHeight
+
+  override def finalizedHeightAt(at: Height): Option[Height] = inner.finalizedHeightAt(at)
 
   override def resolveAlias(alias: Alias): Either[ValidationError, Address] = inner.resolveAlias(alias) match {
     case l @ Left(AliasIsDisabled(_)) => l
@@ -155,11 +161,14 @@ case class SnapshotBlockchain(
     if (maybeSnapshot.isEmpty || to.exists(id => inner.heightOf(id).isDefined)) {
       inner.balanceSnapshots(address, from1, to)
     } else {
-      val balance    = this.balance(address)
-      val lease      = this.leaseBalance(address)
-      val bs         = BalanceSnapshot(Height(height), Portfolio(balance, lease))
-      val height2Fix = this.height == 2 && from1 < 2 && inner.isFeatureActivated(RideV6)
-      if (inner.height > 0 && (from1 < this.height - 1 || height2Fix))
+      val h       = Height(height)
+      val balance = this.balance(address)
+      val lease   = this.leaseBalance(address)
+      val deposit = this.generationDeposit(address, h)
+
+      val bs         = BalanceSnapshot(h, Portfolio(balance, lease, generationDeposit = deposit))
+      val height2Fix = h.toInt == 2 && from1 < 2 && inner.isFeatureActivated(RideV6)
+      if (inner.height > 0 && (from1 < h.toInt - 1 || height2Fix))
         bs +: inner.balanceSnapshots(address, from1, to)
       else
         Seq(bs)
@@ -203,18 +212,32 @@ case class SnapshotBlockchain(
   override def heightOf(blockId: ByteStr): Option[Int] = blockMeta.filter(_._1.id() == blockId).map(_ => height) orElse inner.heightOf(blockId)
 
   /** Features related */
-  override def approvedFeatures: Map[Short, Int] = inner.approvedFeatures
+  override def approvedFeatures: Map[Short, Height] = inner.approvedFeatures
 
-  override def activatedFeatures: Map[Short, Int] = inner.activatedFeatures
+  override def activatedFeatures: Map[Short, Height] = inner.activatedFeatures
 
-  override def featureVotes(height: Int): Map[Short, Int] = inner.featureVotes(height)
+  override def featureVotes(height: Height): Map[Short, Int] = inner.featureVotes(height)
 
   /** Block reward related */
   override def blockReward(height: Int): Option[Long] = reward.filter(_ => this.height == height) orElse inner.blockReward(height)
 
   override def blockRewardVotes(height: Int): Seq[Long] = inner.blockRewardVotes(height)
 
-  override def wavesAmount(height: Int): BigInt = inner.wavesAmount(height) + BigInt(reward.getOrElse(0L))
+  override def wavesAmount(height: Int): BigInt = {
+    val parentBlockHeader = blockMeta match {
+      case None => inner.blockHeader(height - 1)
+      case _    => inner.lastBlockHeader
+    }
+
+    val parentConflictEndorsements = for {
+      parentBlockHeader <- parentBlockHeader
+      voting            <- parentBlockHeader.header.finalizationVoting
+    } yield voting.conflict.size
+
+    inner.wavesAmount(height) +
+      BigInt(reward.getOrElse(0L)) -
+      parentConflictEndorsements.getOrElse(0) * CommitToGenerationTransaction.DepositInWavelets
+  }
 
   override def hitSource(height: Int): Option[ByteStr] =
     blockMeta
@@ -228,6 +251,29 @@ case class SnapshotBlockchain(
 
   override def lastStateHash(refId: Option[ByteStr]): BlockId =
     stateHash.orElse(blockMeta.flatMap(_._1.header.stateHash)).getOrElse(inner.lastStateHash(refId))
+
+  override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = {
+    val base   = inner.committedGenerators(at)
+    val atNext = this.currentGenerationPeriod.exists(_.next == at)
+    if (atNext) base ++ snapshot.nextCommittedGenerators.map { case (pk, blsPk) => pk.toAddress -> blsPk } else base
+  }
+
+  override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = {
+    lazy val base = inner.conflictGenerators(at)
+    this.currentGenerationPeriod.fold(ConflictGenerators.empty) { currPeriod =>
+      if (at < currPeriod) base
+      else if (at > currPeriod) ConflictGenerators.empty
+      else {
+        val extraConflictIndexes = for {
+          (blockMeta, _) <- blockMeta.toSeq
+          v              <- blockMeta.header.finalizationVoting.toSeq
+          c              <- v.conflict
+        } yield c.endorserIndex
+
+        base.appendAll(Height(height), extraConflictIndexes*)
+      }
+    }
+  }
 }
 
 object SnapshotBlockchain {
@@ -238,7 +284,8 @@ object SnapshotBlockchain {
       Some(SignedBlockHeader(ngState.bestLiquidBlock.header, ngState.bestLiquidBlock.signature) -> ngState.hitSource),
       ngState.carryFee,
       ngState.reward,
-      Some(ngState.bestLiquidComputedStateHash)
+      Some(ngState.bestLiquidComputedStateHash),
+      Some(ngState.finalizationState.generatorBalances)
     )
 
   def apply(inner: Blockchain, reward: Option[Long]): SnapshotBlockchain =

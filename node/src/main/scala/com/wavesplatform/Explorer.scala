@@ -3,22 +3,22 @@ package com.wavesplatform
 import com.google.common.hash.{Funnels, BloomFilter as GBloomFilter}
 import com.google.common.primitives.{Ints, Longs, Shorts}
 import com.wavesplatform.account.Address
+import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.api.common.{AddressPortfolio, CommonAccountsApi}
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.{Base58, Base64}
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.common.utils.{Base58, Base64}
 import com.wavesplatform.database.*
 import com.wavesplatform.database.protobuf.StaticAssetInfo
 import com.wavesplatform.lang.script.ContractScript
 import com.wavesplatform.lang.script.v1.ExprScript
 import com.wavesplatform.settings.Constants
 import com.wavesplatform.state.diffs.{DiffsCommon, SetScriptTransactionDiff}
-import com.wavesplatform.state.{Blockchain, Height, Portfolio, SnapshotBlockchain, StateSnapshot, TransactionId}
+import com.wavesplatform.state.{Blockchain, Height, Portfolio, SnapshotBlockchain, StateSnapshot, TransactionId, StateHash}
 import com.wavesplatform.transaction.Asset.IssuedAsset
 import com.wavesplatform.utils.ScorexLogging
 import monix.execution.{ExecutionModel, Scheduler}
 import org.rocksdb.{ReadOptions, RocksDB}
-import play.api.libs.json.Json
 
 import java.io.File
 import java.nio.ByteBuffer
@@ -39,7 +39,8 @@ object Explorer extends ScorexLogging {
     Portfolio(
       blockchain.balance(address),
       blockchain.leaseBalance(address),
-      db.withResource(r => AddressPortfolio.assetBalanceIterator(r, address, StateSnapshot.empty, _ => true).flatten.to(VectorMap))
+      db.withResource(r => AddressPortfolio.assetBalanceIterator(r, address, StateSnapshot.empty, _ => true).flatten.to(VectorMap)),
+      blockchain.generationDeposit(address)
     )
 
   def main(argsRaw: Array[String]): Unit = {
@@ -369,8 +370,9 @@ object Explorer extends ScorexLogging {
         case "SH" =>
           val targetHeight = Height(argument(1, "height").toInt)
           log.info(s"Loading state hash at $targetHeight")
+          val deterministicFinalityActivated = reader.isFeatureActivated(BlockchainFeatures.DeterministicFinality, targetHeight.toInt)
           rdb.db.get(Keys.stateHash(targetHeight)).foreach { sh =>
-            println(Json.toJson(sh).toString())
+            println(StateHash.toJson(sh, deterministicFinalityActivated).toString())
           }
         case "CTI" =>
           log.info("Counting transaction IDs")

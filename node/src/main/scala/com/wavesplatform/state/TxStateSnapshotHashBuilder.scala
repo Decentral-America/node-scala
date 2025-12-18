@@ -97,6 +97,10 @@ object TxStateSnapshotHashBuilder {
         Ints.toByteArray(assetInfo.lastUpdatedAt.toInt)
     }
 
+    snapshot.nextCommittedGenerators.foreach { case (publicKey, blsPublicKey) =>
+      changedKeys += publicKey.arr ++ blsPublicKey.arr
+    }
+
     txStatusOpt.foreach(txInfo =>
       txInfo.status match {
         case Status.Failed    => changedKeys += txInfo.id.arr ++ Array(1: Byte)
@@ -141,7 +145,7 @@ object TxStateSnapshotHashBuilder {
           txDifferResult.resultE match {
             case Right(txSnapshot) =>
               val (feeAsset, feeAmount) =
-                maybeApplySponsorship(accBlockchain, accBlockchain.height >= Sponsorship.sponsoredFeesSwitchHeight(blockchain), tx.assetFee)
+                maybeApplySponsorship(accBlockchain, Height(accBlockchain.height) >= Sponsorship.sponsoredFeesSwitchHeight(blockchain), tx.assetFee)
               val minerPortfolio = Map(signer.toAddress -> Portfolio.build(feeAsset, feeAmount).multiply(CurrentBlockFeePart))
 
               val txSnapshotWithBalances = txSnapshot.addBalances(minerPortfolio, accBlockchain).explicitGet()

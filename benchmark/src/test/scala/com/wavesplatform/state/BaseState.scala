@@ -1,7 +1,5 @@
 package com.wavesplatform.state
 
-import java.io.File
-import java.nio.file.Files
 import com.typesafe.config.ConfigFactory
 import com.wavesplatform.account.KeyPair
 import com.wavesplatform.block.Block
@@ -15,6 +13,9 @@ import com.wavesplatform.state.utils.TestRocksDB
 import com.wavesplatform.transaction.{GenesisTransaction, Transaction}
 import org.openjdk.jmh.annotations.{Setup, TearDown}
 import org.scalacheck.{Arbitrary, Gen}
+
+import java.io.File
+import java.nio.file.Files
 
 trait BaseState {
   import BaseState.*
@@ -80,7 +81,17 @@ trait BaseState {
         .fromBlock(state, prev, next, None, MiningConstraint.Unlimited, next.header.generationSignature)
         .explicitGet()
 
-    state.append(differResult.snapshot, 0, 0, None, next.header.generationSignature, differResult.computedStateHash, next)
+    state.append(
+      differResult.snapshot,
+      carryFee = 0,
+      totalFee = 0,
+      reward = None,
+      next.header.generationSignature,
+      differResult.computedStateHash,
+      next,
+      newFinalizedHeight = GenesisBlockHeight,
+      generatorBalances = Seq.empty
+    )
   }
 
   def applyBlock(b: Block): Unit = {

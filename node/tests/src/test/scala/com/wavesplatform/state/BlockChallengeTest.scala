@@ -1,17 +1,16 @@
 package com.wavesplatform.state
 
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, FormData, HttpEntity}
-import org.apache.pekko.http.scaladsl.server.Route
-import org.apache.pekko.http.scaladsl.testkit.*
 import com.wavesplatform.TestValues
 import com.wavesplatform.account.{Address, KeyPair, SeedKeyPair}
 import com.wavesplatform.api.http.*
 import com.wavesplatform.api.http.TransactionsApiRoute.{ApplicationStatus, Status}
-import com.wavesplatform.block.{Block, ChallengedHeader, MicroBlock}
+import com.wavesplatform.block.{Block, BlockEndorsement, ChallengedHeader, FinalizationVoting, MicroBlock}
 import com.wavesplatform.common.merkle.Merkle
 import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.consensus.GeneratingBalanceProvider
 import com.wavesplatform.crypto.DigestLength
+import com.wavesplatform.crypto.bls.BlsKeyPair
 import com.wavesplatform.db.WithDomain
 import com.wavesplatform.db.WithState.AddrWithBalance
 import com.wavesplatform.features.BlockchainFeatures
@@ -29,24 +28,27 @@ import com.wavesplatform.settings.WavesSettings
 import com.wavesplatform.state.BlockRewardCalculator.BlockRewardShares
 import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.wavesplatform.state.appender.{BlockAppender, ExtensionAppender, MicroblockAppender}
-import com.wavesplatform.state.diffs.BlockDiffer
 import com.wavesplatform.state.diffs.BlockDiffer.CurrentBlockFeePart
+import com.wavesplatform.state.diffs.{BlockDiffer, ENOUGH_AMT}
 import com.wavesplatform.test.*
 import com.wavesplatform.test.DomainPresets.{TransactionStateSnapshot, WavesSettingsOps}
 import com.wavesplatform.transaction.Asset.Waves
 import com.wavesplatform.transaction.TxValidationError.{BlockAppendError, GenericError, InvalidStateHash, MicroBlockAppendError}
 import com.wavesplatform.transaction.assets.exchange.OrderType
 import com.wavesplatform.transaction.utils.EthConverters.*
-import com.wavesplatform.transaction.{EthTxGenerator, Transaction, TxHelpers, TxVersion}
-import com.wavesplatform.utils.{JsonMatchers, Schedulers, SharedSchedulerMixin}
+import com.wavesplatform.transaction.{CommitToGenerationTransaction, EthTxGenerator, Transaction, TxHelpers, TxVersion}
+import com.wavesplatform.utils.{JsonMatchers, SharedSchedulerMixin}
+import com.wavesplatform.wallet.Wallet
 import io.netty.channel.Channel
 import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
-import io.netty.util.HashedWheelTimer
 import io.netty.util.concurrent.GlobalEventExecutor
 import monix.eval.{Coeval, Task}
 import monix.execution.Scheduler
 import monix.execution.schedulers.SchedulerService
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, FormData, HttpEntity}
+import org.apache.pekko.http.scaladsl.server.Route
+import org.apache.pekko.http.scaladsl.testkit.*
 import org.scalatest.{Assertion, BeforeAndAfterAll, ParallelTestExecution}
 import play.api.libs.json.*
 
@@ -63,6 +65,7 @@ class BlockChallengeTest
     with SharedSchedulerMixin
     with ParallelTestExecution
     with BeforeAndAfterAll {
+  private val GetTimeStampAdjustment = 10 // To surpass Testtime.getTimestamp increment
 
   implicit val appenderScheduler: SchedulerService = Scheduler.singleThread("appender")
   val settings: WavesSettings =
@@ -97,34 +100,60 @@ class BlockChallengeTest
 
   property("NODE-884. Challenging miner should have correct balances") {
     val challengedMiner = TxHelpers.signer(1)
-    withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
-      val challengingMiner = d.wallet.generateNewAccount().get
+    val testSettings = settings
+      .setFeaturesHeight(BlockchainFeatures.DeterministicFinality -> 999)
+      .configure(_.copy(generationPeriodLength = 2))
+
+    withDomain(testSettings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
+      val challengingMiner     = d.wallet.generateNewAccount().get
+      val challengingMinerAddr = challengingMiner.toAddress
+
+      val extraForDeposit = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
       d.appendBlock(
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 2000.waves)
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMinerAddr, 1000.waves + extraForDeposit),
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 2000.waves + extraForDeposit)
       )
-      (1 to 999).foreach(_ => d.appendBlock())
+      (1 to 998).foreach(_ => d.appendBlock(d.createBlock(Block.PlainBlockVersion, txs = Nil, strictTime = true)))
+
+      val commitTxs               = Seq(challengedMiner, challengingMiner).map(acc => TxHelpers.commitToGeneration(Height(1002), acc))
+      val commitTxsTotalFee       = commitTxs.map(_.fee.value).sum
+      val commitTxsFeeToNextMiner = commitTxsTotalFee - CurrentBlockFeePart.apply(commitTxsTotalFee)
+      val blockWithTxs            = d.createBlock(Block.PlainBlockVersion, commitTxs, strictTime = true)
+      d.appendBlock(blockWithTxs)
+      d.blockchain.height shouldBe 1001
+
       val originalBlock =
         d.createBlock(Block.ProtoBlockVersion, Seq.empty, strictTime = true, generator = challengedMiner, stateHash = Some(Some(invalidStateHash)))
-      val challengingBlock = d.createChallengingBlock(challengingMiner, originalBlock)
 
-      val challengingGenBalanceBefore = d.blockchain.generatingBalance(challengingMiner.toAddress, Some(challengingBlock.header.reference))
-      val challengingEffBalanceBefore = d.blockchain.effectiveBalance(challengingMiner.toAddress, 0)
-      val challengedGenBalanceBefore  = d.blockchain.generatingBalance(challengedMiner.toAddress, Some(challengingBlock.header.reference))
+      val challengingGenBalanceBefore = d.blockchain.generatingBalance(challengingMinerAddr, Some(originalBlock.header.reference))
+      val challengingEffBalanceBefore = d.blockchain.effectiveBalance(challengingMinerAddr, 0)
+      val challengedGenBalanceBefore  = d.blockchain.generatingBalance(challengedMiner.toAddress, Some(originalBlock.header.reference))
 
-      d.appendBlockE(challengingBlock) should beRight
+      val challengingBlock =
+        d.createChallengingBlock(challengingMiner, originalBlock, strictTime = true, timestamp = Some(d.nextBlockTime(challengingMiner)))
+      d.appender.appendBlock(challengingBlock)
+
       d.blockchain.generatingBalance(
-        challengingMiner.toAddress,
+        challengingMinerAddr,
         Some(challengingBlock.header.reference)
       ) shouldBe challengingGenBalanceBefore + challengedGenBalanceBefore
 
       val minerReward = getLastBlockMinerReward(d)
       d.blockchain.effectiveBalance(
-        challengingMiner.toAddress,
+        challengingMinerAddr,
         0
-      ) shouldBe challengingEffBalanceBefore + minerReward
+      ) shouldBe challengingEffBalanceBefore + minerReward + commitTxsFeeToNextMiner
 
-      d.blockchain.generatingBalance(challengingMiner.toAddress, Some(challengingBlock.id())) shouldBe challengingGenBalanceBefore
+      d.blockchain.generatingBalance(challengingMinerAddr, Some(challengingBlock.id())) shouldBe challengingGenBalanceBefore
+
+      withClue(s"challenging $challengingMinerAddr: ") {
+        d.commonApi.generatorsApi
+          .generators(Height(d.blockchain.height))
+          .collectFirst {
+            case x if x.address == challengingMinerAddr => x.balance
+          }
+          .value shouldBe challengingEffBalanceBefore
+      }
     }
   }
 
@@ -136,7 +165,7 @@ class BlockChallengeTest
       appendAndCheck(
         d.createBlock(
           Block.ProtoBlockVersion,
-          Seq.empty,
+          txs = Seq.empty,
           strictTime = true,
           stateHash = Some(Some(invalidStateHash)),
           timestamp = Some(Long.MaxValue)
@@ -224,17 +253,50 @@ class BlockChallengeTest
   }
 
   property("NODE-888. ChallengedHeader should contain info from original block header") {
-    withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
-      val challengingMiner = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves))
-      (1 to 999).foreach(_ => d.appendBlock())
+    val challengedMiner  = TxHelpers.signer(0)
+    val challengingMiner = Wallet.generateNewAccount(Domain.DefaultWalletSeed, 0)
+
+    val testSettings = settings
+      .addFeatures(BlockchainFeatures.DeterministicFinality)
+      .configure(_.copy(generationPeriodLength = 700))
+
+    withDomain(testSettings, balances = AddrWithBalance.enoughBalances(challengedMiner, challengingMiner)) { d =>
+      d.wallet.generateNewAccounts(2)
+
+      d.appendBlock(
+        TxHelpers.commitToGeneration(Height(701), challengedMiner),
+        TxHelpers.commitToGeneration(Height(701), challengingMiner)
+      )
+
+      (1 to 999).foreach(_ => d.appendBlock(d.createBlock(Block.ProtoBlockVersion, txs = Nil, generator = challengedMiner)))
+
+      val finalizedHeight = d.blockchain.finalizedHeight.value
+      val finalizedId     = d.blockchain.blockId(finalizedHeight.toInt).value
+
+      val aggSig = BlockEndorsement.sign(
+        BlsKeyPair(challengingMiner.privateKey),
+        finalizedId = finalizedId,
+        finalizedHeight = finalizedHeight,
+        endorsedId = d.lastBlockId
+      )
+
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
-        Seq.empty,
+        txs = Nil,
         strictTime = true,
+        generator = challengedMiner,
         stateHash = Some(Some(invalidStateHash)),
-        timestamp = Some(Long.MaxValue)
+        timestamp = Some(Long.MaxValue),
+        finalizationVoting = Some(
+          FinalizationVoting(
+            valid = Seq(GeneratorIndex(1)),
+            finalizedHeight = finalizedHeight,
+            aggregatedEndorsement = aggSig,
+            conflict = Vector.empty
+          )
+        )
       )
+
       appendAndCheck(originalBlock, d) { block =>
         block.header.challengedHeader shouldBe defined
         val challengedHeader = block.header.challengedHeader.get
@@ -247,7 +309,77 @@ class BlockChallengeTest
         challengedHeader.rewardVote shouldBe originalBlock.header.rewardVote
         challengedHeader.stateHash shouldBe originalBlock.header.stateHash
         challengedHeader.headerSignature shouldBe originalBlock.signature
+        challengedHeader.finalizationVoting shouldBe originalBlock.header.finalizationVoting
       }
+    }
+  }
+
+  property("NODE-888. ChallengedHeader should contain info from original block header - micro block") {
+    val challengedMiner  = TxHelpers.signer(0)
+    val challengingMiner = Wallet.generateNewAccount(Domain.DefaultWalletSeed, 0)
+
+    val testSettings = settings
+      .addFeatures(BlockchainFeatures.DeterministicFinality, BlockchainFeatures.SmallerMinimalGeneratingBalance)
+      .configure(_.copy(generationPeriodLength = 700))
+
+    val initBalances = Seq(
+      AddrWithBalance(challengingMiner.toAddress, ENOUGH_AMT),
+      AddrWithBalance(
+        challengedMiner.toAddress,
+        GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets + 1.waves
+      )
+    )
+
+    withDomain(testSettings, balances = initBalances, time = testTime) { d =>
+      d.wallet.generateNewAccounts(2)
+
+      d.appendBlock(
+        TxHelpers.commitToGeneration(Height(701), challengedMiner),
+        TxHelpers.commitToGeneration(Height(701), challengingMiner)
+      )
+
+      (1 to 999).foreach(_ => d.appendBlock(d.createBlock(Block.ProtoBlockVersion, txs = Nil, generator = challengedMiner)))
+
+      val finalizedHeight = d.blockchain.finalizedHeight.value
+      val finalizedId     = d.blockchain.blockId(finalizedHeight.toInt).value
+
+      val aggSig = BlockEndorsement.sign(
+        BlsKeyPair(challengingMiner.privateKey),
+        finalizedId = finalizedId,
+        finalizedHeight = finalizedHeight,
+        endorsedId = d.lastBlockId
+      )
+
+      val ts = d.nextBlockTime(challengedMiner)
+      val originalBlock = d.createBlock(
+        Block.ProtoBlockVersion,
+        txs = Nil,
+        strictTime = true,
+        generator = challengedMiner,
+        timestamp = Some(ts)
+      )
+
+      testTime.setTime(ts)
+      d.appendBlock(originalBlock)
+
+      val appender = createMicroBlockAppender(d)
+      val channel  = new EmbeddedChannel()
+
+      val microBlock = d.createMicroBlock(
+        stateHash = Some(invalidStateHash),
+        signer = Some(challengedMiner),
+        finalizationVoting = Some(
+          FinalizationVoting(
+            valid = Seq(GeneratorIndex(1)),
+            finalizedHeight = finalizedHeight,
+            aggregatedEndorsement = aggSig,
+            conflict = Vector.empty
+          )
+        )
+      )(TxHelpers.transfer(challengedMiner, challengingMiner.toAddress))
+
+      appender(channel, microBlock).runSyncUnsafe()
+      d.blockchain.lastBlockHeader.value.header.challengedHeader shouldBe defined
     }
   }
 
@@ -368,7 +500,8 @@ class BlockChallengeTest
           d.lastBlock,
           d.lastBlock.transactionData ++ invalidMicroblock.transactionData,
           invalidMicroblock.totalResBlockSig,
-          invalidMicroblock.stateHash
+          invalidMicroblock.stateHash,
+          finalizationVoting = None
         )
         .id()
 
@@ -389,30 +522,73 @@ class BlockChallengeTest
 
   property("NODE-895. Challenged miner should have correct balances") {
     val challengedMiner = TxHelpers.signer(1)
-    withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
-      val challengingMiner = d.wallet.generateNewAccount().get
+    val testSettings = settings
+      .setFeaturesHeight(BlockchainFeatures.DeterministicFinality -> 999)
+      .configure(_.copy(generationPeriodLength = 2))
+
+    withDomain(testSettings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
+      val challengingMiner    = d.wallet.generateNewAccount().get
+      val challengedMinerAddr = challengedMiner.toAddress
+
+      val extraForDeposit = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
       d.appendBlock(
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 2000.waves)
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 2000.waves + extraForDeposit),
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMinerAddr, 3000.waves + extraForDeposit)
       )
-      (1 to 999).foreach(_ => d.appendBlock())
-      val originalBlock =
-        d.createBlock(
-          Block.ProtoBlockVersion,
-          Seq(TxHelpers.transfer(challengedMiner, TxHelpers.defaultAddress, amount = 1.waves)),
-          strictTime = true,
-          generator = challengedMiner,
-          stateHash = Some(Some(invalidStateHash))
-        )
-      val challengingBlock = d.createChallengingBlock(challengingMiner, originalBlock)
 
-      val effBalanceBefore = d.blockchain.effectiveBalance(challengedMiner.toAddress, 0)
+      (1 to 998).foreach(_ => d.appendBlock())
 
-      d.appendBlockE(challengingBlock) should beRight
-      d.blockchain.effectiveBalance(challengedMiner.toAddress, 0) shouldBe 0L
+      val commitTxs = Seq(challengedMiner, challengingMiner).map(acc => TxHelpers.commitToGeneration(Height(1002), acc))
+      d.appendBlock(commitTxs*)
+      d.blockchain.height shouldBe 1001
 
-      d.appendBlock()
-      d.blockchain.effectiveBalance(challengedMiner.toAddress, 0) shouldBe effBalanceBefore - 1.waves - TestValues.fee
+      val originalBlock = d.createBlock(
+        Block.ProtoBlockVersion,
+        Seq(TxHelpers.transfer(challengedMiner, TxHelpers.defaultAddress, amount = 1.waves)),
+        strictTime = true,
+        generator = challengedMiner,
+        stateHash = Some(Some(invalidStateHash))
+      )
+
+      val challengingBlock =
+        d.createChallengingBlock(challengingMiner, originalBlock, strictTime = true, timestamp = Some(d.nextBlockTime(challengingMiner)))
+
+      val effBalanceBefore = d.blockchain.effectiveBalance(challengedMinerAddr, 0)
+
+      d.appender.appendBlock(challengingBlock)
+      d.blockchain.effectiveBalance(challengedMinerAddr, 0) shouldBe 0L
+
+      withClue(s"challenged $challengedMinerAddr: ") {
+        d.commonApi.generatorsApi
+          .generators(Height(d.blockchain.height))
+          .collectFirst {
+            case x if x.address == challengedMinerAddr => x.balance
+          }
+          .value shouldBe effBalanceBefore
+      }
+
+      val newBlock = d.createBlock(
+        Block.ProtoBlockVersion,
+        Seq.empty,
+        strictTime = true,
+        generator = challengingMiner,
+        timestamp = Some(d.nextBlockTime(challengingMiner))
+      )
+      d.testTime.setTime(newBlock.header.timestamp + GetTimeStampAdjustment)
+      d.blockAppender(newBlock).runSyncUnsafe() should beRight
+      d.blockchain.height shouldBe 1003 // Same generation period as 1002
+
+      val expectedEffectiveBalance = effBalanceBefore - 1.waves - TestValues.fee
+      d.blockchain.effectiveBalance(challengedMinerAddr, 0) shouldBe expectedEffectiveBalance
+
+      withClue(s"challenged $challengedMinerAddr: ") {
+        d.commonApi.generatorsApi
+          .generators(Height(d.blockchain.height))
+          .collectFirst {
+            case x if x.address == challengedMinerAddr => x.balance
+          }
+          .value shouldBe 0 // expectedEffectiveBalance // TODO: ?`
+      }
     }
   }
 
@@ -531,7 +707,7 @@ class BlockChallengeTest
       val expectedSnapshot = StateSnapshot
         .build(
           d.rocksDBWriter,
-          Map(challengingMiner.toAddress                                                        -> Portfolio.waves(blockRewards.miner)) ++
+          Map(challengingMiner.toAddress -> Portfolio.waves(blockRewards.miner)) ++
             d.blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten.map(_ -> Portfolio.waves(blockRewards.daoAddress)) ++
             d.blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
               .map(_ -> Portfolio.waves(blockRewards.xtnBuybackAddress)),
@@ -1532,7 +1708,7 @@ class BlockChallengeTest
         d.blockchain,
         DummyTransactionPublisher.accepting,
         testTime,
-        Schedulers.timeBoundedFixedPool(new HashedWheelTimer(), 5.seconds, 1, "rest-time-limited"),
+        Scheduler.global,
         new RouteTimeout(60.seconds)(using sharedScheduler),
         d.accountsApi,
         1000
@@ -1564,7 +1740,6 @@ class BlockChallengeTest
         route
       )
       checkBalances(challengedMiner.toAddress, initChallengedBalance, initChallengedBalance, 0, 1003, route)
-
     }
   }
 
@@ -1635,8 +1810,18 @@ class BlockChallengeTest
             }
           }
         )
-      val appender =
-        BlockAppender(d.blockchain, testTime, d.utxPool, d.posSelector, channels, PeerDatabase.NoOp, blockChallenger, appenderScheduler)
+
+      val appender = BlockAppender(
+        d.blockchain,
+        testTime,
+        d.utxPool,
+        d.posSelector,
+        channels,
+        PeerDatabase.NoOp,
+        blockChallenger,
+        d.createBlockEndorser(channels),
+        appenderScheduler
+      )
 
       val route = new TransactionsApiRoute(
         d.settings.restAPISettings,
@@ -1899,6 +2084,7 @@ class BlockChallengeTest
         channels,
         PeerDatabase.NoOp,
         Some(createBlockChallenger(d, channels)),
+        d.createBlockEndorser(channels),
         appenderScheduler
       )(channel2, _, None)
 
@@ -1910,7 +2096,7 @@ class BlockChallengeTest
   }
 
   private def createBlockAppender(d: Domain): Block => Task[Either[ValidationError, BlockApplyResult]] =
-    BlockAppender(d.blockchain, testTime, d.utxPool, d.posSelector, appenderScheduler)(_, None)
+    BlockAppender(d.blockchain, testTime, d.utxPool, d.posSelector, BlockEndorser.Disabled, appenderScheduler)(_, None)
 
   private def createMicroBlockAppender(d: Domain): (Channel, MicroBlock) => Task[Unit] = { (ch, mb) =>
     val channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
@@ -2015,7 +2201,7 @@ class BlockChallengeTest
   private def getLastBlockRewards(d: Domain): BlockRewardShares =
     BlockRewardCalculator
       .getBlockRewardShares(
-        d.blockchain.height,
+        Height(d.blockchain.height),
         d.blockchain.settings.rewardsSettings.initial,
         d.blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten,
         d.blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten,

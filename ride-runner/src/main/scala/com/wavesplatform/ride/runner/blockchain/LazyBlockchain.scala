@@ -7,6 +7,7 @@ import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.SignedBlockHeader
 import com.wavesplatform.blockchain.SignedBlockHeaderWithVrf
 import com.wavesplatform.common.state.ByteStr
+import com.wavesplatform.crypto.bls.BlsPublicKey
 import com.wavesplatform.events.protobuf.BlockchainUpdated
 import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
 import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
@@ -114,8 +115,12 @@ class LazyBlockchain[TagT] private (
   // Ride: wavesBalance, height, lastBlock
   override def height: Int = heightUntagged.toInt
 
+  override def finalizedHeight: Option[Height] = None // TODO:
+
+  override def finalizedHeightAt(at: Height): Option[Height] = None // TODO:
+
   // Ride: environment initialization
-  override def activatedFeatures: ActivatedFeatures = currentActivatedFeatures.get().view.mapValues(_.toInt).toMap
+  override def activatedFeatures: ActivatedFeatures = currentActivatedFeatures.get()
 
   // Ride: assetInfo
   override def assetDescription(asset: IssuedAsset): Option[AssetDescription] = db
@@ -191,12 +196,16 @@ class LazyBlockchain[TagT] private (
     // NOTE: This code leads to a wrong generating balance, but we see no use-cases for now
     val lb           = leaseBalance(address)
     val wavesBalance = balance(address, Asset.Waves)
-    List(BalanceSnapshot(Height(height), wavesBalance, lb.in, lb.out))
+    List(BalanceSnapshot(Height(height), wavesBalance, lb.in, lb.out, 0))
   }
 
   // Ride: transactionHeightById
   override def transactionMeta(id: ByteStr): Option[TxMeta] =
     getTransactionHeight(TransactionId(id)).map(TxMeta(_, TxMeta.Status.Succeeded, 0)) // Other information not used
+
+  override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = IndexedSeq.empty
+
+  override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = ConflictGenerators.empty
 
   private def getTransactionHeight(id: TransactionId): Option[Height] = db.directReadWrite { implicit ctx =>
     memCache.getOrLoad(MemCacheKey.Transaction(id)) { key =>

@@ -31,7 +31,7 @@ object Dependencies {
 
   // Node protobuf schemas
   lazy val protoSchemasLib =
-    "com.wavesplatform" % "protobuf-schemas" % "1.5.3" classifier "protobuf-src" intransitive ()
+    "com.wavesplatform" % "protobuf-schemas" % "1.6.0-90-SNAPSHOT" classifier "protobuf-src" intransitive ()
 
   private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.2.1"
 
@@ -154,7 +154,8 @@ object Dependencies {
       "eu.timepit"                 %% "refined"       % "0.11.3" exclude ("org.scala-lang.modules", "scala-xml_2.13"),
       "com.esaulpaugh"              % "headlong"      % "13.3.1",
       "com.github.jbellis"          % "jamm"          % "0.4.0", // Weighing caches
-      web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on"))
+      web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
+      "com.wavesplatform" % "blst-java" % "0.3.15-SNAPSHOT"
     ) ++ console ++ logDeps ++ protobuf.value
   )
 

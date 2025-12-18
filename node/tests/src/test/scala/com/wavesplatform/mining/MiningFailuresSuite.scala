@@ -9,8 +9,8 @@ import com.wavesplatform.consensus.PoSSelector
 import com.wavesplatform.lagonaki.mocks.TestBlock
 import com.wavesplatform.settings.*
 import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
-import com.wavesplatform.state.{BalanceSnapshot, BlockMinerInfo, Blockchain, Height, NG}
 import com.wavesplatform.state.diffs.ENOUGH_AMT
+import com.wavesplatform.state.{BalanceSnapshot, BlockEndorser, BlockMinerInfo, Blockchain, EndorsementStorage, Height, NG}
 import com.wavesplatform.test.FlatSpec
 import com.wavesplatform.transaction.BlockchainUpdater
 import com.wavesplatform.transaction.TxValidationError.BlockFromFuture
@@ -66,6 +66,8 @@ class MiningFailuresSuite extends FlatSpec with PathMockFactory with WithNewDBFo
         wavesSettings.copy(blockchainSettings = blockchainSettings),
         ntpTime,
         utxPool,
+        BlockEndorser.Disabled,
+        EndorsementStorage.Disabled,
         wallet,
         pos,
         scheduler,
@@ -99,15 +101,16 @@ class MiningFailuresSuite extends FlatSpec with PathMockFactory with WithNewDBFo
       )
 
     var minedBlock: Block = null
-    (blockchainUpdater.processBlock).when(*, *, *, *, *, *).returning(Left(BlockFromFuture(100, 100))).repeated(10)
+    (blockchainUpdater.processBlock).when(*, *, *, *, *, *, *).returning(Left(BlockFromFuture(100, 100))).repeated(10)
     (blockchainUpdater.processBlock)
-      .when(*, *, *, *, *, *)
-      .onCall { (block, _, _, _, _, _) =>
+      .when(*, *, *, *, *, *, *)
+      .onCall { (block, _, _, _, _, _, _) =>
         minedBlock = block
-        Right(Applied(Nil, 0))
+        Right(Applied(Nil, 0, Seq.empty))
       }
       .once()
-    (blockchainUpdater.balanceSnapshots).when(*, *, *).returning(Seq(BalanceSnapshot(Height(1), ENOUGH_AMT, 0, 0)))
+    (blockchainUpdater.balanceSnapshots).when(*, *, *).returning(Seq(BalanceSnapshot(Height(1), ENOUGH_AMT, 0, 0, 0)))
+    (blockchainUpdater.committedGenerators).when(*).returning(IndexedSeq.empty)
 
     val account       = accountGen.sample.get
     val generateBlock = generateBlockTask(miner)(account)
