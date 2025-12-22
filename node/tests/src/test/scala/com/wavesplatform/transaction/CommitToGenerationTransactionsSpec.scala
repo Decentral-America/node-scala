@@ -22,7 +22,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   private val origTx = CommitToGenerationTransaction(
     version = TxVersion.V1,
     sender = PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-    endorserPublicKey = BlsPublicKey(Base58.decode("6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU")),
+    endorserPublicKey = BlsPublicKey(Base58.decode("6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU")).explicitGet(),
     generationPeriodStart = Height(3000),
     timestamp = 1526287561757L,
     fee = TxPositiveAmount.unsafeFrom(100000000),
@@ -125,9 +125,14 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   }
 
   "Can't commit public BLS key twice" in withDomain(DeterministicFinality, AddrWithBalance.enoughBalances(sender, TxHelpers.secondSigner)) { d =>
-    def mkTx(sender: KeyPair, blsKP: BlsKeyPair): CommitToGenerationTransaction = {
-      val unsigned = CommitToGenerationTransaction.withBls(TxHelpers.commitToGeneration(Height(3001), sender), blsKP)
-      unsigned.copy(proofs = Proofs(crypto.sign(sender.privateKey, unsigned.bodyBytes())))
+    def mkTx(sender: KeyPair, blsKp: BlsKeyPair): CommitToGenerationTransaction = {
+      val baseTx = TxHelpers.commitToGeneration(Height(3001), sender)
+      val withPop = baseTx.copy(
+        endorserPublicKey = blsKp.publicKey,
+        commitmentSignature = CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart)
+      )
+
+      withPop.copy(proofs = Proofs(crypto.sign(sender.privateKey, withPop.bodyBytes())))
     }
 
     log.debug("First")
@@ -159,7 +164,8 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   }
 
   "Can't commit with invalid commitment signature" in {
-    val newGenerator = TxHelpers.signer(1006)
+    val newGenerator     = TxHelpers.signer(1006)
+    val otherGeneratorKp = BlsKeyPair(TxHelpers.signer(1007).privateKey)
     withDomain(
       DeterministicFinality,
       Seq(
@@ -167,8 +173,11 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         AddrWithBalance(newGenerator.toAddress, 10000.waves)
       )
     ) { d =>
-      val unsignedTx = TxHelpers.commitToGeneration(Height(3001), newGenerator).copy(commitmentSignature = BlsSignature.Empty)
-      val signedTx   = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))
+      val periodStart = Height(3001)
+      val unsignedTx = TxHelpers
+        .commitToGeneration(periodStart, newGenerator)
+        .copy(commitmentSignature = CommitToGenerationTransaction.mkPopSignature(otherGeneratorKp, periodStart))
+      val signedTx = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))
 
       d.appendBlockE(unsignedTx) should produce("Proof doesn't validate as signature")
       d.appendBlockE(signedTx) should produce("Invalid commitment signature")
