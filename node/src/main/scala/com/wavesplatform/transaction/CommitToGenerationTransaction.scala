@@ -44,20 +44,10 @@ object CommitToGenerationTransaction {
 
   implicit val validator: TxValidator[CommitToGenerationTransaction] = CommitToGenerationTxValidator
 
-  implicit def signed(tx: CommitToGenerationTransaction, privateKey: PrivateKey): CommitToGenerationTransaction = {
-    val blsKP  = BlsKeyPair(privateKey)
-    val blsSig = mkPopSignature(blsKP, tx.generationPeriodStart)
+  implicit def signed(tx: CommitToGenerationTransaction, privateKey: PrivateKey): CommitToGenerationTransaction =
+    tx.copy(proofs = Proofs(crypto.sign(privateKey, tx.bodyBytes())))
 
-    val txWithBlsSig = tx.copy(endorserPublicKey = blsKP.publicKey, commitmentSignature = blsSig)
-    txWithBlsSig.copy(proofs = Proofs(crypto.sign(privateKey, txWithBlsSig.bodyBytes())))
-  }
-
-  def withBls(tx: CommitToGenerationTransaction, blsKeyPair: BlsKeyPair): CommitToGenerationTransaction = {
-    val blsSig = mkPopSignature(blsKeyPair, tx.generationPeriodStart)
-    tx.copy(endorserPublicKey = blsKeyPair.publicKey, commitmentSignature = blsSig)
-  }
-
-  def mkPopSignature(blsKeyPair: BlsKeyPair, generationPeriodStart: Height): BlsSignature.NonEmpty = {
+  def mkPopSignature(blsKeyPair: BlsKeyPair, generationPeriodStart: Height): BlsSignature = {
     val blsMessage = blsKeyPair.publicKey.arr ++ generationPeriodStart.toByteArray
     blsKeyPair.sign(blsMessage)
   }
@@ -95,17 +85,9 @@ object CommitToGenerationTransaction {
       generationPeriodStart: Height,
       timestamp: TxTimestamp,
       feeInWaves: Long,
+      commitmentSignature: BlsSignature,
       chainId: Byte = AddressScheme.current.chainId
   ): Either[ValidationError, CommitToGenerationTransaction] =
-    create(
-      version,
-      sender.publicKey,
-      endorserPublicKey,
-      generationPeriodStart,
-      timestamp,
-      feeInWaves,
-      commitmentSignature = BlsSignature.Empty,
-      Proofs.empty,
-      chainId
-    ).map(signed(_, sender.privateKey))
+    create(version, sender.publicKey, endorserPublicKey, generationPeriodStart, timestamp, feeInWaves, commitmentSignature, Proofs.empty, chainId)
+      .map(signed(_, sender.privateKey))
 }
