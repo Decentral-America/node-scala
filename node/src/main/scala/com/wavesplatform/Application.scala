@@ -101,9 +101,9 @@ class Application(val actorSystem: ActorSystem, val settings: WavesSettings, con
 
   private var triggers = Seq.empty[BlockchainUpdateTriggers]
 
-  private var miner: Miner & MinerDebugInfo = Miner.Disabled
+  private var miner: Miner & MinerDebugInfo = Miner.StrictDisabledMiner
   private val (blockchainUpdater, rocksDB) =
-    StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), bc => miner.scheduleMining(bc))
+    StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
   private val messageObserver = new MessageObserver
 
@@ -145,7 +145,8 @@ class Application(val actorSystem: ActorSystem, val settings: WavesSettings, con
     val pos = PoSSelector(blockchainUpdater, settings.synchronizationSettings.maxBaseTarget)
 
     val endorsementStorage = EndorsementStorage.InMemory((blockId, height) => blockchainUpdater.blockId(height.toInt).contains(blockId))
-    val blockEndorser      = new BlockEndorser.InMemory(blockchainUpdater, wallet, endorsementStorage, allChannels)
+    val blockEndorser =
+      new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchainUpdater, wallet, endorsementStorage, allChannels)
 
     if (settings.minerSettings.enable)
       miner = new MinerImpl(

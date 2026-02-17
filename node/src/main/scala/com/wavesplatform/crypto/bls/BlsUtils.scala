@@ -2,14 +2,17 @@ package com.wavesplatform.crypto.bls
 
 import supranational.blst
 import supranational.blst.BLST_ERROR
+
+import java.nio.charset.StandardCharsets
 import scala.util.control.NonFatal
 
 object BlsUtils {
-  val BlsDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_" // We have a non-standard PoP
+  val BlsDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"           // We have a non-standard PoP
+  private val BlsKeyGenSalt  = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
 
   def mkBlsSecretKey(arr: Array[Byte]): blst.SecretKey = {
     val sk = new blst.SecretKey()
-    sk.keygen(arr)
+    sk.keygen_v5(arr, BlsKeyGenSalt)
     sk
   }
 
@@ -24,7 +27,7 @@ object BlsUtils {
   def verifyBasic(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: Array[Byte]): Boolean = try {
     val sig = new blst.P2_Affine(blsSigBytes)
     val pk  = new blst.P1_Affine(blsPkBytes)
-    if (!pk.in_group()) throw new java.lang.RuntimeException("disaster") // TODO:
+    if (!pk.in_group()) throw new java.lang.RuntimeException("Not in group")
 
     val ctx = new blst.Pairing(true, BlsDomainSeparationTag)
     ctx.aggregate(pk, sig, message)
@@ -34,9 +37,8 @@ object BlsUtils {
     case NonFatal(_) => false
   }
 
-  // TODO: without empty?
   def aggSign(baseSig: Array[Byte], appendSig: Array[Byte]): Array[Byte] =
-    new blst.P2().add(new blst.P2(baseSig)).add(new blst.P2(appendSig)).compress()
+    new blst.P2(baseSig).add(new blst.P2(appendSig)).compress()
 
   /** @see
     *   https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#name-fastaggregateverify
