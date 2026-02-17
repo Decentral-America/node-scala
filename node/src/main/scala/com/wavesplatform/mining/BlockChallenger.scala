@@ -16,7 +16,7 @@ import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.wavesplatform.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.wavesplatform.state.appender.MaxTimeDrift
 import com.wavesplatform.state.diffs.BlockDiffer
-import com.wavesplatform.state.{Blockchain, Height, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
+import com.wavesplatform.state.{Blockchain, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
 import com.wavesplatform.transaction.TxValidationError.GenericError
 import com.wavesplatform.transaction.{BlockchainUpdater, Transaction}
 import com.wavesplatform.utils.{ScorexLogging, Time}
@@ -124,25 +124,20 @@ class BlockChallengerImpl(
   override def pickBestAccount(accounts: Seq[(SeedKeyPair, Long)]): Either[GenericError, (SeedKeyPair, Long)] =
     accounts.minByOption(_._2).toRight(GenericError("No suitable account in wallet"))
 
-  override def getChallengingAccounts(challengedMiner: Address): Either[ValidationError, Seq[(SeedKeyPair, Long)]] =
-    wallet.privateKeyAccounts
-      .map { pk =>
-        pk -> blockchainUpdater.generatingBalance(pk.toAddress)
-      }
-      .filter { case (pk, balance) =>
-        blockchainUpdater.isCommitted(Height(blockchainUpdater.height), pk.toAddress) // Only a committed generator can challenge on current height
-        && blockchainUpdater.isMiningAllowed(blockchainUpdater.height, balance)
-      }
-      .traverse { case (acc, initGenBalance) =>
-        pos
-          .getValidBlockDelay(
-            blockchainUpdater.height,
-            acc,
-            blockchainUpdater.lastBlockHeader.get.header.baseTarget,
-            initGenBalance + blockchainUpdater.generatingBalance(challengedMiner)
-          )
-          .map((acc, _))
-      }
+  override def getChallengingAccounts(challengedMiner: Address): Either[ValidationError, Seq[(SeedKeyPair, Long)]] = {
+    lazy val challengedBalance = blockchainUpdater.generatingBalance(challengedMiner)
+    wallet.privateKeyAccounts.traverse { acc =>
+      val ownBalance = blockchainUpdater.generatingBalance(acc.toAddress)
+      pos
+        .getValidBlockDelay(
+          blockchainUpdater.height,
+          acc,
+          blockchainUpdater.lastBlockHeader.get.header.baseTarget,
+          ownBalance + challengedBalance
+        )
+        .map((acc, _))
+    }
+  }
 
   override def getProcessingTx(id: ByteStr): Option[Transaction] = Option(processingTxs.get(id))
 
