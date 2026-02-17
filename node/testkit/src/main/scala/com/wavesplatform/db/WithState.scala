@@ -37,7 +37,6 @@ import com.wavesplatform.transaction.Asset.Waves
 import com.wavesplatform.transaction.TxHelpers.defaultAddress
 import com.wavesplatform.transaction.smart.script.trace.TracedResult
 import com.wavesplatform.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers}
-import com.wavesplatform.utils.Time
 import com.wavesplatform.{NTPTime, TestHelpers}
 import org.rocksdb.RocksDB
 import org.scalatest.matchers.should.Matchers
@@ -160,7 +159,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
         computedStateHash,
         preconditionBlock,
         newFinalizedHeight = GenesisBlockHeight,
-        generatorBalances = Seq.empty
+        generatorSet = Seq.empty
       )
     }
     val snapshot =
@@ -210,7 +209,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
         diffResult.computedStateHash,
         preconditionBlock,
         newFinalizedHeight = GenesisBlockHeight,
-        generatorBalances = Seq.empty
+        generatorSet = Seq.empty
       )).explicitGet()
     }
 
@@ -256,7 +255,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
           diffResult.computedStateHash,
           preconditionBlock,
           newFinalizedHeight = GenesisBlockHeight,
-          generatorBalances = Seq.empty
+          generatorSet = Seq.empty
         )
         Some(preconditionBlock)
       }).explicitGet()
@@ -287,7 +286,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
         diffResult.computedStateHash,
         checkedBlock,
         newFinalizedHeight = GenesisBlockHeight,
-        generatorBalances = Seq.empty
+        generatorSet = Seq.empty
       )
       assertion(diffResult.snapshot, state)
     }).explicitGet()
@@ -338,7 +337,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
           result.computedStateHash,
           checkedBlock,
           newFinalizedHeight = GenesisBlockHeight,
-          generatorBalances = Seq.empty
+          generatorSet = Seq.empty
         )
       }
     }
@@ -425,8 +424,8 @@ trait WithDomain extends WithState { suite: Suite =>
       balances: Seq[AddrWithBalance] = Seq.empty,
       wrapDB: RocksDB => RocksDB = identity,
       wrapBU: CompleteBlockchainUpdater => CompleteBlockchainUpdater = identity,
-      miner: Miner = _ => (),
-      time: Time = ntpTime
+      miner: Miner = Miner.StrictDisabledMiner,
+      time: TestTime = TestTime()
   )(test: Domain => A): A =
     withRocksDBWriter(settings) { blockchain =>
       var domain: Domain = null
@@ -444,7 +443,8 @@ trait WithDomain extends WithState { suite: Suite =>
       try {
         val wrappedDb = wrapDB(rdb.db)
         assert(wrappedDb.getNativeHandle == rdb.db.getNativeHandle, "wrap function should not create new database instance")
-        domain = Domain(new RDB(wrappedDb, rdb.txMetaHandle, rdb.txHandle, rdb.txSnapshotHandle, rdb.apiHandle, Seq.empty), bcu, blockchain, settings)
+        domain =
+          Domain(new RDB(wrappedDb, rdb.txMetaHandle, rdb.txHandle, rdb.txSnapshotHandle, rdb.apiHandle, Seq.empty), bcu, blockchain, settings, time)
         val genesis = balances.map { case AddrWithBalance(address, amount) =>
           TxHelpers.genesis(address, amount)
         }

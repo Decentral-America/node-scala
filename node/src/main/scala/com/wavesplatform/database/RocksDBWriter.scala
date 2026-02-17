@@ -501,7 +501,7 @@ class RocksDBWriter(
       addressTransactions: util.Map[AddressId, util.Collection[TransactionId]],
       accountScripts: Map[AddressId, Option[AccountScriptInfo]],
       newFinalizedHeight: Height,
-      generatorBalances: GeneratorBalances,
+      generatorSet: GeneratorSet,
       nextCommittedGenerators: Seq[(AddressId, BlsPublicKey)],
       commitmentTransactionIds: Seq[TransactionId],
       conflictGenerators: Seq[GeneratorIndex],
@@ -735,7 +735,7 @@ class RocksDBWriter(
       }
 
       // TODO: Option to not store
-      rw.put(Keys.generatorBalances(h, rdb.apiHandle), Some(generatorBalances.map(x => x.index -> x.balance)))
+      rw.put(Keys.generatorBalances(h, rdb.apiHandle), Some(generatorSet.map(x => x.index -> x.balance)))
 
       // TODO: height
       rw.put(Keys.issuedAssets(Height(height)), snapshot.assetStatics.keySet.toSeq)
@@ -1599,7 +1599,7 @@ class RocksDBWriter(
     readOnly(_.get(Keys.maliciousMinerBanHeights(address.bytes))).map(_.toInt)
 
   override def loadCommittedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = {
-    val approxGenerators = settings.functionalitySettings.maxEndorsements // Rough buffer size
+    val approxGenerators = settings.functionalitySettings.maxValidEndorsers // Rough buffer size
     val rawGenerators    = new mutable.ArrayBuffer[BlsPublicKey](approxGenerators)
     val addressIds       = new mutable.ArrayBuffer[AddressId](approxGenerators)
 

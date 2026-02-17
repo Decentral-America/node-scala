@@ -26,7 +26,7 @@ trait Blockchain {
   def height: Int
 
   def finalizedHeight: Option[Height]
-  def finalizedHeightAt(at: Height = Height(height)): Option[Height]
+  def finalizedHeightAt(at: Height): Option[Height]
 
   def score: BigInt
 
@@ -118,7 +118,7 @@ object Blockchain {
     def contains(block: Block): Boolean     = blockchain.contains(block.id())
     def contains(blockId: BlockId): Boolean = blockchain.heightOf(blockId).isDefined
 
-    def finalizedHeightAtOrFallback(maxRollbackLength: Int, at: Height = Height(blockchain.height)): Height = {
+    def finalizedHeightAtOrFallback(maxRollbackLength: Int, at: Height): Height = {
       val finalizedAt = blockchain.finalizedHeightAt(at)
       Blockchain.finalizedHeightOrFallback(at, finalizedAt, maxRollbackLength)
     }
@@ -190,11 +190,8 @@ object Blockchain {
       committedTimes * CommitToGenerationTransaction.DepositInWavelets
     }
 
-    def isMiningAllowed(height: Int, effectiveBalance: Long): Boolean =
-      GeneratingBalanceProvider.isMiningAllowed(blockchain, height, effectiveBalance)
-
-    def isGeneratingBalanceValid(height: Int, block: Block, effectiveBalance: Long): Boolean =
-      GeneratingBalanceProvider.isGeneratingBalanceValid(blockchain, height, block, effectiveBalance)
+    def isGeneratingBalanceValid(height: Height, blockHeader: BlockHeader, balance: Long): Boolean =
+      GeneratingBalanceProvider.isGeneratingBalanceValid(blockchain, height, blockHeader.timestamp, balance)
 
     def lastBlockReward: Option[Long] = blockchain.blockReward(blockchain.height)
 
@@ -228,12 +225,6 @@ object Blockchain {
       if (blockchain.activatedFeatures.get(feature).exists(_ <= Height(height))) BlockchainFeatureStatus.Activated
       else if (blockchain.approvedFeatures.get(feature).exists(_ <= Height(height))) BlockchainFeatureStatus.Approved
       else BlockchainFeatureStatus.Undefined
-
-    def isCommitted(height: Height, miner: Address): Boolean = blockchain.generationPeriodOf(height).fold(true) { p =>
-      lazy val committed = blockchain.committedGenerators(p)
-      // TODO: or balance less than minimum
-      committed.isEmpty || committed.exists { case (address, _) => address == miner }
-    }
 
     def isConflict(height: Height, generator: Address): Boolean = {
       val maybeConflict = for {

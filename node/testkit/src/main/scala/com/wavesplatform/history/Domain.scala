@@ -51,7 +51,13 @@ import scala.concurrent.duration.*
 import scala.util.Try
 import scala.util.control.NonFatal
 
-case class Domain(rdb: RDB, blockchainUpdater: CompleteBlockchainUpdater, rocksDBWriter: RocksDBWriter, settings: WavesSettings) {
+case class Domain(
+    rdb: RDB,
+    blockchainUpdater: CompleteBlockchainUpdater,
+    rocksDBWriter: RocksDBWriter,
+    settings: WavesSettings,
+    testTime: TestTime = TestTime()
+) {
   import Domain.*
   private given scheduler: SchedulerService = Schedulers.singleThread("domain", executionModel = SynchronousExecution)
 
@@ -65,7 +71,6 @@ case class Domain(rdb: RDB, blockchainUpdater: CompleteBlockchainUpdater, rocksD
     val parentHeight = blockchain.height
     val parent       = blockchain.blockHeader(parentHeight).map(_.header).getOrElse(lastBlock.header)
 
-    // TODO: challenging balance?
     posSelector
       .getValidBlockDelay(parentHeight, generator, parent.baseTarget, blockchain.generatingBalance(generator.toAddress))
       .map(_ + parent.timestamp)
@@ -88,11 +93,10 @@ case class Domain(rdb: RDB, blockchainUpdater: CompleteBlockchainUpdater, rocksD
 
   lazy val endorsementStorage: EndorsementStorage = EndorsementStorage.Disabled
   def createBlockEndorser(allChannels: ChannelGroup, storage: EndorsementStorage = endorsementStorage): BlockEndorser =
-    new BlockEndorser.InMemory(blockchain, wallet, storage, allChannels)
+    new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchain, wallet, storage, allChannels)
 
   lazy val wallet: Wallet = Wallet(settings.walletSettings.copy(file = None, seed = Some(ByteStr(DefaultWalletSeed))))
 
-  lazy val testTime: TestTime = TestTime()
   lazy val blockAppender: Block => Task[Either[ValidationError, BlockApplyResult]] =
     BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, Scheduler.singleThread("appender"))(_, None) // TODO:
   lazy val blockChallenger: Option[BlockChallenger] =
@@ -668,7 +672,7 @@ object Domain {
               crypto.verifyVRF(ch.generationSignature, prevHs.arr, ch.generator, bcu.isFeatureActivated(RideV6, parentHeight))
             )
             data <- findBlockAndGetGenerators(bcu, block)
-          } yield (hs, challengedHs, data.generatorBalances)
+          } yield (hs, challengedHs, data.generatorSet)
         }
 
       hitSourcesE.flatMap { case (hitSource, challengedHitSource, generatorBalances) =>
@@ -700,10 +704,11 @@ class DefaultAppender(d: Domain)(implicit appenderScheduler: SchedulerService) {
     d.settings,
     d.testTime,
     d.posSelector,
-    _ => throw new RuntimeException("Unexpected call in block challenger")
+    appendBlock = b => d.blockAppender(b)
   )
 
-  private val blockEndorser = new BlockEndorser.InMemory(d.blockchain, d.wallet, d.endorsementStorage, allChannelGroup)
+  private val blockEndorser =
+    new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, d.endorsementStorage, allChannelGroup)
 
   private val appenderWithCatching = BlockAppender(
     d.blockchain,

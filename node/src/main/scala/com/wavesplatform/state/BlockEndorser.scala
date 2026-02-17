@@ -15,18 +15,23 @@ trait BlockEndorser {
     *   with finalizedBlock at votingHeight
     *   by generators, committed at votingHeight
     */
-  def vote(generatorBalances: GeneratorBalances): Unit
+  def vote(generatorSet: GeneratorSet): Unit
 }
 
 object BlockEndorser {
   object Disabled extends BlockEndorser {
-    override def vote(generatorBalances: GeneratorBalances): Unit = {}
+    override def vote(generatorSet: GeneratorSet): Unit = {}
   }
 
-  class InMemory(blockchain: Blockchain, wallet: Wallet, endorsementStorage: EndorsementStorage, allChannels: ChannelGroup)
-      extends BlockEndorser,
+  class InMemory(
+      maxSyncRollbackLength: Int,
+      blockchain: Blockchain,
+      wallet: Wallet,
+      endorsementStorage: EndorsementStorage,
+      allChannels: ChannelGroup
+  ) extends BlockEndorser,
         StrictLogging {
-    override def vote(generatorBalances: GeneratorBalances): Unit = {
+    override def vote(generatorSet: GeneratorSet): Unit = {
       val votingHeight   = Height(blockchain.height)
       val endorsedHeight = votingHeight - 1
       if (endorsedHeight > GenesisBlockHeight) for {
@@ -35,7 +40,8 @@ object BlockEndorser {
         votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
         endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
 
-        finalizedHeight = blockchain.finalizedHeightAtOrFallback(votingHeight.toInt)
+        finalizedHeightAtEndorsed = blockchain.finalizedHeightAt(endorsedHeight)
+        finalizedHeight           = Blockchain.finalizedHeightOrFallback(votingHeight, finalizedHeightAtEndorsed, maxSyncRollbackLength)
         finalizedId <- blockchain
           .blockId(finalizedHeight.toInt)
           .toSeq
@@ -44,16 +50,27 @@ object BlockEndorser {
 
         committed        = blockchain.committedGenerators(votingPeriod)
         votingBlockMiner = votingBlockHeader.header.generator.toAddress
+        balances = generatorSet.collect {
+          case x if blockchain.isGeneratingBalanceValid(votingHeight, votingBlockHeader.header, x.balance) => x.address -> x.balance
+        }.toMap
+
         filter = {
           val isMiner    = wallet.privateKeyAccount(votingBlockMiner).isRight
-          val balances   = generatorBalances.map(x => x.address -> x.balance).toMap
           val minerIndex = if (isMiner) committed.indexWhere { case (addr, _) => addr == votingBlockMiner } else -1
-          val endorsers = committed.map { case (address, blsPk) =>
+          val normalizedEndorsers = committed.map { case (address, blsPk) =>
             (address, blsPk, balances.getOrElse(address, 0L))
           }.toVector
 
           val conflict = blockchain.conflictGenerators(votingPeriod).upTo(votingHeight)
-          EndorsementFilter(GeneratorIndex.checked(minerIndex), finalizedId, finalizedHeight, endorsedId, endorsers, conflict)
+          EndorsementFilter(
+            blockchain.settings.functionalitySettings.maxValidEndorsers,
+            GeneratorIndex.checked(minerIndex),
+            finalizedId,
+            finalizedHeight,
+            endorsedId,
+            normalizedEndorsers,
+            conflict
+          )
         }
         if endorsementStorage.startVoting(filter)
 
@@ -61,13 +78,17 @@ object BlockEndorser {
           ((committedAddr, _), idx) <- committed.zipWithIndex
           if !filter.miner.contains(idx) // A miner doesn’t need to endorse its own blocks - a mining is already an endorsement
           pk <- wallet.privateKeyAccount(committedAddr).toSeq
+          if balances.contains(committedAddr)
         } yield (pk, GeneratorIndex(idx))
-        _ = logger.debug(s"Found ${account.toAddress} in generator set") // TODO: remove from prod
 
         endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId)
         networkMsg  = EndorseBlock.from(endorsement)
-        broadcast <- endorsementStorage.tryAdd(networkMsg).toSeq
-        _ = logger.debug(s"Will ${if (broadcast) "" else "not "}broadcast endorsement from ${account.toAddress}") // TODO: remove from prod
+        broadcast <- endorsementStorage.tryAdd(networkMsg) match {
+          case Right(r) => Some(r)
+          case Left(err) =>
+            logger.warn(s"Can't add endorsement from #$idx ${account.toAddress}: $err")
+            None
+        }
         if broadcast
       } allChannels.broadcast(networkMsg)
     }
