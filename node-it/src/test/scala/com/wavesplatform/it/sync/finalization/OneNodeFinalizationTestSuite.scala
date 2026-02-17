@@ -8,6 +8,7 @@ import com.wavesplatform.it.api.SyncHttpApi.*
 import com.wavesplatform.it.{BaseFreeSpec, NodeConfigs}
 import com.wavesplatform.state.Height
 import com.wavesplatform.test.NumericExt
+import org.apache.pekko.http.scaladsl.model.StatusCodes
 import org.scalatest.OptionValues
 
 import scala.concurrent.duration.DurationInt
@@ -65,6 +66,18 @@ class OneNodeFinalizationTestSuite extends BaseFreeSpec with OptionValues {
     var finalizedHeight1       = node.finalizedHeight
     val waitingFinalizedHeight = finalizedHeight1 + 2
 
+    withClue("Finalized height is unknown: ") {
+      try node.finalizedHeightAt(node.height)
+      catch {
+        case ApiCallException(e: UnexpectedStatusCodeException) => e.statusCode shouldBe StatusCodes.NotFound.intValue
+      }
+
+      try node.finalizedHeightAt(node.height + 10)
+      catch {
+        case ApiCallException(e: UnexpectedStatusCodeException) => e.statusCode shouldBe StatusCodes.NotFound.intValue
+      }
+    }
+
     var done = false
     while (!done && deadline.hasTimeLeft()) {
       val currHeight = node.height
@@ -98,20 +111,15 @@ class OneNodeFinalizationTestSuite extends BaseFreeSpec with OptionValues {
     step("Finalized block header and height checks")
     val finalizedBlock1 = node.finalizedBlockHeader()
     finalizedBlock1.height should be >= finalizedHeight1
-
-    val finalizedHeight2 = node.finalizedHeightAt(node.height)
-    finalizedHeight2 should be >= finalizedHeight1
-
-    val finalizedHeightBefore1 = node.finalizedHeightAt(finalizedBlock1.height)
-    finalizedHeightBefore1 should be < finalizedHeight1
+    node.finalizedHeightAt(finalizedBlock1.height) should be <= finalizedBlock1.height
 
     step("Finalization voting in a block header")
-    val blockHeader        = node.blockHeaderAt(node.height - 1)
-    val finalizationVoting = blockHeader.finalizationVoting.value
+    val votingBlockHeader  = node.blockHeaderAt(finalizedHeight1 + 1)
+    val finalizationVoting = votingBlockHeader.finalizationVoting.value
 
-    val generators: Seq[(data: GeneratorsResponse.Entry, index: Int)] = node.generators(blockHeader.height).zipWithIndex
+    val generators: Seq[(data: GeneratorsResponse.Entry, index: Int)] = node.generators(votingBlockHeader.height).zipWithIndex
 
-    val minerEndorser = generators.find { g => g.data.address == blockHeader.generator }.value
+    val minerEndorser = generators.find { g => g.data.address == votingBlockHeader.generator }.value
 
     withClue(s"endorsers=[${finalizationVoting.endorserIndexes.mkString(", ")}], miner=${minerEndorser.index}: ") {
       finalizationVoting.endorserIndexes should not contain minerEndorser.index

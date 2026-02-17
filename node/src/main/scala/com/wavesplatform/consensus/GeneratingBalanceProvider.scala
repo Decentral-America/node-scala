@@ -1,7 +1,6 @@
 package com.wavesplatform.consensus
 
 import com.wavesplatform.account.Address
-import com.wavesplatform.block.Block
 import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.state.{Blockchain, Height}
@@ -13,17 +12,15 @@ object GeneratingBalanceProvider {
   private val FirstDepth  = 50
   private val SecondDepth = 1000
 
-  def isMiningAllowed(blockchain: Blockchain, height: Int, effectiveBalance: Long): Boolean = {
-    val activated = blockchain.activatedFeatures.get(BlockchainFeatures.SmallerMinimalGeneratingBalance.id).exists(Height(height) >= _)
-    (!activated && effectiveBalance >= MinimalEffectiveBalanceForGenerator1) || (activated && effectiveBalance >= MinimalEffectiveBalanceForGenerator2)
-  }
-
-  def isGeneratingBalanceValid(blockchain: Blockchain, height: Int, block: Block, effectiveBalance: Long): Boolean =
-    block.header.timestamp < blockchain.settings.functionalitySettings.minimalGeneratingBalanceAfter
-      || block.header.timestamp >= blockchain.settings.functionalitySettings.minimalGeneratingBalanceAfter && effectiveBalance >= MinimalEffectiveBalanceForGenerator1
+  def isMiningAllowed(blockchain: Blockchain, height: Height, generatingBalance: Long): Boolean =
+    generatingBalance >= MinimalEffectiveBalanceForGenerator1
       || blockchain.activatedFeatures
         .get(BlockchainFeatures.SmallerMinimalGeneratingBalance.id)
-        .exists(Height(height) >= _) && effectiveBalance >= MinimalEffectiveBalanceForGenerator2
+        .exists(height >= _) && generatingBalance >= MinimalEffectiveBalanceForGenerator2
+
+  def isGeneratingBalanceValid(blockchain: Blockchain, height: Height, timestampMs: Long, balance: Long): Boolean =
+    timestampMs < blockchain.settings.functionalitySettings.minimalGeneratingBalanceAfter
+      || isMiningAllowed(blockchain, height, balance)
 
   def balance(blockchain: Blockchain, account: Address, blockId: Option[BlockId] = None): Long = {
     val height = blockId.flatMap(blockchain.heightOf).getOrElse(blockchain.height)

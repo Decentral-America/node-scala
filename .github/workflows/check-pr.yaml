@@ -30,30 +30,31 @@ jobs:
           find node/tests/target/test-reports -name "*.xml" -exec sed -E -i \
             -e 's/time="(0(\.0+)?|-0\.[0-9]+)"/time="0.001"/g' \
             -e 's/name="([^"]*)(NODE-[0-9]+ )([^"]*)"/name="\2 \1\3"/g' {} +
-      - uses: qase-tms/gh-actions/run-create@v1
-        if: always()
-        id: qase-run-create
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: NODE
-          title: Check PR ${{ github.run_id }} — ${{ github.head_ref || github.ref_name }}
-          description: |
-            PR [#${{ github.event.number }}](https://github.com/wavesplatform/Waves/pulls/${{ github.event.number }}) — Run [#${{ github.run_number }}](https://github.com/wavesplatform/Waves/actions/runs/${{ github.run_id }})
-      - uses: qase-tms/gh-actions/report@v1
-        if: always() && steps.qase-run-create.outcome == 'success'
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: NODE
-          id: ${{ steps.qase-run-create.outputs.id }}
-          format: junit
-          path: node/tests/target/test-reports
-          batch: 100
-      - uses: qase-tms/gh-actions/run-complete@v1
-        if: always() && steps.qase-run-create.outcome == 'success'
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: NODE
-          id: ${{ steps.qase-run-create.outputs.id }}
+      # Temporarily disabled because of 402 Payment Required
+      # - uses: qase-tms/gh-actions/run-create@v1
+      #   if: always()
+      #   id: qase-run-create
+      #   with:
+      #     token: ${{ secrets.QASE_API_TOKEN }}
+      #     project: NODE
+      #     title: Check PR ${{ github.run_id }} — ${{ github.head_ref || github.ref_name }}
+      #     description: |
+      #       PR [#${{ github.event.number }}](https://github.com/wavesplatform/Waves/pulls/${{ github.event.number }}) — Run [#${{ github.run_number }}](https://github.com/wavesplatform/Waves/actions/runs/${{ github.run_id }})
+      # - uses: qase-tms/gh-actions/report@v1
+      #   if: always() && steps.qase-run-create.outcome == 'success'
+      #   with:
+      #     token: ${{ secrets.QASE_API_TOKEN }}
+      #     project: NODE
+      #     id: ${{ steps.qase-run-create.outputs.id }}
+      #     format: junit
+      #     path: node/tests/target/test-reports
+      #     batch: 100
+      # - uses: qase-tms/gh-actions/run-complete@v1
+      #   if: always() && steps.qase-run-create.outcome == 'success'
+      #   with:
+      #     token: ${{ secrets.QASE_API_TOKEN }}
+      #     project: NODE
+      #     id: ${{ steps.qase-run-create.outputs.id }}
       - uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
         if: always()
         with:

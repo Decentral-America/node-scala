@@ -16,7 +16,7 @@ import scala.collection.{immutable, mutable}
 // TODO: .switch: use in appender when changed height
 trait EndorsementStorage {
 
-  /** @return true, if it can be shared with neighbours
+  /** @return true, if it can be shared with neighbors
     */
   def tryAdd(msg: EndorseBlock): Either[String, Boolean]
 
@@ -54,11 +54,16 @@ object EndorsementStorage {
 
     override def tryAdd(msg: EndorseBlock): Either[String, Boolean] = synced {
       for {
-        filter        <- currentFilter.toRight("Voting hasn't started")
-        _             <- Either.raiseWhen(msg.finalizedHeight > filter.finalizedHeight)(s"Expected finalized height <= ${filter.finalizedHeight}")
-        _             <- Either.raiseWhen(msg.endorserIndex >= filter.endorsers.size)(s"There are only ${filter.endorsers.size} endorsers")
+        filter <- currentFilter.toRight("Voting hasn't started")
+        _ <- Either.raiseWhen(msg.finalizedHeight < GenesisBlockHeight || msg.finalizedHeight > filter.finalizedHeight) {
+          s"Expected finalized height >= $GenesisBlockHeight and <= ${filter.finalizedHeight}"
+        }
+        _ <- Either.raiseWhen(msg.endorserIndex >= filter.normalizedGeneratorSet.size)(
+          s"There are only ${filter.normalizedGeneratorSet.size} endorsers"
+        )
         endorserIndex <- GeneratorIndex.checked(msg.endorserIndex).toRight(s"Invalid endorser index: ${msg.endorserIndex}")
-        (_, endorserPk, _) = filter.endorsers(msg.endorserIndex)
+        (endorserAddr, endorserPk, balance) = filter.normalizedGeneratorSet(msg.endorserIndex)
+        _   <- Either.raiseWhen(balance == 0)(s"Endorser #$endorserIndex $endorserAddr has no enough balance")
         sig <- verifySig(msg, endorserPk)
       } yield
         if (sharedWithNeighbors.contains(msg) || conflict.isDefinedAt(msg.endorserIndex) || filter.conflict.contains(endorserIndex)) false
@@ -69,7 +74,7 @@ object EndorsementStorage {
             msg.finalizedHeight < filter.finalizedHeight && !blockAtHeight(msg.finalizedId, msg.finalizedHeight)
           }
 
-          val share = if (isConflict) {
+          val isNew = if (isConflict) {
             conflict = conflict.updated(
               msg.endorserIndex,
               BlockEndorsement(GeneratorIndex(msg.endorserIndex), msg.finalizedId, msg.finalizedHeight, msg.endorsedId, sig)
@@ -84,12 +89,16 @@ object EndorsementStorage {
             true
           } else false
 
-          if (share) {
+          val share = isNew && filter.miner.isEmpty
+          if (isNew) {
+            val kindStr = if (isConflict) "conflict" else "valid"
+            logger.info(s"New $kindStr endorsement from #$endorserIndex $endorserAddr will${if (share) "" else " not"} be shared")
+
             hasChanges = true
             sharedWithNeighbors += msg
-          }
+          } else logger.trace(s"Neither valid, nor conflict endorsement from #$endorserIndex")
 
-          share && filter.miner.isEmpty
+          share
         }
     }
 
@@ -105,8 +114,8 @@ object EndorsementStorage {
         latestResult = FinalizationResult.empty
         hasChanges = false
 
-        currentFilter = if (filter.endorsers.isEmpty) {
-          logger.info("No committed generators, don't collect endorsements")
+        currentFilter = if (filter.normalizedGeneratorSet.isEmpty) {
+          logger.info("Generator set is empty, don't collect endorsements")
           none
         } else {
           logger.info(s"Started voting with $filter")
@@ -117,9 +126,9 @@ object EndorsementStorage {
     }
 
     override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting] = synced {
-      for {
-        currentFilter <- currentFilter
-        if currentFilter.endorsedId == endorsedId && hasChanges
+      val r = for {
+        currentFilter <- currentFilter.toRight("Voting not started")
+        _             <- Either.raiseUnless(currentFilter.endorsedId == endorsedId && hasChanges)("No changes")
         _ = {
           hasChanges = false
         }
@@ -127,16 +136,25 @@ object EndorsementStorage {
         moreConflict   = conflict.size > latestResult.voting.conflict.size
         moreValid      = valid.size > latestResult.voting.valid.size
         couldFinalized = !latestResult.reachedFinalization && moreValid
-        if moreConflict || couldFinalized
+        _ <- Either.raiseUnless(moreConflict || couldFinalized) {
+          s"Could not be changed: finalized=${latestResult.reachedFinalization}, more valid=$moreValid, more conflict=$moreConflict"
+        }
 
         origResult = latestResult
+        simulation = currentFilter.simulate(valid.keys, conflict.keySet)
         _ = {
-          val simulation = currentFilter.simulate(valid.keys, conflict.keySet)
           latestResult = createVoting(currentFilter, simulation)
         }
         changedFinalizationStatus = latestResult.reachedFinalization != origResult.reachedFinalization
-        if moreConflict || changedFinalizationStatus
+        _ <- Either.raiseUnless(moreConflict || changedFinalizationStatus) {
+          s"Status not changed, endorsed=${simulation.endorsedBalance}, total=${simulation.totalBalance}"
+        }
       } yield latestResult.voting
+
+      r.left.foreach { err =>
+        if (currentFilter.nonEmpty) logger.debug(s"Not found new significant endorsements for $endorsedId: $err")
+      }
+      r.toOption
     }
 
     private def createVoting(currentFilter: EndorsementFilter, simulationResult: SimulationResult): FinalizationResult = {
@@ -144,7 +162,7 @@ object EndorsementStorage {
         valid = Seq.empty,
         finalizedHeight = currentFilter.finalizedHeight,
         aggregatedEndorsement = None,
-        conflict = conflict.values.toIndexedSeq
+        conflict = (conflict -- latestResult.voting.conflict.map(_.endorserIndex.toInt)).values.toIndexedSeq
       )
 
       val voting =
