@@ -55,8 +55,15 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
-      - name: Run tests
-        run: sbt --batch test
+      - name: Run unit tests
+        run: |
+          sbt --batch \
+            "lang-tests/test" \
+            "lang-tests-js/test" \
+            "repl-jvm/test" \
+            "grpc-server/test" \
+            "node-tests/test" \
+            "ride-runner/test"
       - uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
         if: always()
         with:
