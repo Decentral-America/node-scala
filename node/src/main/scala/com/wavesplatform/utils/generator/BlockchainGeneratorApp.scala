@@ -56,8 +56,8 @@ object BlockchainGeneratorApp extends ScorexLogging {
       import builder.*
 
       OParser.sequence(
-        programName("waves blockchain generator"),
-        head("Waves Blockchain Generator", Version.VersionString),
+        programName("decentralchain blockchain generator"),
+        head("DecentralChain Blockchain Generator", Version.VersionString),
         opt[File]("genesis-config")
           .required()
           .abbr("gc")
