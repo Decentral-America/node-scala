@@ -138,7 +138,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
 
       val expectedError =
         s"Fee for TransferTransaction (${insufficientFee.fee} in ${issue.assetId.toString})" ++
-          s" does not exceed minimal value of 100000 WAVES or $minFee ${issue.assetId.toString}"
+          s" does not exceed minimal value of 100000 DCC or $minFee ${issue.assetId.toString}"
 
       blockDiffEi should produce(expectedError)
     }
@@ -214,7 +214,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
       blockDiffEi should produce("Asset was issued by other address")
     }
     assertDiffEi(setupBlocks, block(Seq(insufficientReducedFee)), s) { blockDiffEi =>
-      blockDiffEi should produce("(99999 in WAVES) does not exceed minimal value of 100000 WAVES")
+      blockDiffEi should produce("(99999 in DCC) does not exceed minimal value of 100000 DCC")
     }
   }
 
@@ -242,7 +242,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
       blockDiffEi should produce("Asset was issued by other address")
     }
     assertDiffEi(setupBlocks, block(Seq(insufficientFee)), s) { blockDiffEi =>
-      blockDiffEi should produce("(99999 in WAVES) does not exceed minimal value of 100000 WAVES")
+      blockDiffEi should produce("(99999 in DCC) does not exceed minimal value of 100000 DCC")
     }
   }
 

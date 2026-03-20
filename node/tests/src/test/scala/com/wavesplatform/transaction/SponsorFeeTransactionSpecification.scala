@@ -306,7 +306,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
         val b2 = block(Seq(sponsor), Block.ProtoBlockVersion)
 
         assertDiffEi(Seq(b0), b1, NgAndSponsorshipSettings) { ei =>
-          ei should produce(s"Fee for SponsorFeeTransaction ($actualFee in WAVES) does not exceed minimal value of $One WAVES.")
+          ei should produce(s"Fee for SponsorFeeTransaction ($actualFee in DCC) does not exceed minimal value of $One DCC.")
         }
 
         assertDiffEi(Seq(b0), b2, BlockV5Settings) { ei =>

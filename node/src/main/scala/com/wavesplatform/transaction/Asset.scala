@@ -30,7 +30,7 @@ object Asset {
 
   case object Waves extends Asset
 
-  val WavesName = "WAVES"
+  val WavesName = "DCC"
 
   implicit val assetReads: Reads[IssuedAsset] = Reads {
     case JsString(str) => IssuedAsset.fromString(str, JsSuccess(_), JsError(_))

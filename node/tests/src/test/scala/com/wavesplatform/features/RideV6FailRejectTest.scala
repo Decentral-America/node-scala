@@ -724,7 +724,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
       } ++ Seq(
         Case.withInnerPayment(
           "NODE-606 If an inner invoke contains a negative Waves payment",
-          "with attached WAVES amount = -1",
+          "with attached DCC amount = -1",
           "AttachedPayment(unit, -1)"
         ),
         Case.withInnerPayment(

@@ -420,7 +420,7 @@ private object InvokeExpressionTest {
     val expectingFee =
       FeeConstants(invoke.tpe) * FeeUnit + (if (issue) 1 else 0) * 1_0000_0000L + (if (verifier) 1 else 0) * FeeValidation.ScriptExtraFee
     val issueErr = if (issue) " with 1 assets issued" else ""
-    s"for InvokeExpressionTransaction (${invoke.fee} in WAVES)$issueErr does not exceed minimal value of $expectingFee WAVES."
+    s"for InvokeExpressionTransaction (${invoke.fee} in DCC)$issueErr does not exceed minimal value of $expectingFee DCC."
   }
 
   def verifier(version: StdLibVersion): Script =
