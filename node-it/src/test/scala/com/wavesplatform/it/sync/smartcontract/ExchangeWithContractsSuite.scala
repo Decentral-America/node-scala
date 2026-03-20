@@ -49,7 +49,7 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
       )
       .id
 
-    pair = AssetPair.createAssetPair(exchAsset, "WAVES").get
+    pair = AssetPair.createAssetPair(exchAsset, "DCC").get
 
     val entry1 = IntegerDataEntry("int", 24)
     val entry2 = BooleanDataEntry("bool", value = true)

@@ -257,7 +257,7 @@ class OrderJsonSpecification extends PropSpec with JsonMatchers with EthHelpers 
           "signature": "signature"
         } """
 
-    val jsons = Seq(""" "" """, "null", """ "WAVES" """).map { x =>
+    val jsons = Seq(""" "" """, "null", """ "DCC" """).map { x =>
       x -> mkJson(x)
     }
 

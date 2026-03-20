@@ -991,7 +991,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
         // negative fee
         Post(routePath(s"/script/evaluate/$secondAddress"), Json.obj("fee" -> -1)) ~> route ~> check {
-          responseAs[String] should include("error = Fee in WAVES for InvokeScriptTransaction (-1 in WAVES)")
+          responseAs[String] should include("error = Fee in DCC for InvokeScriptTransaction (-1 in DCC)")
         }
 
         // illegal fee asset id

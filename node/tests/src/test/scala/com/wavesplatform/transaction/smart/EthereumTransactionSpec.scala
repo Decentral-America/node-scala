@@ -641,7 +641,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
 
       val snapshot = d.createDiffE(transaction)
 
-      snapshot should produce("Fee for EthereumTransaction (499999 in WAVES) does not exceed minimal value of 500000 WAVES.")
+      snapshot should produce("Fee for EthereumTransaction (499999 in DCC) does not exceed minimal value of 500000 DCC.")
     }
   }
 }

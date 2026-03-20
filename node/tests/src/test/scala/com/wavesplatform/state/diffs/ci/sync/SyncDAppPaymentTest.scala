@@ -41,7 +41,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
           if (customAsset)
             s"DApp $dApp1 invoked DApp $dApp2 with attached token $asset amount = -1"
           else
-            s"DApp $dApp1 invoked DApp $dApp2 with attached WAVES amount = -1"
+            s"DApp $dApp1 invoked DApp $dApp2 with attached DCC amount = -1"
         }
       }
     }
@@ -62,7 +62,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
           if (customAsset)
             s"DApp $dApp1 invoked DApp $dApp2 with attached token $asset amount = -1"
           else
-            s"DApp $dApp1 invoked DApp $dApp2 with attached WAVES amount = -1"
+            s"DApp $dApp1 invoked DApp $dApp2 with attached DCC amount = -1"
 
         d.appendBlock(preparingTxs*)
 

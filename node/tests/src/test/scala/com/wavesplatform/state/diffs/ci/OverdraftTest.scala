@@ -48,7 +48,7 @@ class OverdraftTest extends PropSpec with WithDomain {
 
       assertDiffEi(Seq(TestBlock.create(genesis :+ setDApp)), TestBlock.create(Seq(ci)), settings) { r =>
         r should produce(
-          s"Fee for InvokeScriptTransaction (1 in WAVES) does not exceed minimal value of $InvokeFee WAVES"
+          s"Fee for InvokeScriptTransaction (1 in DCC) does not exceed minimal value of $InvokeFee DCC"
         )
       }
     }
