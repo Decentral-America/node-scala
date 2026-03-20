@@ -60,7 +60,7 @@ jobs:
           sbt --batch \
             "lang-tests/test" \
             "lang-tests-js/test" \
-            "repl-jvm/test" \
+            "replJVM/test" \
             "grpc-server/test" \
             "node-tests/test" \
             "ride-runner/test"
