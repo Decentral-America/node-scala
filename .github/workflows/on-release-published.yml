@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish-node-image:
-    name: Publish Waves Node to Docker Hub
+    name: Publish DCC Node Image
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       raw-docker-tags: |
@@ -37,7 +37,7 @@ jobs:
       - id: meta-private
         uses: docker/metadata-action@v5
         with:
-          images: wavesplatform/waves-private-node
+          images: ghcr.io/decentral-america/node-scala-private
           flavor: latest=false
           tags: |
             type=ref,event=tag
@@ -50,7 +50,7 @@ jobs:
           pull: true
           tags: ${{ steps.meta-private.outputs.tags }}
           build-args: |
-            baseImage=wavesplatform/wavesnode@${{ needs.publish-node-image.outputs.digest }}
+            baseImage=ghcr.io/decentral-america/node-scala@${{ needs.publish-node-image.outputs.digest }}
 
   publish-ride-runner-image:
     name: Publish RIDE Runner to Docker Hub
@@ -73,7 +73,7 @@ jobs:
       - id: meta-ride-runner
         uses: docker/metadata-action@v5
         with:
-          images: wavesplatform/ride-runner
+          images: ghcr.io/decentral-america/ride-runner
           flavor: latest=false
           tags: |
             type=match,pattern=v(.*),group=1

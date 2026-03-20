@@ -58,4 +58,4 @@ jobs:
           cd ../../repl/js
           npm version $VERSION --no-git-tag-version
           npm publish --provenance --access public --tag $TAG
-          echo "url=https://www.npmjs.com/package/@waves/ride-lang/v/$VERSION" >> "$GITHUB_OUTPUT"
+          echo "url=https://www.npmjs.com/package/@decentral-america/ride-lang/v/$VERSION" >> "$GITHUB_OUTPUT"
