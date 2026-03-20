@@ -39,6 +39,6 @@ package object utils {
       )._2
 
     def createTestBlockchainSettings(fs: FunctionalitySettings): BlockchainSettings =
-      BlockchainSettings('T', fs, GenesisSettings.TESTNET, RewardsSettings.TESTNET)
+      BlockchainSettings('!', fs, GenesisSettings.TESTNET, RewardsSettings.TESTNET)
   }
 }
