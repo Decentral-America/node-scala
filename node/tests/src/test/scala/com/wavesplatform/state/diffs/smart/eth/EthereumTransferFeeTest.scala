@@ -50,7 +50,7 @@ class EthereumTransferFeeTest extends PropSpec with WithDomain with EthHelpers {
   private def assertMinFee(d: Domain, asset: Asset, fee: Long) = {
     val notEnoughFeeTx = EthTxGenerator.generateEthTransfer(defaultSigner.toEthKeyPair, secondAddress, 1, asset, fee = fee - 1)
     val enoughFeeTx    = EthTxGenerator.generateEthTransfer(defaultSigner.toEthKeyPair, secondAddress, 1, asset, fee = fee)
-    d.appendBlockE(notEnoughFeeTx) should produce(s"does not exceed minimal value of $fee WAVES")
+    d.appendBlockE(notEnoughFeeTx) should produce(s"does not exceed minimal value of $fee DCC")
     d.appendAndAssertSucceed(enoughFeeTx)
   }
 }

@@ -457,7 +457,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
         Proofs(ByteStr.decodeBase58("2bkuGwECMFGyFqgoHV4q7GRRWBqYmBFWpYRkzgYANR4nN2twgrNaouRiZBqiK2RJzuo9NooB9iRiuZ4hypBbUQs").get)
       ),
       PublicKey.fromBase58String("Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP").explicitGet(),
-      AssetPair.createAssetPair("WAVES", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
+      AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(2),
       TxOrderPrice.unsafeFrom(6000000000L),
@@ -473,7 +473,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
         Proofs(ByteStr.decodeBase58("2R6JfmNjEnbXAA6nt8YuCzSf1effDS4Wkz8owpCD9BdCNn864SnambTuwgLRYzzeP5CAsKHEviYKAJ2157vdr5Zq").get)
       ),
       PublicKey.fromBase58String("Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP").explicitGet(),
-      AssetPair.createAssetPair("WAVES", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
+      AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
       OrderType.SELL,
       TxExchangeAmount.unsafeFrom(3),
       TxOrderPrice.unsafeFrom(5000000000L),
@@ -557,7 +557,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
         Proofs(ByteStr.decodeBase58("2bkuGwECMFGyFqgoHV4q7GRRWBqYmBFWpYRkzgYANR4nN2twgrNaouRiZBqiK2RJzuo9NooB9iRiuZ4hypBbUQs").get)
       ),
       PublicKey.fromBase58String("Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP").explicitGet(),
-      AssetPair.createAssetPair("WAVES", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
+      AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(2),
       TxOrderPrice.unsafeFrom(6000000000L),
@@ -573,7 +573,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
         Proofs(ByteStr.decodeBase58("2R6JfmNjEnbXAA6nt8YuCzSf1effDS4Wkz8owpCD9BdCNn864SnambTuwgLRYzzeP5CAsKHEviYKAJ2157vdr5Zq").get)
       ),
       PublicKey.fromBase58String("Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP").explicitGet(),
-      AssetPair.createAssetPair("WAVES", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
+      AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
       OrderType.SELL,
       TxExchangeAmount.unsafeFrom(3),
       TxOrderPrice.unsafeFrom(5000000000L),
@@ -658,7 +658,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
         Proofs(ByteStr.decodeBase58("2bkuGwECMFGyFqgoHV4q7GRRWBqYmBFWpYRkzgYANR4nN2twgrNaouRiZBqiK2RJzuo9NooB9iRiuZ4hypBbUQs").get)
       ),
       PublicKey.fromBase58String("Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP").explicitGet(),
-      AssetPair.createAssetPair("WAVES", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
+      AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(2),
       TxOrderPrice.unsafeFrom(6000000000L),
@@ -675,7 +675,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
         Proofs(ByteStr.decodeBase58("2R6JfmNjEnbXAA6nt8YuCzSf1effDS4Wkz8owpCD9BdCNn864SnambTuwgLRYzzeP5CAsKHEviYKAJ2157vdr5Zq").get)
       ),
       PublicKey.fromBase58String("Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP").explicitGet(),
-      AssetPair.createAssetPair("WAVES", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
+      AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
       OrderType.SELL,
       TxExchangeAmount.unsafeFrom(3),
       TxOrderPrice.unsafeFrom(5000000000L),

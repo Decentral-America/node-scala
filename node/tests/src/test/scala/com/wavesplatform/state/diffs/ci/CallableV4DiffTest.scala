@@ -87,7 +87,7 @@ class CallableV4DiffTest extends PropSpec with WithDomain with EitherValues {
       Seq(TestBlock.create(genesis :+ setScript :+ issue)),
       TestBlock.create(Seq(invoke)),
       RideV4.blockchainSettings.functionalitySettings
-    )(_ should produceRejectOrFailedDiff(s" with 6 total scripts invoked does not exceed minimal value of $minimalFee WAVES"))
+    )(_ should produceRejectOrFailedDiff(s" with 6 total scripts invoked does not exceed minimal value of $minimalFee DCC"))
   }
 
   ignore("trace") {
