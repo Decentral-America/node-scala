@@ -82,10 +82,10 @@ class InvokeActionsFeeTest extends PropSpec with Inside with WithState with DBCa
          """.stripMargin
       )
       d.appendBlock(issueTx, setScript(secondSigner, dApp))
-      d.appendAndAssertFailed(invoke(func = Some("transfer")), "with 1 total scripts invoked does not exceed minimal value of 900000 WAVES")
-      d.appendAndAssertFailed(invoke(func = Some("reissue")), "with 1 total scripts invoked does not exceed minimal value of 900000 WAVES")
-      d.appendAndAssertFailed(invoke(func = Some("burn")), "with 1 total scripts invoked does not exceed minimal value of 900000 WAVES")
-      d.appendAndAssertFailed(invoke(func = Some("issue")), "with 1 assets issued does not exceed minimal value of 100500000 WAVES")
+      d.appendAndAssertFailed(invoke(func = Some("transfer")), "with 1 total scripts invoked does not exceed minimal value of 900000 DCC")
+      d.appendAndAssertFailed(invoke(func = Some("reissue")), "with 1 total scripts invoked does not exceed minimal value of 900000 DCC")
+      d.appendAndAssertFailed(invoke(func = Some("burn")), "with 1 total scripts invoked does not exceed minimal value of 900000 DCC")
+      d.appendAndAssertFailed(invoke(func = Some("issue")), "with 1 assets issued does not exceed minimal value of 100500000 DCC")
     }
   }
 
@@ -100,13 +100,13 @@ class InvokeActionsFeeTest extends PropSpec with Inside with WithState with DBCa
       d.appendBlockE(invokeFromScripted1) should produce(
         s"Transaction sent from smart account. Requires $ScriptExtraFee extra fee. " +
           s"Transaction involves 2 scripted assets. Requires ${2 * ScriptExtraFee} extra fee. " +
-          s"Fee for InvokeScriptTransaction (${invokeFromScripted1.fee} in WAVES) " +
-          s"does not exceed minimal value of ${FeeConstants(TransactionType.InvokeScript) * FeeUnit + 3 * ScriptExtraFee} WAVES"
+          s"Fee for InvokeScriptTransaction (${invokeFromScripted1.fee} in DCC) " +
+          s"does not exceed minimal value of ${FeeConstants(TransactionType.InvokeScript) * FeeUnit + 3 * ScriptExtraFee} DCC"
       )
       d.appendBlockE(invokeFromNonScripted1) should produce(
         s"Transaction involves 2 scripted assets. Requires ${2 * ScriptExtraFee} extra fee. " +
-          s"Fee for InvokeScriptTransaction (${invokeFromScripted1.fee} in WAVES) " +
-          s"does not exceed minimal value of ${FeeConstants(TransactionType.InvokeScript) * FeeUnit + 2 * ScriptExtraFee} WAVES"
+          s"Fee for InvokeScriptTransaction (${invokeFromScripted1.fee} in DCC) " +
+          s"does not exceed minimal value of ${FeeConstants(TransactionType.InvokeScript) * FeeUnit + 2 * ScriptExtraFee} DCC"
       )
 
       d.appendBlock()
@@ -119,8 +119,8 @@ class InvokeActionsFeeTest extends PropSpec with Inside with WithState with DBCa
       d.appendBlock(invokeFromNonScripted2)
       d.appendBlockE(invokeFromScripted2) should produce(
         s"Transaction sent from smart account. Requires $ScriptExtraFee extra fee. " +
-          s"Fee for InvokeScriptTransaction (${invokeFromScripted1.fee} in WAVES) " +
-          s"does not exceed minimal value of ${FeeConstants(TransactionType.InvokeScript) * FeeUnit + ScriptExtraFee} WAVES"
+          s"Fee for InvokeScriptTransaction (${invokeFromScripted1.fee} in DCC) " +
+          s"does not exceed minimal value of ${FeeConstants(TransactionType.InvokeScript) * FeeUnit + ScriptExtraFee} DCC"
       )
     }
   }

@@ -56,3 +56,46 @@ Audit of every DCC-exclusive commit on top of Waves `v1.3.5` in
 - **DCC-146** — Apply Chain-ID / network config changes to node-scala
 - **DCC-147** — Apply branding changes to node-scala
 - **DCC-148** — Apply protocol-level changes to node-scala
+
+---
+
+## DCC-148 Audit Results
+
+### Protocol change evaluation
+
+The DCC repo contains **no true consensus-breaking protocol changes** on top of Waves v1.3.5.
+All "protocol change" items are **string-level branding** — replacing `"WAVES"` with `"DCC"` in
+user-facing error messages, API responses, and feature descriptions. None affect block validation,
+state transitions, or consensus rules.
+
+### Features investigated
+
+| Feature | Finding | Scope |
+|---------|---------|-------|
+| Inter-Chain Gateway | Not present in node code | Application layer (DApp/service) |
+| Proof of Incentivized Sustainability | Not present in node code | Application layer or absent |
+| Carbon Sequestration | Not present in node code | Application layer (data transactions) |
+| Native Swap (AMM) | Not present in node code | Application layer (DApp) |
+
+### Changes ported to `dev` (node-scala)
+
+| File (node-scala v1.6.x) | Change | Source commit |
+|--------------------------|--------|---------------|
+| `Asset.scala` | `WavesName = "WAVES"` → `"DCC"` | `b77374b5c` |
+| `FeeValidation.scala` | Fee error messages: `"WAVES"` → `"DCC"` | `b77374b5c`, `4b26ead0d` |
+| `InvokeDiffsCommon.scala` | Invoke fee error: `"WAVES"` → `"DCC"` | `4b26ead0d` |
+| `InvokeScriptDiff.scala` | Payment error: `"WAVES"` → `"DCC"` | `4b26ead0d` |
+| `BlockchainFeature.scala` | Feature description: `"1000 WAVES"` → `"1000 DCC"` | `7222a3560` |
+| Integration tests (14 files) | Asset pair / fee error strings updated | — |
+| Unit tests (16 files) | Error message assertions updated | — |
+
+### Intentionally not ported
+
+| Item | Reason |
+|------|--------|
+| `EthOrders.scala` `"WAVES"` | EIP-712 signing format — changing would break Ethereum wallet compatibility. Not present in DCC v1.3.5. |
+
+### Test results
+
+* `sbt node-tests/test` — **no new failures introduced**
+* 5 pre-existing failures (from DCC-146/147 and JDK 25 incompatibility) remain unchanged

@@ -24,7 +24,7 @@ class InvokeFeeTest extends PropSpec with WithDomain {
       d.appendBlock(setScript(secondSigner, dApp))
       d.appendBlock(invoke(fee = invokeFee))
       d.appendBlockE(invoke(fee = invokeFee - 1)) should produce(
-        "Fee for InvokeScriptTransaction (499999 in WAVES) does not exceed minimal value of 500000 WAVES"
+        "Fee for InvokeScriptTransaction (499999 in DCC) does not exceed minimal value of 500000 DCC"
       )
     }
   }
@@ -44,7 +44,7 @@ class InvokeFeeTest extends PropSpec with WithDomain {
       d.appendBlock(issueTx, sponsorTx)
       d.appendBlock(invoke(fee = invokeFee, feeAssetId = asset))
       d.appendBlockE(invoke(fee = invokeFee - 1, feeAssetId = asset)) should produce(
-        s"Fee for InvokeScriptTransaction (499999 in $asset) does not exceed minimal value of 500000 WAVES"
+        s"Fee for InvokeScriptTransaction (499999 in $asset) does not exceed minimal value of 500000 DCC"
       )
     }
   }
@@ -108,7 +108,7 @@ class InvokeFeeTest extends PropSpec with WithDomain {
       d.appendBlock(invoke(fee = enoughFee))
       d.appendAndAssertFailed(
         invoke(fee = enoughFee - 1),
-        "Fee in WAVES for InvokeScriptTransaction (100499999 in WAVES) with 1 assets issued does not exceed minimal value of 100500000 WAVES"
+        "Fee in DCC for InvokeScriptTransaction (100499999 in DCC) with 1 assets issued does not exceed minimal value of 100500000 DCC"
       )
     }
   }

@@ -467,7 +467,7 @@ object InvokeScriptDiff {
   private def ensurePaymentsAreNotNegative(blockchain: Blockchain, tx: InvokeScript, invoker: Address, dAppAddress: Address) = traced {
     tx.payments.collectFirst {
       case p if p.amount < 0 =>
-        s"DApp $invoker invoked DApp $dAppAddress with attached ${p.assetId.fold("WAVES")(a => s"token $a")} amount = ${p.amount}"
+        s"DApp $invoker invoked DApp $dAppAddress with attached ${p.assetId.fold("DCC")(a => s"token $a")} amount = ${p.amount}"
     } match {
       case Some(e) if blockchain.isFeatureActivated(BlockchainFeatures.RideV6) =>
         Left(GenericError(e))
