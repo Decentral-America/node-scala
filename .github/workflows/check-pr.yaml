@@ -24,37 +24,6 @@ jobs:
       - uses: sbt/setup-sbt@v1
       - name: Check PR
         run: sbt -J-Xlog:gc*=debug:file=./gc.log --batch checkPR
-      #- if: always()
-      #  name: Fix test names and durations for Qase
-      #  run: |
-      #    find node/tests/target/test-reports -name "*.xml" -exec sed -E -i \
-      #      -e 's/time="(0(\.0+)?|-0\.[0-9]+)"/time="0.001"/g' \
-      #      -e 's/name="([^"]*)(NODE-[0-9]+ )([^"]*)"/name="\2 \1\3"/g' {} +
-      # Temporarily disabled because of 402 Payment Required
-      # - uses: qase-tms/gh-actions/run-create@v1
-      #   if: always()
-      #   id: qase-run-create
-      #   with:
-      #     token: ${{ secrets.QASE_API_TOKEN }}
-      #     project: NODE
-      #     title: Check PR ${{ github.run_id }} — ${{ github.head_ref || github.ref_name }}
-      #     description: |
-      #       PR [#${{ github.event.number }}](https://github.com/wavesplatform/Waves/pulls/${{ github.event.number }}) — Run [#${{ github.run_number }}](https://github.com/wavesplatform/Waves/actions/runs/${{ github.run_id }})
-      # - uses: qase-tms/gh-actions/report@v1
-      #   if: always() && steps.qase-run-create.outcome == 'success'
-      #   with:
-      #     token: ${{ secrets.QASE_API_TOKEN }}
-      #     project: NODE
-      #     id: ${{ steps.qase-run-create.outputs.id }}
-      #     format: junit
-      #     path: node/tests/target/test-reports
-      #     batch: 100
-      # - uses: qase-tms/gh-actions/run-complete@v1
-      #   if: always() && steps.qase-run-create.outcome == 'success'
-      #   with:
-      #     token: ${{ secrets.QASE_API_TOKEN }}
-      #     project: NODE
-      #     id: ${{ steps.qase-run-create.outputs.id }}
       - uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
         if: always()
         with:
@@ -71,7 +40,7 @@ jobs:
               - 'project/*'
       - uses: actions/upload-artifact@v4
         with:
-          name: waves-fat-jar
+          name: dcc-fat-jar
           path: node/target/waves-all-*.jar
       - uses: actions/upload-artifact@v4
         if: steps.filter.outputs.lang == 'true'
@@ -103,33 +72,8 @@ jobs:
           java-version: '17'
       - uses: actions/download-artifact@v7
         with:
-          name: waves-fat-jar
+          name: dcc-fat-jar
       - run: java -cp '*' com.wavesplatform.utils.UtilApp smoke
-
-  compile-contracts:
-    name: Compile ${{ matrix.repo }}
-    runs-on: ubuntu-latest
-    needs: check-pr
-    if: needs.check-pr.outputs.lang-changed == 'true'
-    strategy:
-      matrix:
-        repo:
-          - waves-exchange/neutrino-contract
-          - waves-exchange/contracts
-          - waves-ducks-core/wavesducks-public
-          - swopfi/swopfi-smart-contracts
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ matrix.repo }}
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - uses: actions/download-artifact@v7
-        with:
-          name: file-compiler
-      - run: find -name "*.ride" -type f -exec java -jar file-compiler.jar {} +;
 
   run-integration-tests:
     name: Run integration tests

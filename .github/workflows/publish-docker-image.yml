@@ -32,7 +32,7 @@ on:
         value: ${{ jobs.publish.outputs.digest }}
 
 env:
-  IMAGE_NAME: ghcr.io/wavesplatform/waves
+  IMAGE_NAME: ghcr.io/decentral-america/node-scala
 
 jobs:
   publish:
@@ -81,7 +81,7 @@ jobs:
           {
             echo 'IMAGES<<EOF'
             echo ${{ env.IMAGE_NAME }}
-            echo wavesplatform/wavesnode
+            echo ghcr.io/decentral-america/node-scala
             echo EOF
           } >> "$GITHUB_ENV"
       - name: Extract image name and tags from workflow_dispatch inputs
@@ -99,7 +99,7 @@ jobs:
             echo 'annotations<<EOF'
             echo org.opencontainers.image.source=https://github.com/${{ github.repository }}/tree/${{ steps.ghd.outputs.sha }}/docker
             echo org.opencontainers.image.licenses=MIT
-            echo org.opencontainers.image.description=Waves Node
+            echo org.opencontainers.image.description=DCC Node
             echo org.opencontainers.image.base.name=${{ steps.versions.outputs.base-image }}
             echo org.opencontainers.image.base.digest=${{ steps.versions.outputs.base-image-digest }}
             echo org.opencontainers.image.version=${{ steps.versions.outputs.node-version }}
@@ -184,12 +184,12 @@ jobs:
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest-descriptor,index-descriptor
         with:
-          images: ghcr.io/wavesplatform/waves-private-node
+          images: ghcr.io/decentral-america/node-scala-private
           flavor: latest=false
           tags: ${{ env.TAGS }}
           annotations: |
-            org.opencontainers.image.description=Waves Private Node
-            org.opencontainers.image.documentation=https://github.com/wavesplatform/Waves/blob/${{ github.sha }}/docker/README.md#waves-private-node
+            org.opencontainers.image.description=DCC Private Node
+            org.opencontainers.image.documentation=https://github.com/Decentral-America/node-scala/blob/${{ github.sha }}/docker/README.md#dcc-private-node
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ needs.publish.outputs.node-version }}
             org.opencontainers.image.base.digest=${{ needs.publish.outputs.digest }}
@@ -201,4 +201,4 @@ jobs:
           pull: true
           tags: ${{ steps.meta-private.outputs.tags }}
           build-args: |
-            baseImage=ghcr.io/wavesplatform/waves@${{ needs.publish.outputs.digest }}
+            baseImage=ghcr.io/decentral-america/node-scala@${{ needs.publish.outputs.digest }}
