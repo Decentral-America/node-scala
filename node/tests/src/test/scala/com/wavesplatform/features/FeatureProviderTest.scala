@@ -27,7 +27,7 @@ class FeatureProviderTest extends FlatSpec {
     val blockchain = new EmptyBlockchain {
       override def height: Int                           = 1
       override def activatedFeatures: Map[Short, Height] = features
-      override lazy val settings: BlockchainSettings     = BlockchainSettings('W', fs, GenesisSettings.MAINNET, RewardsSettings.MAINNET)
+      override lazy val settings: BlockchainSettings     = BlockchainSettings('?', fs, GenesisSettings.MAINNET, RewardsSettings.MAINNET)
     }
 
     forAll(Gen.choose(1, v5ActivationHeight.toInt * 2)) { h =>
