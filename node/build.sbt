@@ -11,6 +11,8 @@ enablePlugins(
   PublishedModule
 )
 
+V.scalaPackage := "com.wavesplatform"
+
 libraryDependencies ++= Dependencies.node.value
 
 instrumentation := false

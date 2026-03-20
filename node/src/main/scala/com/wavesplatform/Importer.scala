@@ -67,8 +67,8 @@ object Importer extends ScorexLogging {
       import builder.*
 
       OParser.sequence(
-        programName("waves import"),
-        head("Waves Blockchain Importer", Version.VersionString),
+        programName("decentralchain import"),
+        head("DecentralChain Blockchain Importer", Version.VersionString),
         opt[File]('c', "config")
           .text("Config file name")
           .action((f, c) => c.copy(configFile = Some(f))),
@@ -329,7 +329,7 @@ object Importer extends ScorexLogging {
           System.in
 
         case _ =>
-          System.setProperty("http.agent", s"waves-node/${Version.VersionString}")
+          System.setProperty("http.agent", s"decentralchain-node/${Version.VersionString}")
           try {
             val url        = URI.create(file).toURL
             val connection = url.openConnection()

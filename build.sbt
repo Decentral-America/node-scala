@@ -62,6 +62,7 @@ lazy val `lang-jvm` = lang.jvm
 lazy val `lang-js` = lang.js
   .enablePlugins(VersionObject)
   .settings(
+    V.scalaPackage := "com.wavesplatform.lang",
     libraryDependencies ++= Dependencies.scalapbRuntimeJS.value
   )
 
@@ -171,10 +172,11 @@ lazy val `waves-node` = (project in file("."))
 inScope(Global)(
   Seq(
     scalaVersion         := "3.8.1",
-    organization         := "com.wavesplatform",
-    organizationName     := "Waves Platform",
-    organizationHomepage := Some(url("https://wavesplatform.com")),
-    licenses             := Seq(("MIT", url("https://github.com/wavesplatform/Waves/blob/master/LICENSE"))),
+    organization         := "io.decentralchain",
+    organizationName     := "DecentralChain",
+    organizationHomepage := Some(url("https://decentralchain.io")),
+    scmInfo := Some(ScmInfo(url("https://github.com/Decentral-America/node-scala"), "scm:git:https://github.com/Decentral-America/node-scala.git")),
+    licenses             := Seq(("MIT", url("https://github.com/Decentral-America/node-scala/blob/dev/LICENSE"))),
     publish / skip       := true,
     scalacOptions ++= Seq(
       "-feature",
