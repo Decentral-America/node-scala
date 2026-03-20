@@ -107,7 +107,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-
       - name: Assembly
-        run: sbt --batch assembly
+        run: sbt --batch "node/assembly"
       - uses: actions/upload-artifact@v4
         with:
           name: dcc-fat-jar
