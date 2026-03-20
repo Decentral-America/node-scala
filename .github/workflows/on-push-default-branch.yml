@@ -3,7 +3,7 @@ name: Publish snapshot JARs and dependency graph
 on:
   push:
     branches:
-      - 'version-1.*.*'
+      - main
 
 jobs:
   update-graph:
