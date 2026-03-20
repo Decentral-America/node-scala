@@ -6,7 +6,7 @@ import com.wavesplatform.Version
   */
 object Constants {
   val ApplicationName = "waves"
-  val AgentName       = s"Waves v${Version.VersionString}"
+  val AgentName       = s"DecentralChain v${Version.VersionString}"
 
   val UnitsInWave = 100000000L
   val TotalWaves  = 100000000L
