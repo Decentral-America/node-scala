@@ -29,7 +29,7 @@ abstract class DBState extends ScorexLogging {
     settings.enableLightMode
   )
 
-  AddressScheme.current = new AddressScheme { override val chainId: Byte = 'W' }
+  AddressScheme.current = new AddressScheme { override val chainId: Byte = '?' }
 
   lazy val environment = WavesEnvironment(
     AddressScheme.current.chainId,
