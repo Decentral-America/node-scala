@@ -3,7 +3,6 @@ package com.decentralchain.state
 import com.decentralchain.account.{Address, Alias, KeyPair, PublicKey}
 import com.decentralchain.api.common.LeaseInfo
 import com.decentralchain.api.common.LeaseInfo.Status.Active
-import com.decentralchain.block.Block.ProtoBlockVersion
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
@@ -20,10 +19,9 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.TRUE
 import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
 import com.decentralchain.lang.v1.traits.domain.Lease
-import com.decentralchain.settings.{TestFunctionalitySettings, DCCSettings}
+import com.decentralchain.settings.{TestFunctionalitySettings, WavesSettings}
 import com.decentralchain.test.*
-import com.decentralchain.state.{Height, TransactionId}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxValidationError.AliasDoesNotExist
 import com.decentralchain.transaction.lease.LeaseTransaction
@@ -1126,10 +1124,9 @@ class RollbackSpec extends FreeSpec with WithDomain {
         def leases(address: Address) = d.accountsApi.activeLeases(address).toListL.runSyncUnsafe()
 
         val leaseTxs = Seq.fill(5)(lease(defaultSigner, secondAddress)) ++ Seq.fill(5)(lease(secondSigner, defaultAddress))
-        val info =
-          leaseTxs.map(tx =>
-            LeaseInfo(tx.id(), TransactionId(tx.id()), tx.sender.toAddress, tx.recipient.asInstanceOf[Address], tx.amount.value, Height(2), Active)
-          )
+        val info = leaseTxs.map { tx =>
+          LeaseInfo(tx.id(), TransactionId(tx.id()), tx.sender.toAddress, tx.recipient.asInstanceOf[Address], tx.amount.value, Height(2), Active)
+        }
 
         val b1 = d.appendBlock(leaseTxs*)
         leases(defaultAddress) should contain theSameElementsAs info
@@ -1143,7 +1140,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
         leases(defaultAddress) should contain theSameElementsAs info.slice(1, 9)
         leases(secondAddress) should contain theSameElementsAs info.slice(1, 9)
 
-        d.appendBlock(d.createBlock(ProtoBlockVersion, Nil, Some(b2.id())))
+        d.appendBlock(d.createBlock(ref = Some(b2.id())))
         leases(defaultAddress) should contain theSameElementsAs info.tail
         leases(secondAddress) should contain theSameElementsAs info.tail
 

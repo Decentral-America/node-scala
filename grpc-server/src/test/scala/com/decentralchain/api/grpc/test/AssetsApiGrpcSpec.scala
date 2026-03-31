@@ -2,9 +2,7 @@ package com.decentralchain.api.grpc.test
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
-import com.decentralchain.api.grpc.{AssetsApiGrpcImpl}
-import io.decentralchain.api.grpc.{AssetInfoResponse, NFTRequest, NFTResponse}
-import com.decentralchain.block.Block.ProtoBlockVersion
+import com.decentralchain.api.grpc.{AssetInfoResponse, AssetsApiGrpcImpl, NFTRequest, NFTResponse}
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
@@ -76,7 +74,7 @@ class AssetsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
     check()
 
     // liquid afterId
-    d.appendBlock(d.createBlock(ProtoBlockVersion, nftIssues.drop(afterId + 1), Some(mb1)))
+    d.appendBlock(d.createBlock(nftIssues.drop(afterId + 1), Some(mb1)))
     d.rocksDBWriter.containsTransaction(nftIssues(afterId)) shouldBe true
     d.rocksDBWriter.containsTransaction(nftIssues(afterId + 1)) shouldBe false
     check()

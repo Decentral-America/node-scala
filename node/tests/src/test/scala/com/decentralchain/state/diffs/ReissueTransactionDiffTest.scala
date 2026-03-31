@@ -90,7 +90,6 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
           BlockDiffer
             .fromBlock(blockchain, blockchain.lastBlock, block, None, MiningConstraint.Unlimited, block.header.generationSignature)
             .explicitGet()
-        // NOTE: Could apply from BlockDiffer.Result — current approach is simpler
         blockchain.append(
           snapshot,
           carryFee,

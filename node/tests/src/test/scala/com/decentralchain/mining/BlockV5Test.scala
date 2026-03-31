@@ -9,23 +9,22 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.features.BlockchainFeatures
-import com.decentralchain.history.{chainBaseAndMicro, defaultSigner}
+import com.decentralchain.history.{chainBaseAndMicro, customBuildBlockOfTxs, defaultSigner}
 import com.decentralchain.lagonaki.mocks.TestBlock
-import io.decentralchain.protobuf.block.PBBlocks
-import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings, DCCSettings}
+import com.decentralchain.protobuf.block.PBBlocks
+import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings, WavesSettings}
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
-import com.decentralchain.state.{Blockchain, BlockchainUpdaterImpl, Height, NG, diffs}
+import com.decentralchain.state.{Blockchain, BlockchainUpdaterImpl, NG, diffs}
 import com.decentralchain.test.{FlatSpec, *}
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.Time
-import com.decentralchain.{BlocksTransactionsHelpers, crypto}
+import com.decentralchain.{BlocksTransactionsHelpers, crypto, protobuf}
 import org.scalacheck.Gen
 import org.scalatest.*
 import org.scalatest.enablers.Length
 
-import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.*
 
 class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherValues with BlocksTransactionsHelpers {
@@ -124,8 +123,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
   }
 
   "Miner" should "generate valid blocks" in forAll(genesis) { case (minerAcc1, minerAcc2, genesis) =>
-    val disabledFeatures = new AtomicReference(Set[Short]())
-    withBlockchain(disabledFeatures, testTime) { blockchain =>
+    withBlockchain(testTime) { blockchain =>
       blockchain.processBlock(genesis, genesis.header.generationSignature, snapshot = None, generatorSet = Seq.empty) should beRight
       withMiner(blockchain, testTime, testSettings) { case (miner, append) =>
         for (h <- 2 until BlockV5ActivationHeight) {
@@ -209,16 +207,16 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
         blockchain.parentHeader(blockAfterVRFUsing.header).value shouldBe blockAfterActivationHeight.header
         blockchain.parentHeader(blockAfterVRFUsing.header, 2).value shouldBe blockAtActivationHeight.header
 
-        disabledFeatures.set(Set(BlockchainFeatures.BlockV5.id))
-
         shiftTime(miner, minerAcc2)
-
-        val oldVersionBlockForge = miner.forgeBlock(minerAcc2).toEither
-        val oldVersionBlock      = oldVersionBlockForge.explicitGet()._1
-        oldVersionBlock.header.version shouldBe Block.RewardBlockVersion
-
-        disabledFeatures.set(Set())
-        append(oldVersionBlock).left.value
+        val oldVersionBlock = customBuildBlockOfTxs(
+          blockchain.lastBlockId.get,
+          txs = Nil,
+          signer = minerAcc2,
+          Block.RewardBlockVersion,
+          testTime.getTimestamp(),
+          blockchain.lastBlockHeader.get.header.baseTarget
+        )
+        append(oldVersionBlock) should produce("Block version should be equal to 5")
 
         for (h <- blockchain.height to 110) {
           shiftTime(miner, minerAcc1)
@@ -247,7 +245,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
   }
 
   "Miner" should "generate valid blocks when feature pre-activated" in forAll(genesis) { case (minerAcc1, _, genesis) =>
-    withBlockchain(new AtomicReference(Set()), testTime, preActivatedTestSettings) { blockchain =>
+    withBlockchain(testTime, preActivatedTestSettings) { blockchain =>
       blockchain.processBlock(genesis, genesis.header.generationSignature, snapshot = None, generatorSet = Seq.empty) should beRight
       withMiner(blockchain, testTime, testSettings) { case (miner, append) =>
         for (h <- blockchain.height to 110) {
@@ -265,8 +263,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
   }
 
   "Block version" should "be validated accordingly features activation" in forAll(genesis) { case (minerAcc, _, genesis) =>
-    val disabledFeatures = new AtomicReference(Set.empty[Short])
-    withBlockchain(disabledFeatures, testTime) { blockchain =>
+    withBlockchain(testTime) { blockchain =>
       blockchain.processBlock(genesis, genesis.header.generationSignature, snapshot = None, generatorSet = Seq.empty) should beRight
       withMiner(blockchain, testTime, testSettings) { case (miner, append) =>
         def forge(): Block = {
@@ -294,12 +291,16 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
           forgeAppendAndValidate(Block.NgBlockVersion, h)
         }
 
-        disabledFeatures.set(Set(BlockchainFeatures.BlockReward.id))
         shiftTime(miner, minerAcc)
-        val badNgBlock = forge()
-        badNgBlock.header.version shouldBe Block.NgBlockVersion
-        disabledFeatures.set(Set())
-        append(badNgBlock).left.value
+        val badNgBlock1 = customBuildBlockOfTxs(
+          blockchain.lastBlockId.get,
+          txs = Nil,
+          signer = minerAcc,
+          Block.NgBlockVersion,
+          testTime.getTimestamp(),
+          blockchain.lastBlockHeader.get.header.baseTarget
+        )
+        append(badNgBlock1) should produce("Block version should be equal to 4")
 
         shiftTime(miner, minerAcc)
         forgeAppendAndValidate(Block.RewardBlockVersion, BlockRewardActivationHeight + 1)
@@ -309,13 +310,25 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
           forgeAppendAndValidate(Block.RewardBlockVersion, h)
         }
 
-        disabledFeatures.set(Set(BlockchainFeatures.BlockV5.id))
         shiftTime(miner, minerAcc)
-        val badRewardBlock = forge()
-        badRewardBlock.header.version shouldBe Block.RewardBlockVersion
-        disabledFeatures.set(Set())
-        append(badNgBlock).left.value
-        append(badRewardBlock).left.value
+        val badNgBlock2 = customBuildBlockOfTxs(
+          blockchain.lastBlockId.get,
+          txs = Nil,
+          signer = minerAcc,
+          Block.NgBlockVersion,
+          testTime.getTimestamp(),
+          blockchain.lastBlockHeader.get.header.baseTarget
+        )
+        val badRewardBlock = customBuildBlockOfTxs(
+          blockchain.lastBlockId.get,
+          txs = Nil,
+          signer = minerAcc,
+          Block.RewardBlockVersion,
+          testTime.getTimestamp(),
+          blockchain.lastBlockHeader.get.header.baseTarget
+        )
+        append(badNgBlock2) should produce("Block version should be equal to 5")
+        append(badRewardBlock) should produce("Block version should be equal to 5")
 
         shiftTime(miner, minerAcc)
         forgeAppendAndValidate(Block.ProtoBlockVersion, BlockV5ActivationHeight)
@@ -345,7 +358,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
 
   "BlockchainUpdater" should "accept valid key blocks and microblocks" in forAll(updaterScenario) {
     case (bs, (ngBlock, ngMicros), (rewardBlock, rewardMicros), (protoBlock, protoMicros), (afterProtoBlock, afterProtoMicros)) =>
-      withBlockchain(new AtomicReference(Set())) { blockchain =>
+      withBlockchain() { blockchain =>
         bs.foreach(b => blockchain.processBlock(b, b.header.generationSignature, snapshot = None, generatorSet = Seq.empty) should beRight)
 
         blockchain.processBlock(ngBlock, ngBlock.header.generationSignature, snapshot = None, generatorSet = Seq.empty) should beRight
@@ -439,14 +452,11 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
         .block
     } yield (miner1, miner2, genesisBlock)
 
-  private def withBlockchain(disabledFeatures: AtomicReference[Set[Short]], time: Time = ntpTime, settings: DCCSettings = testSettings)(
+  private def withBlockchain(time: Time = ntpTime, settings: WavesSettings = testSettings)(
       f: Blockchain & BlockchainUpdater & NG => Unit
   ): Unit = {
     withRocksDBWriter(settings.blockchainSettings) { blockchain =>
-      val bcu: BlockchainUpdaterImpl =
-        new BlockchainUpdaterImpl(blockchain, settings, time, ignoreBlockchainUpdateTriggers, (_, _) => Map.empty) {
-          override def activatedFeatures: Map[Short, Height] = super.activatedFeatures -- disabledFeatures.get()
-        }
+      val bcu = new BlockchainUpdaterImpl(blockchain, settings, time, ignoreBlockchainUpdateTriggers, (_, _) => Map.empty)
       try f(bcu)
       finally bcu.shutdown()
     }

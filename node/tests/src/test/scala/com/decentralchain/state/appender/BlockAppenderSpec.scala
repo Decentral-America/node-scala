@@ -1,11 +1,11 @@
 package com.decentralchain.state.appender
 
-import com.decentralchain.block.Block
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.network.{MessageCodec, PBBlockSpec, PeerDatabase, RawBytes}
 import com.decentralchain.state.BlockEndorser
+import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Ignored
 import com.decentralchain.test.{FlatSpec, TestTime}
 import com.decentralchain.transaction.TxHelpers
@@ -41,7 +41,7 @@ class BlockAppenderSpec extends FlatSpec with WithDomain with BeforeAndAfterAll 
         appenderScheduler
       )(channel2, _, None)
 
-      val block = d.createBlock(Block.ProtoBlockVersion, Seq.empty, generator = sender, strictTime = true)
+      val block = d.createBlock(generator = sender, strictTime = true)
 
       testTime.setTime(block.header.timestamp)
       appender(block).runSyncUnsafe()
@@ -62,6 +62,17 @@ class BlockAppenderSpec extends FlatSpec with WithDomain with BeforeAndAfterAll 
 
       appender(block).runSyncUnsafe()
       channel1.outboundMessages().isEmpty shouldBe true
+    }
+  }
+
+  "BlockAppender" should "ignore a block if it is already appended" in {
+    val miner = TxHelpers.signer(0)
+    withDomain(DomainPresets.ConsensusImprovements, AddrWithBalance.enoughBalances(miner)) { d =>
+      val b        = d.createBlock(strictTime = true, generator = miner)
+      def append() = d.appender.appendBlockWithoutFallback(b).explicitGet()
+
+      append() shouldBe a[BlockApplyResult.Applied]
+      append() shouldBe BlockApplyResult.Ignored
     }
   }
 

@@ -26,6 +26,9 @@ import java.time.Instant
 import scala.util.chaining.*
 
 object BlockAppender extends ScorexLogging {
+
+  /** @note Expects that newBlock references the latest block of blockchainUpdater or some microblock
+    */
   def apply(
       blockchainUpdater: BlockchainUpdater & Blockchain,
       time: Time,
@@ -37,7 +40,8 @@ object BlockAppender extends ScorexLogging {
       txSignParCheck: Boolean = true
   )(newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Either[ValidationError, BlockApplyResult]] =
     Task {
-      if (
+      if (blockchainUpdater.isLastBlockId(newBlock.id())) Right(Ignored) // Cheap to test
+      else if (
         blockchainUpdater.isLastBlockId(newBlock.header.reference) ||
         blockchainUpdater.lastBlockHeader.exists(_.header.reference == newBlock.header.reference)
       ) {
@@ -49,7 +53,7 @@ object BlockAppender extends ScorexLogging {
             case _                                 =>
           }
         }
-      } else if (blockchainUpdater.contains(newBlock.id()) || blockchainUpdater.isLastBlockId(newBlock.id()))
+      } else if (blockchainUpdater.contains(newBlock.id()))
         Right(Ignored)
       else
         Left(BlockAppendError("Block is not a child of the last block or its parent", newBlock))

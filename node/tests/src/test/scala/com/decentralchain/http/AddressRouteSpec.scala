@@ -1,7 +1,7 @@
 package com.decentralchain.http
 
 import com.google.common.primitives.Longs
-import com.decentralchain.api.http.ApiError.{ApiKeyNotValid, DataKeysNotSpecified, TooBigArrayAllocation}
+import com.decentralchain.api.http.ApiError.{ApiKeyNotValid, DataKeysNotSpecified, MissingSenderPrivateKey, TooBigArrayAllocation}
 import com.decentralchain.api.http.{AddressApiRoute, RouteTimeout}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
@@ -11,8 +11,8 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.directives.values.{V5, V6}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import io.decentralchain.protobuf.dapp.DAppMeta
-import com.decentralchain.settings.{WalletSettings, DCCSettings}
+import com.decentralchain.protobuf.dapp.DAppMeta
+import com.decentralchain.settings.{WalletSettings, WavesSettings}
 import com.decentralchain.state.IntegerDataEntry
 import com.decentralchain.state.diffs.FeeValidation
 import com.decentralchain.test.*
@@ -164,6 +164,11 @@ class AddressRouteSpec extends RouteSpec("/addresses") with RestAPISettingsHelpe
     val kp                   = wallet.privateKeyAccounts.head
     val address              = kp.toAddress
     val expectedBlsPublicKey = BlsKeyPair(kp.privateKey).publicKey
+
+    Get(routePath(s"/bls/${TxHelpers.address(100)}")) ~> route ~> check {
+      response.status shouldBe MissingSenderPrivateKey.code
+      (responseAs[JsObject] \ "error").as[Int] shouldBe MissingSenderPrivateKey.id
+    }
 
     Get(routePath(s"/bls/$address")) ~> route ~> check {
       val r = responseAs[JsObject]

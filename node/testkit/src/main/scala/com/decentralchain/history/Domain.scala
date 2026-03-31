@@ -39,7 +39,6 @@ import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.util.concurrent.GlobalEventExecutor
 import monix.eval.Task
 import monix.execution.ExecutionModel.SynchronousExecution
-import monix.execution.Scheduler
 import monix.execution.schedulers.SchedulerService
 import org.rocksdb.RocksDB
 import org.scalatest.matchers.should.Matchers.*
@@ -77,7 +76,6 @@ case class Domain(
       .explicitGet()
   }
 
-  // NOTE: Uses system time — testTime can be substituted for time-sensitive tests
   val transactionDiffer: Transaction => TracedResult[ValidationError, StateSnapshot] =
     TransactionDiffer(blockchain.lastBlockTimestamp, System.currentTimeMillis())(blockchain, _)
 
@@ -87,7 +85,6 @@ case class Domain(
   def createDiffE(tx: Transaction): Either[ValidationError, StateSnapshot] = transactionDiffer(tx).resultE
   def createDiff(tx: Transaction): StateSnapshot                           = createDiffE(tx).explicitGet()
 
-  // NOTE: Uses system time — testTime can be substituted for time-sensitive tests
   lazy val utxPool: UtxPoolImpl =
     new UtxPoolImpl(SystemTime, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
 
@@ -98,7 +95,7 @@ case class Domain(
   lazy val wallet: Wallet = Wallet(settings.walletSettings.copy(file = None, seed = Some(ByteStr(DefaultWalletSeed))))
 
   lazy val blockAppender: Block => Task[Either[ValidationError, BlockApplyResult]] =
-    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, Scheduler.singleThread("appender"))(_, None) // NOTE: Appender uses default scheduler
+    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, scheduler)(_, None)
   lazy val blockChallenger: Option[BlockChallenger] =
     if (!settings.enableLightMode)
       Some(
@@ -248,7 +245,7 @@ case class Domain(
   def portfolio(address: Address): Seq[(IssuedAsset, Long)] = Domain.portfolio(address, rdb.db, blockchainUpdater)
 
   def appendAndAssertSucceed(txs: Transaction*): Block = {
-    val block = createBlock(Block.PlainBlockVersion, txs)
+    val block = createBlock(txs, version = Block.PlainBlockVersion)
     appendBlock(block)
     txs.foreach { tx =>
       if (!blockchain.transactionSucceeded(tx.id())) {
@@ -260,7 +257,7 @@ case class Domain(
   }
 
   def appendAndCatchError(txs: Transaction*): ValidationError = {
-    val block  = createBlock(Block.PlainBlockVersion, txs)
+    val block  = createBlock(txs, version = Block.PlainBlockVersion)
     val result = appendBlockE(block)
     txs.foreach { tx =>
       assert(blockchain.transactionInfo(tx.id()).isEmpty, s"should not pass: $tx")
@@ -269,7 +266,7 @@ case class Domain(
   }
 
   def appendAndAssertFailed(txs: Transaction*): Block = {
-    val block = createBlock(Block.PlainBlockVersion, txs)
+    val block = createBlock(txs, version = Block.PlainBlockVersion)
     appendBlockE(block) match {
       case Left(err) =>
         throw new RuntimeException(s"Should be success: $err")
@@ -291,7 +288,7 @@ case class Domain(
     createBlockE(Block.PlainBlockVersion, txs).flatMap(appendBlockE(_))
 
   def appendBlock(version: Byte, txs: Transaction*): Block = {
-    val block = createBlock(version, txs)
+    val block = createBlock(txs, version = version)
     appendBlock(block)
     lastBlock
   }
@@ -301,10 +298,9 @@ case class Domain(
 
   def appendKeyBlock(signer: KeyPair = defaultSigner, ref: Option[ByteStr] = None): Block = {
     val block = createBlock(
-      Block.NgBlockVersion,
-      Nil,
-      ref.orElse(Some(lastBlockId)),
-      generator = signer
+      ref = ref.orElse(Some(lastBlockId)),
+      generator = signer,
+      version = Block.NgBlockVersion
     )
     appendBlock(block) match {
       case Applied(discardedDiffs = discardedSnapshots) =>
@@ -403,8 +399,7 @@ case class Domain(
   }
 
   def createBlock(
-      version: Byte, // NOTE: Almost always ProtoBlockVersion — parametrized for edge-case tests
-      txs: Seq[Transaction],
+      txs: Seq[Transaction] = Nil,
       ref: Option[ByteStr] = blockchainUpdater.lastBlockId,
       strictTime: Boolean = false,
       generator: KeyPair = defaultSigner,
@@ -412,7 +407,8 @@ case class Domain(
       challengedHeader: Option[ChallengedHeader] = None,
       rewardVote: Long = -1L,
       timestamp: Option[Long] = None,
-      finalizationVoting: Option[FinalizationVoting] = None
+      finalizationVoting: Option[FinalizationVoting] = None,
+      version: Byte = Block.ProtoBlockVersion
   ): Block =
     createBlockE(version, txs, ref, strictTime, generator, stateHash, challengedHeader, rewardVote, timestamp, finalizationVoting).explicitGet()
 
@@ -542,7 +538,6 @@ case class Domain(
       timestamp: Option[Long] = None
   ): Block = {
     createBlock(
-      Block.ProtoBlockVersion,
       txs.getOrElse(challengedBlock.transactionData),
       ref.orElse(blockchain.lastBlockId),
       strictTime = strictTime,
@@ -563,7 +558,8 @@ case class Domain(
           )
         )
       ),
-      timestamp = timestamp
+      timestamp = timestamp,
+      version = Block.ProtoBlockVersion
     )
   }
 

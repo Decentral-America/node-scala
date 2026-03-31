@@ -2,12 +2,12 @@ package com.decentralchain.state
 
 import cats.syntax.either.*
 import com.decentralchain.block.Block.BlockId
-import com.decentralchain.block.{Block, FinalizationVoting}
+import com.decentralchain.block.FinalizationVoting
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import com.decentralchain.network.{EndorseBlock, MessageCodec, PeerDatabase}
-import com.decentralchain.test.DomainPresets.DCCSettingsOps
+import com.decentralchain.test.DomainPresets.WavesSettingsOps
 import com.decentralchain.test.{FreeSpec, NumericExt, WithResourceManager}
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import com.decentralchain.utils.EmbeddedChannelOps
@@ -15,7 +15,6 @@ import com.decentralchain.wallet.Wallet
 import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.util.concurrent.GlobalEventExecutor
-import org.scalactic.source.Position
 
 class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, EmbeddedChannelOps {
   private val defaultSettings = DomainPresets.DeterministicFinality
@@ -50,12 +49,12 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
 
         log.debug("Append block 2 with commitments")
         val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-        val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = generator1, strictTime = true)
+        val block2WithCommitments = d.createBlock(txs, generator = generator1, strictTime = true)
         d.appender.appendBlock(block2WithCommitments)
 
         log.debug("Append blocks 3 and 4 of new period")
         (3 to 4).foreach { _ =>
-          val block = d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = generator1, strictTime = true)
+          val block = d.createBlock(generator = generator1, strictTime = true)
           d.appender.appendBlock(block)
         }
 
@@ -89,13 +88,12 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
 
           log.debug("Append block 2 with commitments")
           val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-          val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = generator1, strictTime = true)
+          val block2WithCommitments = d.createBlock(txs, generator = generator1, strictTime = true)
           d.appender.appendBlock(block2WithCommitments)
 
           log.debug("Append block 3 of new period with spending all DCC by generator2")
           d.appender.appendBlock(
             d.createBlock(
-              version = Block.ProtoBlockVersion,
               txs = Seq(
                 TxHelpers.transfer(
                   from = generator2,
@@ -110,7 +108,7 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
           )
 
           log.debug("Append block 4")
-          d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = otherNodeGenerator, strictTime = true))
+          d.appender.appendBlock(d.createBlock(generator = otherNodeGenerator, strictTime = true))
 
           endorser.vote(d.blockchain.currentGeneratorSet.getOrElse(Nil))
           val xs = channel1.sentEndorsements

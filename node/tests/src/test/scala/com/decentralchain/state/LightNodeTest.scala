@@ -33,9 +33,9 @@ class LightNodeTest extends PropSpec with WithDomain {
     val recipient = TxHelpers.address(2)
     withDomain(settings.configure(_.copy(lightNodeBlockFieldsAbsenceInterval = 0)), AddrWithBalance.enoughBalances(sender)) { d =>
       val prevBlock    = d.lastBlock
-      val txs          = Seq(TxHelpers.transfer(sender, recipient, amount = 10.dcc), TxHelpers.transfer(sender, recipient, amount = 100.dcc))
-      val validBlock   = d.createBlock(Block.ProtoBlockVersion, txs)
-      val invalidBlock = d.createBlock(Block.ProtoBlockVersion, txs, stateHash = Some(Some(invalidStateHash)))
+      val txs          = Seq(TxHelpers.transfer(sender, recipient, amount = 10.waves), TxHelpers.transfer(sender, recipient, amount = 100.waves))
+      val validBlock   = d.createBlock(txs)
+      val invalidBlock = d.createBlock(txs, stateHash = Some(Some(invalidStateHash)))
       val txSnapshots  = getTxSnapshots(d, validBlock)
 
       d.appendBlockE(
@@ -59,9 +59,9 @@ class LightNodeTest extends PropSpec with WithDomain {
     val invalidBlockTxs = Seq(TxHelpers.transfer(sender, recipient, amount = 20.dcc), TxHelpers.transfer(sender, recipient, amount = 200.dcc))
 
     withDomain(settings, AddrWithBalance.enoughBalances(sender)) { d =>
-      val validBlockWithOtherTxs = d.createBlock(Block.ProtoBlockVersion, txs)
+      val validBlockWithOtherTxs = d.createBlock(txs)
 
-      val invalidBlock = d.createBlock(Block.ProtoBlockVersion, invalidBlockTxs, stateHash = Some(validBlockWithOtherTxs.header.stateHash))
+      val invalidBlock = d.createBlock(invalidBlockTxs, stateHash = Some(validBlockWithOtherTxs.header.stateHash))
 
       val txSnapshots = getTxSnapshots(d, validBlockWithOtherTxs)
 
@@ -87,7 +87,7 @@ class LightNodeTest extends PropSpec with WithDomain {
                 TxHelpers.transfer(sender, recipient, amount = (count + 1).dcc),
                 TxHelpers.transfer(sender, recipient, amount = (count + 2).dcc)
               )
-            val block       = d.createBlock(Block.ProtoBlockVersion, txs)
+            val block       = d.createBlock(txs)
             val txSnapshots = getTxSnapshots(d, block).map { case (snapshot, status) => snapshot.copy(transactions = VectorMap.empty) -> status }
             d.appendBlock(block)
             BlockSnapshot(block.id(), txSnapshots) :: newBlocks(count - 1)
@@ -118,8 +118,8 @@ class LightNodeTest extends PropSpec with WithDomain {
         val genesisId = d.lastBlockId
         val betterBlocks = (1 to chainSize).map { idx =>
           val txs =
-            Seq(TxHelpers.transfer(sender, recipient, amount = (idx + 10).dcc), TxHelpers.transfer(sender, recipient, amount = (idx + 11).dcc))
-          val block       = d.createBlock(Block.ProtoBlockVersion, txs, strictTime = true)
+            Seq(TxHelpers.transfer(sender, recipient, amount = (idx + 10).waves), TxHelpers.transfer(sender, recipient, amount = (idx + 11).waves))
+          val block       = d.createBlock(txs, strictTime = true)
           val txSnapshots = if (isLightMode) Some(getTxSnapshots(d, block)) else None
           d.appendBlock(block)
           block -> txSnapshots
@@ -158,9 +158,8 @@ class LightNodeTest extends PropSpec with WithDomain {
         appender(extensionBlocks).runSyncUnsafe() should beRight
         d.lastBlock.header.stateHash shouldBe expectedStateHash
         d.blockchain.height shouldBe chainSize + 1
-        d.blocksApi.blocksRange(Height(2), Height(d.blockchain.height)).toListL.runSyncUnsafe().map(_._1.header) shouldBe betterBlocks.map(
-          _._1.header
-        )
+        d.blocksApi.blocksRange(Height(2), Height(d.blockchain.height)).toListL.runSyncUnsafe().map(_._1.header) shouldBe
+          betterBlocks.map(_._1.header)
       }
     }
   }
@@ -174,8 +173,8 @@ class LightNodeTest extends PropSpec with WithDomain {
       settings.configure(_.copy(lightNodeBlockFieldsAbsenceInterval = 0)),
       AddrWithBalance.enoughBalances(challengingMiner, TxHelpers.defaultSigner, sender)
     ) { d =>
-      val txs              = Seq(TxHelpers.transfer(sender, recipient, amount = 1.dcc), TxHelpers.transfer(sender, recipient, amount = 2.dcc))
-      val invalidBlock     = d.createBlock(Block.ProtoBlockVersion, txs, strictTime = true, stateHash = Some(Some(invalidStateHash)))
+      val txs              = Seq(TxHelpers.transfer(sender, recipient, amount = 1.waves), TxHelpers.transfer(sender, recipient, amount = 2.waves))
+      val invalidBlock     = d.createBlock(txs, strictTime = true, stateHash = Some(Some(invalidStateHash)))
       val challengingBlock = d.createChallengingBlock(challengingMiner, invalidBlock, strictTime = true)
       val txSnapshots      = getTxSnapshots(d, challengingBlock)
 
@@ -197,23 +196,22 @@ class LightNodeTest extends PropSpec with WithDomain {
   }
 
   private def getTxSnapshots(d: Domain, block: Block): Seq[(StateSnapshot, TxMeta.Status)] = {
-    val (refBlock, refSnapshot, carry, _, prevStateHash, _) = d.liquidState.get.snapshotOf(block.header.reference).get
-
-    val hs = d.posSelector.validateGenerationSignature(block).explicitGet()
+    val liquid = d.liquidState.get.liquidBlockOf(block.header.reference).get
+    val hs     = d.posSelector.validateGenerationSignature(block).explicitGet()
 
     val referencedBlockchain = SnapshotBlockchain(
       d.rocksDBWriter,
-      refSnapshot,
-      refBlock,
+      liquid.data.snapshot,
+      liquid.block,
       d.liquidState.get.hitSource,
-      carry,
+      liquid.data.carryFee,
       Some(d.settings.blockchainSettings.rewardsSettings.initial),
-      Some(prevStateHash)
+      Some(liquid.data.liquidStateHash)
     )
 
     val snapshot =
       BlockDiffer
-        .fromBlock(referencedBlockchain, Some(refBlock), block, None, MiningConstraint.Unlimited, hs, None)
+        .fromBlock(referencedBlockchain, Some(liquid.block), block, None, MiningConstraint.Unlimited, hs, None)
         .explicitGet()
         .snapshot
 

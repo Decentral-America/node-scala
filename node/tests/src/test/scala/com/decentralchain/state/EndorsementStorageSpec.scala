@@ -5,9 +5,8 @@ import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
+import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.network.EndorseBlock
-import com.decentralchain.state.{EndorsementFilter, EndorsementStorage, GeneratorIndex, Height}
 import com.decentralchain.test.{FreeSpec, NumericExt, produce}
 import com.decentralchain.transaction.TxHelpers
 import org.scalactic.source.Position
@@ -65,7 +64,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
     }
 
     "don't rebroadcast if miner" in {
-      started(minerIndex = 1).tryAddEndorsement(mk()).value shouldBe false
+      started(isMiner = true).tryAddEndorsement(mk()).value shouldBe false
     }
 
     "ignore if" - {
@@ -74,7 +73,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
 
         "a wrong signature" in test(
           EndorseBlock(activeGeneratorIndex.toInt, expectedFinalizedId, expectedFinalizedHeight, expectedEndorsedId, ByteStr.empty),
-          "Unexpected BLS signature length: 0, expected: 96"
+          "Unexpected BLS signature length: 0, expected 96"
         )
 
         "an unexpected finalized height" in test(
@@ -278,18 +277,20 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
   }
 
   private def started(
-      minerIndex: Int = -1,
+      minerIndex: Int = 0,
       normalizedGeneratorSet: IndexedSeq[TestGenerator] = mkGeneratorSet(2),
       conflict: Set[GeneratorIndex] = Set.empty,
       hasSameBlockBeforeFinalizationHeight: Boolean = true,
+      isMiner: Boolean = false,
       maxValidEndorsers: Int = 2
   ): ExtendedEndorsementStorage = {
-    require(minerIndex == -1 || minerIndex >= 0 && minerIndex < normalizedGeneratorSet.size, s"Invalid miner index $minerIndex")
+    require(normalizedGeneratorSet.isEmpty || minerIndex >= 0 && minerIndex < normalizedGeneratorSet.size, s"Invalid miner index $minerIndex")
     val r = new EndorsementStorage.InMemory((_, _) => hasSameBlockBeforeFinalizationHeight)
     r.startVoting(
       EndorsementFilter(
         maxValidEndorsers,
-        GeneratorIndex.checked(minerIndex),
+        GeneratorIndex(minerIndex),
+        isMiner,
         expectedFinalizedId,
         expectedFinalizedHeight,
         expectedEndorsedId,
@@ -333,12 +334,10 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
               case Some(aggEnd) =>
                 if (valid.isEmpty) fail(s"Signature must be empty if endorsers empty: $aggEnd, [${valid.mkString(", ")}]")
                 else
-                  aggEnd
-                    .verifyAgg(
-                      BlockEndorsement.mkMessage(expectedFinalizedId, expectedFinalizedHeight, endorsedId),
-                      valid.map(generators(_).blsKp.publicKey)
-                    )
-                    .value shouldBe true
+                  aggEnd.verifyAgg(
+                    BlockEndorsement.mkMessage(expectedFinalizedId, expectedFinalizedHeight, endorsedId),
+                    valid.map(generators(_).blsKp.publicKey)
+                  ) should beRight
             }
           }
         case _ =>

@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.StrictLogging
 import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.network.{ChannelGroupExt, EndorseBlock}
-import com.decentralchain.state.EndorsementFilter
 import com.decentralchain.wallet.Wallet
 import io.netty.channel.group.ChannelGroup
 
@@ -40,8 +39,9 @@ object BlockEndorser {
         votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
         endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
 
-        finalizedHeightAtEndorsed = blockchain.finalizedHeightAt(endorsedHeight)
-        finalizedHeight           = Blockchain.finalizedHeightOrFallback(votingHeight, finalizedHeightAtEndorsed, maxSyncRollbackLength)
+        finalizedHeight = blockchain.finalizedHeightOrFallback(maxSyncRollbackLength)
+        if endorsedHeight > finalizedHeight
+
         finalizedId <- blockchain
           .blockId(finalizedHeight.toInt)
           .toSeq
@@ -50,13 +50,14 @@ object BlockEndorser {
 
         committed        = blockchain.committedGenerators(votingPeriod)
         votingBlockMiner = votingBlockHeader.header.generator.toAddress
+        minerIndex       = committed.indexWhere { case (addr, _) => addr == votingBlockMiner }
+        if minerIndex >= 0 // -1 means no miner among committed, impossible
+
         balances = generatorSet.collect {
           case x if blockchain.isGeneratingBalanceValid(votingHeight, votingBlockHeader.header, x.balance) => x.address -> x.balance
         }.toMap
 
         filter = {
-          val isMiner    = wallet.privateKeyAccount(votingBlockMiner).isRight
-          val minerIndex = if (isMiner) committed.indexWhere { case (addr, _) => addr == votingBlockMiner } else -1
           val normalizedEndorsers = committed.map { case (address, blsPk) =>
             (address, blsPk, balances.getOrElse(address, 0L))
           }.toVector
@@ -64,7 +65,8 @@ object BlockEndorser {
           val conflict = blockchain.conflictGenerators(votingPeriod).upTo(votingHeight)
           EndorsementFilter(
             blockchain.settings.functionalitySettings.maxValidEndorsers,
-            GeneratorIndex.checked(minerIndex),
+            GeneratorIndex(minerIndex),
+            isMiner = wallet.privateKeyAccount(votingBlockMiner).isRight,
             finalizedId,
             finalizedHeight,
             endorsedId,
@@ -76,7 +78,7 @@ object BlockEndorser {
 
         (account, idx) <- for {
           ((committedAddr, _), idx) <- committed.zipWithIndex
-          if !filter.miner.contains(idx) // A miner doesn’t need to endorse its own blocks - a mining is already an endorsement
+          if idx != filter.miner.toInt // A miner doesn’t need to endorse its own blocks - a mining is already an endorsement
           pk <- wallet.privateKeyAccount(committedAddr).toSeq
           if balances.contains(committedAddr)
         } yield (pk, GeneratorIndex(idx))

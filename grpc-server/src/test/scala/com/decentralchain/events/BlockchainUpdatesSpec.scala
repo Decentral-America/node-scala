@@ -4,7 +4,6 @@ import com.google.common.primitives.Longs
 import com.google.protobuf.ByteString
 import com.decentralchain.TestValues
 import com.decentralchain.account.{Address, KeyPair}
-import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.DigestLength
@@ -20,12 +19,12 @@ import com.decentralchain.events.StateUpdate.{
   LeasingBalanceUpdate,
   ScriptUpdate
 }
-import io.decentralchain.events.api.grpc.protobuf.{GetBlockUpdateRequest, GetBlockUpdatesRangeRequest, SubscribeRequest}
-import io.decentralchain.events.protobuf.BlockchainUpdated.Rollback.RollbackType
-import io.decentralchain.events.protobuf.BlockchainUpdated.Update
-import io.decentralchain.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
+import com.decentralchain.events.api.grpc.protobuf.{GetBlockUpdateRequest, GetBlockUpdatesRangeRequest, SubscribeRequest}
+import com.decentralchain.events.protobuf.BlockchainUpdated.Rollback.RollbackType
+import com.decentralchain.events.protobuf.BlockchainUpdated.Update
+import com.decentralchain.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
 import com.decentralchain.events.protobuf.serde.*
-import io.decentralchain.events.protobuf.{TransactionMetadata, BlockchainUpdated as PBBlockchainUpdated, StateUpdate as PBStateUpdate}
+import com.decentralchain.events.protobuf.{TransactionMetadata, BlockchainUpdated as PBBlockchainUpdated, StateUpdate as PBStateUpdate}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.BlockchainFeatures.BlockReward
 import com.decentralchain.history.Domain
@@ -33,15 +32,15 @@ import com.decentralchain.lang.directives.values.{V5, V6}
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import io.decentralchain.protobuf.*
-import io.decentralchain.protobuf.block.PBBlocks
-import io.decentralchain.protobuf.transaction.InvokeScriptResult.{Call, Invocation, Payment}
-import io.decentralchain.protobuf.transaction.{DataEntry, InvokeScriptResult}
-import com.decentralchain.settings.{Constants, DCCSettings}
+import com.decentralchain.protobuf.*
+import com.decentralchain.protobuf.block.PBBlocks
+import com.decentralchain.protobuf.transaction.InvokeScriptResult.{Call, Invocation, Payment}
+import com.decentralchain.protobuf.transaction.{DataEntry, InvokeScriptResult}
+import com.decentralchain.settings.{Constants, WavesSettings}
 import com.decentralchain.state.{AssetDescription, BlockRewardCalculator, EmptyDataEntry, Height, LeaseBalance, StringDataEntry, TransactionId}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.exchange.OrderType
 import com.decentralchain.transaction.assets.{IssueTransaction, ReissueTransaction}
 import com.decentralchain.transaction.lease.LeaseTransaction
@@ -65,7 +64,7 @@ import java.util.concurrent.ThreadLocalRandom
 class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures {
   private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
 
-  val currentSettings: DCCSettings = RideV5
+  val currentSettings: WavesSettings = RideV5
 
   val transfer: TransferTransaction       = TxHelpers.transfer()
   val lease: LeaseTransaction             = TxHelpers.lease(fee = TestValues.fee)
@@ -836,7 +835,6 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
           TxHelpers.transfer(sender, recipient.toAddress, 2.dcc, timestamp = txTimestamp + 1)
         )
         val originalBlock = d.createBlock(
-          Block.ProtoBlockVersion,
           txs,
           generator = challengedMiner,
           stateHash = Some(Some(invalidStateHash))
@@ -1122,8 +1120,8 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
         subscription
           .fetchAllEvents(d.blockchain)
-          .map(_.getUpdate.getAppend.getBlock.updatedDccAmount) shouldBe
-          (2 to 16).scanLeft(100_000_000.dcc) { (total, height) => total + 6.dcc * d.blockchain.blockRewardBoost(Height(height)) }
+          .map(_.getUpdate.getAppend.getBlock.updatedWavesAmount) shouldBe
+          (2 to 16).scanLeft(100_000_000.waves) { (total, height) => total + 6.waves * d.blockchain.blockRewardBoost(Height(height)) }
 
       }
     }

@@ -19,6 +19,7 @@ tags:
   - name: blocks
   - name: peers
   - name: blockchain
+  - name: generators
   - name: transactions
   - name: utils
   - name: wallet
@@ -131,6 +132,36 @@ paths:
           $ref: '#/components/responses/ApiKeyNotValid'
       security:
         - APIKey: [ ]
+  '/addresses/bls/{address}':
+    get:
+      tags:
+        - addresses
+      summary: BLS public key
+      description: Get BLS public key for the {address}
+      operationId: getBlsPublicKeyByAddress
+      parameters:
+        - $ref: '#/components/parameters/address'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                required:
+                  - blsPublicKey
+                type: object
+                properties:
+                  blsPublicKey:
+                    $ref: '#/components/schemas/BlsPublicKey'
+        '400':
+          description: No private key for sender address in wallet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error: 115
+                message: no private key for sender address in wallet
   '/addresses/publicKey/{publicKey}':
     get:
       tags:
@@ -256,9 +287,7 @@ paths:
                     from the current height is set by
                     `rest-api.distribution-address-limit`, 1000 by default.
                 asset:
-                  allOf:
-                    - $ref: '#/components/schemas/AssetId'
-                  description: Base58 encoded asset ID. Not defined for DCC asset
+                  $ref: '#/components/schemas/WavesOrAssetId'
       responses:
         '200':
           description: successful operation
@@ -450,11 +479,9 @@ paths:
                   script:
                     type: string
                     format: byte
-                    nullable: true
                     description: Compiled script in base64 representation
                   scriptText:
                     type: string
-                    nullable: true
                     description: Compiled script in text representation
                   complexity:
                     type: integer
@@ -814,6 +841,16 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Height'
+  /blocks/height/finalized:
+    get:
+      tags:
+        - blocks
+      summary: Finalized blockchain height
+      description: Get the current finalized blockchain height
+      operationId: getFinalizedHeight
+      responses:
+        '200':
+          $ref: '#/components/responses/Height'
   '/blocks/at/{height}':
     get:
       tags:
@@ -900,6 +937,26 @@ paths:
               examples:
                 largeSignificandBlock:
                   $ref: '#/components/examples/largeSignificandBlock'
+  /blocks/headers/finalized:
+    get:
+      tags:
+        - blocks
+      summary: Finalized block headers
+      description: Get headers of the finalized block
+      operationId: getFinalizedBlockHeaders
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockHeader'
+            application/json;large-significand-format=string:
+              schema:
+                $ref: '#/components/schemas/BlockHeaderLSF'
+              examples:
+                largeSignificandBlock:
+                  $ref: '#/components/examples/largeSignificandBlock'
   '/blocks/headers/{id}':
     get:
       tags:
@@ -973,6 +1030,69 @@ paths:
               examples:
                 largeSignificandBlock:
                   $ref: '#/components/examples/largeSignificandBlock'
+  '/blocks/finalized/at/{height}':
+    get:
+      tags:
+        - blocks
+      summary: Finalized height at blockchain height
+      description: Get finalized height at a given blockchain height
+      operationId: getFinalizedHeightAt
+      parameters:
+        - name: height
+          in: path
+          description: Block height
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/Height'
+        '404':
+          description: Not finalized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error: 406
+                message: Not finalized
+  '/generators/at/{height}':
+    get:
+      tags:
+        - generators
+      summary: Generators at height
+      description: Get generators data at a given height
+      operationId: getGeneratorsAtHeight
+      parameters:
+        - name: height
+          in: path
+          description: Target block height
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratorData'
+            application/json;large-significand-format=string:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratorDataLSF'
+        '404':
+          description: Height is above current blockchain height
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+              example: [ ]
   /peers/connect:
     post:
       tags:
@@ -1484,9 +1604,11 @@ paths:
           Transaction [data in
           JSON](https://docs.dcc.tech/en/blockchain/transaction/#json-representation)
           including
-          [`type`](https://docs.dcc.tech/en/blockchain/transaction-type/) and
-          `sender`. If `timestamp` is omitted, current node's time is used.
-          `senderPublicKey` is ignored.
+          [`type`](https://docs.waves.tech/en/blockchain/transaction-type/) and
+          `sender`.
+          If `timestamp` is omitted, current node's time is used. 
+          If `generationPeriodStart` is omitted, the next period height is used. 
+          `senderPublicKey` and `endorserPublicKey` are ignored.
         content:
           application/json:
             schema:
@@ -1648,7 +1770,7 @@ paths:
                 type: object
                 properties:
                   feeAssetId:
-                    type: string
+                    - $ref: '#/components/schemas/WavesOrAssetId'
                   feeAmount:
                     type: integer
                     format: int64
@@ -1660,8 +1782,7 @@ paths:
                 type: object
                 properties:
                   feeAssetId:
-                    type: string
-                    example: 'AGHJgjhHJGGKHJGKbjk1789jlkjl'
+                    - $ref: '#/components/schemas/WavesOrAssetId'
                   feeAmount:
                     type: string
                     example: '50000'
@@ -1994,11 +2115,9 @@ paths:
                   script:
                     type: string
                     format: byte
-                    nullable: true
                     description: Compiled script in base64 script representation
                   scriptText:
                     type: string
-                    nullable: true
                     description: Compiled script in text representation
                   complexity:
                     type: integer
@@ -2481,7 +2600,7 @@ paths:
                   address:
                     type: string
                   assetId:
-                    type: string
+                    $ref: '#/components/schemas/AssetId'
                   balance:
                     type: integer
                     format: int64
@@ -2496,7 +2615,7 @@ paths:
                   address:
                     type: string
                   assetId:
-                    type: string
+                    $ref: '#/components/schemas/AssetId'
                   balance:
                     type: string
   '/assets/{assetId}/distribution':
@@ -2977,30 +3096,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  blockId:
-                    type: string
-                  dccBalanceHash:
-                    type: string
-                  assetsBalanceHash:
-                    type: string
-                  dataEntryHash:
-                    type: string
-                  accountScriptHash:
-                    type: string
-                  assetScriptHash:
-                    type: string
-                  leaseBalanceHash:
-                    type: string
-                  leaseStatusHash:
-                    type: string
-                  sponsorshipHash:
-                    type: string
-                  aliasHash:
-                    type: string
-                  stateHash:
-                    type: string
+                $ref: '#/components/schemas/DebugStateHashes'
   '/debug/stateHash/last':
     get:
       tags:
@@ -3016,30 +3112,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  blockId:
-                    type: string
-                  dccBalanceHash:
-                    type: string
-                  assetsBalanceHash:
-                    type: string
-                  dataEntryHash:
-                    type: string
-                  accountScriptHash:
-                    type: string
-                  assetScriptHash:
-                    type: string
-                  leaseBalanceHash:
-                    type: string
-                  leaseStatusHash:
-                    type: string
-                  sponsorshipHash:
-                    type: string
-                  aliasHash:
-                    type: string
-                  stateHash:
-                    type: string
+                $ref: '#/components/schemas/DebugStateHashes'
   /debug/blacklist:
     post:
       tags:
@@ -3387,8 +3460,15 @@ components:
     Proof:
       type: string
     AssetId:
-      allOf:
+      title: AssetId
+      allOf: # Generators can't handle this: https://github.com/OpenAPITools/openapi-generator/issues/21469
         - $ref: '#/components/schemas/Hash'
+    WavesOrAssetId:
+      description: Asset identifier. Absence or null means WAVES
+      anyOf:
+        - type: 'null'
+        - allOf:
+            - $ref: '#/components/schemas/AssetId'
     BlockId:
       oneOf:
         - $ref: '#/components/schemas/Signature'
@@ -3426,6 +3506,17 @@ components:
     PublicKey:
       type: string
       example: 2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY
+    BlsPublicKey:
+      type: string
+      example: 6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU
+    BlsSignature:
+      type: string
+      example: oJUBPLXnqejpwkkifzBbyQp63mPwypYq9GV7eAYqQGAvsE2LxU6csrrwLWgK1HdW28Ygku7vfkcMW1TCDCFymVXoqi7SpCwWGp3P6gegHusSPBsuVQQiQ5BWTYpUpSJjiBL
+    GeneratorIndex:
+      type: integer
+      format: int32
+      minimum: 0
+      example: 0
     Amount:
       type: integer
       format: int64
@@ -3464,10 +3555,6 @@ components:
           $ref: '#/components/schemas/Signature'
         fee:
           $ref: '#/components/schemas/Amount'
-        feeAssetId:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
     TransactionBaseLSF:
       type: object
       required: [ id, timestamp, type, fee ]
@@ -3502,15 +3589,6 @@ components:
           $ref: '#/components/schemas/Signature'
         fee:
           type: string
-        feeAssetId:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
-    TransactionInfo:
-      allOf:
-        - $ref: '#/components/schemas/TransactionBase'
-        - type: object
-          required: [ height, sender, senderPublicKey, proofs, signature ]
     ApiError:
       required:
         - error
@@ -3697,16 +3775,12 @@ components:
       required:
         - assetId
         - balance
-        - issueTransaction
-        - minSponsoredAssetFee
         - quantity
         - reissuable
-        - sponsorBalance
       type: object
       properties:
         assetId:
-          type: string
-          description: Asset ID base58 encoded
+          $ref: '#/components/schemas/AssetId'
         balance:
           type: integer
           format: int64
@@ -3717,7 +3791,6 @@ components:
         minSponsoredAssetFee:
           type: integer
           format: int64
-          nullable: true
           description: >-
             For [sponsored
             asset](https://docs.dcc.tech/en/blockchain/dcc-protocol/sponsored-fee)
@@ -3725,7 +3798,6 @@ components:
         sponsorBalance:
           type: integer
           format: int64
-          nullable: true
           description: >-
             For [sponsored
             asset](https://docs.dcc.tech/en/blockchain/dcc-protocol/sponsored-fee)
@@ -3740,16 +3812,12 @@ components:
       required:
         - assetId
         - balance
-        - issueTransaction
-        - minSponsoredAssetFee
         - quantity
         - reissuable
-        - sponsorBalance
       type: object
       properties:
         assetId:
-          type: string
-          description: Asset ID base58 encoded
+          $ref: '#/components/schemas/AssetId'
         balance:
           type: string
           description: Account balance in the asset
@@ -3758,14 +3826,12 @@ components:
           description: Indicates if the asset is reissuable
         minSponsoredAssetFee:
           type: string
-          nullable: true
           description: >-
             For [sponsored
             asset](https://docs.dcc.tech/en/blockchain/dcc-protocol/sponsored-fee)
             only: the equivalent of 0.001 DCC
         sponsorBalance:
           type: string
-          nullable: true
           description: >-
             For [sponsored
             asset](https://docs.dcc.tech/en/blockchain/dcc-protocol/sponsored-fee)
@@ -3909,6 +3975,8 @@ components:
           type: string
         stateHash:
           type: string
+        finalizationVoting:
+          $ref: '#/components/schemas/FinalizationVoting'
     BlockHeaderLSF:
       required:
         - blocksize
@@ -3986,6 +4054,56 @@ components:
           type: string
         stateHash:
           type: string
+        finalizationVoting:
+          $ref: '#/components/schemas/FinalizationVoting'
+    BlockEndorsement:
+      type: object
+      required:
+        - endorserIndex
+        - finalizedId
+        - finalizedHeight
+        - endorsedId
+        - signature
+      properties:
+        endorserIndex:
+          $ref: '#/components/schemas/GeneratorIndex'
+        finalizedId:
+          $ref: '#/components/schemas/BlockId'
+        finalizedHeight:
+          $ref: '#/components/schemas/Height'
+        endorsedId:
+          $ref: '#/components/schemas/BlockId'
+        signature:
+          $ref: '#/components/schemas/BlsSignature'
+    FinalizationVoting:
+      type: object
+      oneOf:
+        - required: [ valid, finalizedHeight, aggregatedEndorsement, conflict ]
+        - required: [ valid, finalizedHeight, aggregatedEndorsement ]
+        - required: [ finalizedHeight, conflict ]
+      properties:
+        valid:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeneratorIndex'
+        finalizedHeight:
+          $ref: '#/components/schemas/Height'
+        aggregatedEndorsement:
+          $ref: '#/components/schemas/BlsSignature'
+        conflict:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockEndorsement'
+      example:
+        valid: [ 2 ]
+        aggregatedEndorsement: 25D5M96CYmdiuragjjJNGY9thrZL5sgUVjHrfamoi9B7XMUU7e7qFHejX49Qe4FdQxYkrb8v4f6MhgAEj6D3YbEB7xxAfLbA4HqwvuQeKTrZoMnLTcNfujQ8QGbsyqMT28Cn
+        finalizedHeight: 1609990
+        conflict:
+          - endorserIndex: 0
+            finalizedId: 2Sf5yJ4AAuMRaVr6vQUyGPE7mkFLaBbkz3quLoB2dseBJdneGDPqioiFsDKcXVVpDK6LXMA1RTY8WfWio1MPXt8c
+            finalizedHeight: 1
+            endorsedId: 2Sf5yJ4AAuMRaVr6vQUyGPE7mkFLaBbkz3quLoB2dseBJdneGDPqioiFsDKcXVVpDK6LXMA1RTY8WfWio1MPXt8c
+            signature: oGETTvn8Mggi1cULSEEDGuDG7rPeY1tEE11Vc4FwR3f5fPwVLGTWo6M5XFTtwqSabNpWjzh4FNuoGssDVK1Y23mdiCKYCkt2D6mvnWDfrLpM3JUxP7yRGrv4LfzfCTXnJxF
     Block:
       allOf:
         - $ref: '#/components/schemas/BlockHeader'
@@ -4020,7 +4138,6 @@ components:
         script:
           type: string
           format: byte
-          nullable: true
           description: Compiled script in base64 representation
         complexity:
           type: integer
@@ -4069,6 +4186,7 @@ components:
                 type:
                   type: string
     BinaryEntry:
+      title: BinaryEntry
       required:
         - key
         - type
@@ -4085,6 +4203,7 @@ components:
           type: string
           format: byte
     BooleanEntry:
+      title: BooleanEntry
       required:
         - key
         - type
@@ -4100,6 +4219,7 @@ components:
         value:
           type: boolean
     IntegerEntry:
+      title: IntegerEntry
       required:
         - key
         - type
@@ -4116,6 +4236,7 @@ components:
           type: integer
           format: int64
     IntegerEntryLSF:
+      title: IntegerEntryLSF
       required:
         - key
         - type
@@ -4131,6 +4252,7 @@ components:
         value:
           type: string
     StringEntry:
+      title: StringEntry
       required:
         - key
         - type
@@ -4146,6 +4268,7 @@ components:
         value:
           type: string
     DataEntry:
+      title: DataEntry
       oneOf:
         - $ref: '#/components/schemas/BinaryEntry'
         - $ref: '#/components/schemas/BooleanEntry'
@@ -4159,6 +4282,7 @@ components:
           integer: '#/components/schemas/IntegerEntry'
           string: '#/components/schemas/StringEntry'
     DataEntryLSF:
+      title: DataEntryLSF
       oneOf:
         - $ref: '#/components/schemas/BinaryEntry'
         - $ref: '#/components/schemas/BooleanEntry'
@@ -4172,6 +4296,7 @@ components:
           integer: '#/components/schemas/IntegerEntryLSF'
           string: '#/components/schemas/StringEntry'
     DeleteEntry:
+      title: DeleteEntry
       required:
         - key
         - value
@@ -4180,7 +4305,7 @@ components:
         key:
           type: string
         value:
-          nullable: true
+          type: 'null'
           description: null for entry deletion
     HashedMessage:
       required:
@@ -4192,6 +4317,13 @@ components:
           type: string
         hash:
           $ref: '#/components/schemas/Hash'
+    AssetPair:
+      type: object
+      properties:
+        amountAsset:
+          $ref: '#/components/schemas/WavesOrAssetId'
+        priceAsset:
+          $ref: '#/components/schemas/WavesOrAssetId'
     Order:
       type: object
       properties:
@@ -4209,14 +4341,7 @@ components:
         matcherPublicKey:
           $ref: '#/components/schemas/PublicKey'
         assetPair:
-          type: object
-          properties:
-            amountAsset:
-              type: string
-              nullable: true
-            priceAsset:
-              type: string
-              nullable: true
+          $ref: '#/components/schemas/AssetPair'
         orderType:
           type: string
           enum:
@@ -4239,7 +4364,7 @@ components:
           items:
             $ref: '#/components/schemas/Signature'
         matcherFeeAssetId:
-          $ref: '#/components/schemas/AssetId'
+          $ref: '#/components/schemas/WavesOrAssetId'
     OrderLSF:
       type: object
       properties:
@@ -4257,14 +4382,7 @@ components:
         matcherPublicKey:
           $ref: '#/components/schemas/PublicKey'
         assetPair:
-          type: object
-          properties:
-            amountAsset:
-              type: string
-              nullable: true
-            priceAsset:
-              type: string
-              nullable: true
+          $ref: '#/components/schemas/AssetPair'
         orderType:
           type: string
           enum:
@@ -4287,7 +4405,7 @@ components:
           items:
             $ref: '#/components/schemas/Signature'
         matcherFeeAssetId:
-          $ref: '#/components/schemas/AssetId'
+          $ref: '#/components/schemas/WavesOrAssetId'
     RewardStatus:
       required:
         - currentReward
@@ -4386,6 +4504,36 @@ components:
           type: string
         xtnBuybackAddress:
           type: string
+    GeneratorData:
+      type: object
+      required:
+        - address
+        - balance
+        - transactionId
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        balance:
+          $ref: '#/components/schemas/Amount'
+        transactionId:
+          $ref: '#/components/schemas/TransactionId'
+        conflictHeight:
+          $ref: '#/components/schemas/Height'
+    GeneratorDataLSF:
+      type: object
+      required:
+        - address
+        - balance
+        - transactionId
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        balance:
+          type: string
+        transactionId:
+          $ref: '#/components/schemas/TransactionId'
+        conflictHeight:
+          $ref: '#/components/schemas/Height'
     Signed:
       type: object
       properties:
@@ -4397,47 +4545,49 @@ components:
         signature:
           $ref: '#/components/schemas/Signature'
     NonGenesisTransaction:
-      required: [ sender, senderPublicKey, applicationStatus, version, proofs, signature, feeAssetId ]
+      title: NonGenesisTransaction
+      required: [ sender, senderPublicKey, applicationStatus, version, proofs, signature ]
       allOf:
         - $ref: '#/components/schemas/TransactionBase'
-      oneOf:
-        - $ref: '#/components/schemas/BurnTransaction'
-        - $ref: '#/components/schemas/CreateAliasTransaction'
-        - $ref: '#/components/schemas/DataTransaction'
-        - $ref: '#/components/schemas/ExchangeTransaction'
-        - $ref: '#/components/schemas/GenesisTransaction'
-        - $ref: '#/components/schemas/InvokeScriptTransaction'
-        - $ref: '#/components/schemas/IssueTransaction'
-        - $ref: '#/components/schemas/LeaseCancelTransaction'
-        - $ref: '#/components/schemas/LeaseTransaction'
-        - $ref: '#/components/schemas/MassTransferTransaction'
-        - $ref: '#/components/schemas/ReissueTransaction'
-        - $ref: '#/components/schemas/SetAssetScriptTransaction'
-        - $ref: '#/components/schemas/SetScriptTransaction'
-        - $ref: '#/components/schemas/SponsorFeeTransaction'
-        - $ref: '#/components/schemas/TransferTransaction'
-        - $ref: '#/components/schemas/UpdateAssetInfoTransaction'
+        - oneOf:
+            - $ref: '#/components/schemas/BurnTransaction'
+            - $ref: '#/components/schemas/CreateAliasTransaction'
+            - $ref: '#/components/schemas/DataTransaction'
+            - $ref: '#/components/schemas/ExchangeTransaction'
+            - $ref: '#/components/schemas/InvokeScriptTransaction'
+            - $ref: '#/components/schemas/IssueTransaction'
+            - $ref: '#/components/schemas/LeaseCancelTransaction'
+            - $ref: '#/components/schemas/LeaseTransaction'
+            - $ref: '#/components/schemas/MassTransferTransaction'
+            - $ref: '#/components/schemas/ReissueTransaction'
+            - $ref: '#/components/schemas/SetAssetScriptTransaction'
+            - $ref: '#/components/schemas/SetScriptTransaction'
+            - $ref: '#/components/schemas/SponsorFeeTransaction'
+            - $ref: '#/components/schemas/TransferTransaction'
+            - $ref: '#/components/schemas/UpdateAssetInfoTransaction'
+            - $ref: '#/components/schemas/CommitToGenerationTransaction'
     NonGenesisTransactionLSF:
-      required: [ sender, senderPublicKey, applicationStatus, version, proofs, signature, feeAssetId ]
+      title: NonGenesisTransactionLSF
+      required: [ sender, senderPublicKey, applicationStatus, version, proofs, signature ]
       allOf:
         - $ref: '#/components/schemas/TransactionBaseLSF'
-      oneOf:
-        - $ref: '#/components/schemas/BurnTransactionLSF'
-        - $ref: '#/components/schemas/CreateAliasTransaction'
-        - $ref: '#/components/schemas/DataTransactionLSF'
-        - $ref: '#/components/schemas/ExchangeTransactionLSF'
-        - $ref: '#/components/schemas/GenesisTransactionLSF'
-        - $ref: '#/components/schemas/InvokeScriptTransactionLSF'
-        - $ref: '#/components/schemas/IssueTransactionLSF'
-        - $ref: '#/components/schemas/LeaseCancelTransactionLSF'
-        - $ref: '#/components/schemas/LeaseTransactionLSF'
-        - $ref: '#/components/schemas/MassTransferTransactionLSF'
-        - $ref: '#/components/schemas/ReissueTransactionLSF'
-        - $ref: '#/components/schemas/SetAssetScriptTransaction'
-        - $ref: '#/components/schemas/SetScriptTransaction'
-        - $ref: '#/components/schemas/SponsorFeeTransactionLSF'
-        - $ref: '#/components/schemas/TransferTransactionLSF'
-        - $ref: '#/components/schemas/UpdateAssetInfoTransaction'
+        - oneOf:
+            - $ref: '#/components/schemas/BurnTransactionLSF'
+            - $ref: '#/components/schemas/CreateAliasTransaction'
+            - $ref: '#/components/schemas/DataTransactionLSF'
+            - $ref: '#/components/schemas/ExchangeTransactionLSF'
+            - $ref: '#/components/schemas/InvokeScriptTransactionLSF'
+            - $ref: '#/components/schemas/IssueTransactionLSF'
+            - $ref: '#/components/schemas/LeaseCancelTransactionLSF'
+            - $ref: '#/components/schemas/LeaseTransactionLSF'
+            - $ref: '#/components/schemas/MassTransferTransactionLSF'
+            - $ref: '#/components/schemas/ReissueTransactionLSF'
+            - $ref: '#/components/schemas/SetAssetScriptTransaction'
+            - $ref: '#/components/schemas/SetScriptTransaction'
+            - $ref: '#/components/schemas/SponsorFeeTransactionLSF'
+            - $ref: '#/components/schemas/TransferTransactionLSF'
+            - $ref: '#/components/schemas/UpdateAssetInfoTransaction'
+            - $ref: '#/components/schemas/CommitToGenerationTransaction'
     Transaction:
       oneOf:
         - $ref: '#/components/schemas/GenesisTransaction'
@@ -4599,6 +4749,7 @@ components:
           items:
             $ref: '#/components/schemas/Hash'
     BurnTransaction:
+      title: BurnTransaction
       type: object
       required: [ assetId, amount ]
       properties:
@@ -4607,6 +4758,7 @@ components:
         amount:
           $ref: '#/components/schemas/Amount'
     BurnTransactionLSF:
+      title: BurnTransactionLSF
       type: object
       required: [ assetId, amount ]
       properties:
@@ -4615,6 +4767,7 @@ components:
         amount:
           type: string
     CreateAliasTransaction:
+      title: CreateAliasTransaction
       type: object
       required: [ alias ]
       properties:
@@ -4622,6 +4775,7 @@ components:
           type: string
           pattern: '^[\-\.0-9@_a-z]{4,30}$'
     DataTransaction:
+      title: DataTransaction
       type: object
       required: [ data ]
       properties:
@@ -4632,6 +4786,7 @@ components:
               - $ref: '#/components/schemas/DataEntry'
               - $ref: '#/components/schemas/DeleteEntry'
     DataTransactionLSF:
+      title: DataTransactionLSF
       type: object
       required: [ data ]
       properties:
@@ -4642,6 +4797,7 @@ components:
               - $ref: '#/components/schemas/DataEntryLSF'
               - $ref: '#/components/schemas/DeleteEntry'
     ExchangeTransaction:
+      title: ExchangeTransaction
       type: object
       required:
         - order1
@@ -4664,6 +4820,7 @@ components:
         sellMatcherFee:
           $ref: '#/components/schemas/Amount'
     ExchangeTransactionLSF:
+      title: ExchangeTransactionLSF
       type: object
       required:
         - order1
@@ -4686,6 +4843,7 @@ components:
         sellMatcherFee:
           type: string
     GenesisTransaction:
+      title: GenesisTransaction
       type: object
       required:
         - id
@@ -4711,6 +4869,7 @@ components:
         amount:
           $ref: '#/components/schemas/Amount'
     GenesisTransactionLSF:
+      title: GenesisTransactionLSF
       type: object
       required:
         - id
@@ -4733,6 +4892,7 @@ components:
         amount:
           type: string
     InvokeScriptTransaction:
+      title: InvokeScriptTransaction
       type: object
       required:
         - dApp
@@ -4750,9 +4910,7 @@ components:
               amount:
                 $ref: '#/components/schemas/Amount'
               assetId:
-                allOf:
-                  - $ref: '#/components/schemas/AssetId'
-                nullable: true
+                $ref: '#/components/schemas/WavesOrAssetId'
         call:
           type: object
           properties:
@@ -4782,7 +4940,10 @@ components:
                       value } objects
         stateChanges:
           $ref: '#/components/schemas/StateChanges'
+        feeAssetId:
+          $ref: '#/components/schemas/WavesOrAssetId'
     InvokeScriptTransactionLSF:
+      title: InvokeScriptTransactionLSF
       type: object
       required:
         - dApp
@@ -4800,9 +4961,7 @@ components:
               amount:
                 type: string
               assetId:
-                allOf:
-                  - $ref: '#/components/schemas/AssetId'
-                nullable: true
+                $ref: '#/components/schemas/WavesOrAssetId'
         call:
           type: object
           properties:
@@ -4832,7 +4991,10 @@ components:
                       value } objects
         stateChanges:
           $ref: '#/components/schemas/StateChangesLSF'
+        feeAssetId:
+          $ref: '#/components/schemas/WavesOrAssetId'
     IssueTransaction:
+      title: IssueTransaction
       type: object
       required:
         - assetId
@@ -4862,6 +5024,7 @@ components:
           type: string
           format: byte
     IssueTransactionLSF:
+      title: IssueTransactionLSF
       type: object
       required:
         - assetId
@@ -4890,6 +5053,7 @@ components:
           type: string
           format: byte
     LeaseCancelTransaction:
+      title: LeaseCancelTransaction
       type: object
       required:
         - leaseId
@@ -4900,6 +5064,7 @@ components:
         lease:
           $ref: '#/components/schemas/LeaseInfo'
     LeaseCancelTransactionLSF:
+      title: LeaseCancelTransactionLSF
       type: object
       required:
         - leaseId
@@ -4910,6 +5075,7 @@ components:
         lease:
           $ref: '#/components/schemas/LeaseInfoLSF'
     LeaseTransaction:
+      title: LeaseTransaction
       type: object
       required:
         - amount
@@ -4920,6 +5086,7 @@ components:
         recipient:
           $ref: '#/components/schemas/AddressOrAlias'
     LeaseTransactionLSF:
+      title: LeaseTransactionLSF
       type: object
       required:
         - amount
@@ -4930,6 +5097,7 @@ components:
         recipient:
           $ref: '#/components/schemas/AddressOrAlias'
     MassTransferTransaction:
+      title: MassTransferTransaction
       type: object
       required:
         - assetId
@@ -4939,8 +5107,7 @@ components:
         - transfers
       properties:
         assetId:
-          type: string
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
         attachment:
           type: string
         transferCount:
@@ -4961,6 +5128,7 @@ components:
               amount:
                 $ref: '#/components/schemas/Amount'
     MassTransferTransactionLSF:
+      title: MassTransferTransactionLSF
       type: object
       required:
         - assetId
@@ -4970,8 +5138,7 @@ components:
         - transfers
       properties:
         assetId:
-          type: string
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
         attachment:
           type: string
         transferCount:
@@ -4990,6 +5157,7 @@ components:
               amount:
                 type: string
     ReissueTransaction:
+      title: ReissueTransaction
       type: object
       required:
         - assetId
@@ -5003,6 +5171,7 @@ components:
         reissuable:
           type: boolean
     ReissueTransactionLSF:
+      title: ReissueTransactionLSF
       type: object
       required:
         - assetId
@@ -5016,6 +5185,7 @@ components:
         reissuable:
           type: boolean
     SetAssetScriptTransaction:
+      title: SetAssetScriptTransaction
       type: object
       required:
         - assetId
@@ -5027,6 +5197,7 @@ components:
           type: string
           format: byte
     SetScriptTransaction:
+      title: SetScriptTransaction
       type: object
       required:
         - script
@@ -5035,6 +5206,7 @@ components:
           type: string
           format: byte
     SponsorFeeTransaction:
+      title: SponsorFeeTransaction
       type: object
       required:
         - assetId
@@ -5047,6 +5219,7 @@ components:
           format: int64
           minimum: 1
     SponsorFeeTransactionLSF:
+      title: SponsorFeeTransactionLSF
       type: object
       required:
         - assetId
@@ -5057,52 +5230,51 @@ components:
         minSponsoredAssetFee:
           type: string
     TransferTransaction:
+      title: TransferTransaction
       type: object
       required:
         - recipient
-        - assetId
         - amount
         - attachment
-        - feeAsset
       properties:
         recipient:
           $ref: '#/components/schemas/AddressOrAlias'
         assetId:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
         feeAsset:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
+          description: Legacy v0.11.1 compatibility field. Use `assetId` instead
+          deprecated: true
+        feeAssetId:
+          $ref: '#/components/schemas/WavesOrAssetId'
         amount:
           $ref: '#/components/schemas/Amount'
         attachment:
           type: string
     TransferTransactionLSF:
+      title: TransferTransactionLSF
       type: object
       required:
         - recipient
-        - assetId
         - amount
         - attachment
-        - feeAsset
       properties:
         recipient:
           $ref: '#/components/schemas/AddressOrAlias'
         assetId:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
         feeAsset:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
+          description: Legacy v0.11.1 compatibility field. Use `assetId` instead
+          deprecated: true
+        feeAssetId:
+          $ref: '#/components/schemas/WavesOrAssetId'
         amount:
           type: string
         attachment:
           type: string
     UpdateAssetInfoTransaction:
+      title: UpdateAssetInfoTransaction
       type: object
       required:
         - assetId
@@ -5115,6 +5287,22 @@ components:
           $ref: '#/components/schemas/AssetName'
         description:
           $ref: '#/components/schemas/AssetDescription'
+        feeAssetId:
+          $ref: '#/components/schemas/WavesOrAssetId'
+    CommitToGenerationTransaction:
+      title: CommitToGenerationTransaction
+      type: object
+      required:
+        - endorserPublicKey
+        - generationPeriodStart
+        - commitmentSignature
+      properties:
+        endorserPublicKey:
+          $ref: '#/components/schemas/BlsPublicKey'
+        generationPeriodStart:
+          $ref: '#/components/schemas/Height'
+        commitmentSignature:
+          $ref: '#/components/schemas/BlsSignature'
     DataAction:
       oneOf:
         - $ref: '#/components/schemas/DataEntry'
@@ -5127,30 +5315,24 @@ components:
       type: object
       required:
         - address
-        - asset
         - amount
       properties:
         address:
           $ref: '#/components/schemas/Address'
         asset:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
         amount:
           $ref: '#/components/schemas/Amount'
     TransferActionLSF:
       type: object
       required:
         - address
-        - asset
         - amount
       properties:
         address:
           $ref: '#/components/schemas/Address'
         asset:
-          allOf:
-            - $ref: '#/components/schemas/AssetId'
-          nullable: true
+          $ref: '#/components/schemas/WavesOrAssetId'
         amount:
           type: string
     IssueAction:
@@ -5449,34 +5631,27 @@ components:
           type: object
           properties:
             function:
-              type: string
+              type: [ string, 'null' ]
               default: "default"
-              nullable: true
             args:
-              type: array
+              type: [ array, 'null' ]
               items:
                 $ref: '#/components/schemas/RideFunctionCallArg'
-              nullable: true
         id:
-          type: string
+          type: [ string, 'null' ]
           example: "C8AgSFP8y91XUTpGtEQAQyjsSemxoY61ocGM852DFKF6"
-          nullable: true
         fee:
-          type: number
+          type: [ number, 'null' ]
           example: 500000
-          nullable: true
         feeAssetId:
-          type: string
+          type: [ string, 'null' ]
           example: null
-          nullable: true
         sender:
-          type: string
+          type: [ string, 'null' ]
           example: "3Mds6m8XZf4biC72NRkFx2kyoBdC9UvYRUR"
-          nullable: true
         senderPublicKey:
-          type: string
+          type: [ string, 'null' ]
           example: "3T9fL3XpeaHYbumohePPUmeuUqhyEeyzifi9vKouV8QoNtAT6kYV1oPAe9e2KCVquPcyXJpr2QwUiQKEUQPGZnc6"
-          nullable: true
         payment:
           type: array
           items:
@@ -5485,11 +5660,19 @@ components:
               amount:
                 $ref: '#/components/schemas/Amount'
               assetId:
-                allOf:
-                  - $ref: '#/components/schemas/AssetId'
-                nullable: true
+                $ref: '#/components/schemas/WavesOrAssetId'
         state:
           $ref: '#/components/schemas/BlockchainOverrides'
+    CommittedGenerator:
+      type: object
+      required:
+        - publicKey
+        - blsPublicKey
+      properties:
+        publicKey:
+          $ref: '#/components/schemas/PublicKey'
+        blsPublicKey:
+          $ref: '#/components/schemas/BlsPublicKey'
     TransactionSnapshot:
       type: object
       properties:
@@ -5662,6 +5845,54 @@ components:
                   oneOf:
                     - $ref: '#/components/schemas/DataEntry'
                     - $ref: '#/components/schemas/DeleteEntry'
+        nextCommittedGenerators:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommittedGenerator'
+    DebugStateHashes:
+      type: object
+      description: Hashes representing blockchain state at a specific block
+      required:
+        - blockId
+        - wavesBalanceHash
+        - assetsBalanceHash
+        - dataEntryHash
+        - accountScriptHash
+        - assetScriptHash
+        - leaseBalanceHash
+        - leaseStatusHash
+        - sponsorshipHash
+        - aliasHash
+        - stateHash
+      properties:
+        blockId:
+          type: string
+        wavesBalanceHash:
+          type: string
+        assetsBalanceHash:
+          type: string
+        dataEntryHash:
+          type: string
+        accountScriptHash:
+          type: string
+        assetScriptHash:
+          type: string
+        leaseBalanceHash:
+          type: string
+        leaseStatusHash:
+          type: string
+        sponsorshipHash:
+          type: string
+        aliasHash:
+          type: string
+        stateHash:
+          type: string
+        nextCommittedGeneratorsHash:
+          type: string
+          description: Available after deterministic finality feature activation.
+        committedGeneratorBalancesHash:
+          type: string
+          description: Available after deterministic finality feature activation.
 
   responses:
     Height:

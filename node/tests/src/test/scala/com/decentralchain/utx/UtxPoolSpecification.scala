@@ -680,11 +680,9 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val minerBalance  = initialAmount + 0.001.dcc * 2
 
       withDomain(DomainPresets.NG, balances = Seq(AddrWithBalance(blockMiner.toAddress, minerBalance))) { d =>
-        val transfer1 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = initialAmount, fee = 0.001.dcc)
-        val transfer2 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = 0.0004.dcc, fee = 0.001.dcc)
-        d.appendBlock(
-          d.createBlock(Block.NgBlockVersion, Seq.empty, generator = blockMiner)
-        )
+        val transfer1 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = initialAmount, fee = 0.001.waves)
+        val transfer2 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = 0.0004.waves, fee = 0.001.waves)
+        d.appendBlock(d.createBlock(generator = blockMiner, version = Block.NgBlockVersion))
         d.utxPool.addTransaction(transfer1, verify = true)
         d.utxPool.addTransaction(transfer2, verify = true)
 

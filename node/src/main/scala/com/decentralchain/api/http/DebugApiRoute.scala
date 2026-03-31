@@ -9,11 +9,10 @@ import com.decentralchain.database.RocksDBWriter
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.mining.{Miner, MinerDebugInfo}
 import com.decentralchain.network.{PeerDatabase, PeerInfo, *}
-import com.decentralchain.settings.{RestAPISettings, DCCSettings}
+import com.decentralchain.settings.{RestAPISettings, WavesSettings}
 import com.decentralchain.state.diffs.TransactionDiffer
-import com.decentralchain.state.{Blockchain, Height, LeaseBalance, NG, Portfolio, SnapshotBlockchain, TxMeta, StateHash}
+import com.decentralchain.state.{Blockchain, Height, LeaseBalance, NG, SnapshotBlockchain, StateHash, TxMeta}
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.trace.{InvokeScriptTrace, TracedResult}
@@ -330,24 +329,4 @@ object DebugApiRoute {
       case Disabled          => "disabled"
       case Error(err)        => s"error: $err"
     })
-
-  implicit val assetMapWrites: Writes[Map[IssuedAsset, Long]] = Writes { m =>
-    Json.toJson(m.map { case (asset, balance) =>
-      asset.id.toString -> JsNumber(balance)
-    })
-  }
-
-  implicit val portfolioJsonWrites: Writes[Portfolio] = {
-    implicit val assetWrites: Writes[IssuedAsset] = Asset.assetWrites
-    Writes { pf =>
-      JsObject(
-        Map(
-          "balance"           -> JsNumber(pf.balance),
-          "lease"             -> Json.toJson(pf.lease),
-          "assets"            -> Json.toJson(pf.assets),
-          "generationDeposit" -> JsNumber(pf.generationDeposit)
-        )
-      )
-    }
-  }
 }

@@ -4,17 +4,16 @@ import cats.instances.seq.*
 import cats.syntax.either.*
 import cats.syntax.traverse.*
 import com.typesafe.scalalogging.Logger
-import com.decentralchain.account.{Address, PublicKey}
+import com.decentralchain.account.Address
 import com.decentralchain.block.{Block, BlockEndorsement, BlockSnapshot, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
-import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
+import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
 import com.decentralchain.mining.Miner
 import com.decentralchain.network.BlockSnapshotResponse
-import io.decentralchain.protobuf.PBSnapshots
-import com.decentralchain.state
+import com.decentralchain.protobuf.PBSnapshots
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.transaction.*
@@ -82,18 +81,21 @@ package object appender {
   }
 
   private[appender] def appendKeyBlock(
-      blockchainUpdater: BlockchainUpdater & Blockchain,
+      blockchainUpdater: BlockchainUpdater,
       utx: UtxPool,
-      pos: PoSSelector,
+      pos: PoSSelector, // No need to .copy(blockchain = blockchain), because it doesn't depend on committed/conflict endorsers
       time: Time,
       log: Logger,
       verify: Boolean,
       txSignParCheck: Boolean
-  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] =
+  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] = {
+    // The block can reference only one of the latest liquid blocks.
+    // We have to validate the new block against a state by this reference
+    val blockchain = blockchainUpdater.referencedBlockchain(block.header.reference) // Safe to use, see BlockAppender.apply
     for {
-      data <- findBlockAndGetGenerators(blockchainUpdater, block)
+      data <- findBlockAndGetGenerators(blockchain, block)
       (hitSource, balances) <-
-        if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(block, data.parentHeight)
+        if (verify) validateBlock(blockchain, pos, time, data.generatorSet)(block, data.parentHeight)
         else pos.validateGenerationSignature(block).map(_ -> Seq.empty)
       applyResult <-
         metrics.appendBlock
@@ -102,7 +104,7 @@ package object appender {
               .processBlock(
                 block,
                 hitSource,
-                snapshot.map(responseToSnapshot(block, Height(blockchainUpdater.height + 1))),
+                snapshot.map(responseToSnapshot(block, Height(blockchain.height + 1))),
                 balances,
                 challengedHitSource = None,
                 verify,
@@ -124,6 +126,7 @@ package object appender {
             case res => res
           }
     } yield applyResult
+  }
 
   private[appender] def appendExtensionBlock(
       blockchainUpdater: BlockchainUpdater & Blockchain,
@@ -216,16 +219,16 @@ package object appender {
   /** @return
     *   Hit source
     */
-  private def validateBlock(blockchainUpdater: Blockchain, pos: PoSSelector, time: Time, generatorSet: GeneratorSet)(
+  private def validateBlock(blockchain: Blockchain, pos: PoSSelector, time: Time, generatorSet: GeneratorSet)(
       block: Block,
       parentHeight: Height
   ): Either[ValidationError, (ByteStr, GeneratorSet)] =
     for {
-      _ <- Miner.isAllowedForMiningByAccountScript(block.sender.toAddress, blockchainUpdater).leftMap(BlockAppendError(_, block))
-      r <- blockConsensusValidation(blockchainUpdater, pos, time.correctedTime())(block, parentHeight)
-      _ <- validateStateHash(block, blockchainUpdater)
-      _ <- validateChallengedHeader(block, blockchainUpdater)
-      b <- validateFinalizationVoting(block, blockchainUpdater, generatorSet)
+      _ <- Miner.isAllowedForMiningByAccountScript(block.sender.toAddress, blockchain).leftMap(BlockAppendError(_, block))
+      r <- blockConsensusValidation(blockchain, pos, time.correctedTime())(block, parentHeight)
+      _ <- validateStateHash(block, blockchain)
+      _ <- validateChallengedHeader(block, blockchain)
+      b <- validateFinalizationVoting(block, blockchain, generatorSet)
     } yield (r, b)
 
   private def blockConsensusValidation(blockchain: Blockchain, pos: PoSSelector, currentTs: Long)(
@@ -265,7 +268,7 @@ package object appender {
     val balance           = ownBalance + challengedBalance
 
     if (blockchain.isGeneratingBalanceValid(parentHeight, block.header, balance)) Either.right(balance)
-    else if (minerAddress == block.sender.toAddress) Either.left(s"generator's effective balance $balance is less that required for generation")
+    else if (minerAddress == block.sender.toAddress) Either.left(s"generator's effective balance $balance is less than required for generation")
     else Either.right(0L) // Ignore for a regular generator, not a miner
   }
 
@@ -313,6 +316,7 @@ package object appender {
   )(
       conflictingEndorsement: BlockEndorsement
   ): Either[String, Unit] = for {
+    _ <- Either.raiseWhen(commitedGenerators.isEmpty)("No one committed")
     (address, blsPublicKey) <- commitedGenerators
       .lift(conflictingEndorsement.endorserIndex.toInt)
       .toRight(s"Invalid conflicting endorser index ${conflictingEndorsement.endorserIndex}")
@@ -326,7 +330,7 @@ package object appender {
       s"Conflicting endorsement sender $address has insufficient balance"
     }
     _ <- Either.raiseWhen(address == minerAddress)("Conflicting endorsement from miner is not allowed")
-    _ <- Either.raiseWhen(validEndorsements.contains(address))(s"Block contains both conflicting and valid endorsement from $address")
+    _ <- Either.raiseWhen(validEndorsements.contains(address))(s"Block contains both conflicting and valid endorsements from $address")
     _ <- Either.raiseWhen(conflictingEndorsement.finalizedHeight > validFinalizedHeight) {
       s"Finalized height ${conflictingEndorsement.finalizedHeight} is higher than expected $validFinalizedHeight"
     }
@@ -336,12 +340,12 @@ package object appender {
     _ <- Either.raiseWhen(conflictingEndorsement.finalizedId == finalizedBlock.id()) {
       s"Contains expected finalized block: ${conflictingEndorsement.finalizedId}"
     }
-    _ <- Either.raiseUnless(conflictingEndorsement.signatureValid(blsPublicKey))(s"Invalid conflicting endorsement signature from $address")
+    _ <- conflictingEndorsement.signatureValid(blsPublicKey).leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
   } yield ()
 
   def validateFinalizationVoting(block: Block, blockchain: Blockchain, generatorSet: GeneratorSet): Either[ValidationError, GeneratorSet] =
     block.header.finalizationVoting
-      .fold(Right(generatorSet)) { fv =>
+      .fold(generatorSet.asRight[String]) { fv =>
         for {
           _ <- Either.raiseUnless(blockchain.supportsFinalizationVoting(blockchain.height + 1))(
             "Finalization voting is not allowed before Deterministic Finality feature activation"
@@ -367,25 +371,24 @@ package object appender {
             allCommittedGenerators.lift(gi.toInt).toRight(s"Invalid endorser index: $gi, expected < ${allCommittedGenerators.length}")
           }
           _ <- fv.valid.traverse { idx =>
-            Either.raiseUnless(generatorsWithEnoughBalance.contains(idx))(s"Valid endorsement sender $idx has insufficient balance")
+            Either.raiseUnless(generatorsWithEnoughBalance.contains(idx))(s"Valid endorser $idx has insufficient balance or conflicting")
           }
           validEndorserAddresses = validEndorsers.view.map(_._1).toSet
           _ <- Either.raiseWhen(validEndorserAddresses.contains(block.header.generator.toAddress))("Miner can't endorse its own block")
 
           knownConflictGenerators = blockchain.conflictGenerators(blockGenerationPeriod).upTo(blockHeight)
-          _ <- fv.conflict
-            .traverse(
-              validateConflictingEndorsement(
-                blockchain,
-                fv,
-                allCommittedGenerators,
-                knownConflictGenerators,
-                validEndorserAddresses,
-                block.header.generator.toAddress,
-                generatorsWithEnoughBalance,
-                fv.finalizedHeight
-              )
+          _ <- fv.conflict.traverse(
+            validateConflictingEndorsement(
+              blockchain,
+              fv,
+              allCommittedGenerators,
+              knownConflictGenerators,
+              validEndorserAddresses,
+              block.header.generator.toAddress,
+              generatorsWithEnoughBalance,
+              fv.finalizedHeight
             )
+          )
           conflictingEndorsers     = fv.conflict.map(_.endorserIndex).toSet
           nonConflictingGenerators = generatorSet.filterNot(x => conflictingEndorsers.contains(x.index))
           _ <- fv.aggregatedEndorsement match {
@@ -395,14 +398,10 @@ package object appender {
               else
                 for {
                   finalizedBlockId <- blockchain.blockId(fv.finalizedHeight.toInt).toRight(s"Unable to get block ID at height ${fv.finalizedHeight}")
-                  _ <-
-                    if (validEndorsers.isEmpty) Either.unit
-                    else
-                      BlsUtils.verifyAgg(
-                        aggregatedEndorsement.arr,
-                        BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
-                        validEndorsers.view.map(_._2.arr)
-                      )
+                  _ <- aggregatedEndorsement.verifyAgg(
+                    BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
+                    validEndorsers.view.map(_._2)
+                  )
                 } yield ()
           }
         } yield nonConflictingGenerators

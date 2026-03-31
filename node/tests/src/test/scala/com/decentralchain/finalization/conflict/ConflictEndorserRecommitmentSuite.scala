@@ -1,18 +1,14 @@
 package com.decentralchain.finalization.conflict
 
 import com.decentralchain.TestValues
-import com.decentralchain.block.Block
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.state.diffs.ENOUGH_AMT
-import com.decentralchain.state.{Blockchain, GeneratorIndex, Height, Portfolio}
-import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.test.FreeSpec
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
+import com.decentralchain.state.{GeneratorIndex, Height, Portfolio}
+import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.TxHelpers
-import org.scalactic.source.Position
-import org.scalatest.Assertion
 
 class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
   private val validGenerator = TxHelpers.signer(0)
@@ -34,7 +30,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
   "punished and committed to next" in withDomain(defaultSettings, AddrWithBalance.enoughBalances(validGenerator, conflictGenerator)) { d =>
     log.debug(s"Append block 2 with commitments")
     val block2Txs             = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-    val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = block2Txs, generator = validGenerator, strictTime = true)
+    val block2WithCommitments = d.createBlock(block2Txs, generator = validGenerator, strictTime = true)
     d.appender.appendBlock(block2WithCommitments)
 
     val balanceAfter1 = ENOUGH_AMT
@@ -42,8 +38,6 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with votes")
     val block3WithVotes = d.createBlock(
-      version = Block.ProtoBlockVersion,
-      txs = Nil,
       generator = validGenerator,
       strictTime = true,
       finalizationVoting = Some(mkFinalizationVoting().withConflict(conflictGenerator, GeneratorIndex(1), block2WithCommitments.id()))
@@ -52,13 +46,13 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with punishment and commitment")
     val block4Txs             = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(5), x))
-    val block4WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = block4Txs, generator = validGenerator, strictTime = true)
+    val block4WithCommitments = d.createBlock(block4Txs, generator = validGenerator, strictTime = true)
     d.appender.appendBlock(block4WithCommitments)
 
     val balanceAfter4 = ENOUGH_AMT - 2 * TestValues.commitToGenerationFee - DepositInDcclets
 
     log.debug("Append block 5 of new period")
-    d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = validGenerator, strictTime = true))
+    d.appender.appendBlock(d.createBlock(generator = validGenerator, strictTime = true))
 
     withClue(s"checkCommitted: ") {
       d.blockchain.committedGenerators(d.blockchain.currentGenerationPeriod.value).map(_._1) should contain theSameElementsInOrderAs generatorAddrs
@@ -75,7 +69,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
       d.generatorsApi
         .generators(Height(d.blockchain.height))
         .collectFirst { case x if x.address == conflictGeneratorAddr => x.balance }
-        .getOrElse(0L) shouldBe balanceAfter4 - DepositInDcclets
+        .value shouldBe Some(balanceAfter4 - DepositInWavelets)
     }
 
     d.blockchain.balanceSnapshots(conflictGeneratorAddr, from = 2, to = None) should contain theSameElementsInOrderAs Seq(

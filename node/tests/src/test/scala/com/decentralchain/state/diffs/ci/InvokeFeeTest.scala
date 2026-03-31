@@ -89,7 +89,9 @@ class InvokeFeeTest extends PropSpec with WithDomain {
       val sponsorTx = sponsor(asset, Some(FeeUnit), signer(9))
       d.appendBlock(setScript(secondSigner, dApp))
       d.appendBlock(issueTx, sponsorTx)
-      d.appendBlockE(invoke(feeAssetId = asset)) should produce(s"negative dcc balance: ${signer(9).toAddress}, old: 0, new: -$invokeFee")
+      d.appendBlockE(invoke(feeAssetId = asset)) should produce(
+        s"${signer(9).toAddress} -> negative waves balance: before=0, after=-$invokeFee"
+      )
     }
   }
 

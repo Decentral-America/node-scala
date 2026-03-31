@@ -253,17 +253,20 @@ object Keys {
   // Writes only after DeterministicFinality activation
   val finalizedHeight: Key[Option[Height]] = Key(
     FinalizedBlockHeight,
-    Array.emptyByteArray,
-    bytes => Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) },
+    keySuffix = Array.emptyByteArray,
+    readFinalizedHeight,
     _.fold(Array.emptyByteArray)(_.toByteArray)
   )
 
   def finalizedHeightAt(at: Height): Key[Option[Height]] = Key(
     FinalizedBlockHeightAt,
-    h(at),
-    bytes => Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) },
+    keySuffix = h(at),
+    readFinalizedHeight,
     _.fold(Array.emptyByteArray)(_.toByteArray)
   )
+
+  private def readFinalizedHeight(bytes: Array[Byte]): Option[Height] =
+    Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) }
 
   /** Key: Int(committedPeriod.start) ++ Int(commitmentHeight)
     * @note

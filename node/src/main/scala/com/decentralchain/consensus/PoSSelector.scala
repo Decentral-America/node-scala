@@ -1,7 +1,5 @@
 package com.decentralchain.consensus
 
-import scala.concurrent.duration.FiniteDuration
-
 import cats.syntax.either.*
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.{Block, BlockHeader}
@@ -13,7 +11,9 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.Blockchain
 import com.decentralchain.transaction.TxValidationError.GenericError
-import com.decentralchain.utils.{forceStopApplication, BaseTargetReachedMaximum, ScorexLogging}
+import com.decentralchain.utils.{BaseTargetReachedMaximum, ScorexLogging, forceStopApplication}
+
+import scala.concurrent.duration.FiniteDuration
 
 case class PoSSelector(blockchain: Blockchain, maxBaseTarget: Option[Long]) extends ScorexLogging {
   import PoSCalculator.*
@@ -84,6 +84,7 @@ case class PoSSelector(blockchain: Blockchain, maxBaseTarget: Option[Long]) exte
   def validateGenerationSignature(block: Block): Either[ValidationError, ByteStr] = {
     val blockGenSig = block.header.generationSignature
 
+    // TODO: we already checked this
     blockchain.heightOf(block.header.reference).toRight(GenericError(s"Block reference ${block.header.reference} doesn't exist")).flatMap { height =>
       if (vrfActivated(height + 1)) {
         getHitSource(height)

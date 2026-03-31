@@ -1,16 +1,15 @@
 package com.decentralchain.finalization.conflict
 
 import com.decentralchain.TestValues
-import com.decentralchain.block.Block
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.history.Domain
 import com.decentralchain.state.diffs.ENOUGH_AMT
-import com.decentralchain.state.{BalanceSnapshot, Blockchain, GeneratorIndex, Height, Portfolio}
-import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.test.{FreeSpec, NumericExt}
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
+import com.decentralchain.state.{BalanceSnapshot, GeneratorIndex, Height, Portfolio}
+import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.NumericExt
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.TxHelpers
 import org.scalactic.source.Position
 import org.scalatest.Assertion
@@ -87,17 +86,17 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
     override def after5WithNewPeriodCheck                = _ shouldBe (4, after2 - DepositInDcclets)
   }.run()
 
-  "generator balance from API" in new Scenario[Long] { // Collected before applying block
+  "generator balance from API" in new Scenario[Option[Long]] { // Collected before applying block
     override def getData = d =>
       d.generatorsApi
         .generators(Height(d.blockchain.height))
         .collectFirst { case x if x.address == conflictGeneratorAddr => x.balance }
-        .getOrElse(0L)
+        .flatten
 
-    override def after2WithCommitmentsCheck              = _ shouldBe 0
-    override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe 0
-    override def after4WithPunishmentCheck               = _ shouldBe 0
-    override def after5WithNewPeriodCheck                = _ shouldBe 0 // Not committed
+    override def after2WithCommitmentsCheck              = _ shouldBe None
+    override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe Some(0)
+    override def after4WithPunishmentCheck               = _ shouldBe Some(0)
+    override def after5WithNewPeriodCheck                = _ shouldBe None // Not committed
   }.run()
 
   "generating balance" in new Scenario[Long] { // Collected after applying block
@@ -161,14 +160,12 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
 
       log.debug(s"Append block 2 with commitments")
       val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-      val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = validGenerator, strictTime = true)
+      val block2WithCommitments = d.createBlock(txs, generator = validGenerator, strictTime = true)
       d.appender.appendBlock(block2WithCommitments)
       after2WithCommitmentsCheck(data)
 
       log.debug(s"Append block 3 with votes")
       val block3WithVotes = d.createBlock(
-        version = Block.ProtoBlockVersion,
-        txs = Nil,
         generator = validGenerator,
         strictTime = true,
         finalizationVoting = Some(mkFinalizationVoting().withConflict(conflictGenerator, GeneratorIndex(1), block2WithCommitments.id()))
@@ -177,12 +174,12 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
       after3WithNewPeriodAndEndorsementsCheck(data)
 
       log.debug("Append block 4")
-      val block4 = d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = validGenerator, strictTime = true)
+      val block4 = d.createBlock(generator = validGenerator, strictTime = true)
       d.appender.appendBlock(block4)
       after4WithPunishmentCheck(data)
 
       log.debug("Append block 5 of new period, apply punishment")
-      d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = validGenerator, strictTime = true))
+      d.appender.appendBlock(d.createBlock(generator = validGenerator, strictTime = true))
       after5WithNewPeriodCheck(data)
 
       log.debug("Rollback to 4")

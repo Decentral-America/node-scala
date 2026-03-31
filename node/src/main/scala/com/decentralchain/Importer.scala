@@ -37,7 +37,7 @@ import monix.reactive.Observable
 import scopt.OParser
 
 import java.io.*
-import java.net.{MalformedURLException, URI}
+import java.net.URI
 import java.time
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -306,7 +306,7 @@ object Importer extends ScorexLogging {
           if (blockchain.lastBlockId.contains(block.header.reference)) {
             Await.result(appendBlock(block, snapshot).runAsyncLogErr(using appender), Duration.Inf) match {
               case Left(ve) =>
-                log.error(s"Error appending block: $ve")
+                log.error(s"Error appending block ${blockchain.height + 1}: $ve")
                 queue.clear()
                 quit = true
               case _ =>
@@ -330,18 +330,17 @@ object Importer extends ScorexLogging {
           System.in
 
         case _ =>
-          System.setProperty("http.agent", s"decentralchain-node/${Version.VersionString}")
-          try {
-            val url        = URI.create(file).toURL
-            val connection = url.openConnection()
+          System.setProperty("http.agent", s"waves-node/${Version.VersionString}")
+          val uri = new URI(file)
+          if (isRemoteResource(uri)) {
+            val connection = uri.toURL.openConnection()
             if (offset > 0) connection.setRequestProperty("Range", s"bytes=$offset-")
             connection.connect()
             connection.getInputStream
-          } catch {
-            case _: MalformedURLException =>
-              val fs = new FileInputStream(file)
-              if (offset > 0) fs.skip(offset)
-              fs
+          } else {
+            val fs = new FileInputStream(file)
+            if (offset > 0) fs.skip(offset)
+            fs
           }
       }
     }
@@ -360,35 +359,33 @@ object Importer extends ScorexLogging {
     val extensions = initExtensions(settings, blockchainUpdater, scheduler, time, utxPool, rdb)
     checkGenesis(settings, blockchainUpdater, Miner.StrictDisabledMiner)
 
-    val blocksFileOffset =
-      importOptions.format match {
-        case Formats.Binary =>
-          var blocksOffset = 0L
-          rdb.db.iterateOver(KeyTag.BlockInfoAtHeight) { e =>
-            e.getKey match {
-              case Array(_, _, 0, 0, 0, 1) => // Skip genesis
-              case _ =>
-                val meta = com.decentralchain.database.readBlockMeta(e.getValue)
-                blocksOffset += meta.size + 4
-            }
+    val blocksFileOffset = importOptions.format match {
+      case Formats.Binary =>
+        var blocksOffset = 0L
+        rdb.db.iterateOver(KeyTag.BlockInfoAtHeight) { e =>
+          e.getKey match {
+            case Array(_, _, 0, 0, 0, 1) => // Skip genesis
+            case _ =>
+              val meta = com.decentralchain.database.readBlockMeta(e.getValue)
+              blocksOffset += meta.size + 4
           }
-          blocksOffset
-        case _ =>
-          0
-      }
-    val blocksInputStream = new BufferedInputStream(initFileStream(importOptions.blockchainFile, blocksFileOffset), 2 * 1024 * 1024)
-    val snapshotsInputStream =
-      importOptions.snapshotsFile
-        .map { file =>
-          val inputStream = new BufferedInputStream(initFileStream(file, 0), 20 * 1024 * 1024)
-          val sizeBytes   = new Array[Byte](Ints.BYTES)
-          (2 to blockchainUpdater.height).foreach { _ =>
-            ByteStreams.read(inputStream, sizeBytes, 0, 4)
-            val snapshotsSize = Ints.fromByteArray(sizeBytes)
-            ByteStreams.skipFully(inputStream, snapshotsSize)
-          }
-          inputStream
         }
+        blocksOffset
+
+      case _ => 0
+    }
+
+    val blocksInputStream = new BufferedInputStream(initFileStream(importOptions.blockchainFile, blocksFileOffset), 2 * 1024 * 1024)
+    val snapshotsInputStream = importOptions.snapshotsFile.map { file =>
+      val inputStream = new BufferedInputStream(initFileStream(file, 0), 20 * 1024 * 1024)
+      val sizeBytes   = new Array[Byte](Ints.BYTES)
+      (2 to blockchainUpdater.height).foreach { _ =>
+        ByteStreams.read(inputStream, sizeBytes, 0, 4)
+        val snapshotsSize = Ints.fromByteArray(sizeBytes)
+        ByteStreams.skipFully(inputStream, snapshotsSize)
+      }
+      inputStream
+    }
 
     sys.addShutdownHook {
       quit = true
@@ -443,5 +440,10 @@ object Importer extends ScorexLogging {
       scheduler
     )
     Await.result(Kamon.stopModules(), 10.seconds)
+  }
+
+  private def isRemoteResource(uri: URI): Boolean = {
+    val scheme = uri.getScheme
+    scheme != null && scheme != "file"
   }
 }

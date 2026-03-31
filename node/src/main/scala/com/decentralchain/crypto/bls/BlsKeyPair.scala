@@ -10,16 +10,15 @@ sealed trait BlsKeyPair {
   def publicKey: BlsPublicKey
 
   def sign(message: Array[Byte]): BlsSignature
-  def verify(message: Array[Byte], signature: BlsSignature): Boolean = publicKey.verify(message, signature)
 }
 
 object BlsKeyPair {
   def apply(dccPrivateKey: DccPrivateKey): BlsKeyPair = new BlsSeedKeyPair(dccPrivateKey.arr)
 }
 
-private final class BlsSeedKeyPair(private val dccPrivateKey: Array[Byte]) extends BlsKeyPair {
-  private lazy val sk: blst.SecretKey = BlsUtils.mkBlsSecretKey(dccPrivateKey)
-  lazy val publicKey: BlsPublicKey    = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
+private final class BlsSeedKeyPair(private val wavesPrivateKey: Array[Byte]) extends BlsKeyPair {
+  private lazy val sk: blst.SecretKey = BlsUtils.mkSecretKey(wavesPrivateKey)
+  lazy val publicKey: BlsPublicKey    = BlsPublicKey.unchecked(ByteStr(BlsUtils.mkPublicKey(sk)))
 
   def sign(message: Array[Byte]): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message)))
 

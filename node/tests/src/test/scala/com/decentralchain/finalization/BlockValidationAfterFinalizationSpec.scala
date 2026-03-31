@@ -1,15 +1,17 @@
 package com.decentralchain.finalization
 
+import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, FinalizationVoting}
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
-import com.decentralchain.settings.DCCSettings
+import com.decentralchain.settings.WavesSettings
 import com.decentralchain.state.*
-import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.test.{FreeSpec, produce}
-import com.decentralchain.transaction.TxHelpers
+import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.{NumericExt, produce}
+import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 
+// Enough to check appending both blocks and microblocks, because they share the validation code
 class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
   private val defaultSettings = DomainPresets.DeterministicFinality
     .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
@@ -25,7 +27,7 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
       override def continue(d: Domain): Unit = {
         val block3WithVotes = d.createBlock(
           mkFinalizationVoting(valid = Seq(committedGenerator2Idx))
-            .signed(endorsedId = d.lastBlockId, finalizedId = d.blockchain.blockHeader(GenesisBlockHeight.toInt).value.id(), committedGenerator2)
+            .signed(endorsedId = d.lastBlockId, finalizedId = d.genesisBlockId, committedGenerator2)
         )
 
         d.appender.appendBlockWithoutFallback(block3WithVotes) should beRight
@@ -38,7 +40,7 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
       override def continue(d: Domain): Unit = {
         val block3WithVotes = d.createBlock(
           mkFinalizationVoting(finalizedHeight = GenesisBlockHeight.prev)
-            .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), Height(3))
+            .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, Height(3))
         )
 
         d.appender.appendBlockWithoutFallback(block3WithVotes) should produce("Finalized block height is less than 1")
@@ -61,10 +63,42 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
       override def continue(d: Domain): Unit = {
         val block3WithVotes = d.createBlock(
           mkFinalizationVoting(valid = Seq(committedGenerator1Idx))
-            .signed(endorsedId = d.lastBlockId, finalizedId = d.blockchain.blockHeader(GenesisBlockHeight.toInt).value.id(), committedGenerator1)
+            .signed(endorsedId = d.lastBlockId, finalizedId = d.genesisBlockId, committedGenerator1)
         )
 
         d.appender.appendBlockWithoutFallback(block3WithVotes) should produce("Miner can't endorse its own block")
+      }
+    }.run()
+
+    "with endorsement of poor generator" in new BaseTest {
+      override def continue(d: Domain): Unit = {
+        d.appender.appendBlock(
+          d.createBlock(
+            txs = Seq(
+              TxHelpers.transfer(
+                from = committedGenerator2,
+                to = committedGenerator1Addr,
+                amount = d.blockchain.balance(committedGenerator2Addr) - CommitToGenerationTransaction.DepositInWavelets - 2.waves
+              )
+            ),
+            generator = committedGenerator1,
+            strictTime = true
+          )
+        )
+
+        log.debug("Append block 4 with poor generator endorsement")
+        val block4 = d.createBlock(
+          generator = committedGenerator1,
+          strictTime = true,
+          finalizationVoting = Some(
+            mkFinalizationVoting(valid = Seq(committedGenerator2Idx)).signed(
+              endorsedId = d.lastBlockId,
+              finalizedId = d.genesisBlockId,
+              validEndorsers = committedGenerator2
+            )
+          )
+        )
+        d.appender.appendBlockWithoutFallback(block4) should produce(s"Valid endorser $committedGenerator2Idx has insufficient balance")
       }
     }.run()
 
@@ -72,8 +106,8 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
       override def continue(d: Domain): Unit = {
         val block3WithVotes = d.createBlock(
           mkFinalizationVoting()
-            .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), GenesisBlockHeight)
-            .signed(endorsedId = d.lastBlockId, finalizedId = d.blockchain.blockHeader(GenesisBlockHeight.toInt).value.id(), committedGenerator3)
+            .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
+            .signed(endorsedId = d.lastBlockId, finalizedId = d.genesisBlockId, committedGenerator3)
         )
 
         d.appender.appendBlockWithoutFallback(block3WithVotes) should produce(
@@ -104,7 +138,7 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
           mkFinalizationVoting(valid = (1 to 4).map(GeneratorIndex.apply))
             .signed(
               endorsedId = d.lastBlockId,
-              finalizedId = d.blockchain.blockHeader(GenesisBlockHeight.toInt).value.id(),
+              finalizedId = d.genesisBlockId,
               validEndorsers = committedGenerator2,
               committedGenerator3,
               committedGenerator4,
@@ -122,8 +156,8 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
           override def continue(d: Domain): Unit = {
             val block3WithVotes = d.createBlock(
               mkFinalizationVoting(finalizedHeight = GenesisBlockHeight)
-                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), GenesisBlockHeight)
-                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), GenesisBlockHeight)
+                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
+                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
             )
 
             d.appender.appendBlockWithoutFallback(block3WithVotes) should produce("Duplicate conflicting endorser indexes")
@@ -131,20 +165,51 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
         }.run()
 
         "in multiple blocks of one epoch" in new BaseTest {
-          override def settings: DCCSettings = super.settings.configure(_.copy(maxValidEndorsers = 3))
-
           override def continue(d: Domain): Unit = {
             val block3WithVote = d.createBlock(
               mkFinalizationVoting(finalizedHeight = GenesisBlockHeight)
-                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), GenesisBlockHeight)
+                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
             )
             d.appender.appendBlockWithoutFallback(block3WithVote) should beRight
 
             val block4WithVote = d.createBlock(
               mkFinalizationVoting(finalizedHeight = GenesisBlockHeight)
-                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), GenesisBlockHeight)
+                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
             )
             d.appender.appendBlockWithoutFallback(block4WithVote) should produce("Second conflicting endorsement from one generator")
+          }
+        }.run()
+      }
+
+      "and valid from same endorser" - {
+        "in one block" in new BaseTest {
+          override def continue(d: Domain): Unit = {
+            val block3WithVotes = d.createBlock(
+              mkFinalizationVoting(valid = Seq(committedGenerator2Idx), finalizedHeight = GenesisBlockHeight)
+                .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
+                .signed(d.lastBlockId, d.genesisBlockId, committedGenerator2)
+            )
+
+            d.appender.appendBlockWithoutFallback(block3WithVotes) should produce("Block contains both conflicting and valid endorsements")
+          }
+        }.run()
+
+        "in multiple blocks of one epoch" in new BaseTest {
+          override def continue(d: Domain): Unit = {
+            d.appender.appendBlock(
+              d.createBlock(
+                mkFinalizationVoting(finalizedHeight = GenesisBlockHeight)
+                  .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, GenesisBlockHeight)
+              )
+            )
+
+            val block4 = d.createBlock(
+              mkFinalizationVoting(valid = Seq(committedGenerator2Idx), finalizedHeight = GenesisBlockHeight)
+                .signed(d.lastBlockId, d.genesisBlockId, committedGenerator2)
+            )
+
+            d.appender.appendBlockWithoutFallback(block4) should
+              produce(s"Valid endorser $committedGenerator2Idx has insufficient balance or conflicting")
           }
         }.run()
       }
@@ -153,7 +218,7 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
         override def continue(d: Domain): Unit = {
           val block3WithVotes = d.createBlock(
             mkFinalizationVoting(finalizedHeight = GenesisBlockHeight)
-              .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlock.id(), Height(3))
+              .withConflict(committedGenerator2, committedGenerator2Idx, d.lastBlockId, Height(3))
           )
 
           d.appender.appendBlockWithoutFallback(block3WithVotes) should produce("Finalized height 3 is higher than expected 1")
@@ -205,21 +270,18 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
     def run(): Unit = withDomain(settings, AddrWithBalance.enoughBalances(allGenerators*)) { d =>
       log.debug(s"Append block 2 with commitments")
       val txs                   = committedGenerators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-      val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = notCommittedGenerator, strictTime = true)
+      val block2WithCommitments = d.createBlock(txs, generator = notCommittedGenerator, strictTime = true)
       d.appender.appendBlock(block2WithCommitments)
 
-      log.debug(s"Append block 3 with votes")
+      log.debug(s"Append block 3")
       continue(d)
     }
 
     extension (d: Domain) {
-      def createBlock(finalizationVoting: FinalizationVoting): Block = d.createBlock(
-        version = Block.ProtoBlockVersion,
-        txs = Nil,
-        generator = committedGenerator1,
-        strictTime = true,
-        finalizationVoting = Some(finalizationVoting)
-      )
+      def genesisBlockId: BlockId = d.blockchain.blockHeader(GenesisBlockHeight.toInt).value.id()
+
+      def createBlock(finalizationVoting: FinalizationVoting): Block =
+        d.createBlock(generator = committedGenerator1, strictTime = true, finalizationVoting = Some(finalizationVoting))
     }
   }
 }

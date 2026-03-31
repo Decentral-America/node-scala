@@ -1,8 +1,7 @@
 package com.decentralchain.finalization
 
 import com.decentralchain.TestValues
-import com.decentralchain.block.{Block, BlockEndorsement}
-import com.decentralchain.common.state.ByteStr
+import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.consensus.GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2
 import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.db.WithState.AddrWithBalance
@@ -11,8 +10,8 @@ import com.decentralchain.history.Domain
 import com.decentralchain.mining.{Miner, MinerImpl}
 import com.decentralchain.network.EndorseBlock
 import com.decentralchain.state.*
-import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.test.{CatchLogs, FreeSpec, NumericExt, TestSchedulerOps, TestTime}
+import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.{CatchLogs, NumericExt, TestSchedulerOps, TestTime}
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import com.decentralchain.wallet.Wallet
 import io.netty.channel.group.DefaultChannelGroup
@@ -69,7 +68,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         miner = minerImpl
 
         log.debug("Append block2")
-        val block2 = d.createBlock(version = Block.ProtoBlockVersion, txs = Seq.empty, generator = otherNodeAcc, strictTime = true)
+        val block2 = d.createBlock(generator = otherNodeAcc, strictTime = true)
         d.appender.appendBlock(block2)
         d.appendMicroBlock(TxHelpers.commitToGeneration(Height(3), sender = thisNodeAcc))
         d.utxPool.cleanUnconfirmed()
@@ -121,13 +120,11 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
         log.debug("Append block2 with commitments")
         val txs                   = Seq(otherNodeAcc, thisNodeAcc).map(x => TxHelpers.commitToGeneration(Height(3), sender = x))
-        val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = otherNodeAcc, strictTime = true)
+        val block2WithCommitments = d.createBlock(txs, generator = otherNodeAcc, strictTime = true)
         d.appender.appendBlock(block2WithCommitments)
 
         log.debug("Append block3 with conflict")
         val block3WithVotes = d.createBlock(
-          version = Block.ProtoBlockVersion,
-          txs = Nil,
           generator = otherNodeAcc,
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().withConflict(thisNodeAcc, GeneratorIndex(1), block2WithCommitments.id()))
@@ -135,7 +132,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         d.appender.appendBlock(block3WithVotes)
 
         log.debug("Append empty block")
-        d.appender.appendBlock(d.createBlock(Block.ProtoBlockVersion, Seq.empty, generator = otherNodeAcc, strictTime = true))
+        d.appender.appendBlock(d.createBlock(generator = otherNodeAcc, strictTime = true))
         val block5Id = d.lastBlockId
 
         log.debug("Trigger thisNode forging")
@@ -150,12 +147,12 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
   }
 
   "Mining works if not committed, but all generators have no right to mine" - {
-    "block" in withManager { manager =>
+    def test(makeGeneratorSetEmptyF: Domain => Unit): Unit = withManager { manager =>
       val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
       var miner    = Miner.StrictDisabledMiner
       withDomain(
         defaultSettings,
-        AddrWithBalance.enoughBalances(otherNodeAcc, thisNodeAcc),
+        AddrWithBalance.enoughBalances(otherNodeAcc, thisNodeAcc), // Only otherNodeAcc committed
         miner = Miner.forwardTo(miner)
       ) { d =>
         val minerScheduler    = TestScheduler()
@@ -181,16 +178,31 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
         log.debug("Append block2")
         val block2 = d.createBlock(
-          version = Block.ProtoBlockVersion,
           txs = Seq(TxHelpers.commitToGeneration(Height(3), sender = otherNodeAcc)),
           generator = otherNodeAcc,
           strictTime = true
         )
         d.appender.appendBlock(block2)
 
-        log.debug("Append block3 with spending all dcc by miner")
+        log.debug("Spending")
+        makeGeneratorSetEmptyF(d)
+
+        log.debug("Trigger thisNode forging")
+        d.testTime.setTimeIfGreater(d.nextBlockTime(thisNodeAcc))
+        appenderScheduler.tickNext("appender-1")
+        minerScheduler.tickNext("miner-1")
+        appenderScheduler.tickNext("appender-2")
+
+        d.lastBlock.header.generator.toAddress shouldBe thisNodeAcc.toAddress
+      }
+    }
+
+    // There are no tests with conflicting generators, because the miner can't be conflicting, it can only spend all WAVES
+
+    "spending in" - {
+      "block" in test { d =>
+        log.debug("Append block3 with spending all waves by miner")
         val block3 = d.createBlock(
-          version = Block.ProtoBlockVersion,
           txs = Seq(
             TxHelpers.transfer(
               otherNodeAcc,
@@ -203,57 +215,11 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           strictTime = true
         )
         d.appender.appendBlock(block3)
-
-        log.debug("Trigger thisNode forging")
-        d.testTime.setTimeIfGreater(d.nextBlockTime(thisNodeAcc))
-        appenderScheduler.tickNext("appender-1")
-        minerScheduler.tickNext("miner-1")
-        appenderScheduler.tickNext("appender-2")
-
-        d.lastBlock.header.generator.toAddress shouldBe thisNodeAcc.toAddress
       }
-    }
 
-    "microblock" in withManager { manager =>
-      val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
-      var miner    = Miner.StrictDisabledMiner
-      withDomain(
-        defaultSettings,
-        AddrWithBalance.enoughBalances(otherNodeAcc, thisNodeAcc),
-        miner = Miner.forwardTo(miner)
-      ) { d =>
-        val minerScheduler    = TestScheduler()
-        val appenderScheduler = TestScheduler()
-
-        d.wallet.generateNewAccounts(1)
-
-        val minerImpl = new MinerImpl(
-          channels,
-          d.blockchain,
-          d.settings,
-          d.testTime,
-          d.utxPool,
-          BlockEndorser.Disabled,
-          EndorsementStorage.Disabled,
-          d.wallet,
-          d.posSelector,
-          minerScheduler,
-          appenderScheduler,
-          Observable.empty
-        ) with CatchLogs
-        miner = minerImpl
-
-        log.debug("Append block2")
-        val block2 = d.createBlock(
-          version = Block.ProtoBlockVersion,
-          txs = Seq(TxHelpers.commitToGeneration(Height(3), sender = otherNodeAcc)),
-          generator = otherNodeAcc,
-          strictTime = true
-        )
-        d.appender.appendBlock(block2)
-
-        log.debug("Append micro block with spending all dcc by miner")
-        d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = otherNodeAcc, strictTime = true))
+      "microblock" in test { d =>
+        log.debug("Append micro block with spending all waves by miner")
+        d.appender.appendBlock(d.createBlock(generator = otherNodeAcc, strictTime = true))
         d.appendMicroBlock(
           d.createMicroBlock(signer = Some(otherNodeAcc))(
             TxHelpers.transfer(
@@ -264,14 +230,6 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
             )
           )
         )
-
-        log.debug("Trigger thisNode forging")
-        d.testTime.setTimeIfGreater(d.nextBlockTime(thisNodeAcc))
-        appenderScheduler.tickNext("appender-1")
-        minerScheduler.tickNext("miner-1")
-        appenderScheduler.tickNext("appender-2")
-
-        d.lastBlock.header.generator.toAddress shouldBe thisNodeAcc.toAddress
       }
     }
   }
@@ -313,13 +271,11 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
         log.debug("Append block2 with commitments")
         val txs                   = Seq(otherNodeAcc, thisNodeAcc).map(x => TxHelpers.commitToGeneration(Height(3), sender = x))
-        val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = otherNodeAcc, strictTime = true)
+        val block2WithCommitments = d.createBlock(txs, generator = otherNodeAcc, strictTime = true)
         d.appender.appendBlock(block2WithCommitments)
 
         log.debug("Append block3 with conflict")
         val block3WithVotes = d.createBlock(
-          version = Block.ProtoBlockVersion,
-          txs = Nil,
           generator = otherNodeAcc,
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().withConflict(thisNodeAcc, GeneratorIndex(1), block2WithCommitments.id()))
@@ -372,7 +328,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         miner = minerImpl
 
         log.debug("Append block2")
-        val block2 = d.createBlock(version = Block.ProtoBlockVersion, txs = Seq.empty, generator = otherNodeAcc, strictTime = true)
+        val block2 = d.createBlock(generator = otherNodeAcc, strictTime = true)
         d.appender.appendBlock(block2)
         val lastBlockId = d.appendMicroBlock(TxHelpers.commitToGeneration(Height(3), sender = otherNodeAcc))
 
@@ -436,7 +392,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       log.debug(s"Append block 2 with commitments")
       val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-      val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = otherAcc1, strictTime = true)
+      val block2WithCommitments = d.createBlock(txs, generator = otherAcc1, strictTime = true)
       d.appender.appendBlock(block2WithCommitments)
 
       log.debug(s"Trigger forging block 3")
@@ -464,13 +420,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       log.debug("Append block 3 and calculate finalization")
       val block3 =
-        d.createBlock(
-          version = Block.ProtoBlockVersion,
-          txs = Nil,
-          generator = generator2,
-          strictTime = true,
-          ref = Some(d.lastBlockId)
-        )
+        d.createBlock(generator = generator2, strictTime = true, ref = Some(d.lastBlockId))
       d.appender.appendBlock(block3)
       d.finalizedHeightIs(2)
     }
@@ -524,7 +474,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       log.debug(s"Append block 2 with commitments")
       val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
-      val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = generator2, strictTime = true)
+      val block2WithCommitments = d.createBlock(txs, generator = generator2, strictTime = true)
       d.appender.appendBlock(block2WithCommitments)
 
       log.debug(s"Trigger forging block 3")
@@ -584,8 +534,16 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
       minerScheduler.tickNext("miner-4")
       appenderScheduler.tickNext("appender-5")
       val microBlock3TotalId = d.lastBlockId
+      microBlock3TotalId shouldNot be(microBlock2TotalId) // Appended
 
-      microBlock2TotalId shouldNot be(microBlock3TotalId) // Appended
+      log.debug(s"Trigger forging micro block 4 of block 3 without finalization changes")
+      d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))
+      time.advance(defaultSettings.minerSettings.microBlockInterval + 1.millis)
+      minerScheduler.tickNext("miner-5")
+      appenderScheduler.tickNext("appender-6")
+      withClue("appended: ") {
+        d.lastBlockId shouldNot be(microBlock3TotalId)
+      }
     }
   }
 }

@@ -1,13 +1,12 @@
 package com.decentralchain.finalization
 
-import com.decentralchain.block.Block
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
 import com.decentralchain.mining.{Miner, MinerImpl}
 import com.decentralchain.state.*
-import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.test.{CatchLogs, FreeSpec, NumericExt, TestSchedulerOps, TestTime}
+import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.{CatchLogs, NumericExt, TestSchedulerOps, TestTime}
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import com.decentralchain.wallet.Wallet
 import io.netty.channel.group.DefaultChannelGroup
@@ -66,7 +65,6 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
 
       log.debug("Append block2")
       val block2 = d.createBlock(
-        version = Block.ProtoBlockVersion,
         txs = Seq(TxHelpers.commitToGeneration(Height(3), sender = minerAcc)),
         generator = otherNodeNotCommittedAcc1,
         strictTime = true
@@ -152,7 +150,6 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
 
         log.debug("Append block2")
         val block2 = d.createBlock(
-          version = Block.ProtoBlockVersion,
           txs = Seq(minerAcc, otherNodeCommittedAcc1).map(x => TxHelpers.commitToGeneration(Height(3), sender = x)),
           generator = otherNodeCommittedAcc1,
           strictTime = true
@@ -253,7 +250,6 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
 
         log.debug("Append block2")
         val block2 = d.createBlock(
-          version = Block.ProtoBlockVersion,
           txs = Seq(minerAcc, otherNodeCommittedAcc1).map(x => TxHelpers.commitToGeneration(Height(3), sender = x)),
           generator = otherNodeCommittedAcc1,
           strictTime = true

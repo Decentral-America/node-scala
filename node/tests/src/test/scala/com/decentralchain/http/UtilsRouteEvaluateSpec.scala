@@ -601,7 +601,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
                 withClue(s"${Json.prettyPrint(json)}: ") {
                   (json \ "error").asOpt[Int] shouldBe Some(199)
                   withClue("message: ") {
-                    (json \ "message").as[String] should include regex """negative \w+ balance.+ -1"""
+                    (json \ "message").as[String] should include regex """negative \w+ balance.+-1"""
                   }
                 }
               }
@@ -760,7 +760,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
                 withClue(s"${Json.prettyPrint(json)}: ") {
                   (json \ "error").asOpt[Int] shouldBe Some(402)
                   withClue("details: ") {
-                    (json \ "details").toString should include regex """negative \w+ balance.+ -1"""
+                    (json \ "details").toString should include regex """negative \w+ balance.+-1"""
                   }
                 }
               }

@@ -2,28 +2,27 @@ package com.decentralchain.api.grpc.test
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
-import com.decentralchain.api.grpc.{TransactionsApiGrpcImpl}
-import io.decentralchain.api.grpc.{
+import com.decentralchain.api.grpc.{
   ApplicationStatus,
   TransactionResponse,
   TransactionSnapshotResponse,
   TransactionSnapshotsRequest,
+  TransactionsApiGrpcImpl,
   TransactionsRequest
 }
-import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
-import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
-import io.decentralchain.protobuf.{PBSnapshots, toByteString}
+import com.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
+import com.decentralchain.protobuf.{PBSnapshots, toByteString}
 import com.decentralchain.state.diffs.ENOUGH_AMT
-import com.decentralchain.state.{StateSnapshot, TxMeta, Height}
+import com.decentralchain.state.{Height, StateSnapshot, TxMeta}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
@@ -236,7 +235,6 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
       val resenderTxs = Seq(TxHelpers.transfer(resender, recipient.toAddress, 1.dcc), TxHelpers.transfer(resender, recipient.toAddress, 2.dcc))
       val challengedBlockTx = TxHelpers.transfer(challengedMiner, resender.toAddress, 1001.dcc)
       val originalBlock = d.createBlock(
-        Block.ProtoBlockVersion,
         challengedBlockTx +: resenderTxs,
         strictTime = true,
         generator = challengedMiner,

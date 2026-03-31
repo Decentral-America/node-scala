@@ -248,8 +248,8 @@ inScope(Global)(
   )
 )
 
-commands += Command.command("packageAll"){ state =>
-  "buildTarballsForDocker" :: "buildDebPackages" :: state
+commands += Command.command("packageAll") { state =>
+  "node / assembly" :: "ride-runner / assembly" :: "buildDebPackages" :: "buildTarballsForDocker" :: state
 }
 
 lazy val buildTarballsForDocker = taskKey[Unit]("Package node and grpc-server tarballs and copy them to docker/target")
