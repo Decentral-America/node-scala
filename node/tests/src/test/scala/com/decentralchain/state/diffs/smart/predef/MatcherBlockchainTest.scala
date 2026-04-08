@@ -4,7 +4,6 @@ import com.decentralchain.account.{Address, Alias}
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.SignedBlockHeader
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.db.WithDomain
 import com.decentralchain.lang.ValidationError
@@ -16,10 +15,10 @@ import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.*
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.smart.script.ScriptRunner
 import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.{Asset, ERC20Address, Transaction}
+import com.decentralchain.transaction.{Asset, ERC20Address, Transaction, TxHelpers}
 
 class MatcherBlockchainTest extends PropSpec, WithDomain {
   property("ScriptRunner.applyGeneric() avoids Blockchain calls") {
@@ -68,7 +67,17 @@ class MatcherBlockchainTest extends PropSpec, WithDomain {
       override def conflictGenerators(at: GenerationPeriod): ConflictGenerators                             = ???
     }
 
-    val tx = TransferTransaction.selfSigned(1.toByte, accountGen.sample.get, accountGen.sample.get.toAddress, Dcc, 1, Dcc, 1, ByteStr.empty, 0)
+    val tx = TxHelpers.transfer(
+      from = accountGen.sample.get,
+      to = accountGen.sample.get.toAddress,
+      amount = 1,
+      asset = Waves,
+      fee = 1,
+      feeAsset = Waves,
+      attachment = ByteStr.empty,
+      timestamp = 0,
+      version = 1.toByte
+    )
     val scripts =
       Seq(
         TestCompiler(V5).compileExpression("true"),
@@ -92,7 +101,7 @@ class MatcherBlockchainTest extends PropSpec, WithDomain {
     scripts.foreach { script =>
       ScriptRunner
         .applyGeneric(
-          tx.explicitGet(),
+          tx,
           blockchain,
           script,
           isAssetScript = false,

@@ -15,7 +15,7 @@ import com.decentralchain.lang.v1.evaluator.ContractEvaluator.Invocation
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, ScriptExtraFee}
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
 import com.decentralchain.state.{AccountScriptInfo, Blockchain}
-import com.decentralchain.transaction.TransactionType.{InvokeScript, TransactionType}
+import com.decentralchain.transaction.TransactionType.InvokeScript
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.{Asset, TransactionType}

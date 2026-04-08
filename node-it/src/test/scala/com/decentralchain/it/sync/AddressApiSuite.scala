@@ -151,11 +151,7 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
     postResult should contain theSameElementsAs expected
   }
 
+  import NodeConfigs.*
   override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.raw("dcc.rest-api.transactions-by-address-limit = 20"))
-      .withDefault(1)
-      .withSpecial(_.nonMiner)
-      .buildNonConflicting()
+    Seq(BiggestMiner.quorum(0).overrides("waves.rest-api.transactions-by-address-limit = 20"), NotMiner)
 }

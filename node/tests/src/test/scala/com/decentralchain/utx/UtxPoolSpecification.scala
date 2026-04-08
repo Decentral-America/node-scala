@@ -1,7 +1,7 @@
 package com.decentralchain.utx
 
 import cats.data.NonEmptyList
-import com.decentralchain
+import com.wavesplatform
 import com.decentralchain.*
 import com.decentralchain.account.{Address, KeyPair, PublicKey}
 import com.decentralchain.block.{Block, BlockHeader, SignedBlockHeader}
@@ -14,7 +14,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.events.UtxEvent
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain.BlockchainUpdaterExt
-import com.decentralchain.history.{DefaultDCCSettings, randomSig, settingsWithFeatures}
+import com.decentralchain.history.{DefaultWavesSettings, randomSig, settingsWithFeatures}
 import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.script.Script
@@ -28,14 +28,13 @@ import com.decentralchain.state.*
 import com.decentralchain.state.diffs.{invoke as _, *}
 import com.decentralchain.state.utils.TestRocksDB
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxValidationError.{GenericError, SenderIsBlacklisted}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
-import com.decentralchain.transaction.utils.Signed
 import com.decentralchain.transaction.{Transaction, *}
 import com.decentralchain.utils.{EmptyBlockchain, Time}
 import com.decentralchain.utx.UtxPool.PackStrategy
@@ -113,14 +112,12 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       amount    <- chooseNum(1L, (maxAmount * 0.9).toLong)
       recipient <- accountGen
       fee       <- chooseNum(extraFee, (maxAmount * 0.1).toLong)
-    } yield TransferTransaction
-      .selfSigned(1.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, fee, ByteStr.empty, time.getTimestamp())
-      .explicitGet())
+    } yield TxHelpers.transfer(from = sender, to = recipient.toAddress, amount = amount, asset = Waves, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte))
       .label("transferTransaction")
 
   private def invokeScript(sender: KeyPair, dApp: Address, time: Time) =
     Gen.choose(500000L, 600000L).map { fee =>
-      Signed.invokeScript(TxVersion.V1, sender, dApp, None, Seq.empty, fee, Dcc, time.getTimestamp())
+      TxHelpers.invoke(dApp, None, Seq.empty, Seq.empty, sender, fee, Waves, TxVersion.V1, time.getTimestamp())
     }
 
   private def dAppSetScript(sender: KeyPair, time: Time) = {
@@ -133,7 +130,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         |func default() = { WriteSet([DataEntry("0", true)]) }
         |""".stripMargin
     val script = ScriptCompiler.compile(scriptText, ScriptEstimatorV1).explicitGet()._1
-    SetScriptTransaction.selfSigned(TxVersion.V1, sender, Some(script), extraFee, time.getTimestamp()).explicitGet()
+    TxHelpers.setScript(acc = sender, script = script, fee = extraFee, version = TxVersion.V1, timestamp = time.getTimestamp())
   }
 
   private def withState[A](test: (KeyPair, Long, BlockchainUpdaterImpl) => A): A = {
@@ -342,29 +339,23 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
     }
 
   private def transfer(sender: KeyPair, time: Time) =
-    TransferTransaction
-      .selfSigned(1.toByte, sender, TxHelpers.address(2), Dcc, 1, Dcc, extraFee, ByteStr.empty, time.getTimestamp())
-      .explicitGet()
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = 1, asset = Waves, fee = extraFee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte)
 
   private def transferWithRecipient(sender: KeyPair, recipient: PublicKey, time: Time) =
-    TransferTransaction
-      .selfSigned(1.toByte, sender, recipient.toAddress, Dcc, 1, Dcc, extraFee, ByteStr.empty, time.getTimestamp())
-      .explicitGet()
+    TxHelpers.transfer(from = sender, to = recipient.toAddress, amount = 1, asset = Waves, fee = extraFee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte)
 
   private def massTransferWithRecipients(sender: KeyPair, recipients: Seq[PublicKey], maxAmount: Long, time: Time) = {
     val amount    = maxAmount / (recipients.size + 1)
     val transfers = recipients.map(r => ParsedTransfer(r.toAddress, TxNonNegativeAmount.unsafeFrom(amount)))
     val minFee    = FeeValidation.FeeConstants(TransactionType.Transfer) + FeeValidation.FeeConstants(TransactionType.MassTransfer) * transfers.size
-    MassTransferTransaction
-      .selfSigned(1.toByte, sender, Dcc, transfers, minFee, time.getTimestamp(), ByteStr.empty)
-      .explicitGet()
+    TxHelpers.massTransfer(sender, transfers.map(t => (t.address, t.amount.value)), Waves, minFee, time.getTimestamp(), 1.toByte)
   }
 
   private def transactionV1(sender: KeyPair, ts: Long, feeAmount: Long): TransferTransaction =
-    TransferTransaction.selfSigned(1.toByte, sender, TxHelpers.address(2), Dcc, dcc(1), Dcc, feeAmount, ByteStr.empty, ts).explicitGet()
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Waves, fee = feeAmount, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 1.toByte)
 
   private def transactionV2(sender: KeyPair, ts: Long, feeAmount: Long): TransferTransaction =
-    TransferTransaction.selfSigned(2.toByte, sender, TxHelpers.address(2), Dcc, dcc(1), Dcc, feeAmount, ByteStr.empty, ts).explicitGet()
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Waves, fee = feeAmount, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
 
   private def utxTest(utxSettings: UtxSettings, txCount: Int = 10)(f: (Seq[TransferTransaction], UtxPool, TestTime) => Unit): Unit = {
     withState { case (sender, _, bcu) =>
@@ -385,7 +376,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         |true
       """.stripMargin
     )
-    val setScript = SetScriptTransaction.selfSigned(1.toByte, master, Some(script), 100000L, ts + 1).explicitGet()
+    val setScript = TxHelpers.setScript(acc = master, script = script, fee = 100000L, version = 1.toByte, timestamp = ts + 1)
     Seq(TestBlock.create(ts + 1, lastBlockId, Seq(setScript)).block)
   }
 
@@ -618,16 +609,11 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
               txs = Seq(
                 GenesisTransaction.create(richAccount.toAddress, ENOUGH_AMT, ntpNow).explicitGet(),
                 GenesisTransaction.create(randomAccount.toAddress, ENOUGH_AMT, ntpNow).explicitGet(),
-                SetScriptTransaction
-                  .signed(
-                    1.toByte,
-                    richAccount.publicKey,
-                    Some(Script.fromBase64String("AQkAAGcAAAACAHho/EXujJiPAJUhuPXZYac+rt2jYg==").explicitGet()),
+                TxHelpers.setScript(
+                    richAccount,
+                    Script.fromBase64String("AQkAAGcAAAACAHho/EXujJiPAJUhuPXZYac+rt2jYg==").explicitGet(),
                     QuickTX.FeeAmount * 4,
-                    ntpNow,
-                    richAccount.privateKey
                   )
-                  .explicitGet()
               ),
               signer = TestBlock.defaultSigner,
               version = 3,
@@ -1100,12 +1086,8 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
           ts = System.currentTimeMillis()
           fee <- smallFeeGen
           genesis = GenesisTransaction.create(richAcc.toAddress, ENOUGH_AMT, ts).explicitGet()
-          validTransfer = TransferTransaction
-            .selfSigned(TxVersion.V1, richAcc, secondAcc.toAddress, Dcc, 1L, Dcc, fee, ByteStr.empty, ts)
-            .explicitGet()
-          invalidTransfer = TransferTransaction
-            .selfSigned(TxVersion.V1, secondAcc, richAcc.toAddress, Dcc, 2L, Dcc, fee, ByteStr.empty, ts)
-            .explicitGet()
+          validTransfer = TxHelpers.transfer(from = richAcc, to = secondAcc.toAddress, amount = 1L, asset = Waves, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = TxVersion.V1)
+          invalidTransfer = TxHelpers.transfer(from = secondAcc, to = richAcc.toAddress, amount = 2L, asset = Waves, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = TxVersion.V1)
         } yield (genesis, validTransfer, invalidTransfer)
 
         forAll(preconditions) { case (genesis, validTransfer, invalidTransfer) =>

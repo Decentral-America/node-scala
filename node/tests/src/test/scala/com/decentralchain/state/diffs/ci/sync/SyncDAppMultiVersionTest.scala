@@ -9,10 +9,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
-import com.decentralchain.transaction.{GenesisTransaction, TxVersion}
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.smart.SetScriptTransaction
-import com.decentralchain.transaction.utils.Signed
+import com.decentralchain.transaction.{GenesisTransaction, TxHelpers, TxVersion}
 
 class SyncDAppMultiVersionTest extends PropSpec with WithDomain {
   import DomainPresets.*
@@ -48,9 +45,9 @@ class SyncDAppMultiVersionTest extends PropSpec with WithDomain {
       gTx1     = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
       gTx2     = GenesisTransaction.create(dApp1.toAddress, ENOUGH_AMT, ts).explicitGet()
       gTx3     = GenesisTransaction.create(dApp2.toAddress, ENOUGH_AMT, ts).explicitGet()
-      ssTx1    = SetScriptTransaction.selfSigned(1.toByte, dApp1, Some(dApp1Script(version1, dApp2.toAddress)), fee, ts).explicitGet()
-      ssTx2    = SetScriptTransaction.selfSigned(1.toByte, dApp2, Some(dApp2Script(version2)), fee, ts).explicitGet()
-      invokeTx = Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Dcc, ts)
+      ssTx1    = TxHelpers.setScript(dApp1, dApp1Script(version1, dApp2.toAddress), fee, 1.toByte)
+      ssTx2    = TxHelpers.setScript(dApp2, dApp2Script(version2), fee, 1.toByte)
+      invokeTx = TxHelpers.invoke(dApp1.toAddress, invoker = invoker, fee = fee, version = TxVersion.V3, timestamp = ts)
     } yield (Seq(gTx1, gTx2, gTx3, ssTx1, ssTx2), invokeTx)
 
   property("sync call can be performed between V5 and V6 dApps") {

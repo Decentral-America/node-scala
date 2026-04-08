@@ -22,7 +22,38 @@ jobs:
       attestations: write
       id-token: write
     secrets:
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+  push-private-node-image:
+    name: Publish Private Node to Docker Hub
+    environment: Docker Hub
+    needs: publish-node-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - id: meta-private
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: wavesplatform/waves-private-node
+          flavor: latest=false
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
+      - uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        with:
+          platforms: linux/amd64,linux/arm64
+          context: ./docker/private
+          push: ${{ github.event_name == 'release' }}
+          pull: true
+          tags: ${{ steps.meta-private.outputs.tags }}
+          build-args: |
+            baseImage=wavesplatform/wavesnode@${{ needs.publish-node-image.outputs.digest }}
 
   publish-ride-runner-image:
     name: Publish RIDE Runner to Docker Hub
@@ -33,28 +64,28 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1.1.22
       - run: sbt --batch 'buildRIDERunnerForDocker'
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: meta-ride-runner
-        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ghcr.io/decentral-america/ride-runner
           flavor: latest=false
           tags: |
             type=match,pattern=v(.*),group=1
             type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
-      - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
+      - uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: ./ride-runner/docker
           push: ${{ github.event_name == 'release' }}
@@ -68,7 +99,7 @@ jobs:
     timeout-minutes: 45
     if: github.event_name == 'release'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: sbt-version
         run: |
           set -euo pipefail
@@ -82,14 +113,14 @@ jobs:
           set -euo pipefail
           echo "::error::Release version $RELEASE_VERSION does not match SBT version $SBT_VERSION"
           exit 1
-      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+          gpg-private-key: ${{ secrets.OSSRH_GPG_KEY }}
+          gpg-passphrase: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
+      - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1.1.22
       - name: Publish release jars
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

@@ -1,11 +1,11 @@
 package com.decentralchain.it.sync
 
 import com.decentralchain.account.KeyPair
-import com.decentralchain.transaction.DataTransaction
-import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}
+import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
+import com.decentralchain.transaction.{DataTransaction, TxHelpers}
 import com.decentralchain.utils.Time
 import play.api.libs.json.JsObject
-import com.decentralchain.common.utils.EitherExt2.*
 
 package object smartcontract {
   val invokeScrTxSupportedVersions: List[Byte] = List(1, 2)
@@ -126,20 +126,18 @@ package object smartcontract {
     val buyMatcherFee  = (BigInt(orderFee) * amount / buy.amount.value).toLong
     val sellMatcherFee = (BigInt(orderFee) * amount / sell.amount.value).toLong
 
-    val tx = ExchangeTransaction
-      .signed(
-        2.toByte,
-        matcher = matcher.privateKey,
+    val tx = TxHelpers
+      .exchange(
+        version = 2.toByte,
+        matcher = matcher,
         order1 = buy,
         order2 = sell,
         amount = amount,
         price = sellPrice,
         buyMatcherFee = buyMatcherFee,
         sellMatcherFee = sellMatcherFee,
-        fee = matcherFee,
-        timestamp = time.correctedTime()
+        fee = matcherFee
       )
-      .explicitGet()
       .json()
 
     tx

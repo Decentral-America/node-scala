@@ -12,8 +12,8 @@ import com.decentralchain.lang.v1.compiler.ExpressionCompiler
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.StateSyntheticBenchmark.*
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.Transaction
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.{Proofs, Transaction}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.*
 import org.openjdk.jmh.annotations.*
@@ -43,7 +43,7 @@ object StateSyntheticBenchmark {
       for {
         amount    <- Gen.choose(1L, dcc(1))
         recipient <- accountGen
-      } yield TransferTransaction.selfSigned(1.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, 100000, ByteStr.empty, ts).explicitGet()
+      } yield TransferTransaction.create(1.toByte, sender.publicKey, recipient.toAddress, Waves, amount, Waves, 100000, ByteStr.empty, ts, Proofs.empty).map(_.signWith(sender.privateKey)).explicitGet()
   }
 
   @State(Scope.Benchmark)
@@ -58,7 +58,8 @@ object StateSyntheticBenchmark {
         recipient: KeyPair <- accountGen
         amount             <- Gen.choose(1L, dcc(1))
       } yield TransferTransaction
-        .selfSigned(2.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, 1000000, ByteStr.empty, ts)
+        .create(2.toByte, sender.publicKey, recipient.toAddress, Waves, amount, Waves, 1000000, ByteStr.empty, ts, Proofs.empty)
+        .map(_.signWith(sender.privateKey))
         .explicitGet()
 
     @Setup
@@ -72,7 +73,8 @@ object StateSyntheticBenchmark {
       val setScriptBlock = nextBlock(
         Seq(
           SetScriptTransaction
-            .selfSigned(1.toByte, richAccount, Some(ExprScript(typedScript).explicitGet()), 1000000, System.currentTimeMillis())
+            .create(1.toByte, richAccount.publicKey, Some(ExprScript(typedScript).explicitGet()), 1000000, System.currentTimeMillis(), Proofs.empty)
+            .map(_.signWith(richAccount.privateKey))
             .explicitGet()
         )
       )

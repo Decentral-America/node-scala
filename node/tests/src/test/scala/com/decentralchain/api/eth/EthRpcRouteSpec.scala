@@ -4,7 +4,7 @@ import com.decentralchain.api.http.eth.EthRpcRoute
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.features.BlockchainFeatures
-import com.decentralchain.history.{DefaultDCCSettings, Domain, settingsWithFeatures}
+import com.decentralchain.history.{DefaultWavesSettings, Domain, settingsWithFeatures}
 import com.decentralchain.http.RouteSpec
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
@@ -14,8 +14,7 @@ import com.decentralchain.test.node.{randomAddress, randomKeyPair}
 import com.decentralchain.transaction.TxHelpers.issue
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.utils.EthConverters.*
-import com.decentralchain.transaction.utils.Signed
-import com.decentralchain.transaction.{Asset, EthTxGenerator, GenesisTransaction, TxHelpers}
+import com.decentralchain.transaction.{Asset, EthTxGenerator, GenesisTransaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.EthEncoding.toHexString
 import com.decentralchain.utils.{EthEncoding, EthHelpers}
 import play.api.libs.json.*
@@ -69,23 +68,23 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
     ) { d =>
       val testKP = randomKeyPair()
       d.appendBlock(
-        GenesisTransaction.create(testKP.toAddress, 1.dcc, ntpTime.getTimestamp()).explicitGet(),
-        Signed.setScript(
-          2.toByte,
+        GenesisTransaction.create(testKP.toAddress, 1.waves, ntpTime.getTimestamp()).explicitGet(),
+        TxHelpers.setScript(
           testKP,
-          Some(TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 4 #-}
-                                                  |{-# CONTENT_TYPE DAPP #-}
-                                                  |{-# SCRIPT_TYPE ACCOUNT #-}
-                                                  |
-                                                  |@Callable(inv)
-                                                  |func foo() = {
-                                                  |  [
-                                                  |    BinaryEntry("leaseId", base64'AAA')
-                                                  |  ]
-                                                  |}
-                                                  |""".stripMargin)),
-          0.01.dcc,
-          ntpTime.getTimestamp()
+          TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 4 #-}
+                                             |{-# CONTENT_TYPE DAPP #-}
+                                             |{-# SCRIPT_TYPE ACCOUNT #-}
+                                             |
+                                             |@Callable(inv)
+                                             |func foo() = {
+                                             |  [
+                                             |    BinaryEntry("leaseId", base64'AAA')
+                                             |  ]
+                                             |}
+                                             |""".stripMargin),
+          0.01.waves,
+          version = TxVersion.V2,
+          timestamp = ntpTime.getTimestamp()
         )
       )
       routeTest(d, "eth_getCode", testKP.toAddress.toEthAddress)(result shouldBe "0xff")
@@ -110,7 +109,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   "eth_call" - {
     "asset calls" in withDomain() { d =>
       val randomKP         = randomKeyPair()
-      val issueTransaction = Signed.issue(2.toByte, randomKP, "TEST", "test asset", 100000, 2, false, None, 1.dcc, ntpTime.getTimestamp())
+      val issueTransaction = TxHelpers.issue(randomKP, 100000, 2, "TEST", "test asset", 1.waves, None, false, ntpTime.getTimestamp(), TxVersion.V2)
 
       d.appendBlock(
         GenesisTransaction.create(randomKP.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet(),
@@ -225,31 +224,31 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   ) { d =>
     val randomKP = randomKeyPair()
     val invoker  = randomKeyPair()
-    val issue1   = Signed.issue(2.toByte, randomKP, "TEST1", "test asset", 100000, 2, true, None, 1.dcc, ntpTime.getTimestamp())
-    val issue2   = Signed.issue(2.toByte, randomKP, "NFT1", "test asset", 1, 0, false, None, 0.001.dcc, ntpTime.getTimestamp())
+    val issue1   = TxHelpers.issue(randomKP,100000, 2,  "TEST1", "test asset", 1.waves, None, true, version = 2.toByte)
+    val issue2   = TxHelpers.issue(randomKP,1, 0,  "NFT1", "test asset",  0.001.waves, None, false, version = 2.toByte)
 
     d.appendBlock(
       GenesisTransaction.create(randomKP.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet(),
       GenesisTransaction.create(invoker.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet()
     )
 
-    val invoke = Signed.invokeScript(
-      2.toByte,
-      invoker,
+    val invoke = TxHelpers.invoke(
       randomKP.toAddress,
       None,
-      Seq(InvokeScriptTransaction.Payment(1.dcc, Asset.Dcc)),
-      1.005.dcc,
-      Asset.Dcc,
+      Seq.empty,
+      Seq(InvokeScriptTransaction.Payment(1.waves, Asset.Waves)),
+      invoker,
+      1.005.waves,
+      Asset.Waves,
+      2.toByte,
       ntpTime.getTimestamp()
     )
     d.appendBlock(
       issue1,
       issue2,
-      Signed.setScript(
-        2.toByte,
+      TxHelpers.setScript(
         randomKP,
-        Some(TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 4 #-}
+        TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 4 #-}
                                                 |{-# CONTENT_TYPE DAPP #-}
                                                 |{-# SCRIPT_TYPE ACCOUNT #-}
                                                 |
@@ -261,9 +260,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
                                                 |    BinaryEntry("assetId", calculateAssetId(issue))
                                                 |  ]
                                                 |}
-                                                |""".stripMargin)),
-        0.01.dcc,
-        ntpTime.getTimestamp()
+                                                |""".stripMargin),
+        0.01.waves,
+        timestamp = ntpTime.getTimestamp()
       ),
       invoke
     )
@@ -326,10 +325,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   }
 
   "absence of id" in withDomain() { d =>
-    val expectedChainId = s"0x${d.settings.blockchainSettings.addressSchemeCharacter.toInt.toHexString}"
     Post(routePath(""), Json.obj("method" -> "eth_chainId"))
       .~>(new EthRpcRoute(d.blockchain, d.commonApi.transactions, ntpTime).route)
-      .~>(check { responseAs[JsObject] shouldBe Json.obj("id" -> null, "jsonrpc" -> "2.0", "result" -> expectedChainId) })
+      .~>(check { responseAs[JsObject] shouldBe Json.obj("id" -> null, "jsonrpc" -> "2.0", "result" -> "0x54") })
   }
 
   "absence of method" in withDomain() { d =>

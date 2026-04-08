@@ -15,9 +15,8 @@ import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.state.diffs.{ENOUGH_AMT, FeeValidation}
 import com.decentralchain.state.{AssetInfo, AssetStaticInfo, AssetVolumeInfo, BinaryDataEntry, BooleanDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.assets.{IssueTransaction, SponsorFeeTransaction}
-import com.decentralchain.transaction.smart.{InvokeExpressionTransaction, SetScriptTransaction}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.smart.InvokeExpressionTransaction
 import com.decentralchain.transaction.{GenesisTransaction, Transaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.JsonMatchers
 import org.scalatest.{Assertion, EitherValues}
@@ -107,9 +106,7 @@ class InvokeExpressionTest extends PropSpec with ScalaCheckPropertyChecks with W
     val freeCall = TestCompiler(V6).compileFreeCall(s"""strict test = invoke(Address(base58'${dAppAccount.toAddress}'), "test", [], [])
                                                        |if (test == 123) then [] else throw("err")""".stripMargin)
 
-    val invoke = InvokeExpressionTransaction
-      .selfSigned(TxVersion.V1, TxHelpers.defaultSigner, freeCall, 1000000L, Dcc, System.currentTimeMillis())
-      .explicitGet()
+    val invoke = TxHelpers.invokeExpression(freeCall, TxHelpers.defaultSigner, 1000000L)
     withDomain(ContinuationTransaction) { d =>
       d.helpers.creditDccToDefaultSigner()
       d.helpers.creditDccFromDefaultSigner(dAppAccount.toAddress)
@@ -409,16 +406,15 @@ private object InvokeExpressionTest {
     val fee      = ciFee(freeCall = enoughFee, nonNftIssue = if (issue) 1 else 0, sc = if (bigVerifier) 1 else 0).sample.get
 
     val genesis     = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, TxHelpers.timestamp).explicitGet()
-    val setVerifier = SetScriptTransaction.selfSigned(TxVersion.V2, invoker, verifier, fee, TxHelpers.timestamp).explicitGet()
+    val setVerifier = verifier.fold(TxHelpers.removeScript(invoker, fee, TxVersion.V2)) { s => TxHelpers.setScript(invoker, s, fee, TxVersion.V2) }
 
-    val sponsorIssueTx =
-      IssueTransaction.selfSigned(TxVersion.V2, invoker, "name", "", 1000, 1, true, None, 1.dcc, TxHelpers.timestamp).explicitGet()
-    val sponsorAsset = IssuedAsset(sponsorIssueTx.id.value())
-    val sponsorTx    = SponsorFeeTransaction.selfSigned(TxVersion.V2, invoker, sponsorAsset, Some(1000L), fee, TxHelpers.timestamp).explicitGet()
-    val feeAsset     = if (sponsor) sponsorAsset else Dcc
+    val sponsorIssueTx = TxHelpers.issue(invoker, 1000, 1, "name", "", 1.waves, None, true, TxVersion.V2)
+    val sponsorAsset   = IssuedAsset(sponsorIssueTx.id.value())
+    val sponsorTx      = TxHelpers.sponsor(sponsorAsset, Some(1000L), invoker, fee, TxVersion.V2)
+    val feeAsset       = if (sponsor) sponsorAsset else Waves
 
     val call   = makeExpression(invoker, fee, issue, transfersCount, receiver.toAddress, sigVerifyCount, raiseError)
-    val invoke = InvokeExpressionTransaction.selfSigned(version, invoker, call, fee, feeAsset, TxHelpers.timestamp).explicitGet()
+    val invoke = TxHelpers.invokeExpression(call, invoker, fee, feeAsset, version)
 
     (Seq(genesis, sponsorIssueTx, sponsorTx, setVerifier), invoke)
   }

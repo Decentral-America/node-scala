@@ -1,5 +1,6 @@
 package com.decentralchain.it.account.storage
 
+import com.typesafe.config.Config
 import com.decentralchain.account.KeyPair
 import com.decentralchain.api.http.ApiError.ScriptExecutionError
 import com.decentralchain.common.state.ByteStr
@@ -12,11 +13,13 @@ import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import java.util.concurrent.ThreadLocalRandom
 
 case class WriteEntry(ct: String, t: String, v: Any, k: String = "somekey")
 
 class RemoveEntrySuite extends BaseFreeSpec {
+
+  import com.decentralchain.it.NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(Miners(5).quorum(0))
 
   private val stringTestData  = WriteEntry("String", "String", "somevalue")
   private val integerTestData = WriteEntry("Integer", "Int", 1)
@@ -57,7 +60,7 @@ class RemoveEntrySuite extends BaseFreeSpec {
 
       invokeScript(keyPair, s"write${data.ct}", data.k, data.v.toString)
 
-      nodes.waitForHeightArise() // NOTE: Height wait needed for state consistency (NODE-2099 upstream ticket)
+      nodes.waitForHeightArise() // TODO: delete this line after NODE-2099 will be done
 
       val address = keyPair.toAddress.toString
       miner.getData(address) should have size 1

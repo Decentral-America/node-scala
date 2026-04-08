@@ -1,6 +1,5 @@
 package com.decentralchain.api.http.requests
 
-import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order}
@@ -16,13 +15,12 @@ case class ExchangeRequest(
     sellMatcherFee: Long,
     version: Option[TxVersion] = None,
     sender: Option[String] = None,
-    senderPublicKey: Option[String] = None,
     fee: Option[Long] = None,
     timestamp: Option[TxTimestamp] = None,
     signature: Option[ByteStr] = None,
     proofs: Option[Proofs] = None
 ) extends TxBroadcastRequest[ExchangeTransaction] {
-  def toTxFrom(sender: PublicKey): Either[ValidationError, ExchangeTransaction] =
+  def toTx: Either[ValidationError, ExchangeTransaction] =
     for {
       validProofs <- toProofs(signature, proofs)
       tx <- ExchangeTransaction.create(
@@ -41,5 +39,5 @@ case class ExchangeRequest(
 }
 
 object ExchangeRequest {
-  implicit val jsonFormat: Format[ExchangeRequest] = Json.format
+  given Format[ExchangeRequest] = Json.format
 }

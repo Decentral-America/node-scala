@@ -9,7 +9,7 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.Sponsorship
 import com.decentralchain.test.*
-import com.decentralchain.transaction.smart.SetScriptTransaction
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
 class SponsorFeeActionSuite extends BaseFreeSpec {
@@ -468,9 +468,8 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
     nodes.waitForTransaction(
       miner
         .signedBroadcast(
-          SetScriptTransaction
-            .selfSigned(1.toByte, address, Some(compiledScript), setScriptFee, System.currentTimeMillis())
-            .explicitGet()
+          TxHelpers
+            .setScript(address, compiledScript, setScriptFee, timestamp = System.currentTimeMillis())
             .json()
         )
         .id

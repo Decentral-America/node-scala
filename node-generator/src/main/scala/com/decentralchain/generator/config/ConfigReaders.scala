@@ -6,7 +6,6 @@ import com.decentralchain.generator.Worker
 import com.decentralchain.settings.*
 import com.decentralchain.state.DataEntry
 import com.decentralchain.transaction.TransactionType
-import com.decentralchain.transaction.TransactionType.TransactionType
 import play.api.libs.json.*
 import pureconfig.*
 import pureconfig.error.ThrowableFailure
@@ -18,7 +17,7 @@ trait ConfigReaders {
 
   given ConfigReader[Map[TransactionType, Double]] = {
     val converter                              = CaseFormat.LOWER_HYPHEN.converterTo(CaseFormat.UPPER_CAMEL)
-    def toTxType(key: String): TransactionType = TransactionType.withName(converter.convert(key).replace("Transaction", ""))
+    def toTxType(key: String): TransactionType = TransactionType.valueOf(converter.convert(key).replace("Transaction", ""))
 
     CollectionReaders.mapReader[Double].map { xs =>
       xs.map { case (k, v) =>

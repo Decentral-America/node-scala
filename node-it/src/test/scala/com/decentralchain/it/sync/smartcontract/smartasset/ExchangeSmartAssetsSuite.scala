@@ -6,14 +6,14 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
-import com.decentralchain.it.sync.smartcontract.{cryptoContextScript, pureContextScript, dccContextScript, *}
+import com.decentralchain.it.sync.smartcontract.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.DataTransaction
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
+import com.decentralchain.transaction.{DataTransaction, TxHelpers}
 import org.scalatest.CancelAfterFailure
 
 class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFailure with NTPTime {
@@ -34,7 +34,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
     val entry3 = BinaryDataEntry("blob", ByteStr.decodeBase64("YWxpY2U=").get)
     val entry4 = StringDataEntry("str", "test")
 
-    dtx = DataTransaction.selfSigned(1.toByte, acc0, List(entry1, entry2, entry3, entry4), minFee, ntpTime.correctedTime()).explicitGet()
+    dtx = TxHelpers.data(acc0, List(entry1, entry2, entry3, entry4), minFee)
     sender.signedBroadcast(dtx.json(), waitForTx = true)
   }
 
@@ -181,7 +181,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
     val script1 = Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + cryptoContextScript(false), estimator).explicitGet()._1.bytes().base64)
     val script2 = Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + pureContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
     val script3 =
-      Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + dccContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
+      Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + wavesContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
 
     List(script1, script2, script3)
       .map { i =>

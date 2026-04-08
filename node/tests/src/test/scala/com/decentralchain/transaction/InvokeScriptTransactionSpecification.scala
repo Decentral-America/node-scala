@@ -2,7 +2,7 @@ package com.decentralchain.transaction
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.*
-import com.decentralchain.api.http.requests.{InvokeScriptRequest, SignedInvokeScriptRequest}
+import com.decentralchain.api.http.requests.InvokeScriptRequest
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
@@ -12,16 +12,15 @@ import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BIGINT, CONST_BYTES
 import com.decentralchain.lang.v1.compiler.Types.CASETYPEREF
 import com.decentralchain.lang.v1.serialization.SerdeV1
 import com.decentralchain.lang.v1.{ContractLimits, FunctionHeader}
-import io.decentralchain.protobuf.transaction.*
-import io.decentralchain.protobuf.{Amount, transaction}
+import com.decentralchain.protobuf.transaction.*
+import com.decentralchain.protobuf.{Amount, transaction}
 import com.decentralchain.serialization.Deser
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.TxValidationError.NonPositiveAmount
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, Verifier}
-import com.decentralchain.transaction.utils.Signed
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 
 class InvokeScriptTransactionSpecification extends PropSpec {
@@ -146,9 +145,10 @@ class InvokeScriptTransactionSpecification extends PropSpec {
                         }
     """)
 
-    val tx = Signed.invokeScript(
+    val sender = KeyPair("test3".getBytes("UTF-8"))
+    val tx = InvokeScriptTransaction(
       1.toByte,
-      KeyPair("test3".getBytes("UTF-8")),
+      sender.publicKey,
       dApp,
       Some(
         Terms.FUNCTION_CALL(
@@ -157,13 +157,15 @@ class InvokeScriptTransactionSpecification extends PropSpec {
         )
       ),
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58(publicKey).get))),
-      100000,
-      Dcc,
-      1526910778245L
-    )
+      TxPositiveAmount.unsafeFrom(100000),
+      Waves,
+      1526910778245L,
+      Proofs.empty,
+      dApp.chainId
+    ).signWith(sender.privateKey)
 
     (tx.json() - "proofs") shouldEqual (js.asInstanceOf[JsObject] - "proofs")
-    TransactionFactory.fromSignedRequest(js) shouldBe Right(tx)
+    TransactionFactory.parseRequest(js.as[JsObject]) shouldBe Right(tx)
   }
 
   property("JSON format validation for InvokeScriptTransaction without FUNCTION_CALL") {
@@ -184,28 +186,31 @@ class InvokeScriptTransactionSpecification extends PropSpec {
                             "assetId" : "$publicKey"
                             }]
                         }
-    """)
+    """).as[JsObject]
 
-    val tx = Signed.invokeScript(
+    val sender2 = KeyPair("test3".getBytes("UTF-8"))
+    val tx = InvokeScriptTransaction(
       1.toByte,
-      KeyPair("test3".getBytes("UTF-8")),
+      sender2.publicKey,
       dApp,
       None,
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58(publicKey).get))),
-      100000,
-      Dcc,
-      1526910778245L
-    )
+      TxPositiveAmount.unsafeFrom(100000),
+      Waves,
+      1526910778245L,
+      Proofs.empty,
+      dApp.chainId
+    ).signWith(sender2.privateKey)
 
-    (tx.json() - "proofs") shouldEqual (js.asInstanceOf[JsObject] - "proofs" +
+    (tx.json() - "proofs") shouldEqual (js - "proofs" +
       ("call" -> JsObject(Map("function" -> JsString("default"), "args" -> JsArray()))))
-    TransactionFactory.fromSignedRequest(js) shouldBe Right(tx)
+    TransactionFactory.parseRequest(js) shouldBe Right(tx)
   }
 
   property("Signed InvokeScriptTransactionRequest parser") {
-    val req = SignedInvokeScriptRequest(
+    val req = InvokeScriptRequest(
       None,
-      Some(1.toByte),
+      1.toByte,
       senderPublicKey = publicKey,
       fee = 1,
       feeAssetId = None,
@@ -314,9 +319,9 @@ class InvokeScriptTransactionSpecification extends PropSpec {
   }
 
   property("can't have zero amount") {
-    val req = SignedInvokeScriptRequest(
+    val req = InvokeScriptRequest(
       None,
-      Some(1.toByte),
+      1.toByte,
       senderPublicKey = publicKey,
       fee = 1,
       feeAssetId = None,
@@ -336,9 +341,9 @@ class InvokeScriptTransactionSpecification extends PropSpec {
   }
 
   property("can't have negative amount") {
-    val req = SignedInvokeScriptRequest(
+    val req = InvokeScriptRequest(
       None,
-      Some(1.toByte),
+      1.toByte,
       senderPublicKey = publicKey,
       fee = 1,
       feeAssetId = None,

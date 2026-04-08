@@ -3,7 +3,6 @@ package com.decentralchain.transaction.smart
 import java.io.BufferedWriter
 import java.nio.file.{Files, Path, Paths}
 import java.util.concurrent.TimeUnit
-
 import cats.Id
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
@@ -12,9 +11,9 @@ import com.decentralchain.lang.directives.values.V4
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, EVALUATED}
 import com.decentralchain.lang.v1.evaluator.Log
-import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Bindings
+import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Bindings
 import com.decentralchain.state.BinaryDataEntry
-import com.decentralchain.transaction.DataTransaction
+import com.decentralchain.transaction.{DataTransaction, TxHelpers}
 import com.decentralchain.transaction.smart.VerifierLoggerBenchmark.BigLog
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
@@ -42,15 +41,8 @@ object VerifierLoggerBenchmark {
     val resultFile: Path       = Paths.get("log.txt")
     val writer: BufferedWriter = Files.newBufferedWriter(resultFile)
 
-    private val dataTx: DataTransaction = DataTransaction
-      .selfSigned(
-        1.toByte,
-        KeyPair(Array[Byte]()),
-        (1 to 4).map(i => BinaryDataEntry(s"data$i", ByteStr(Array.fill(1024 * 30)(1)))).toList,
-        100000000,
-        0
-      )
-      .explicitGet()
+    private val dataTx: DataTransaction =
+      TxHelpers.data(KeyPair(Array[Byte]()), (1 to 4).map(i => BinaryDataEntry(s"data$i", ByteStr(Array.fill(1024 * 30)(1)))).toList, 100000000, 0)
 
     private val dataTxObj: Terms.CaseObj = Bindings.transactionObject(
       RealTransactionWrapper(dataTx, ???, ???, ???).explicitGet(),

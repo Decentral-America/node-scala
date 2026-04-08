@@ -1,43 +1,31 @@
 package com.decentralchain.it.sync.transactions
 
 import com.typesafe.config.Config
+import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.{BlockchainFeatureStatus, BlockchainFeatures}
-import com.decentralchain.it.NodeConfigs
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.{issueFee, scriptBase64, setAssetScriptFee, someAssetAmount}
-import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.it.{BaseFunSuite, NodeConfigs}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
-class SetAssetScriptTxFeatureSuite extends BaseTransactionSuite {
+class SetAssetScriptTxFeatureSuite extends BaseFunSuite {
 
-  private val featureActivationHeight = Height(8)
+  private val featureActivationHeight = Height(11)
 
   private var assetId = ""
 
-  override def nodeConfigs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.raw(s"""dcc {
-                             |  blockchain.custom.functionality {
-                             |    pre-activated-features = {
-                             |      ${BlockchainFeatures.SmartAssets.id} = $featureActivationHeight
-                             |    }
-                             |    
-                             |  }
-                             |}""".stripMargin))
-      .withDefault(1)
-      .withSpecial(_.nonMiner)
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] =
+    Seq(BiggestMiner.quorum(0).preactivatedFeatures((BlockchainFeatures.SmartAssets, featureActivationHeight)))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
 
     assetId = sender
       .issue(
-        firstKeyPair,
+        miner.keyPair,
         "SetAssetScript",
         "Test coin for SetAssetScript tests",
         someAssetAmount,
@@ -54,7 +42,7 @@ class SetAssetScriptTxFeatureSuite extends BaseTransactionSuite {
 
   test("cannot transact without activated feature") {
     assertBadRequestAndResponse(
-      sender.setAssetScript(assetId, firstKeyPair, setAssetScriptFee, Some(scriptBase64)).id,
+      sender.setAssetScript(assetId, miner.keyPair, setAssetScriptFee, Some(scriptBase64)).id,
       s"${BlockchainFeatures.SmartAssets.description} feature has not been activated yet"
     )
   }
@@ -81,7 +69,7 @@ class SetAssetScriptTxFeatureSuite extends BaseTransactionSuite {
     val txId = sender
       .setAssetScript(
         assetId,
-        firstKeyPair,
+        miner.keyPair,
         setAssetScriptFee,
         Some(script)
       )

@@ -14,8 +14,8 @@ import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.{Blockchain, EndorsementStorage, StateSnapshot}
 import com.decentralchain.test.DomainPresets.RideV6
 import com.decentralchain.test.FlatSpec
-import com.decentralchain.transaction.TxHelpers.{defaultAddress, defaultSigner, secondAddress, transfer}
-import com.decentralchain.transaction.{CreateAliasTransaction, Transaction, TxVersion}
+import com.decentralchain.transaction.TxHelpers.{createAlias, defaultAddress, defaultSigner, secondAddress, transfer}
+import com.decentralchain.transaction.{Transaction, TxVersion}
 import com.decentralchain.utils.Schedulers
 import com.decentralchain.utx.{UtxPool, UtxPoolImpl, UtxPriorityPool}
 import monix.execution.Scheduler
@@ -57,9 +57,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
         )
         import Scheduler.Implicits.global
         val startTime = System.nanoTime()
-        val tx = CreateAliasTransaction
-          .selfSigned(TxVersion.V1, acc, "test" + ThreadLocalRandom.current().nextInt(), TestValues.fee, TestValues.timestamp)
-          .explicitGet()
+        val tx = createAlias(name = "test" + Random.nextInt(), sender = acc, fee = TestValues.fee, version = TxVersion.V1)
         utxPool.putIfNew(tx).resultE.explicitGet()
         val result = task.runSyncUnsafe()
         result match {

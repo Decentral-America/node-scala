@@ -8,11 +8,11 @@ import com.decentralchain.generator.utils.Implicits.*
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
-import com.decentralchain.transaction.{Transaction, TxNonNegativeAmount}
+import com.decentralchain.transaction.{Proofs, Transaction, TxNonNegativeAmount}
 
 import java.util.concurrent.ThreadLocalRandom
 
@@ -121,7 +121,9 @@ object Gen {
       .zip(feeGen)
       .zipWithIndex
       .map { case (((src, dst), fee), i) =>
-        TransferTransaction.selfSigned(2.toByte, src, dst, Dcc, fee, Dcc, fee, ByteStr.empty, now + i)
+        TransferTransaction
+          .create(2.toByte, src.publicKey, dst, Waves, fee, Waves, fee, ByteStr.empty, now + i, Proofs.empty)
+          .map(_.signWith(src.privateKey))
       }
       .collect { case Right(x) => x }
   }
@@ -135,7 +137,9 @@ object Gen {
       .map { case ((sender, count), i) =>
         val transfers = List.tabulate(count)(_ => ParsedTransfer(recipientGen.next(), TxNonNegativeAmount.unsafeFrom(amountGen.next())))
         val fee       = 100000 + count * 50000
-        MassTransferTransaction.selfSigned(1.toByte, sender, Dcc, transfers, fee, now + i, ByteStr.empty)
+        MassTransferTransaction
+          .create(1.toByte, sender.publicKey, Waves, transfers, fee, now + i, ByteStr.empty, Proofs.empty)
+          .map(_.signWith(sender.privateKey))
       }
       .collect { case Right(tx) => tx }
   }

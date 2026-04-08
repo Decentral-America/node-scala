@@ -2,15 +2,13 @@ package com.decentralchain.it.sync.transactions
 
 import com.decentralchain.api.http.ApiError.InvalidIds
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{TransactionInfo, TransactionStatus}
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.{ProvenTransaction, Transaction}
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.{ProvenTransaction, Transaction, TxHelpers}
 import play.api.libs.json.*
 
 import java.util.concurrent.ThreadLocalRandom
@@ -77,19 +75,17 @@ class TransactionsStatusSuite extends BaseTransactionSuite with NTPTime {
 
   private def mkTransactions: List[Transaction & ProvenTransaction] =
     (1001 to 1020).map { amount =>
-      TransferTransaction
-        .selfSigned(
-          2.toByte,
-          miner.keyPair,
-          secondKeyPair.toAddress,
-          Dcc,
-          amount,
-          Dcc,
-          minFee,
-          ByteStr.empty,
-          ntpTime.correctedTime()
-        )
-        .explicitGet()
+      TxHelpers.transfer(
+        from = miner.keyPair,
+        to = secondKeyPair.toAddress,
+        amount = amount,
+        asset = Waves,
+        fee = minFee,
+        feeAsset = Waves,
+        attachment = ByteStr.empty,
+        timestamp = ntpTime.correctedTime(),
+        version = 2.toByte
+      )
     }.toList
 
   private def waitForTransactions(txs: List[Transaction]): List[TransactionInfo] =

@@ -15,6 +15,7 @@ import com.decentralchain.lang.directives.values.V4
 import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.state.Height
+import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.assets.IssueTransaction.{MaxAssetDescriptionLength, MaxAssetNameLength, MinAssetNameLength}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{TransactionType, TxVersion}
@@ -118,9 +119,8 @@ class UpdateAssetInfoTransactionSuite extends BaseTransactionSuite with CancelAf
         UpdateAssetInfoRequest(
           TxVersion.V1,
           AddressScheme.current.chainId,
-          None,
-          Some(issuer.publicKey.toString),
-          assetId,
+          issuer.publicKey.toString,
+          IssuedAsset(ByteStr(new Array[Byte](32))),
           "test",
           "test",
           None,

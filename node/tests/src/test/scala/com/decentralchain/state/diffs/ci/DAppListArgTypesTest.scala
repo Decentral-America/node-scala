@@ -8,18 +8,15 @@ import com.decentralchain.lang.contract.DApp
 import com.decentralchain.lang.contract.DApp.{CallableAnnotation, CallableFunction}
 import com.decentralchain.lang.directives.values.{V3, V4}
 import com.decentralchain.lang.script.{ContractScript, Script}
-import com.decentralchain.lang.v1.FunctionHeader.User
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_STRING, *}
 import com.decentralchain.lang.v1.compiler.{TestCompiler, Types}
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
-import io.decentralchain.protobuf.dapp.DAppMeta
+import com.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.TxHelpers
-import com.decentralchain.transaction.smart.SetScriptTransaction
-import com.decentralchain.transaction.utils.Signed
 import org.scalatest.Inside
 
 class DAppListArgTypesTest extends PropSpec with WithDomain with Inside {
@@ -32,10 +29,9 @@ class DAppListArgTypesTest extends PropSpec with WithDomain with Inside {
     val invoker = RandomKeyPair()
     val dApp    = RandomKeyPair()
     val fee     = ciFee().sample.get
-    val call    = Some(FUNCTION_CALL(User("f"), args))
     val genesis = Seq(invoker, dApp).map(acc => TxHelpers.genesis(acc.toAddress, ENOUGH_AMT))
-    val setDApp = SetScriptTransaction.selfSigned(1.toByte, dApp, Some(dAppScript), 0.01.dcc, ts).explicitGet()
-    val ci      = () => Signed.invokeScript(1.toByte, invoker, dApp.toAddress, call, Nil, fee, Dcc, ts)
+    val setDApp = TxHelpers.setScript(dApp, dAppScript, 0.01.waves, 1.toByte)
+    val ci      = () => TxHelpers.invoke(dApp.toAddress, Some("f"), args, Nil, invoker, fee, Waves, 1.toByte, ts)
     (genesis :+ setDApp, ci, dApp.toAddress)
   }
 

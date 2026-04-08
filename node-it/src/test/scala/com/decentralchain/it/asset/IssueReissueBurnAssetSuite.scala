@@ -14,20 +14,17 @@ import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
+import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import monix.execution.atomic.AtomicInt
 
 import scala.concurrent.duration.*
 
 class IssueReissueBurnAssetSuite extends BaseFreeSpec {
-  override val nodeConfigs: Seq[Config] =
-    com.decentralchain.it.NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .withDefault(1)
-      .buildNonConflicting()
-  private val initialDccBalance = 100.dcc
-  private val setScriptPrice      = 0.01.dcc
+  import com.decentralchain.it.NodeConfigs.*
+  override val nodeConfigs: Seq[Config] = Seq(BiggestMiner.quorum(0))
+  private val initialWavesBalance = 100.waves
+  private val setScriptPrice      = 0.01.waves
   private val accountCounter      = AtomicInt(1000)
 
   private val CallableMethod    = "@Callable"
@@ -328,9 +325,7 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
     nodes.waitForHeightAriseAndTxPresent(
       miner
         .signedBroadcast(
-          SetScriptTransaction
-            .selfSigned(1.toByte, address, Some(compiledScript), setScriptFee, System.currentTimeMillis())
-            .explicitGet()
+          TxHelpers.setScript(acc = address, script = compiledScript, fee = setScriptFee, version = 1.toByte)
             .json()
         )
         .id

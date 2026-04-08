@@ -1,14 +1,10 @@
 package com.decentralchain.state.diffs.ci
 
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.smart.SetScriptTransaction
-import com.decentralchain.transaction.utils.Signed
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 
 class IllegalAddressChainIdTest extends PropSpec with WithDomain {
@@ -33,8 +29,8 @@ class IllegalAddressChainIdTest extends PropSpec with WithDomain {
     val invoker  = RandomKeyPair()
     val gTx1     = TxHelpers.genesis(master.toAddress, ENOUGH_AMT, TxHelpers.timestamp)
     val gTx2     = TxHelpers.genesis(invoker.toAddress, ENOUGH_AMT, TxHelpers.timestamp)
-    val ssTx     = SetScriptTransaction.selfSigned(1.toByte, master, Some(contract(bigComplexity)), 0.01.dcc, TxHelpers.timestamp).explicitGet()
-    val invokeTx = Signed.invokeScript(TxVersion.V3, invoker, master.toAddress, None, Nil, 0.005.dcc, Dcc, TxHelpers.timestamp)
+    val ssTx     = TxHelpers.setScript(master, contract(bigComplexity), 0.01.waves, 1.toByte)
+    val invokeTx = TxHelpers.invoke(master.toAddress, invoker = invoker, fee = 0.005.waves, version = TxVersion.V3, timestamp = TxHelpers.timestamp)
     (Seq(gTx1, gTx2, ssTx), invokeTx)
   }
 

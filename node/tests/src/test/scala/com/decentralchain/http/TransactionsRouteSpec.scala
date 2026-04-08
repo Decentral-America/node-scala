@@ -15,11 +15,11 @@ import com.decentralchain.lang.directives.values.{V5, V7, V8}
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, CONST_STRING, FUNCTION_CALL}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import io.decentralchain.protobuf.transaction.PBTransactions
-import com.decentralchain.settings.DCCSettings
+import com.decentralchain.protobuf.transaction.PBTransactions
+import com.decentralchain.settings.WavesSettings
 import com.decentralchain.state.{BinaryDataEntry, EmptyDataEntry, Height, InvokeScriptResult, StringDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, setScript, transfer}
 import com.decentralchain.transaction.TxValidationError.ScriptExecutionError
 import com.decentralchain.transaction.assets.exchange.{Order, OrderType}
@@ -29,8 +29,7 @@ import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.trace.AccountVerifierTrace
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.utils.EthConverters.*
-import com.decentralchain.transaction.utils.Signed
-import com.decentralchain.transaction.{Asset, AssetIdLength, EthTxGenerator, TransactionSignOps, TxHelpers, TxVersion}
+import com.decentralchain.transaction.{Asset, AssetIdLength, EthTxGenerator, TxHelpers, TxVersion}
 import com.decentralchain.utils.{EthEncoding, EthHelpers, SharedSchedulerMixin}
 import com.decentralchain.{BlockGen, TestValues, crypto}
 import org.apache.pekko.http.scaladsl.model.*
@@ -897,15 +896,12 @@ class TransactionsRouteSpec
       val seed = new Array[Byte](32)
       ThreadLocalRandom.current().nextBytes(seed)
       val sender: KeyPair = KeyPair(seed)
-      val ist = Signed.invokeScript(
-        TxVersion.V1,
-        sender,
-        sender.toAddress,
-        None,
-        Seq.empty,
-        500000L,
-        Asset.Dcc,
-        testTime.getTimestamp()
+      val ist = TxHelpers.invoke(
+        dApp = sender.toAddress,
+        invoker = sender,
+        fee = 500000L,
+        version = TxVersion.V1,
+        timestamp = testTime.getTimestamp()
       )
       f(sender, ist)
     }
@@ -987,8 +983,13 @@ class TransactionsRouteSpec
         lease
       )
 
-      val invoke = Signed
-        .invokeScript(2.toByte, sender, sender.toAddress, None, Seq.empty, 0.005.dcc, Asset.Dcc, ntpTime.getTimestamp())
+      val invoke = TxHelpers.invoke(
+        dApp = sender.toAddress,
+        invoker = sender,
+        fee = 0.005.waves,
+        version = 2.toByte,
+        timestamp = ntpTime.getTimestamp()
+      )
 
       Post(routePath("/broadcast?trace=true"), invoke.json()) ~> route ~> check {
         val dappTrace = (responseAs[JsObject] \ "trace").as[Seq[JsObject]].find(jsObject => (jsObject \ "type").as[String] == "dApp").get

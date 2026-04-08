@@ -14,9 +14,8 @@ import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.settings.*
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{BlockEndorser, Blockchain, BlockchainUpdaterImpl, EndorsementStorage, NG}
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction}
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers}
 import com.decentralchain.utx.UtxPoolImpl
 import com.decentralchain.wallet.Wallet
 import com.decentralchain.{TransactionGen, WithNewDBForEachTest}
@@ -73,20 +72,14 @@ class MiningWithRewardSuite extends AsyncFlatSpec with Matchers with WithNewDBFo
     val bps: Seq[BlockProducer] = Seq((ts, reference, account) => {
       val recipient1 = createAccount.toAddress
       val recipient2 = createAccount.toAddress
-      val tx1 = TransferTransaction
-        .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
-        .explicitGet()
-      val tx2 = TransferTransaction
-        .selfSigned(2.toByte, account, recipient2, Dcc, 5 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
-        .explicitGet()
+      val tx1 = TxHelpers.transfer(from = account, to = recipient1, amount = 10 * Constants.UnitsInWave, asset = Waves, fee = 400000, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
+      val tx2 = TxHelpers.transfer(from = account, to = recipient2, amount = 5 * Constants.UnitsInWave, asset = Waves, fee = 400000, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
       TestBlock.create(time = ts, ref = reference, txs = Seq(tx1, tx2), version = Block.NgBlockVersion).block
     })
 
     val txs: Seq[TransactionProducer] = Seq((ts, account) => {
       val recipient1 = createAccount.toAddress
-      TransferTransaction
-        .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
-        .explicitGet()
+      TxHelpers.transfer(from = account, to = recipient1, amount = 10 * Constants.UnitsInWave, asset = Waves, fee = 400000, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
     })
 
     withEnv(bps, txs) { case Env(_, account, miner, blockchain) =>

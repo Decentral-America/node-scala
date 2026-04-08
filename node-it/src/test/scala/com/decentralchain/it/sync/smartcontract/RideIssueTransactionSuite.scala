@@ -1,13 +1,10 @@
 package com.decentralchain.it.sync.smartcontract
 
-import java.nio.charset.StandardCharsets
-
 import com.typesafe.config.Config
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.TransactionInfo
 import com.decentralchain.it.sync.*
@@ -16,12 +13,11 @@ import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.{Assertion, CancelAfterFailure}
 
+import java.nio.charset.StandardCharsets
+
 class RideIssueTransactionSuite extends BaseTransactionSuite with CancelAfterFailure {
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(BiggestMiner.quorum(0))
 
   val assetName        = "Asset name"
   val assetDescription = "Asset description"

@@ -4,14 +4,14 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain.BlockchainUpdaterExt
-import com.decentralchain.settings.{BlockchainSettings, DCCSettings}
+import com.decentralchain.settings.{BlockchainSettings, WavesSettings}
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.{IssueTransaction, SponsorFeeTransaction}
 import com.decentralchain.transaction.transfer.*
-import com.decentralchain.transaction.{Asset, GenesisTransaction}
+import com.decentralchain.transaction.{Asset, GenesisTransaction, TxHelpers, TxVersion}
 import org.scalacheck.Gen
 
 class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenarioDrivenPropertyCheck {
@@ -33,58 +33,51 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
     (feeAsset, sponsorTx, _, _) <- sponsorFeeCancelSponsorFeeGen(alice)
     dccFee                    = Sponsorship.toDcc(sponsorTx.minSponsoredAssetFee.get.value, sponsorTx.minSponsoredAssetFee.get.value)
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-    masterToAlice: TransferTransaction = TransferTransaction
-      .selfSigned(
-        1.toByte,
-        master,
-        alice.toAddress,
-        Dcc,
-        feeAsset.fee.value + sponsorTx.fee.value + transferAssetDccFee + dccFee,
-        Dcc,
-        transferAssetDccFee,
-        ByteStr.empty,
-        ts + 1
-      )
-      .explicitGet()
-    aliceToBob: TransferTransaction = TransferTransaction
-      .selfSigned(
-        1.toByte,
-        alice,
-        bob.toAddress,
-        Asset.fromCompatId(Some(feeAsset.id())),
-        feeAsset.quantity.value / 2,
-        Dcc,
-        transferAssetDccFee,
-        ByteStr.empty,
-        ts + 2
-      )
-      .explicitGet()
-    bobToMaster: TransferTransaction = TransferTransaction
-      .selfSigned(
-        1.toByte,
+    masterToAlice: TransferTransaction = TxHelpers.transfer(
+      master,
+      alice.toAddress,
+      feeAsset.fee.value + sponsorTx.fee.value + transferAssetWavesFee + wavesFee,
+      Waves,
+      transferAssetWavesFee,
+      Waves,
+      ByteStr.empty,
+      ts + 1,
+      TxVersion.V1
+    )
+    aliceToBob: TransferTransaction = TxHelpers.transfer(
+      alice,
+      bob.toAddress,
+      feeAsset.quantity.value / 2,
+      Asset.fromCompatId(Some(feeAsset.id())),
+      transferAssetWavesFee,
+      Waves,
+      ByteStr.empty,
+      ts + 2,
+      TxVersion.V1
+    )
+    bobToMaster: TransferTransaction = TxHelpers.transfer(
+      bob,
+      master.toAddress,
+      amtTx,
+      Asset.fromCompatId(Some(feeAsset.id())),
+      sponsorTx.minSponsoredAssetFee.get.value,
+      Asset.fromCompatId(Some(feeAsset.id())),
+      ByteStr.empty,
+      ts + 3,
+      TxVersion.V1
+    )
+    bobToMaster2: TransferTransaction = TxHelpers
+      .transfer(
         bob,
         master.toAddress,
-        Asset.fromCompatId(Some(feeAsset.id())),
         amtTx,
         Asset.fromCompatId(Some(feeAsset.id())),
         sponsorTx.minSponsoredAssetFee.get.value,
-        ByteStr.empty,
-        ts + 3
-      )
-      .explicitGet()
-    bobToMaster2: TransferTransaction = TransferTransaction
-      .selfSigned(
-        1.toByte,
-        bob,
-        master.toAddress,
         Asset.fromCompatId(Some(feeAsset.id())),
-        amtTx,
-        Asset.fromCompatId(Some(feeAsset.id())),
-        sponsorTx.minSponsoredAssetFee.get.value,
         ByteStr.empty,
-        ts + 4
+        ts + 4,
+        TxVersion.V1
       )
-      .explicitGet()
   } yield (genesis, masterToAlice, feeAsset, sponsorTx, aliceToBob, bobToMaster, bobToMaster2)
 
   val SponsoredFeeActivatedAt0BlockchainSettings: BlockchainSettings = DefaultBlockchainSettings.copy(

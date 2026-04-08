@@ -3,16 +3,14 @@ package com.decentralchain.it.sync
 import com.typesafe.config.Config
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.*
 import com.decentralchain.it.api.*
 import com.decentralchain.it.api.AsyncHttpApi.*
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.TxVersion
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.assets.IssueTransaction
-import com.decentralchain.transaction.transfer.TransferTransaction
+import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import play.api.libs.json.*
 
 import java.util.concurrent.ThreadLocalRandom
@@ -22,13 +20,8 @@ import scala.concurrent.{Await, Future}
 
 class NFTBalanceSuite extends BaseFreeSpec {
   import NFTBalanceSuite.*
-
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .withDefault(1)
-      .withSpecial(_.nonMiner)
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(BiggestMiner, NotMiner)
 
   private def node: Node = nodes.head
 
@@ -83,9 +76,17 @@ class NFTBalanceSuite extends BaseFreeSpec {
     "returns only nft with balance > 0 on /nft/{address}/limit/{limit}" in {
       val other = KeyPair("other".getBytes)
 
-      val transfer = TransferTransaction
-        .selfSigned(1.toByte, issuer, other.toAddress, randomTokenToTransfer, 1, Dcc, 0.001.dcc, ByteStr.empty, System.currentTimeMillis())
-        .explicitGet()
+      val transfer = TxHelpers.transfer(
+        from = issuer,
+        to = other.toAddress,
+        amount = 1,
+        asset = randomTokenToTransfer,
+        fee = 0.001.waves,
+        feeAsset = Waves,
+        attachment = ByteStr.empty,
+        timestamp = System.currentTimeMillis(),
+        version = 1.toByte
+      )
 
       val assertion = for {
         tx         <- node.signedBroadcast(transfer.json())
@@ -156,37 +157,31 @@ object NFTBalanceSuite {
   def fillPortfolio(issuer: KeyPair, nft: Int, simple: Int): (List[IssueTransaction], List[IssueTransaction]) = {
 
     val simpleAssets = List.fill[IssueTransaction](simple) {
-      IssueTransaction
-        .selfSigned(
-          TxVersion.V1,
-          issuer,
-          "SimpleAsset",
-          s"Simple Test Asset ${ThreadLocalRandom.current().nextInt(1000)}",
-          1000,
-          8,
-          reissuable = true,
-          script = None,
-          1.dcc,
-          System.currentTimeMillis()
-        )
-        .explicitGet()
+      TxHelpers.issue(
+        issuer = issuer,
+        amount = 1000,
+        decimals = 8,
+        name = "SimpleAsset",
+        description = s"Simple Test Asset ${Random.nextInt(1000)}",
+        fee = 1.waves,
+        script = None,
+        reissuable = true,
+        version = TxVersion.V1
+      )
     }
 
     val nonFungibleAssets = List.fill[IssueTransaction](nft) {
-      IssueTransaction
-        .selfSigned(
-          TxVersion.V1,
-          issuer,
-          "NonFungibleAsset",
-          s"NFT Test Asset ${ThreadLocalRandom.current().nextInt(1000)}",
-          1,
-          0,
-          reissuable = false,
-          script = None,
-          1.dcc,
-          System.currentTimeMillis()
-        )
-        .explicitGet()
+      TxHelpers.issue(
+        issuer = issuer,
+        amount = 1,
+        decimals = 0,
+        name = "NonFungibleAsset",
+        description = s"NFT Test Asset ${Random.nextInt(1000)}",
+        fee = 1.waves,
+        script = None,
+        reissuable = false,
+        version = TxVersion.V1
+      )
     }
 
     (simpleAssets, nonFungibleAssets)

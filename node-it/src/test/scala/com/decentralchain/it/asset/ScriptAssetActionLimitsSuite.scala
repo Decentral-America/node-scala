@@ -4,21 +4,16 @@ import com.typesafe.config.Config
 import com.decentralchain.account.KeyPair
 import com.decentralchain.features.BlockchainFeatures.{RideV6, SynchronousCalls}
 import com.decentralchain.it.{BaseFreeSpec, NodeConfigs}
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.lang.directives.values.StdLibVersion
 import com.decentralchain.test.*
-import com.decentralchain.state.Height
 
 trait ScriptAssetActionLimitsSuite extends BaseFreeSpec {
 
   def createDApp(script: String, address: KeyPair = miner.generateKeyPair()): KeyPair
 
+  import NodeConfigs.*
   override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((SynchronousCalls.id, Height(0)), (RideV6.id, Height(0))))
-      .buildNonConflicting()
+    Seq(BiggestMiner.quorum(0).preactivatedFeatures(SynchronousCalls, RideV6))
 
   protected val initialDccBalance: Long  = 1000.dcc
   protected val minSponsoredAssetFee: Long = 1001

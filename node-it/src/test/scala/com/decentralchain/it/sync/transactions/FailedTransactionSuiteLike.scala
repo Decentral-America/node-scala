@@ -1,25 +1,25 @@
 package com.decentralchain.it.sync.transactions
 
-import scala.concurrent.duration.*
-
 import com.google.protobuf.ByteString
 import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.account.KeyPair
-import io.decentralchain.api.grpc.{ApplicationStatus, TransactionsByIdRequest, TransactionStatus as PBTransactionStatus}
+import com.decentralchain.api.grpc.{ApplicationStatus, TransactionsByIdRequest, TransactionStatus as PBTransactionStatus}
 import com.decentralchain.api.http.ApiError.TransactionDoesNotExist
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
-import com.decentralchain.it.{Node, NodeConfigs}
 import com.decentralchain.it.api.TransactionStatus
+import com.decentralchain.it.{Node, NodeConfigs}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import com.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.decentralchain.state.Height
-import com.decentralchain.transaction.{Asset, TxVersion}
 import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
+import com.decentralchain.transaction.{Asset, TxHelpers, TxVersion}
 import com.decentralchain.utils.ScorexLogging
 import org.scalatest.matchers.should.Matchers
 import play.api.libs.json.JsObject
+
+import scala.concurrent.duration.*
 
 trait FailedTransactionSuiteLike[T] extends ScorexLogging { matchers: Matchers =>
   protected def waitForHeightArise(): Unit
@@ -46,7 +46,7 @@ trait FailedTransactionSuiteLike[T] extends ScorexLogging { matchers: Matchers =
   }
 
   object restApi {
-    import com.decentralchain.it.api.SyncHttpApi.{assertApiError, NodeExtSync}
+    import com.decentralchain.it.api.SyncHttpApi.{NodeExtSync, assertApiError}
 
     /** Checks that transactions contain failed and returns them.
       */
@@ -310,20 +310,18 @@ object FailedTransactionSuiteLike {
         Asset.fromString(Some(sellMatcherFeeAsset))
       )
       .explicitGet()
-    ExchangeTransaction
-      .signed(
-        TxVersion.V3,
-        matcher.privateKey,
-        buy,
-        sell,
-        buy.amount.value,
-        buy.price.value,
-        buy.matcherFee.value,
-        sell.matcherFee.value,
-        fee,
-        timestamp
-      )
-      .explicitGet()
+    TxHelpers.exchange(
+      buy,
+      sell,
+      matcher,
+      buy.amount.value,
+      buy.price.value,
+      buy.matcherFee.value,
+      sell.matcherFee.value,
+      fee,
+      timestamp,
+      TxVersion.V3
+    )
   }
 
   val configForMinMicroblockAge: Config = ConfigFactory.parseString(s"""
@@ -331,11 +329,6 @@ object FailedTransactionSuiteLike {
                                                                        |dcc.miner.max-transactions-in-micro-block = 1
                                                                        |""".stripMargin)
 
-  val Configs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.raw(s"dcc.miner.max-transactions-in-micro-block = 50"))
-      .withDefault(1)
-      .withSpecial(_.nonMiner)
-      .buildNonConflicting()
+  import NodeConfigs.*
+  val Configs: Seq[Config] = Seq(BiggestMiner.quorum(0).overrides("waves.miner.max-transactions-in-micro-block = 50"), NotMiner)
 }

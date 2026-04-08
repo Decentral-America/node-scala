@@ -6,22 +6,20 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.crypto
 import com.decentralchain.crypto.Blake2b256
+import com.decentralchain.it.BaseFreeSpec
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.activation.ActivationStatusRequest
-import com.decentralchain.it.{BaseFreeSpec, NodeConfigs}
 import com.decentralchain.state.Height
 import org.scalatest.*
 
 import scala.concurrent.duration.*
 
 class BlockV5TestSuite extends BaseFreeSpec with ActivationStatusRequest with OptionValues {
-
-  override def nodeConfigs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .withDefault(1)
-      .withSpecial(1, _.nonMiner)
-      .buildNonConflicting()
+  import com.decentralchain.it.NodeConfigs.*
+  override val nodeConfigs: Seq[Config] = Seq(
+    Miners(3).quorum(0),
+    Default.head.notMiner
+  )
 
   var currentHeight = Height(0)
 

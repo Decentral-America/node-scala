@@ -1,30 +1,28 @@
 package com.decentralchain.it.sync.activation
 
-import scala.concurrent.duration.*
-
 import com.typesafe.config.Config
 import com.decentralchain.api.http.ApiError.StateCheckFailed
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
-import com.decentralchain.it.{NodeConfigs, NTPTime}
-import com.decentralchain.it.NodeConfigs.Default
+import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.TransactionStatus
 import com.decentralchain.it.sync.*
-import com.decentralchain.it.sync.transactions.OverflowBlock
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.IssuedAsset
-import com.decentralchain.transaction.{TxExchangePrice, TxVersion}
 import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
+import com.decentralchain.transaction.{TxExchangePrice, TxVersion}
 import play.api.libs.json.JsObject
 
-class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTime with OverflowBlock {
+import scala.concurrent.duration.*
+
+class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTime {
   import AcceptFailedScriptActivationSuite.*
 
   private lazy val (dApp, dAppKP)               = (firstAddress, firstKeyPair)
@@ -70,7 +68,6 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
   }
 
   test("reject failed transaction before activation height") {
-    overflowBlock()
     sender.waitForHeight(
       Height(
         sender
@@ -109,7 +106,6 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
     val startHeight = sender.height
 
     sender.setAssetScript(asset, dAppKP, setAssetScriptFee + smartFee, assetScript(true), waitForTx = true)
-    overflowBlock()
     sender.setAssetScript(asset, dAppKP, priorityFee, assetScript(false))
     val txs =
       (1 to MaxTxsInMicroBlock * 2).map { _ =>
@@ -182,8 +178,6 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
   test("accept invalid by asset script InvokeScriptTransaction to utx and save it as failed after activation height") {
     sender.setAssetScript(asset, dAppKP, priorityFee, assetScript(true), waitForTx = true)
 
-    overflowBlock()
-
     val txs =
       (1 to MaxTxsInMicroBlock * 2).map { i =>
         sender.invokeScript(callerKP, dApp, Some("transfer"), fee = minInvokeFee + i)._1.id
@@ -220,7 +214,6 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
 
     nodes.waitFor("empty utx")(_.utxSize)(_.forall(_ == 0))
     nodes.waitForHeightArise()
-    overflowBlock()
 
     val txs =
       (1 to invokesCount).map { _ =>
@@ -403,7 +396,6 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
 
     {
       val (buy, sell) = orders
-      overflowBlock()
 
       sender.setAssetScript(tradeAsset, dAppKP, priorityFee, assetScript(false))
       val tx = sender
@@ -433,7 +425,6 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
       val (buy, sell) = orders
       sender.setAssetScript(tradeAsset, dAppKP, setAssetScriptFee + smartFee, assetScript(true), waitForTx = true)
 
-      overflowBlock()
       sender.setAssetScript(feeAsset, dAppKP, setAssetScriptFee + smartFee, assetScript(false))
       val tx = sender
         .broadcastExchange(
@@ -486,16 +477,20 @@ object AcceptFailedScriptActivationSuite {
 
   private def mkScript(scriptText: String): Option[String] = Some(ScriptCompiler.compile(scriptText, estimator).explicitGet()._1.bytes().base64)
 
+  import com.decentralchain.it.NodeConfigs.*
+
   private def configs(activate: Boolean): Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(
-        _.preactivatedFeatures(
-          (BlockchainFeatures.BlockV5.id, Height(if (activate) 0 else 9999))
-        )
-      )
-      .overrideBase(_.raw(s"dcc.blockchain.custom.functionality.min-asset-info-update-interval = $UpdateInterval"))
-      .overrideBase(_.raw(s"dcc.miner.max-transactions-in-micro-block = $MaxTxsInMicroBlock"))
-      .buildNonConflicting()
+    Seq(
+      Miners(3)
+        .quorum(0)
+        .preactivatedFeatures((BlockchainFeatures.BlockV5, Height(if (activate) 0 else 9999)))
+        .overrides(s"""
+          waves {
+            blockchain.custom.functionality.min-asset-info-update-interval = $UpdateInterval
+            miner {
+              max-transactions-in-micro-block = $MaxTxsInMicroBlock
+              micro-block-interval = 5s
+            }
+          }""")
+    )
 }

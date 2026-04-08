@@ -2,6 +2,7 @@ package com.decentralchain.it.sync.transactions
 
 import com.typesafe.config.Config
 import com.decentralchain.account.KeyPair
+import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.{Node, NodeConfigs}
@@ -17,15 +18,9 @@ class IssueNFTSuite extends BaseTransactionSuite with TableDrivenPropertyChecks 
   val secondNodeIssuer: KeyPair = KeyPair("second_node_issuer".getBytes("UTF-8"))
   val firstNodeIssuer: KeyPair  = KeyPair("first_node_issuer".getBytes("UTF-8"))
 
-  override def nodeConfigs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.raw("""dcc {
-                            |  miner.quorum = 0
-                            |  blockchain.custom.functionality.pre-activated-features.13 = 10
-                            |}""".stripMargin))
-      .withDefault(1)
-      .withSpecial(_.nonMiner)
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] =
+    Seq(BiggestMiner.quorum(0), NotMiner).map(_.preactivatedFeatures((BlockchainFeatures.ReduceNFTFee, Height(10))))
 
   test("Can't issue NFT before activation") {
     val assetName        = "NFTAsset"
@@ -80,8 +75,7 @@ class IssueNFTSuite extends BaseTransactionSuite with TableDrivenPropertyChecks 
         assetDescription,
         quantity = 1,
         decimals = 0,
-        reissuable = true,
-        fee = 0.001.dcc,
+        fee = 0.001.waves,
         script = None,
         waitForTx = true
       ),

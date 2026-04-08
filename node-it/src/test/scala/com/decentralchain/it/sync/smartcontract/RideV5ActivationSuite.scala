@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import com.decentralchain.api.http.ApiError.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.sync.smartcontract.RideV4ActivationSuite.*
@@ -15,15 +14,14 @@ import org.scalatest.{Assertion, CancelAfterFailure}
 import scala.concurrent.duration.DurationInt
 
 class RideV5ActivationSuite extends BaseTransactionSuite with CancelAfterFailure {
-  private val activationHeight = Height(6)
+  private val activationHeight = Height(10)
 
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((BlockchainFeatures.Ride4DApps.id, Height(0))))
-      .overrideBase(_.preactivatedFeatures((BlockchainFeatures.SynchronousCalls.id, activationHeight - 1)))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    Miners(5)
+      .quorum(0)
+      .preactivatedFeatures(BlockchainFeatures.Ride4DApps, (BlockchainFeatures.SynchronousCalls, activationHeight - 1))
+  )
 
   private def smartAccV5 = firstKeyPair
   private def callerAcc  = secondKeyPair

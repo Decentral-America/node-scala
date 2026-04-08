@@ -5,7 +5,6 @@ import com.decentralchain.api.http.ApiError.ScriptCompilerError
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.TransactionInfo
 import com.decentralchain.it.sync.*
@@ -17,13 +16,8 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
 
 class RideUpdateAssetInfoTxSuite extends BaseTransactionSuite with CancelAfterFailure {
-
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.minAssetInfoUpdateInterval(1))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(BiggestMiner.quorum(0).minAssetInfoUpdateInterval(1))
 
   private def dApp     = firstKeyPair
   private def smartAcc = secondKeyPair

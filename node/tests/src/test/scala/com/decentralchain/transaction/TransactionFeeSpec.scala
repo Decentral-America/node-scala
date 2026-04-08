@@ -1,6 +1,5 @@
 package com.decentralchain.transaction
 
-import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
@@ -10,10 +9,8 @@ import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.test.{FreeSpec, NumericExt}
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.assets.SponsorFeeTransaction
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
-import com.decentralchain.transaction.transfer.TransferTransaction
 
 class TransactionFeeSpec extends FreeSpec with WithDomain {
   "invoke script" - {
@@ -51,9 +48,9 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
       withDomain(settingsWithFeatures(BF.BlockV5, BF.Ride4DApps, BF.SynchronousCalls), balances) { d =>
         d.appendBlock(
           SetScriptTransaction
-            .selfSigned(
+            .create(
               2.toByte,
-              dAppSigner,
+              dAppSigner.publicKey,
               Some(TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 5 #-}
                                                       |{-# SCRIPT_TYPE ACCOUNT #-}
                                                       |{-# CONTENT_TYPE DAPP #-}
@@ -66,9 +63,11 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                       |  ]
                                                       |}
                                                       |""".stripMargin)),
-              0.01.dcc,
-              ntpTime.getTimestamp()
+              0.01.waves,
+              ntpTime.getTimestamp(),
+              Proofs.empty
             )
+            .map(_.signWith(dAppSigner.privateKey))
             .explicitGet()
         )
 
@@ -89,9 +88,9 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
         withDomain(settingsWithFeatures(BF.BlockV5, BF.Ride4DApps, BF.SynchronousCalls), balances) { d =>
           d.appendBlock(
             SetScriptTransaction
-              .selfSigned(
+              .create(
                 2.toByte,
-                sender,
+                sender.publicKey,
                 Some(TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 5 #-}
                                                         |{-# SCRIPT_TYPE ACCOUNT #-}
                                                         |{-# CONTENT_TYPE DAPP #-}
@@ -101,14 +100,16 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                         |  true
                                                         |}
                                                         |""".stripMargin)),
-                0.01.dcc,
-                ntpTime.getTimestamp()
+                0.01.waves,
+                ntpTime.getTimestamp(),
+                Proofs.empty
               )
+              .map(_.signWith(sender.privateKey))
               .explicitGet(),
             SetScriptTransaction
-              .selfSigned(
+              .create(
                 2.toByte,
-                dappAccount,
+                dappAccount.publicKey,
                 Some(TestCompiler(V5).compileContract(s"""{-# STDLIB_VERSION 5 #-}
                                                          |{-# CONTENT_TYPE DAPP #-}
                                                          |{-# SCRIPT_TYPE ACCOUNT #-}
@@ -132,9 +133,11 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                           .mkString(" || ")}
                                                          |  [ScriptTransfer(i.caller, 100, unit)]
                                                          |}""".stripMargin)),
-                0.01.dcc,
-                ntpTime.getTimestamp()
+                0.01.waves,
+                ntpTime.getTimestamp(),
+                Proofs.empty
               )
+              .map(_.signWith(dappAccount.privateKey))
               .explicitGet()
           )
 
@@ -166,9 +169,9 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
         withDomain(settingsWithFeatures(BF.BlockV5, BF.Ride4DApps, BF.SynchronousCalls), balances) { d =>
           d.appendBlock(
             SetScriptTransaction
-              .selfSigned(
+              .create(
                 2.toByte,
-                sender,
+                sender.publicKey,
                 Some(TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 5 #-}
                                                         |{-# SCRIPT_TYPE ACCOUNT #-}
                                                         |{-# CONTENT_TYPE DAPP #-}
@@ -182,14 +185,16 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                         |  p0 + p1 + p2 >= 1
                                                         |}
                                                         |""".stripMargin)),
-                0.01.dcc,
-                ntpTime.getTimestamp()
+                0.01.waves,
+                ntpTime.getTimestamp(),
+                Proofs.empty
               )
+              .map(_.signWith(sender.privateKey))
               .explicitGet(),
             SetScriptTransaction
-              .selfSigned(
+              .create(
                 2.toByte,
-                dappAccount,
+                dappAccount.publicKey,
                 Some(TestCompiler(V5).compileContract(s"""{-# STDLIB_VERSION 5 #-}
                                                          |{-# CONTENT_TYPE DAPP #-}
                                                          |{-# SCRIPT_TYPE ACCOUNT #-}
@@ -206,9 +211,11 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                          |  )
                                                          |}
                                                          |""".stripMargin)),
-                0.01.dcc,
-                ntpTime.getTimestamp()
+                0.01.waves,
+                ntpTime.getTimestamp(),
+                Proofs.empty
               )
+              .map(_.signWith(dappAccount.privateKey))
               .explicitGet()
           )
 
@@ -230,25 +237,20 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
         val issue = TxHelpers.issue()
         d.appendBlock(issue)
         d.appendBlock(
-          SponsorFeeTransaction
-            .selfSigned(TxVersion.V1, TxHelpers.defaultSigner, issue.asset, Some(1L), 1.dcc, ntpTime.getTimestamp())
-            .explicitGet()
+          TxHelpers.sponsor(issue.asset, Some(1L), TxHelpers.defaultSigner, 1.waves)
         )
 
-        val transfer = TransferTransaction
-          .selfSigned(
-            TxVersion.V2,
-            TxHelpers.defaultSigner,
-            TxHelpers.secondAddress,
-            Dcc,
-            1,
-            issue.asset,
-            1L,
-            ByteStr.empty,
-            ntpTime.getTimestamp()
-          )
-          .explicitGet()
-        d.commonApi.calculateFee(transfer) shouldBe ((issue.asset, 1L, 0.001.dcc))
+        val transfer = TxHelpers.transfer(
+          TxHelpers.defaultSigner,
+          TxHelpers.secondAddress,
+          1,
+          Waves,
+          1L,
+          issue.asset,
+          version = TxVersion.V2,
+          timestamp = ntpTime.getTimestamp()
+        )
+        d.commonApi.calculateFee(transfer) shouldBe (issue.asset, 1L, 0.001.waves)
       }
     }
 
@@ -290,41 +292,38 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
 
       withDomain(DomainPresets.RideV5, balances) { d =>
         d.appendBlock(
-          SetScriptTransaction
-            .selfSigned(
-              2.toByte,
+          TxHelpers
+            .setScript(
               defaultSigner,
-              Some(TestCompiler(V5).compileExpression("""{-# STDLIB_VERSION 5 #-}
-                                                        |{-# CONTENT_TYPE EXPRESSION #-}
-                                                        |{-# SCRIPT_TYPE ACCOUNT #-}
-                                                        |
-                                                        |sigVerify_16Kb(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
-                                                        |""".stripMargin)),
-              0.01.dcc,
-              ntpTime.getTimestamp()
-            )
-            .explicitGet(),
-          SetScriptTransaction
-            .selfSigned(
+              TestCompiler(V5).compileExpression("""{-# STDLIB_VERSION 5 #-}
+                                                   |{-# CONTENT_TYPE EXPRESSION #-}
+                                                   |{-# SCRIPT_TYPE ACCOUNT #-}
+                                                   |
+                                                   |sigVerify_16Kb(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
+                                                   |""".stripMargin),
+              0.01.waves,
               2.toByte,
-              secondSigner,
-              Some(TestCompiler(V5).compileExpression("""{-# STDLIB_VERSION 5 #-}
-                                                        |{-# CONTENT_TYPE EXPRESSION #-}
-                                                        |{-# SCRIPT_TYPE ACCOUNT #-}
-                                                        |
-                                                        |match tx {
-                                                        |  case t: Order | SetScriptTransaction => false
-                                                        |  case _ =>
-                                                        |    let s0 = if (sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)) then 1 else 0
-                                                        |    let s1 = if (sigVerify(tx.bodyBytes, tx.proofs[1], tx.senderPublicKey)) then 1 else 0
-                                                        |    let s2 = if (sigVerify(tx.bodyBytes, tx.proofs[2], tx.senderPublicKey)) then 1 else 0
-                                                        |    s0 + s1 + s2 > 1
-                                                        |}
-                                                        |""".stripMargin)),
-              0.01.dcc,
-              ntpTime.getTimestamp()
-            )
-            .explicitGet()
+              timestamp = ntpTime.getTimestamp()
+            ),
+          TxHelpers.setScript(
+            secondSigner,
+            TestCompiler(V5).compileExpression("""{-# STDLIB_VERSION 5 #-}
+                                                 |{-# CONTENT_TYPE EXPRESSION #-}
+                                                 |{-# SCRIPT_TYPE ACCOUNT #-}
+                                                 |
+                                                 |match tx {
+                                                 |  case t: Order | SetScriptTransaction => false
+                                                 |  case _ =>
+                                                 |    let s0 = if (sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)) then 1 else 0
+                                                 |    let s1 = if (sigVerify(tx.bodyBytes, tx.proofs[1], tx.senderPublicKey)) then 1 else 0
+                                                 |    let s2 = if (sigVerify(tx.bodyBytes, tx.proofs[2], tx.senderPublicKey)) then 1 else 0
+                                                 |    s0 + s1 + s2 > 1
+                                                 |}
+                                                 |""".stripMargin),
+            0.01.waves,
+            2.toByte,
+            timestamp = ntpTime.getTimestamp()
+          )
         )
 
         d.commonApi.calculateDccFee(TxHelpers.transfer(defaultSigner, defaultRecipient.toAddress)) shouldBe 0.001.dcc

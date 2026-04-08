@@ -3,17 +3,14 @@ package com.decentralchain.generator
 import cats.Show
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.explicitGet
 import com.decentralchain.generator.OracleTransactionGenerator.Settings
 import com.decentralchain.generator.config.ConfigReaders
 import com.decentralchain.generator.utils.Gen
 import com.decentralchain.generator.utils.Implicits.DoubleExt
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.smart.SetScriptTransaction
-import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.{DataTransaction, Transaction}
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.{Transaction, TxHelpers}
 import pureconfig.ConfigReader
 
 class OracleTransactionGenerator(settings: Settings, val accounts: Seq[KeyPair], estimator: ScriptEstimator) extends TransactionGenerator {
@@ -29,19 +26,13 @@ class OracleTransactionGenerator(settings: Settings, val accounts: Seq[KeyPair],
     val enoughFee = 0.005.dcc
 
     val setScript: Transaction =
-      SetScriptTransaction
-        .selfSigned(1.toByte, scriptedAccount, Some(script), enoughFee, timestamp = System.currentTimeMillis())
-        .explicitGet()
+      TxHelpers.setScript(scriptedAccount, script, enoughFee)
 
-    val setDataTx: Transaction = DataTransaction
-      .selfSigned(1.toByte, oracle, settings.requiredData.toList, enoughFee, System.currentTimeMillis())
-      .explicitGet()
+    val setDataTx: Transaction = TxHelpers.data(oracle, settings.requiredData.toSeq, enoughFee)
 
     val now = System.currentTimeMillis()
     val transactions: List[Transaction] = (1 to settings.transactions).map { i =>
-      TransferTransaction
-        .selfSigned(2.toByte, scriptedAccount, oracle.toAddress, Dcc, 1.dcc, Dcc, enoughFee, ByteStr.empty, now + i)
-        .explicitGet()
+      TxHelpers.transfer(scriptedAccount, oracle.toAddress, 1.waves, Waves, enoughFee, Waves, ByteStr.empty, now + i, 2.toByte)
     }.toList
 
     setScript +: setDataTx +: transactions

@@ -1,33 +1,43 @@
 package com.decentralchain.it.sync.smartcontract
 
+import com.typesafe.config.Config
 import com.decentralchain.api.http.ApiError.ScriptExecutionError
-import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.it.BaseFunSuite
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
-import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms.CONST_STRING
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
+import com.decentralchain.test.*
 import org.scalatest.CancelAfterFailure
 
-class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailure {
+class InvokeSelfPaymentSuite extends BaseFunSuite with CancelAfterFailure {
+  import com.decentralchain.it.NodeConfigs.*
+  override protected val nodeConfigs: Seq[Config] = Seq(Miners(3).quorum(0))
 
-  private def caller = firstKeyPair
-  private def dAppV4 = secondKeyPair
-  private def dAppV3 = thirdKeyPair
+  private lazy val caller = sender.keyPair
+  private val dAppV4      = TxHelpers.signer(1002)
+  private val dAppV3      = TxHelpers.signer(1003)
 
-  private var asset1: IssuedAsset = scala.compiletime.uninitialized
-  private def asset1Id            = asset1.id.toString
+  private lazy val issueTx = TxHelpers.issue(caller)
 
-  private lazy val dAppV3Address: String = dAppV3.toAddress.toString
-  private lazy val dAppV4Address: String = dAppV4.toAddress.toString
+  private lazy val asset1   = issueTx.asset
+  private lazy val asset1Id = asset1.id.toString
+
+  private lazy val dAppV3Address = dAppV3.toAddress.toString
+  private lazy val dAppV4Address = dAppV4.toAddress.toString
 
   test("prerequisite: set contract") {
-    asset1 = IssuedAsset(ByteStr.decodeBase58(sender.issue(caller, waitForTx = true).id).get)
+    sender.massTransfer(caller, List(
+      Transfer(dAppV4.toAddress.toString, 100.waves),
+      Transfer(dAppV3.toAddress.toString, 100.waves),
+    ), 0.005.waves, waitForTx = true)
+    sender.signedBroadcast(issueTx.json(), true)
 
     val sourceV4 =
       """{-# STDLIB_VERSION 4 #-}

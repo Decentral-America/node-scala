@@ -4,25 +4,21 @@ import com.typesafe.config.Config
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.util.*
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.state.{BinaryDataEntry, Height}
+import com.decentralchain.state.BinaryDataEntry
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.*
 
 class InvokeCalcIssueSuite extends BaseTransactionSuite with CancelAfterFailure with OptionValues {
   import InvokeCalcIssueSuite.*
-
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((BlockchainFeatures.BlockV5.id, Height(0)), (BlockchainFeatures.BlockV5.id, Height(0))))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    BiggestMiner.quorum(0).preactivatedFeatures(BlockchainFeatures.BlockV5)
+  )
 
   private def smartAcc  = firstKeyPair
   private def callerAcc = secondKeyPair

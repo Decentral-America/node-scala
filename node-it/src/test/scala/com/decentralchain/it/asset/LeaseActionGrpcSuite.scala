@@ -2,12 +2,11 @@ package com.decentralchain.it.asset
 
 import com.google.protobuf.ByteString
 import com.typesafe.config.Config
-import io.decentralchain.api.grpc.LeaseResponse
+import com.decentralchain.api.grpc.LeaseResponse
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuite
@@ -17,17 +16,15 @@ import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.lang.v1.traits.domain.Lease
 import com.decentralchain.lang.v1.traits.domain.Recipient.Address
-import io.decentralchain.protobuf.transaction.Recipient
+import com.decentralchain.protobuf.transaction.Recipient
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
 class LeaseActionGrpcSuite extends GrpcBaseTransactionSuite {
+  import NodeConfigs.*
   override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 2, Seq.empty)
-      .overrideBase(_.preactivatedFeatures((BlockchainFeatures.SynchronousCalls.id, Height(1))))
-      .buildNonConflicting()
+    Seq(BiggestMiner, Miners(3)).map(_.preactivatedFeatures((BlockchainFeatures.SynchronousCalls, Height(1))))
 
   private def compile(script: String): Script =
     ScriptCompiler.compile(script, ScriptEstimatorV3.latest).explicitGet()._1

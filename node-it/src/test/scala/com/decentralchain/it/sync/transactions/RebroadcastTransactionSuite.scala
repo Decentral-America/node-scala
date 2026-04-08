@@ -4,15 +4,14 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.parseString
 import com.decentralchain.account.Address
 import com.decentralchain.api.http.ApiError.CustomValidationError
-import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.Node
 import com.decentralchain.it.NodeConfigs.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.{BaseTransactionSuite, NodesFromDocker}
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.transfer.TransferTransaction
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.TxHelpers
 
 class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDocker {
 
@@ -25,19 +24,15 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
   private def nodeBIsNotMiner: Node = nodes.last
 
   test("should rebroadcast a transaction if that's allowed in config") {
-    val tx = TransferTransaction
-      .selfSigned(
-        2.toByte,
+    val tx = TxHelpers
+      .transfer(
         nodeAIsMiner.keyPair,
         Address.fromString(nodeBIsNotMiner.address).explicitGet(),
-        Dcc,
         transferAmount,
         Dcc,
         minFee,
-        ByteStr.empty,
-        System.currentTimeMillis()
+        Waves
       )
-      .explicitGet()
       .json()
 
     val dockerNodeAId = docker.stopContainer(dockerNodes().head)
@@ -54,19 +49,15 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
   test("should not rebroadcast a transaction if that's not allowed in config") {
     dockerNodes().foreach(docker.restartNode(_, configWithRebroadcastNotAllowed))
 
-    val tx = TransferTransaction
-      .selfSigned(
-        2.toByte,
+    val tx = TxHelpers
+      .transfer(
         nodeAIsMiner.keyPair,
         Address.fromString(nodeBIsNotMiner.address).explicitGet(),
-        Dcc,
         transferAmount,
         Dcc,
         minFee,
-        ByteStr.empty,
-        System.currentTimeMillis()
+        Waves
       )
-      .explicitGet()
       .json()
 
     val dockerNodeAId = docker.stopContainer(dockerNodes().head)
@@ -82,19 +73,15 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
   }
 
   test("should not broadcast a transaction if there are not enough peers") {
-    val tx = TransferTransaction
-      .selfSigned(
-        2.toByte,
+    val tx = TxHelpers
+      .transfer(
         nodeAIsMiner.keyPair,
         Address.fromString(nodeBIsNotMiner.address).explicitGet(),
-        Dcc,
         transferAmount,
         Dcc,
         minFee,
-        ByteStr.empty,
-        System.currentTimeMillis()
+        Waves
       )
-      .explicitGet()
       .json()
 
     val testNode = dockerNodes().last

@@ -2,16 +2,16 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.{AddressScheme, Alias, KeyPair, PublicKey}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.{MassTransferTxSerializer, PBTransactionSerializer}
-import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.{MaxTransferCount, ParsedTransfer, Transfer}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ThreadLocalRandom
@@ -209,10 +209,10 @@ class MassTransferTransactionSpecification extends PropSpec {
 
   property("empty transfers validation") {
     val transaction = TransactionFactory
-      .fromSignedRequest(
+      .parseRequest(
         Json.parse(
           """{"senderPublicKey":"CkvZ3sY9o8zV1akquJk6Y5d9Ke4G68zGzfSTep1KZBhi","fee":51449505,"type":11,"transferCount":0,"version":1,"totalAmount":0,"attachment":"SQqypFfuVh4j4H6zaZaAXPT8fbuNQSo6cvv6jiQuYeFXDJjtjwvu7QE6bAzQJ7VSCpX8km6rTYbug7mi3i","sender":"3MrFBnLCGKibu1jrEcRiHqGBwYCeQgyUQHc","feeAssetId":null,"proofs":["uYVrE8fKzR2dcx1EXU2WLWPwgWfdgAizRuwDJd2eU19rgoSpPuUF9eQCQzmKxg1pA3Tcp31W9MnZiK3LEbQeBwe"],"assetId":"5TBkQTEnyN8qYvfnDMnVQss3DuRVLmXSnyFFLS5AnzvE","transfers":[],"id":"CwJMbjdXchdqupzCkoALGBzg5Zp72duzhGfURLR5iwK1","timestamp":215734165446088575}"""
-        )
+        ).as[JsObject]
       )
       .explicitGet()
 

@@ -6,9 +6,9 @@ import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{matcherFee, minFee, someAssetAmount}
 import com.decentralchain.test.*
-import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.TxVersion
+import com.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
 import com.decentralchain.utils.*
@@ -118,20 +118,16 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
   }
 
   test("cannot exchange non-issued assets") {
-    val exchAsset: IssueTransaction = IssueTransaction
-      .selfSigned(
-        TxVersion.V1,
+    val exchAsset: IssueTransaction = TxHelpers.issue(
         sender.keyPair,
+        someAssetAmount,
+        2,
         "myasset",
         "my asset description",
-        quantity = someAssetAmount,
-        decimals = 2,
-        reissuable = true,
+        fee = 1.waves,
         script = None,
-        fee = 1.dcc,
         timestamp = System.currentTimeMillis()
       )
-      .explicitGet()
     for ((o1ver, o2ver, tver) <- versions) {
 
       val assetId             = exchAsset.id().toString

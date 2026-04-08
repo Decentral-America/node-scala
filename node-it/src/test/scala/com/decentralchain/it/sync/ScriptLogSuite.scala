@@ -7,8 +7,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.BinaryDataEntry
-import com.decentralchain.transaction.DataTransaction
-import com.decentralchain.transaction.smart.SetScriptTransaction
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
 
@@ -66,10 +65,8 @@ class ScriptLogSuite extends BaseTransactionSuite with CancelAfterFailure {
 
     sender.putData(firstKeyPair, data, ENOUGH_FEE, waitForTx = true).id
 
-    val script = ScriptCompiler.compile(scriptSrc, ScriptEstimatorV2).explicitGet()._1
-    val setScriptTransaction = SetScriptTransaction
-      .selfSigned(1.toByte, firstKeyPair, Some(script), setScriptFee, System.currentTimeMillis())
-      .explicitGet()
+    val script               = ScriptCompiler.compile(scriptSrc, ScriptEstimatorV2).explicitGet()._1
+    val setScriptTransaction = TxHelpers.setScript(firstKeyPair, script, setScriptFee, timestamp = System.currentTimeMillis())
 
     val sstx = sender.signedBroadcast(setScriptTransaction.json()).id
 
@@ -80,18 +77,14 @@ class ScriptLogSuite extends BaseTransactionSuite with CancelAfterFailure {
     ThreadLocalRandom.current().nextBytes(signature)
 
     def mkInvData() =
-      DataTransaction
-        .selfSigned(
-          1.toByte,
-          firstKeyPair,
-          List(
-            BinaryDataEntry("pk", firstKeyPair.publicKey.byteStr),
-            BinaryDataEntry("sig", ByteStr(signature))
-          ),
-          ENOUGH_FEE,
-          System.currentTimeMillis()
-        )
-        .explicitGet()
+      TxHelpers.data(
+        firstKeyPair,
+        List(
+          BinaryDataEntry("pk", firstKeyPair.publicKey.byteStr),
+          BinaryDataEntry("sig", ByteStr(signature))
+        ),
+        ENOUGH_FEE
+      )
 
     assertApiErrorRaised(sender.signedBroadcast(mkInvData().json()))
 

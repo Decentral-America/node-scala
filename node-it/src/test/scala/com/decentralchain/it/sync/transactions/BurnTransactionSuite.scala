@@ -3,13 +3,13 @@ package com.decentralchain.it.sync.transactions
 import cats.syntax.option.*
 import com.decentralchain.account.AddressScheme
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.BurnTransactionInfo
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.{issueAmount, issueFee, *}
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.TxVersion
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.assets.BurnTransaction
 import play.api.libs.json.Json
 
@@ -189,9 +189,7 @@ class BurnTransactionSuite extends BaseTransactionSuite {
     val issuedAssetId =
       sender.issue(firstKeyPair, "name", "description", issueAmount, decimals, reissuable = false, fee = issueFee, waitForTx = true).id
 
-    val tx = BurnTransaction
-      .selfSigned(TxVersion.V1, firstKeyPair, IssuedAsset(ByteStr.decodeBase58(issuedAssetId).get), 1, minFee, System.currentTimeMillis())
-      .explicitGet()
+    val tx = TxHelpers.burn(asset = IssuedAsset(ByteStr.decodeBase58(issuedAssetId).get), amount = 1, fee = minFee, sender = firstKeyPair, version = TxVersion.V1)
     val json = tx.json() - "amount" ++ Json.obj("quantity" -> 1L)
     sender.signedBroadcast(json, waitForTx = true).id
   }

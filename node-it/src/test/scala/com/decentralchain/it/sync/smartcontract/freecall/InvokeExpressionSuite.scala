@@ -4,7 +4,6 @@ import com.decentralchain.account.AddressScheme
 import com.decentralchain.api.http.ApiError.StateCheckFailed
 import com.decentralchain.features.BlockchainFeatures.ContinuationTransaction
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{PutDataResponse, StateChangesDetails, Transaction, TransactionInfo}
 import com.decentralchain.it.sync.invokeExpressionFee
@@ -16,12 +15,10 @@ import com.decentralchain.state.Height
 import org.scalatest.{Assertion, CancelAfterFailure}
 
 class InvokeExpressionSuite extends BaseTransactionSuite with CancelAfterFailure {
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((ContinuationTransaction.id, Height(0))))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    BiggestMiner.quorum(0).preactivatedFeatures(ContinuationTransaction)
+  )
 
   private val expr: ExprScript =
     TestCompiler(V6).compileFreeCall(

@@ -1,14 +1,13 @@
 package com.decentralchain.it.sync.smartcontract
 
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.state.*
 import com.decentralchain.transaction.assets.exchange.*
-import com.decentralchain.transaction.{DataTransaction, TxVersion}
+import com.decentralchain.transaction.{DataTransaction, TxHelpers, TxVersion}
 import org.scalatest.CancelAfterFailure
 
 class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFailure with NTPTime {
@@ -56,7 +55,7 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
     val entry3 = BinaryDataEntry("blob", ByteStr.decodeBase64("YWxpY2U=").get)
     val entry4 = StringDataEntry("str", "test")
 
-    dtx = DataTransaction.selfSigned(1.toByte, acc0, List(entry1, entry2, entry3, entry4), minFee, ntpTime.correctedTime()).explicitGet()
+    dtx = TxHelpers.data(acc0, List(entry1, entry2, entry3, entry4), minFee)
     sender.signedBroadcast(dtx.json(), waitForTx = true)
   }
 
@@ -92,7 +91,7 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
 
         sender.signedBroadcast(exchangeTx(pair, smartMatcherFee, orderFee, ntpTime, o1ver, o2ver, acc1, acc0, acc2), waitForTx = true)
 
-        // NOTE: Balance assertions omitted — exchange flow tested by other assertions
+        // TODO : add assert balances
       }
     }
 
@@ -127,7 +126,7 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
           sender.signedBroadcast(exchangeTx(pair, smartMatcherFee, orderFee, ntpTime, o1ver, o2ver, acc1, acc0, acc2)),
           "Transaction is not allowed by account-script"
         )
-        // NOTE: Balance assertions omitted — exchange flow tested by other assertions
+        // TODO : add assert balances
       }
     }
     setContracts(
@@ -156,7 +155,7 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
       ) {
         val tx = exchangeTx(pair, smartMatcherFee, orderFee, ntpTime, o1ver, o2ver, acc1, acc0, acc2)
         assertBadRequestAndMessage(sender.signedBroadcast(tx), "Error while executing account-script: Some generic error")
-        // NOTE: Balance assertions omitted — exchange flow tested by other assertions
+        // TODO : add assert balances
       }
     }
     setContracts(
@@ -192,26 +191,24 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
         val (buy, sell) = orders(pair, o1ver, o2ver, orderFee, ntpTime, acc1, acc0, acc2)
 
         val amount = math.min(buy.amount.value, sell.amount.value)
-        val tx = ExchangeTransaction
-          .signed(
-            3.toByte,
-            matcher = matcher.privateKey,
-            order1 = sell,
-            order2 = buy,
-            amount = amount,
-            price = sellPrice,
-            buyMatcherFee = (BigInt(orderFee) * amount / buy.amount.value).toLong,
-            sellMatcherFee = (BigInt(orderFee) * amount / sell.amount.value).toLong,
-            fee = smartMatcherFee,
-            timestamp = ntpTime.correctedTime()
+        val tx = TxHelpers
+          .exchange(
+            sell,
+            buy,
+            matcher,
+            amount,
+            sellPrice,
+            (BigInt(orderFee) * amount / buy.amount.value).toLong,
+            (BigInt(orderFee) * amount / sell.amount.value).toLong,
+            smartMatcherFee,
+            version = 3.toByte
           )
-          .explicitGet()
           .json()
 
         val txId = sender.signedBroadcast(tx).id
         nodes.waitForTransaction(txId)
 
-        // NOTE: Balance assertions omitted — exchange flow tested by other assertions
+        // TODO : add assert balances
       }
     }
     setContracts(
@@ -236,20 +233,18 @@ class ExchangeWithContractsSuite extends BaseTransactionSuite with CancelAfterFa
       val (buy, sell) = orders(pair, o1ver, o2ver, orderFee, ntpTime, acc1, acc0, acc2)
 
       val amount = math.min(buy.amount.value, sell.amount.value)
-      val tx = ExchangeTransaction
-        .signed(
-          2.toByte,
-          matcher = matcher.privateKey,
-          order1 = buy,
-          order2 = sell,
-          amount = amount,
-          price = sellPrice,
-          buyMatcherFee = (BigInt(orderFee) * amount / buy.amount.value).toLong,
-          sellMatcherFee = (BigInt(orderFee) * amount / sell.amount.value).toLong,
-          fee = smartMatcherFee,
-          timestamp = ntpTime.correctedTime()
+      val tx = TxHelpers
+        .exchange(
+          buy,
+          sell,
+          matcher,
+          amount,
+          sellPrice,
+          (BigInt(orderFee) * amount / buy.amount.value).toLong,
+          (BigInt(orderFee) * amount / sell.amount.value).toLong,
+          smartMatcherFee,
+          version = 2.toByte
         )
-        .explicitGet()
         .json()
 
       assertBadRequestAndMessage(sender.signedBroadcast(tx), "Reason: Can't process order with signature from scripted account")

@@ -1,20 +1,42 @@
 package com.decentralchain.api.http.requests
 
+import com.decentralchain.account.PublicKey
+import com.decentralchain.lang.ValidationError
+import com.decentralchain.lang.script.Script
+import com.decentralchain.transaction.Asset.IssuedAsset
+import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.assets.SetAssetScriptTransaction
-import play.api.libs.json.{Format, JsNumber, JsObject, Json}
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.{JsPath, Reads}
+
+object SetAssetScriptRequest {
+  given Reads[SetAssetScriptRequest] = (
+    (JsPath \ "version").readNullable[Byte] and
+      (JsPath \ "senderPublicKey").read[String] and
+      (JsPath \ "assetId").read[IssuedAsset] and
+      (JsPath \ "script").readNullable[String] and
+      (JsPath \ "fee").read[Long] and
+      (JsPath \ "timestamp").read[Long] and
+      (JsPath \ "proofs").read[Proofs]
+  )(SetAssetScriptRequest.apply)
+}
 
 case class SetAssetScriptRequest(
     version: Option[Byte],
-    sender: String,
-    assetId: String,
+    senderPublicKey: String,
+    assetId: IssuedAsset,
     script: Option[String],
     fee: Long,
-    timestamp: Option[Long] = None
-) {}
-
-object SetAssetScriptRequest {
-  implicit val jsonFormat: Format[SetAssetScriptRequest] = Json.format
-  implicit class SetAssetScriptRequestExt(val self: SetAssetScriptRequest) extends AnyVal {
-    def toJsObject: JsObject = Json.toJson(self).as[JsObject] + ("type" -> JsNumber(SetAssetScriptTransaction.typeId.toInt))
-  }
+    timestamp: Long,
+    proofs: Proofs
+) extends TxBroadcastRequest[SetAssetScriptTransaction] {
+  def toTx: Either[ValidationError, SetAssetScriptTransaction] =
+    for {
+      _sender <- PublicKey.fromBase58String(senderPublicKey)
+      _script <- script match {
+        case None | Some("") => Right(None)
+        case Some(s)         => Script.fromBase64String(s).map(Some(_))
+      }
+      t <- SetAssetScriptTransaction.create(version.getOrElse(1.toByte), _sender, assetId, _script, fee, timestamp, proofs)
+    } yield t
 }

@@ -5,7 +5,6 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.LeaseInfo
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
@@ -18,11 +17,9 @@ import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
 class LeaseActionSuite extends BaseTransactionSuite {
+  import NodeConfigs.*
   override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 2, Seq.empty)
-      .overrideBase(_.preactivatedFeatures((BlockchainFeatures.SynchronousCalls.id, Height(1))))
-      .buildNonConflicting()
+    Seq(BiggestMiner, Miners(6)).map(_.preactivatedFeatures((BlockchainFeatures.SynchronousCalls, Height(1))))
 
   private def compile(script: String): String =
     ScriptCompiler.compile(script, ScriptEstimatorV3.latest).explicitGet()._1.bytes().base64

@@ -17,7 +17,6 @@ import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.state.{Blockchain, BlockchainUpdaterImpl, NG, diffs}
 import com.decentralchain.test.{FlatSpec, *}
 import com.decentralchain.transaction.Asset.Waves
-import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.Time
 import com.decentralchain.{BlocksTransactionsHelpers, crypto, protobuf}
@@ -337,9 +336,17 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
   }
 
   private def createTx(sender: KeyPair, recipient: AddressOrAlias): Transaction =
-    TransferTransaction
-      .selfSigned(TxVersion.V1, sender, recipient, Dcc, 10 * Constants.UnitsInDcc, Dcc, 100000, ByteStr.empty, ntpTime.getTimestamp())
-      .explicitGet()
+    TxHelpers.transfer(
+      from = sender,
+      to = recipient,
+      amount = 10 * Constants.UnitsInWave,
+      asset = Waves,
+      fee = 100000,
+      feeAsset = Waves,
+      attachment = ByteStr.empty,
+      timestamp = ntpTime.getTimestamp(),
+      version = TxVersion.V1
+    )
 
   private val updaterScenario = for {
     (miner1, miner2, b1) <- genesis

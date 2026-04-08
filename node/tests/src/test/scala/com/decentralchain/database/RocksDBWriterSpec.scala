@@ -13,14 +13,14 @@ import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.{V2, V5}
 import com.decentralchain.lang.v1.compiler.Terms.CONST_BOOLEAN
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.settings.{GenesisTransactionSettings, DCCSettings}
+import com.decentralchain.settings.{GenesisTransactionSettings, WavesSettings}
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.Height as H
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.transaction.TxValidationError.AliasDoesNotExist
 import com.decentralchain.transaction.smart.SetScriptTransaction
-import com.decentralchain.transaction.{TxHelpers, TxPositiveAmount}
+import com.decentralchain.transaction.{Proofs, TxHelpers, TxPositiveAmount}
 import org.rocksdb.{ReadOptions, RocksIterator}
 
 import java.util.concurrent.ThreadLocalRandom
@@ -93,7 +93,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe true
 
     // removing account script
-    d.appendBlock(SetScriptTransaction.selfSigned(1.toByte, scriptOwner, None, 0.014.dcc, ntpNow).explicitGet())
+    d.appendBlock(SetScriptTransaction.create(1.toByte, scriptOwner.publicKey, None, 0.014.waves, ntpNow, Proofs.empty).map(_.signWith(scriptOwner.privateKey)).explicitGet())
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe false
 
     d.appendBlock()

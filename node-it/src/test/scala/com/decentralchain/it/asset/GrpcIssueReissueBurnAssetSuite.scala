@@ -1,7 +1,7 @@
 package com.decentralchain.it.asset
 
 import com.decentralchain.account.KeyPair
-import io.decentralchain.api.grpc.AssetInfoResponse
+import com.decentralchain.api.grpc.AssetInfoResponse
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
@@ -12,10 +12,9 @@ import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuiteLike
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
+import com.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.TxVersion
-import com.decentralchain.transaction.smart.SetScriptTransaction
+import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.freespec.AnyFreeSpec
 
@@ -262,9 +261,7 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
       miner
         .signedBroadcast(
           PBTransactions.protobuf(
-            SetScriptTransaction
-              .selfSigned(1.toByte, address, Some(compiledScript), setScriptFee, System.currentTimeMillis())
-              .explicitGet()
+            TxHelpers.setScript(address, compiledScript, setScriptFee)
           )
         )
         .id

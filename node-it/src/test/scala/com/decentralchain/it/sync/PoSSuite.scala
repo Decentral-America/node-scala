@@ -12,14 +12,14 @@ import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.crypto
 import com.decentralchain.it.api.AsyncNetworkApi.NodeAsyncNetworkApi
 import com.decentralchain.it.api.SyncHttpApi.*
-import com.decentralchain.it.{BaseFunSuite, NodeConfigs, WaitForHeight2}
+import com.decentralchain.it.{BaseFunSuite, NodeConfigs}
 import com.decentralchain.network.RawBytes
 import com.decentralchain.state.Height
 import play.api.libs.json.{JsSuccess, Json, Reads}
 
 import java.util.concurrent.ThreadLocalRandom
 
-class PoSSuite extends BaseFunSuite with WaitForHeight2 {
+class PoSSuite extends BaseFunSuite {
 
   private val signerPK = KeyPair.fromSeed(nodeConfigs.last.getString("account-seed")).explicitGet()
 

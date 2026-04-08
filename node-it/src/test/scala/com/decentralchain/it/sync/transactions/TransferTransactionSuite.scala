@@ -8,10 +8,11 @@ import com.decentralchain.it.api.TransferTransactionInfo
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.TransferTransaction.MaxAttachmentSize
-import com.decentralchain.transaction.{Proofs, TxPositiveAmount, TxVersion, TransactionSignOps}
+import com.decentralchain.transaction.{Proofs, TxPositiveAmount, TxVersion}
 import org.scalatest.CancelAfterFailure
 import play.api.libs.json.Json
 
@@ -20,9 +21,7 @@ import scala.concurrent.duration.*
 
 class TransferTransactionSuite extends BaseTransactionSuite with CancelAfterFailure {
   test("transfer with empty string assetId") {
-    val tx = TransferTransaction
-      .selfSigned(2.toByte, sender.keyPair, sender.keyPair.toAddress, Dcc, 100L, Dcc, minFee, ByteStr.empty, System.currentTimeMillis())
-      .explicitGet()
+    val tx = TxHelpers.transfer(from = sender.keyPair, to = sender.keyPair.toAddress, amount = 100L, asset = Waves, fee = minFee, feeAsset = Waves, attachment = ByteStr.empty, version = 2.toByte)
     val json = tx.json() ++ Json.obj("assetId" -> "", "feeAssetId" -> "")
     sender.signedBroadcast(json, waitForTx = true)
   }

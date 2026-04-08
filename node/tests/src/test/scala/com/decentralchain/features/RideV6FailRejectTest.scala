@@ -13,12 +13,12 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.utils.EthConverters.*
-import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, Transaction, TxHelpers, TxVersion, TransactionSignOps}
+import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, Transaction, TxHelpers, TxVersion}
 import org.scalatest.{EitherValues, OptionValues}
 
 import java.nio.charset.StandardCharsets
@@ -310,7 +310,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
           s"NODE-546 If an invoke writes an empty $entryType key to the state",
           "Data entry key should not be empty",
           mkDAppFunc(entry),
-          invokeTx = aliceInvokeTx.copy(version = TxVersion.V1).signWith(invoker.privateKey)
+          invokeTx = TxHelpers.invoke(dApp = aliceAddr, invoker = invoker, func = Some("foo"), fee = 3.waves, version = TxVersion.V1)
         )
       } ++
         dataEntries.map { case (entryType, entry) =>

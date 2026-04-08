@@ -3,21 +3,21 @@ package com.decentralchain.it.sync.transactions
 import com.google.common.primitives.Ints
 import com.typesafe.config.Config
 import com.decentralchain.account.{AddressScheme, KeyPair}
-import com.decentralchain.api.http.ApiError.{CustomValidationError, TooBigArrayAllocation, WrongJson}
+import com.decentralchain.api.http.ApiError.{CustomValidationError, TooBigArrayAllocation}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{TransactionInfo, UnexpectedStatusCodeException}
-import com.decentralchain.it.sync.{calcDataFee, minFee, *}
+import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.state.Height
-import com.decentralchain.test.*
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
+import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import com.decentralchain.transaction.{DataTransaction, Proofs, TxVersion}
+import com.decentralchain.transaction.{DataTransaction, Proofs, TxHelpers, TxVersion}
 import org.scalatest.{Assertion, Assertions, EitherValues}
 import play.api.libs.json.*
 
@@ -26,15 +26,18 @@ import java.util.concurrent.ThreadLocalRandom
 import scala.util.{Failure, Try}
 
 class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
-  override def nodeConfigs: Seq[Config] =
-    NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.raw("dcc.blockchain.custom.functionality.blocks-for-feature-activation = 1"))
-      .overrideBase(_.raw("dcc.blockchain.custom.functionality.feature-check-blocks-period = 1"))
-      .overrideBase(_.preactivatedFeatures(15 -> Height(0)))
-      .withDefault(1)
-      .withSpecial(1, _.nonMiner)
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    BiggestMiner.quorum(0),
+    NotMiner
+  ).map(
+    _.preactivatedFeatures(BlockchainFeatures.BlockV5).overrides(
+      """waves.blockchain.custom.functionality {
+        |  blocks-for-feature-activation = 1
+        |  feature-check-blocks-period = 1
+        |}""".stripMargin
+    )
+  )
 
   private lazy val fourthKeyPair         = sender.createKeyPair()
   private lazy val fourthAddress: String = fourthKeyPair.toAddress.toString
@@ -70,7 +73,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
       waitForTx = true
     )
     val dataTx =
-      DataTransaction.selfSigned(TxVersion.V1, keyPair, Seq(StringDataEntry("1", "test")), 700000L, System.currentTimeMillis()).explicitGet()
+      TxHelpers.data(account = keyPair, entries = Seq(StringDataEntry("1", "test")), fee = 700000L, version = TxVersion.V1)
 
     val brokenProofs = dataTx.copy(proofs = Proofs(dataTx.proofs.proofs :+ ByteStr(new Array[Byte](65))))
     assertBadRequestAndResponse(sender.signedBroadcast(brokenProofs.json(), waitForTx = true), "Too large proof")
@@ -357,21 +360,17 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
   test("transaction requires a valid proof") {
     for (v <- dataTxSupportedVersions) {
       def request: JsObject =
-        DataTransaction
-          .selfSigned(
-            v,
-            firstKeyPair,
-            List(IntegerDataEntry("int", 333)),
-            minFee,
-            System.currentTimeMillis()
-          )
-          .explicitGet()
+        TxHelpers
+          .data(account = firstKeyPair, entries = List(IntegerDataEntry("int", 333)), fee = minFee, version = v)
           .json()
 
       def id(obj: JsObject): String = obj.value("id").as[String]
 
       val noProof = request - "proofs"
-      assertBadRequestAndResponse(sender.postJson("/transactions/broadcast", noProof), s"${WrongJson.WrongJsonDataMessage}.*proofs.*missing")
+      assertBadRequestAndResponse(
+        sender.postJson("/transactions/broadcast", noProof),
+        "Transactions from non-scripted accounts must have exactly 1 proof"
+      )
       nodes.foreach(_.ensureTxDoesntExist(id(noProof)))
 
       val badProof = request ++ Json.obj("proofs" -> Seq(Base58.encode(Array.fill(64)(ThreadLocalRandom.current().nextInt().toByte))))
@@ -479,5 +478,5 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
       timestamp: Long = System.currentTimeMillis,
       version: TxVersion
   ): DataTransaction =
-    DataTransaction.selfSigned(version, sender.keyPair, entries, fee, timestamp).explicitGet()
+    TxHelpers.data(sender.keyPair, entries, fee, version, timestamp)
 }

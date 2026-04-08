@@ -14,8 +14,9 @@ JAVA_OPTS="-XX:+ExitOnOutOfMemoryError
   -Ddcc.rest-api.bind-address=${DCC_REST_API_BIND:-127.0.0.1}
   ${JAVA_OPTS:-}"
 
-# Log non-sensitive JVM options only
-echo "Node starting with DCC_NETWORK=${DCC_NETWORK}, DCC_HEAP_SIZE=${DCC_HEAP_SIZE}" | tee -a ${DCC_LOG}/dcc.log
+if [ "$WAVES_LOG_JAVA_OPTS" = "true" ] ; then
+  echo "JAVA_OPTS=${JAVA_OPTS}" | tee -a ${WVLOG}/waves.log
+fi
 
 # Write wallet secrets to a temp config file (not visible in ps/cmdline)
 DCC_SECRETS_CONF=$(mktemp /tmp/dcc-secrets.XXXXXX.conf)

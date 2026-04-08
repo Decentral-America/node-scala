@@ -7,7 +7,6 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.sync.smartcontract.RideV4ActivationSuite.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.state.Height
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
@@ -28,19 +27,16 @@ class InvokeScriptTransactionRideV5Suite extends BaseTransactionSuite with Cance
 
   private def alias(name: String): String = s"alias:I:$name"
 
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(NodeConfigs.Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(
-        _.preactivatedFeatures(
-          (BlockchainFeatures.Ride4DApps.id, Height(0)),
-          (BlockchainFeatures.BlockV5.id, Height(0)),
-          (BlockchainFeatures.SynchronousCalls.id, Height(0))
-        )
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    BiggestMiner
+      .quorum(0)
+      .preactivatedFeatures(
+        BlockchainFeatures.Ride4DApps,
+        BlockchainFeatures.BlockV5,
+        BlockchainFeatures.SynchronousCalls
       )
-      .withDefault(1)
-      .buildNonConflicting()
+  )
 
   protected override def beforeAll(): Unit = {
     super.beforeAll()

@@ -2,33 +2,29 @@ package com.decentralchain.it.sync.transactions
 
 import com.google.common.primitives.Longs
 import com.typesafe.config.Config
-
-import java.util.concurrent.ThreadLocalRandom
-import scala.util.Try
 import com.decentralchain.account.{AddressScheme, KeyPair}
 import com.decentralchain.api.http.ApiError.WrongJson
 import com.decentralchain.features.BlockchainFeatures.RideV6
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.TransactionInfo
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.directives.values.V6
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.state.Height
 import com.decentralchain.test.*
 import com.decentralchain.transaction.*
 import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json.*
 
+import scala.util.{Random, Try}
+
 class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropertyChecks {
+  import NodeConfigs.*
   override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 2, Seq.empty)
-      .overrideBase(_.preactivatedFeatures((RideV6.id, Height(0))))
-      .overrideBase(_.raw(s"dcc.blockchain.custom.functionality.allow-multiple-proofs-in-create-alias-until = 0"))
-      .buildNonConflicting()
+    Seq(BiggestMiner, Miners(3)).map(
+      _.preactivatedFeatures(RideV6).overrides("waves.blockchain.custom.functionality.allow-multiple-proofs-in-create-alias-until = 0")
+    )
 
   var version: Byte = 1
 
@@ -217,12 +213,9 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
   }
 
   private def createAliasFromJson(target: KeyPair, alias: String, fee: Long, version: Byte) = {
-    import com.decentralchain.common.utils.EitherExt2.*
     val transactionJson = Try(
-      CreateAliasTransaction
-        .selfSigned(version, target, alias, fee, System.currentTimeMillis())
-        .foldToTry
-    ).flatten
+      TxHelpers.createAlias(name = alias, sender = target, fee = fee, version = version)
+    )
       .map(_.json())
       .getOrElse(
         Json.obj(

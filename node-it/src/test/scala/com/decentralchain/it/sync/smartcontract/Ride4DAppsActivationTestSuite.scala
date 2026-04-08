@@ -1,18 +1,19 @@
 package com.decentralchain.it.sync.smartcontract
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.test.*
-import com.decentralchain.transaction.{Asset, AssetIdLength}
-import com.decentralchain.transaction.smart.script.ScriptCompiler
-import org.scalatest.CancelAfterFailure
 import com.decentralchain.state.Height
+import com.decentralchain.test.*
+import com.decentralchain.transaction.smart.script.ScriptCompiler
+import com.decentralchain.transaction.{Asset, AssetIdLength}
+import org.scalatest.CancelAfterFailure
 
 import scala.concurrent.duration.*
 
@@ -182,18 +183,6 @@ class Ride4DAppsActivationTestSuite extends BaseTransactionSuite with CancelAfte
 object Ride4DAppsActivationTestSuite {
   val activationHeight = Height(15)
 
-  val configWithRide4DAppsFeature = NodeConfigs.newBuilder
-    .withDefault(1)
-    .withSpecial(1, _.nonMiner)
-    .buildNonConflicting()
-    .map(
-      ConfigFactory
-        .parseString(
-          s"""dcc.blockchain.custom.functionality {
-             |  pre-activated-features.11 = ${activationHeight - 1}
-             |}""".stripMargin
-        )
-        .withFallback(_)
-    )
-
+  import NodeConfigs.*
+  val configWithRide4DAppsFeature = Seq(BiggestMiner, NotMiner).map(_.preactivatedFeatures((BlockchainFeatures.Ride4DApps, activationHeight - 1)))
 }

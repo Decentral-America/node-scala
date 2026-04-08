@@ -18,9 +18,8 @@ import com.decentralchain.settings.{Constants, FunctionalitySettings, RewardsSet
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain, GenesisBlockHeight, Height}
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.{RideV6, DCCSettingsOps, BlockRewardDistribution as BlockRewardDistributionSettings}
-import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.transfer.TransferTransaction
+import com.decentralchain.test.DomainPresets.{RideV6, WavesSettingsOps, BlockRewardDistribution as BlockRewardDistributionSettings}
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers}
 import org.scalacheck.Gen
 import org.scalactic.source.Position
@@ -232,32 +231,29 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   "Miner receives reward and fees" - {
     val ngEmptyScenario = for {
       (sourceAddress, issuer, miner1, miner2, genesisBlock) <- genesis
-      tx1 = TransferTransaction
-        .selfSigned(
-          1.toByte,
+      tx1 = TxHelpers.transfer(
+        issuer,
+        sourceAddress.toAddress,
+        10 * Constants.UnitsInWave,
+        Waves,
+        OneTotalFee,
+        Waves,
+        ByteStr.empty,
+        ntpTime.getTimestamp(),
+        1.toByte
+      )
+      tx2 = TxHelpers
+        .transfer(
           issuer,
           sourceAddress.toAddress,
-          Dcc,
-          10 * Constants.UnitsInDcc,
-          Dcc,
+          10 * Constants.UnitsInWave,
+          Waves,
           OneTotalFee,
+          Waves,
           ByteStr.empty,
-          ntpTime.getTimestamp()
+          ntpTime.getTimestamp(),
+          1.toByte
         )
-        .explicitGet()
-      tx2 = TransferTransaction
-        .selfSigned(
-          1.toByte,
-          issuer,
-          sourceAddress.toAddress,
-          Dcc,
-          10 * Constants.UnitsInDcc,
-          Dcc,
-          OneTotalFee,
-          ByteStr.empty,
-          ntpTime.getTimestamp()
-        )
-        .explicitGet()
       b2        = mkEmptyBlock(genesisBlock.id(), miner1)
       b3        = mkEmptyBlock(b2.id(), miner1)
       b4        = TestBlock.create(ntpNow, b3.id(), Seq(tx1), miner1).block
@@ -306,19 +302,17 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
     val betterBlockScenario = for {
       (sourceAddress, issuer, miner, _, genesisBlock) <- genesis
-      tx = TransferTransaction
-        .selfSigned(
-          1.toByte,
-          issuer,
-          sourceAddress.toAddress,
-          Dcc,
-          10 * Constants.UnitsInDcc,
-          Dcc,
-          OneTotalFee,
-          ByteStr.empty,
-          ntpTime.getTimestamp()
-        )
-        .explicitGet()
+      tx = TxHelpers.transfer(
+        issuer,
+        sourceAddress.toAddress,
+        10 * Constants.UnitsInWave,
+        Waves,
+        OneTotalFee,
+        Waves,
+        ByteStr.empty,
+        ntpTime.getTimestamp(),
+        1.toByte
+      )
       b2        = mkEmptyBlock(genesisBlock.id(), miner)
       b3        = mkEmptyBlock(b2.id(), miner)
       b4        = mkEmptyBlock(b3.id(), miner)

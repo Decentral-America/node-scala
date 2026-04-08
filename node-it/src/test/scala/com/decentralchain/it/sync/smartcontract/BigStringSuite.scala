@@ -7,12 +7,11 @@ import com.decentralchain.crypto
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.{minFee, setScriptFee, transferAmount}
 import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.test.*
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Proofs
+import com.decentralchain.test.*
 import com.decentralchain.transaction.lease.LeaseTransaction
-import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
+import com.decentralchain.transaction.{Proofs, TxHelpers}
 import org.scalatest.CancelAfterFailure
 
 class BigStringSuite extends BaseTransactionSuite with CancelAfterFailure {
@@ -44,10 +43,8 @@ class BigStringSuite extends BaseTransactionSuite with CancelAfterFailure {
         }
         """.stripMargin
 
-    val script = ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
-    val setScriptTransaction = SetScriptTransaction
-      .selfSigned(1.toByte, acc0, Some(script), setScriptFee, System.currentTimeMillis())
-      .explicitGet()
+    val script               = ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
+    val setScriptTransaction = TxHelpers.setScript(acc0, script, setScriptFee)
 
     val setScriptId = sender
       .signedBroadcast(setScriptTransaction.json())

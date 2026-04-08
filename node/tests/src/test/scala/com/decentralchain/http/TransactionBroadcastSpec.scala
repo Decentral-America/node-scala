@@ -23,7 +23,6 @@ import com.decentralchain.transaction.{
   AssetIdLength,
   Proofs,
   Transaction,
-  TransactionSignOps,
   TxExchangeAmount,
   TxHelpers,
   TxMatcherFee,

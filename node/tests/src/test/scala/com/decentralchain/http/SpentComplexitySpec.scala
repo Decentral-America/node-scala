@@ -2,18 +2,15 @@ package com.decentralchain.http
 
 import com.decentralchain.api.http.{ApiMarshallers, RouteTimeout, TransactionsApiRoute}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.IssueTransaction
-import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
-import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.utils.Signed
+import com.decentralchain.transaction.smart.InvokeScriptTransaction
+import com.decentralchain.transaction.{Asset, TxHelpers}
 import com.decentralchain.utils.SharedSchedulerMixin
 import com.decentralchain.{BlockGen, TestWallet}
 import org.scalatest.OptionValues
@@ -82,11 +79,10 @@ class SpentComplexitySpec
   "Invocation" - {
     "does not count verifier complexity when InvokeScript is sent from smart account" in
       withDomain(settings, Seq(AddrWithBalance(sender.toAddress, 10_000_00000000L))) { d =>
-        val invokeTx = Signed
-          .invokeScript(2.toByte, sender, sender.toAddress, None, Seq.empty, 90_0000L, Asset.Dcc, ntpTime.getTimestamp())
+        val invokeTx = TxHelpers.invoke(sender.toAddress, None, Seq.empty, Seq.empty, sender, 90_0000L, Asset.Waves, 2.toByte, ntpTime.getTimestamp())
 
         d.appendBlock(
-          SetScriptTransaction.selfSigned(2.toByte, sender, Some(contract), 100_0000L, ntpTime.getTimestamp()).explicitGet(),
+          TxHelpers.setScript(sender, contract, 100_0000L, 2.toByte, timestamp = ntpTime.getTimestamp()),
           invokeTx
         )
 
@@ -99,30 +95,27 @@ class SpentComplexitySpec
       val recipient = testWallet.generateNewAccount().get
 
       withDomain(settings, Seq(AddrWithBalance(sender.toAddress, 10_000_00000000L), AddrWithBalance(recipient.toAddress, 10_00000000L))) { d =>
-        val issue = IssueTransaction
-          .selfSigned(2.toByte, sender, "TEST", "", 1000_00L, 2.toByte, false, Some(assetScript), 1_00000000L, ntpTime.getTimestamp())
-          .explicitGet()
+        val issue = TxHelpers.issue(sender, 1000_00L, 2.toByte, "TEST", "", 1_00000000L, Some(assetScript), false, ntpTime.getTimestamp(), 2.toByte)
 
-        val transferAsset = TransferTransaction
-          .selfSigned(2.toByte, sender, recipient.toAddress, issue.asset, 50_00L, Dcc, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
-          .explicitGet()
+        val transferAsset = TxHelpers
+          .transfer(sender, recipient.toAddress, 50_00L, issue.asset, 90_0000L, Waves, timestamp = ntpTime.getTimestamp(), version = 2.toByte)
 
-        val invokeTx = Signed
-          .invokeScript(
-            2.toByte,
-            recipient,
-            sender.toAddress,
-            None,
-            Seq(InvokeScriptTransaction.Payment(50_00L, issue.asset)),
-            90_0000L,
-            Asset.Dcc,
-            ntpTime.getTimestamp()
-          )
+        val invokeTx = TxHelpers.invoke(
+          sender.toAddress,
+          None,
+          Seq.empty,
+          Seq(InvokeScriptTransaction.Payment(50_00L, issue.asset)),
+          recipient,
+          90_0000L,
+          Asset.Waves,
+          2.toByte,
+          ntpTime.getTimestamp()
+        )
 
         d.appendBlock(
           issue,
           transferAsset,
-          SetScriptTransaction.selfSigned(2.toByte, sender, Some(contract), 100_0000L, ntpTime.getTimestamp()).explicitGet(),
+          TxHelpers.setScript(sender, contract, 100_0000L, 2.toByte, timestamp = ntpTime.getTimestamp()),
           invokeTx
         )
 
@@ -137,17 +130,13 @@ class SpentComplexitySpec
     val recipient = testWallet.generateNewAccount().get
 
     withDomain(settings, Seq(AddrWithBalance(sender.toAddress, 10_000_00000000L), AddrWithBalance(recipient.toAddress, 10_00000000L))) { d =>
-      val issue = IssueTransaction
-        .selfSigned(2.toByte, sender, "TEST", "", 1000_00L, 2.toByte, false, Some(assetScript), 1_00000000L, ntpTime.getTimestamp())
-        .explicitGet()
+      val issue = TxHelpers.issue(sender, 1000_00L, 2.toByte, "TEST", "", 1_00000000L, Some(assetScript), false, ntpTime.getTimestamp(), 2.toByte)
 
-      val transferAsset = TransferTransaction
-        .selfSigned(2.toByte, sender, recipient.toAddress, issue.asset, 50_00L, Dcc, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
-        .explicitGet()
+      val transferAsset =
+        TxHelpers.transfer(sender, recipient.toAddress, 50_00L, issue.asset, 90_0000L, Waves, ByteStr.empty, ntpTime.getTimestamp(), 2.toByte)
 
-      val returnFrom = TransferTransaction
-        .selfSigned(2.toByte, recipient, sender.toAddress, issue.asset, 49_00L, Dcc, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
-        .explicitGet()
+      val returnFrom =
+        TxHelpers.transfer(recipient, sender.toAddress, 49_00L, issue.asset, 90_0000L, Waves, ByteStr.empty, ntpTime.getTimestamp(), 2.toByte)
 
       d.appendBlock(
         issue,

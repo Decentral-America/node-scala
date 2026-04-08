@@ -8,11 +8,11 @@ import com.decentralchain.features.BlockchainFeatures.BlockRewardDistribution
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.lang.v1.ContractLimits
 import com.decentralchain.lang.v1.compiler.Terms
-import io.decentralchain.protobuf.transaction.PBTransactions
+import com.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.Blockchain
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.TransactionType.TransactionType
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.TransactionType
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.BaseTxJson
 import com.decentralchain.transaction.smart.InvokeScriptTransaction

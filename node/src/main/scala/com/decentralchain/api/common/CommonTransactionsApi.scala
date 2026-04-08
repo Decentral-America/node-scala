@@ -12,7 +12,7 @@ import com.decentralchain.mining.BlockChallenger
 import com.decentralchain.state.diffs.FeeValidation
 import com.decentralchain.state.diffs.FeeValidation.FeeDetails
 import com.decentralchain.state.{Blockchain, Height, StateSnapshot, TxMeta}
-import com.decentralchain.transaction.TransactionType.TransactionType
+import com.decentralchain.transaction.TransactionType
 import com.decentralchain.transaction.smart.script.trace.TracedResult
 import com.decentralchain.transaction.{Asset, CreateAliasTransaction, Transaction}
 import com.decentralchain.utx.UtxPool

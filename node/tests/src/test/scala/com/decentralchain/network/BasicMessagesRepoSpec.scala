@@ -1,17 +1,15 @@
 package com.decentralchain.network
 
-import java.io.ByteArrayOutputStream
-
 import com.google.protobuf.{ByteString, CodedOutputStream, WireFormat}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.mining.MiningConstraints
-import io.decentralchain.protobuf.block.*
-import io.decentralchain.protobuf.transaction.*
+import com.decentralchain.protobuf.block.*
+import com.decentralchain.protobuf.transaction.*
 import com.decentralchain.test.FreeSpec
 import com.decentralchain.transaction.Asset.IssuedAsset
-import com.decentralchain.transaction.smart.SetScriptTransaction
-import com.decentralchain.transaction.{DataTransaction, Proofs, TxVersion}
+import com.decentralchain.transaction.{DataTransaction, Proofs, TxHelpers, TxVersion}
+
+import java.io.ByteArrayOutputStream
 
 class BasicMessagesRepoSpec extends FreeSpec {
   "PBBlockSpec max length" in {
@@ -52,15 +50,11 @@ class BasicMessagesRepoSpec extends FreeSpec {
 
     val minPossibleTransactionSize = PBTransactions
       .protobuf(
-        SetScriptTransaction
-          .selfSigned(
-            TxVersion.V2,
-            accountGen.sample.get,
-            None,
-            1L,
-            0L
-          )
-          .explicitGet()
+        TxHelpers.removeScript(
+          accountGen.sample.get,
+          fee = 1L,
+          version = TxVersion.V2
+        )
       )
       .serializedSize
 

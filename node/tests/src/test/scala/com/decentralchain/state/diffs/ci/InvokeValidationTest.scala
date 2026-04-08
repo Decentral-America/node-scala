@@ -5,16 +5,18 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.lang.directives.values.V5
-import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_LONG}
+import com.decentralchain.lang.v1.FunctionHeader.User
+import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_LONG, FUNCTION_CALL}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import io.decentralchain.protobuf.transaction.PBTransactions
+import com.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.FeeValidation.FeeUnit
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxVersion.{V1, V2}
+import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 
 class InvokeValidationTest extends PropSpec with WithDomain {
@@ -114,14 +116,37 @@ class InvokeValidationTest extends PropSpec with WithDomain {
   property("invoke tx size limit is 5 Kb") {
     def array(size: Int): ARR = ARR(Vector.fill(size)(CONST_LONG(1)), 0, false).explicitGet()
 
-    val txV1       = invoke(defaultAddress, Some("f"), Seq(array(557)), version = V1)
-    def tooBigTxV1 = invoke(defaultAddress, Some("f"), Seq(array(558)), version = V1)
+    val txV1 = invoke(defaultAddress, Some("f"), Seq(array(557)), version = V1)
+    def tooBigTxV1 = InvokeScriptTransaction.create(
+      1.toByte,
+      defaultSigner.publicKey,
+      defaultAddress,
+      Some(FUNCTION_CALL(User("f"), List(array(559)))),
+      Seq.empty,
+      1,
+      Waves,
+      1,
+      Proofs.empty,
+      defaultAddress.chainId
+    ).explicitGet()
+
     txV1.copy(proofs = Proofs.empty).bytes().length shouldBe 5114
-    (the[Exception] thrownBy tooBigTxV1).getMessage shouldBe "GenericError(InvokeScriptTransaction bytes length = 5123 exceeds limit = 5120)"
+    (the[Exception] thrownBy tooBigTxV1).getMessage shouldBe "GenericError(InvokeScriptTransaction bytes length = 5132 exceeds limit = 5120)"
 
     val txV2       = invoke(defaultAddress, Some("f"), Seq(array(564)), version = V2)
-    def tooBigTxV2 = invoke(defaultAddress, Some("f"), Seq(array(565)), version = V2)
+    def tooBigTxV2 = InvokeScriptTransaction.create(
+      2.toByte,
+      defaultSigner.publicKey,
+      defaultAddress,
+      Some(FUNCTION_CALL(User("f"), List(array(566)))),
+      Seq.empty,
+      1,
+      Waves,
+      1,
+      Proofs.empty,
+      defaultAddress.chainId
+    ).explicitGet()
     PBTransactions.toPBInvokeScriptData(txV2.dApp, txV2.funcCallOpt, txV2.payments).toByteArray.length shouldBe 5120
-    (the[Exception] thrownBy tooBigTxV2).getMessage shouldBe "GenericError(InvokeScriptTransaction bytes length = 5129 exceeds limit = 5120)"
+    (the[Exception] thrownBy tooBigTxV2).getMessage shouldBe "GenericError(InvokeScriptTransaction bytes length = 5138 exceeds limit = 5120)"
   }
 }

@@ -19,7 +19,7 @@ import com.decentralchain.lang.script.ContractScript
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_LONG}
 import com.decentralchain.lang.v1.compiler.{ContractCompiler, TestCompiler}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.traits.Environment
@@ -28,7 +28,6 @@ import com.decentralchain.state.diffs.smart.smartEnabledFS
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.serialization.impl.PBTransactionSerializer
-import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.utils.*
@@ -373,7 +372,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
           .explicitGet()
           ._1
 
-        val setScriptTx = SetScriptTransaction.selfSigned(1.toByte, masterAcc, Some(script), 1000000L, transferTx.timestamp + 5).explicitGet()
+        val setScriptTx = setScript(acc = masterAcc, script = script, fee = 1000000L, timestamp = transferTx.timestamp + 5)
 
         append(Seq(setScriptTx)).explicitGet()
         append(Seq(transfer2)).explicitGet()
@@ -865,9 +864,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
           .explicitGet()
           ._1
 
-        val setScriptTx = SetScriptTransaction
-          .selfSigned(1.toByte, masterAcc, Some(script), 1000000L, transferTx.timestamp + 5)
-          .explicitGet()
+        val setScriptTx = setScript(acc = masterAcc, script = script, fee = 1000000L, timestamp = transferTx.timestamp + 5)
 
         append(Seq(setScriptTx)).explicitGet()
         append(Seq(transfer2)).explicitGet()
@@ -949,9 +946,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
            """.stripMargin
           )
 
-        val setScriptTx = SetScriptTransaction
-          .selfSigned(1.toByte, masterAcc, Some(script), 1000000L, transferTx.timestamp + 5)
-          .explicitGet()
+        val setScriptTx = setScript(acc = masterAcc, script = script, fee = 1000000L, timestamp = transferTx.timestamp + 5)
 
         append(Seq(setScriptTx)).explicitGet()
         append(Seq(transfer2)).explicitGet()

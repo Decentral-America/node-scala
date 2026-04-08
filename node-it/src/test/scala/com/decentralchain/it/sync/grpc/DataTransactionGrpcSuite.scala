@@ -6,11 +6,11 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{dataTxSupportedVersions, minFee}
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
-import io.decentralchain.protobuf.transaction.*
+import com.decentralchain.protobuf.transaction.*
 import com.decentralchain.state.StringDataEntry
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import com.decentralchain.transaction.{DataTransaction, TxVersion}
+import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import io.grpc.Status.Code
 
 import java.util.concurrent.ThreadLocalRandom
@@ -52,7 +52,7 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     )
     val dataTx =
       PBTransactions.protobuf(
-        DataTransaction.selfSigned(TxVersion.V1, keyPair, Seq(StringDataEntry("1", "test")), 700000L, System.currentTimeMillis()).explicitGet()
+        TxHelpers.data(keyPair, Seq(StringDataEntry("1", "test")), 700000L)
       )
 
     assertGrpcError(

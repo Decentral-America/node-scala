@@ -24,7 +24,7 @@ object FeeValidation {
   val NFTMultiplier     = 0.001
   val BlockV5Multiplier = 0.001
 
-  val FeeConstants: Map[TransactionType.TransactionType, Long] = Map(
+  val FeeConstants: Map[TransactionType, Long] = Map(
     TransactionType.Genesis            -> 0,
     TransactionType.Payment            -> 1,
     TransactionType.Issue              -> 1000,
@@ -62,9 +62,9 @@ object FeeValidation {
     }
   }
 
-  private def notEnoughFeeError(txType: TransactionType.TransactionType, feeDetails: FeeDetails, feeAmount: Long): ValidationError = {
-    val actualFee   = s"$feeAmount in ${feeDetails.asset.fold("DCC")(_.id.toString)}"
-    val requiredFee = s"${feeDetails.minFeeInDcc} DCC${feeDetails.asset.fold("")(id => s" or ${feeDetails.minFeeInAsset} ${id.id.toString}")}"
+  private def notEnoughFeeError(txType: TransactionType, feeDetails: FeeDetails, feeAmount: Long): ValidationError = {
+    val actualFee   = s"$feeAmount in ${feeDetails.asset.fold("WAVES")(_.id.toString)}"
+    val requiredFee = s"${feeDetails.minFeeInWaves} WAVES${feeDetails.asset.fold("")(id => s" or ${feeDetails.minFeeInAsset} ${id.id.toString}")}"
 
     val errorMessage = s"Fee for ${txType.transactionName} ($actualFee) does not exceed minimal value of $requiredFee."
 

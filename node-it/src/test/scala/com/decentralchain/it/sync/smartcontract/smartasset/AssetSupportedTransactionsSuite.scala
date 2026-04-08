@@ -1,15 +1,14 @@
 package com.decentralchain.it.sync.smartcontract.smartasset
 
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.IntegerDataEntry
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
-import com.decentralchain.transaction.transfer.TransferTransaction
 
 import scala.concurrent.duration.*
 
@@ -177,33 +176,29 @@ class AssetSupportedTransactionsSuite extends BaseTransactionSuite {
       .base64
     sender.setAssetScript(blackAsset, firstKeyPair, setAssetScriptFee + smartFee, Some(scr), waitForTx = true)
 
-    val blackTx = TransferTransaction
-      .selfSigned(
-        2.toByte,
-        secondKeyPair,
-        thirdKeyPair.toAddress,
-        IssuedAsset(ByteStr.decodeBase58(blackAsset).get),
-        1,
-        Dcc,
-        smartMinFee,
-        ByteStr.empty,
-        System.currentTimeMillis + 1.minutes.toMillis
-      )
-      .explicitGet()
+    val blackTx = TxHelpers.transfer(
+      from = secondKeyPair,
+      to = thirdKeyPair.toAddress,
+      amount = 1,
+      asset = IssuedAsset(ByteStr.decodeBase58(blackAsset).get),
+      fee = smartMinFee,
+      feeAsset = Waves,
+      attachment = ByteStr.empty,
+      timestamp = System.currentTimeMillis + 1.minutes.toMillis,
+      version = 2.toByte
+    )
 
-    val incorrectTx = TransferTransaction
-      .selfSigned(
-        2.toByte,
-        secondKeyPair,
-        thirdKeyPair.toAddress,
-        IssuedAsset(ByteStr.decodeBase58(blackAsset).get),
-        1,
-        Dcc,
-        smartMinFee,
-        ByteStr.empty,
-        System.currentTimeMillis + 10.minutes.toMillis
-      )
-      .explicitGet()
+    val incorrectTx = TxHelpers.transfer(
+      from = secondKeyPair,
+      to = thirdKeyPair.toAddress,
+      amount = 1,
+      asset = IssuedAsset(ByteStr.decodeBase58(blackAsset).get),
+      fee = smartMinFee,
+      feeAsset = Waves,
+      attachment = ByteStr.empty,
+      timestamp = System.currentTimeMillis + 10.minutes.toMillis,
+      version = 2.toByte
+    )
 
     val dataTx = sender.putData(firstKeyPair, List(IntegerDataEntry(s"${blackTx.id()}", 42)), minFee).id
     nodes.waitForHeightAriseAndTxPresent(dataTx)

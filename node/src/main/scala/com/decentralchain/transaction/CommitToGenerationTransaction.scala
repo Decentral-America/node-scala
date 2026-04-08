@@ -1,6 +1,7 @@
 package com.decentralchain.transaction
 
 import com.decentralchain.account.*
+import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey, BlsSignature}
 import com.decentralchain.lang.ValidationError
@@ -27,6 +28,11 @@ final case class CommitToGenerationTransaction(
     with TxWithFee.InDcc
     with FastHashId
     with PBSince.V1 {
+
+  override type T = CommitToGenerationTransaction
+
+  override def addProof(proof: ByteStr): CommitToGenerationTransaction = copy(proofs = proofs.add(proof))
+
   override val bodyBytes: Coeval[Array[Byte]] = Coeval.evalOnce(PBTransactionSerializer.bodyBytes(this))
   override val bytes: Coeval[Array[Byte]]     = Coeval.evalOnce(PBTransactionSerializer.bytes(this))
   override val json: Coeval[JsObject] =

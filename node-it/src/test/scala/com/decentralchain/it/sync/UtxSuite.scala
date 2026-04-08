@@ -1,20 +1,20 @@
 package com.decentralchain.it.sync
 
-import java.util.concurrent.ThreadLocalRandom
-import scala.util.Try
 import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
-import com.decentralchain.it.{BaseFunSuite, Node}
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{AsyncHttpApi, TransactionInfo}
+import com.decentralchain.it.{BaseFunSuite, Node}
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
-import com.decentralchain.transaction.{TxVersion, utils}
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
+import com.decentralchain.transaction.{Proofs, TxHelpers, TxVersion}
+
+import scala.util.{Random, Try}
 
 class UtxSuite extends BaseFunSuite {
   private var whitelistedAccount: KeyPair     = scala.compiletime.uninitialized
@@ -27,7 +27,19 @@ class UtxSuite extends BaseFunSuite {
     val account = UtxSuite.createAccount
 
     val transferToAccount = TransferTransaction
-      .selfSigned(1.toByte, miner.keyPair, account.toAddress, Dcc, AMOUNT, Dcc, ENOUGH_FEE, ByteStr.empty, System.currentTimeMillis())
+      .create(
+        1.toByte,
+        miner.keyPair.publicKey,
+        account.toAddress,
+        Waves,
+        AMOUNT,
+        Waves,
+        ENOUGH_FEE,
+        ByteStr.empty,
+        System.currentTimeMillis(),
+        Proofs.empty
+      )
+      .map(_.signWith(miner.keyPair.privateKey))
       .explicitGet()
 
     miner.signedBroadcast(transferToAccount.json())
@@ -35,31 +47,35 @@ class UtxSuite extends BaseFunSuite {
     nodes.waitForHeightAriseAndTxPresent(transferToAccount.id().toString)
 
     val firstTransfer = TransferTransaction
-      .selfSigned(
+      .create(
         1.toByte,
-        account,
+        account.publicKey,
         miner.keyPair.toAddress,
         Dcc,
         AMOUNT - ENOUGH_FEE,
         Dcc,
         ENOUGH_FEE,
         ByteStr.empty,
-        System.currentTimeMillis()
+        System.currentTimeMillis(),
+        Proofs.empty
       )
+      .map(_.signWith(account.privateKey))
       .explicitGet()
 
     val secondTransfer = TransferTransaction
-      .selfSigned(
+      .create(
         1.toByte,
-        account,
+        account.publicKey,
         notMiner.keyPair.toAddress,
         Dcc,
         AMOUNT - ENOUGH_FEE,
         Dcc,
         ENOUGH_FEE,
         ByteStr.empty,
-        System.currentTimeMillis()
+        System.currentTimeMillis(),
+        Proofs.empty
       )
+      .map(_.signWith(account.privateKey))
       .explicitGet()
 
     val tx2Id = notMiner.signedBroadcast(secondTransfer.json()).id
@@ -85,44 +101,50 @@ class UtxSuite extends BaseFunSuite {
 
     val whitelistedAccountTransfer =
       TransferTransaction
-        .selfSigned(
+        .create(
           TxVersion.V1,
-          miner.keyPair,
+          miner.keyPair.publicKey,
           whitelistedAccount.toAddress,
           Dcc,
           5 * minTransferFee + 5 + (1 to 5).sum,
           Dcc,
           minTransferFee,
           ByteStr.empty,
-          time
+          time,
+          Proofs.empty
         )
+        .map(_.signWith(miner.keyPair.privateKey))
         .explicitGet()
     val whitelistedDAppAccountTransfer =
       TransferTransaction
-        .selfSigned(
+        .create(
           TxVersion.V1,
-          miner.keyPair,
+          miner.keyPair.publicKey,
           whitelistedDAppAccount.toAddress,
           Dcc,
           minSetScriptFee,
           Dcc,
           minTransferFee,
           ByteStr.empty,
-          time
+          time,
+          Proofs.empty
         )
+        .map(_.signWith(miner.keyPair.privateKey))
         .explicitGet()
     val invokeAccountTransfer = TransferTransaction
-      .selfSigned(
+      .create(
         TxVersion.V1,
-        miner.keyPair,
+        miner.keyPair.publicKey,
         invokeAccount.toAddress,
         Dcc,
         5 * minInvokeFee + (1 to 5).sum,
         Dcc,
         minTransferFee,
         ByteStr.empty,
-        time
+        time,
+        Proofs.empty
       )
+      .map(_.signWith(miner.keyPair.privateKey))
       .explicitGet()
 
     Seq(whitelistedAccountTransfer, whitelistedDAppAccountTransfer, invokeAccountTransfer)
@@ -137,25 +159,52 @@ class UtxSuite extends BaseFunSuite {
         |@Callable(i)
         |func default() = { WriteSet([DataEntry("0", true)]) }
         |""".stripMargin
-    val script    = ScriptCompiler.compile(scriptText, ScriptEstimatorV1).explicitGet()._1
-    val setScript = SetScriptTransaction.selfSigned(TxVersion.V1, whitelistedDAppAccount, Some(script), minSetScriptFee, time).explicitGet()
+    val script = ScriptCompiler.compile(scriptText, ScriptEstimatorV1).explicitGet()._1
+    val setScript = SetScriptTransaction
+      .create(TxVersion.V1, whitelistedDAppAccount.publicKey, Some(script), minSetScriptFee, time, Proofs.empty)
+      .map(_.signWith(whitelistedDAppAccount.privateKey))
+      .explicitGet()
     miner.signedBroadcast(setScript.json())
     nodes.waitForHeightAriseAndTxPresent(setScript.id().toString)
 
     val txs = (1 to 10).map { _ =>
       TransferTransaction
-        .selfSigned(TxVersion.V1, miner.keyPair, UtxSuite.createAccount.toAddress, Dcc, 1L, Dcc, higherFee, ByteStr.empty, time)
+        .create(
+          TxVersion.V1,
+          miner.keyPair.publicKey,
+          UtxSuite.createAccount.toAddress,
+          Waves,
+          1L,
+          Waves,
+          higherFee,
+          ByteStr.empty,
+          time,
+          Proofs.empty
+        )
+        .map(_.signWith(miner.keyPair.privateKey))
         .explicitGet()
     }
 
     val whitelistedTxs = {
       val bySender = (1 to 5).map { i =>
         TransferTransaction
-          .selfSigned(TxVersion.V1, whitelistedAccount, UtxSuite.createAccount.toAddress, Dcc, 1L, Dcc, minTransferFee + i, ByteStr.empty, time)
+          .create(
+            TxVersion.V1,
+            whitelistedAccount.publicKey,
+            UtxSuite.createAccount.toAddress,
+            Waves,
+            1L,
+            Waves,
+            minTransferFee + i,
+            ByteStr.empty,
+            time,
+            Proofs.empty
+          )
+          .map(_.signWith(whitelistedAccount.privateKey))
           .explicitGet()
       }
       val byDApp = (1 to 5).map { i =>
-        utils.Signed.invokeScript(TxVersion.V1, invokeAccount, whitelistedDAppAccount.toAddress, None, Seq.empty, minInvokeFee + i, Dcc, time)
+        TxHelpers.invoke(whitelistedDAppAccount.toAddress, None, Seq.empty, Seq.empty, invokeAccount, minInvokeFee + i, Waves, timestamp = time)
       }
       bySender ++ byDApp
     }

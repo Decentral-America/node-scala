@@ -2,12 +2,12 @@ package com.decentralchain.it.sync.transactions
 
 import com.decentralchain.account.{AddressScheme, KeyPair}
 import com.decentralchain.api.http.ApiError.{CustomValidationError, InvalidDecimals, InvalidName, NonPositiveAmount}
-import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.IssueTransactionInfo
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.test.*
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.assets.IssueTransaction
 import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json.{JsNull, JsString, JsValue, Json}
@@ -114,20 +114,17 @@ class IssueTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
     test(s"Try to put incorrect script=$script") {
       for (v <- issueTxSupportedVersions) {
         val json = {
-          val tx = IssueTransaction
-            .selfSigned(
-              v,
-              firstKeyPair,
-              "1234",
-              "",
-              1,
-              2,
-              false,
-              None,
-              issueFee,
-              System.currentTimeMillis()
-            )
-            .explicitGet()
+          val tx = TxHelpers.issue(
+            issuer = firstKeyPair,
+            amount = 1,
+            decimals = 2,
+            name = "1234",
+            description = "",
+            fee = issueFee,
+            script = None,
+            reissuable = false,
+            version = v
+          )
           tx.json() ++ Json.obj("script" -> script)
         }
 

@@ -14,12 +14,10 @@ import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.appender.BlockAppender
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.TxValidationError.BlockAppendError
-import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.utils.Signed
 import com.decentralchain.transaction.{Transaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.{Schedulers, SystemTime, Time}
 import com.decentralchain.{EitherMatchers, NTPTime}
@@ -274,11 +272,11 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
           ._1
 
         d.appendBlock(
-          SetScriptTransaction.selfSigned(2.toByte, dapp, Some(script), 500_0000L, ntpTime.getTimestamp()).explicitGet()
+          TxHelpers.setScript(acc = dapp, script = script, fee = 500_0000L, version = 2.toByte, timestamp = ntpTime.getTimestamp())
         )
 
         val invoke =
-          Signed.invokeScript(3.toByte, sender, dapp.toAddress, None, Seq.empty, 50_0000L, Dcc, ntpTime.getTimestamp())
+          TxHelpers.invoke(dApp = dapp.toAddress, invoker = sender, fee = 50_0000L, version = 3.toByte, timestamp = ntpTime.getTimestamp())
 
         d.appendBlock(d.createBlock(Seq(invoke)))
       }

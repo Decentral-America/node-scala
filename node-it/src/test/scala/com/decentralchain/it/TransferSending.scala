@@ -1,7 +1,6 @@
 package com.decentralchain.it
 
 import java.util.concurrent.ThreadLocalRandom
-
 import com.google.common.primitives.Ints
 import com.typesafe.config.Config
 import com.decentralchain.account.*
@@ -12,7 +11,8 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.TransferSending.Req
 import com.decentralchain.it.api.AsyncHttpApi.*
 import com.decentralchain.it.api.Transaction
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.TxHelpers
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.utils.ScorexLogging
 import org.scalatest.Suite
@@ -66,7 +66,7 @@ trait TransferSending extends ScorexLogging {
     }
 
     val requests = sourceAndDest.foldLeft(List.empty[Req]) { case (rs, (srcConfig, destAddr)) =>
-      val a              = ThreadLocalRandom.current().nextDouble()
+      val a              = Random.nextDouble()
       val b              = balances(srcConfig)
       val transferAmount = (1e-8 + a * 1e-9 * b).toLong
       if (transferAmount < 0) log.warn(s"Negative amount: (1e-8 + $a * 1e-8 * $b) = $transferAmount")
@@ -106,22 +106,18 @@ trait TransferSending extends ScorexLogging {
     val signedTransfers = requests.zipWithIndex
       .map { case (x, i) =>
         createSignedTransferRequest(
-          TransferTransaction
-            .selfSigned(
-              version = 2.toByte,
-              sender = KeyPair(Base58.decode(x.senderSeed)),
-              recipient = AddressOrAlias.fromString(x.targetAddress).explicitGet(),
-              asset = Dcc,
-              amount = x.amount,
-              feeAsset = Dcc,
-              fee = x.fee,
-              attachment =
-                if (includeAttachment)
-                  ByteStr(Array.fill(TransferTransaction.MaxAttachmentSize)(ThreadLocalRandom.current().nextInt().toByte))
-                else ByteStr.empty,
-              timestamp = start + i
-            )
-            .explicitGet()
+          TxHelpers.transfer(
+            KeyPair(Base58.decode(x.senderSeed)),
+            AddressOrAlias.fromString(x.targetAddress).explicitGet(),
+            x.amount,
+            Waves,
+            x.fee,
+            Waves,
+            if (includeAttachment)
+              ByteStr(Array.fill(TransferTransaction.MaxAttachmentSize)(ThreadLocalRandom.current().nextInt().toByte))
+            else ByteStr.empty,
+            timestamp = start + i
+          )
         )
       }
 
@@ -137,9 +133,8 @@ trait TransferSending extends ScorexLogging {
   protected def createSignedTransferRequest(tx: TransferTransaction): TransferRequest = {
     import tx.*
     TransferRequest(
-      Some(2.toByte),
-      None,
-      Some(tx.sender.toString),
+      2.toByte,
+      tx.sender.toString,
       recipient.toString,
       Some(assetId),
       amount.value,

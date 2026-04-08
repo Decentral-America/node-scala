@@ -6,14 +6,13 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.lang.v1.FunctionHeader
+import com.decentralchain.lang.v1.compiler.Terms.EXPR
 import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
-import com.decentralchain.lang.v1.compiler.Terms.{EXPR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import com.decentralchain.transaction.utils.Signed
 
 class PseudoTransactionSuite extends BaseTransactionSuite {
 
@@ -180,14 +179,14 @@ class PseudoTransactionSuite extends BaseTransactionSuite {
       .base64
 
   private def invokeScriptTransaction(func: String, args: List[EXPR]): InvokeScriptTransaction =
-    Signed.invokeScript(
-      2.toByte,
-      caller,
+    TxHelpers.invoke(
       AddressOrAlias.fromString(firstDApp.toAddress.toString).explicitGet(),
-      Some(FUNCTION_CALL(FunctionHeader.User(func), args)),
+      Some(func),
+      args,
       Seq.empty,
+      caller,
       smartMinFee + smartFee,
-      Dcc,
-      System.currentTimeMillis()
+      Waves,
+      2.toByte
     )
 }

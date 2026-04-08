@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.*
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.api.SyncHttpApi.*
-import com.decentralchain.it.sync.transactions.{FailedTransactionSuiteLike, OverflowBlock}
+import com.decentralchain.it.sync.transactions.FailedTransactionSuiteLike
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.lang.v1.repl.Repl
@@ -19,16 +19,13 @@ import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
-class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[String] with OverflowBlock {
+class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[String] {
   override protected def waitForHeightArise(): Unit =
     nodes.waitForHeightArise()
 
-  override def nodeConfigs: Seq[Config] =
-    com.decentralchain.it.NodeConfigs.newBuilder
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures(BlockchainFeatures.BlockV5.id.toInt -> Height(0)))
-      .withDefault(1)
-      .buildNonConflicting()
+  import com.decentralchain.it.NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] =
+    Seq(BiggestMiner.quorum(0).preactivatedFeatures(BlockchainFeatures.BlockV5))
 
   def await[A](f: Future[A]): A = Await.result(f, 2 seconds)
 

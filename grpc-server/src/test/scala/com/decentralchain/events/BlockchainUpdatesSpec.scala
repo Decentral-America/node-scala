@@ -29,8 +29,6 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.BlockchainFeatures.BlockReward
 import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.{V5, V6}
-import com.decentralchain.lang.v1.FunctionHeader
-import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.protobuf.*
 import com.decentralchain.protobuf.block.PBBlocks
@@ -46,8 +44,7 @@ import com.decentralchain.transaction.assets.{IssueTransaction, ReissueTransacti
 import com.decentralchain.transaction.lease.LeaseTransaction
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.utils.Signed
-import com.decentralchain.transaction.{Asset, CreateAliasTransaction, DataTransaction, GenesisTransaction, PaymentTransaction, TxHelpers}
+import com.decentralchain.transaction.{Asset, CreateAliasTransaction, DataTransaction, GenesisTransaction, PaymentTransaction, Proofs, TxHelpers}
 import com.decentralchain.utils.{Schedulers, byteStrOrdering}
 import io.grpc.StatusException
 import monix.execution.ExecutionModel.SynchronousExecution
@@ -71,7 +68,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
   val issue: IssueTransaction             = TxHelpers.issue(amount = 1000)
   val reissue: ReissueTransaction         = TxHelpers.reissue(issue.asset)
   val data: DataTransaction               = TxHelpers.dataSingle(fee = TestValues.fee * 3) // for compatibility with expected values
-  val createAlias: CreateAliasTransaction = TxHelpers.createAlias("alias")
+  val createAlias: CreateAliasTransaction = TxHelpers.createAlias()
   val setScript1: SetScriptTransaction = TxHelpers.setScript(
     TxHelpers.defaultSigner,
     TestCompiler(V6).compileContract(
@@ -715,20 +712,21 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
            |}
          """.stripMargin
       )
-      val invoke = Signed.invokeScript(
-        2.toByte,
-        invoker,
+      val invoke = TxHelpers.invoke(
         issuer.toAddress,
-        Some(FUNCTION_CALL(FunctionHeader.User("issue"), Nil)),
+        Some("issue"),
         Seq.empty,
-        2.dcc,
-        Asset.Dcc,
+        Seq.empty,
+        invoker,
+        2.waves,
+        Asset.Waves,
+        2.toByte,
         ntpTime.getTimestamp()
       )
       d.appendBlock(
-        GenesisTransaction.create(issuerAddress, 1000.dcc, ntpTime.getTimestamp()).explicitGet(),
-        GenesisTransaction.create(invoker.toAddress, 1000.dcc, ntpTime.getTimestamp()).explicitGet(),
-        SetScriptTransaction.selfSigned(2.toByte, issuer, Some(dAppScript), 0.01.dcc, ntpTime.getTimestamp()).explicitGet(),
+        GenesisTransaction.create(issuerAddress, 1000.waves, ntpTime.getTimestamp()).explicitGet(),
+        GenesisTransaction.create(invoker.toAddress, 1000.waves, ntpTime.getTimestamp()).explicitGet(),
+        SetScriptTransaction.create(2.toByte, issuer.publicKey, Some(dAppScript), 0.01.waves, ntpTime.getTimestamp(), Proofs.empty).map(_.signWith(issuer.privateKey)).explicitGet(),
         invoke
       )
 

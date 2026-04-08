@@ -1,6 +1,7 @@
 package com.decentralchain.transaction.assets.exchange
 
 import com.decentralchain.account.{AddressScheme, PrivateKey, PublicKey}
+import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.*
@@ -26,13 +27,17 @@ case class ExchangeTransaction(
     timestamp: Long,
     proofs: Proofs,
     chainId: Byte
-) extends Transaction(TransactionType.Exchange, order1.assetPair.checkedAssets)
-    with Versioned.ToV3
-    with ProvenTransaction
-    with TxWithFee.InDcc
-    with FastHashId
-    with SigProofsSwitch
-    with PBSince.V3 {
+) extends Transaction(TransactionType.Exchange, order1.assetPair.checkedAssets),
+      ProvenTransaction,
+      HasSignature,
+      Versioned.ToV3,
+      TxWithFee.InWaves,
+      FastHashId,
+      PBSince.V3 {
+
+  override type T = ExchangeTransaction
+
+  override def addProof(proof: ByteStr): ExchangeTransaction = copy(proofs = proofs.add(proof))
 
   val (buyOrder, sellOrder) = if (order1.orderType == OrderType.BUY) (order1, order2) else (order2, order1)
 
@@ -98,19 +103,4 @@ object ExchangeTransaction extends TransactionParser {
         chainId
       ).validatedEither
     } yield tx
-
-  def signed(
-      version: TxVersion,
-      matcher: PrivateKey,
-      order1: Order,
-      order2: Order,
-      amount: Long,
-      price: Long,
-      buyMatcherFee: Long,
-      sellMatcherFee: Long,
-      fee: Long,
-      timestamp: Long,
-      chainId: Byte = AddressScheme.current.chainId
-  ): Either[ValidationError, ExchangeTransaction] =
-    create(version, order1, order2, amount, price, buyMatcherFee, sellMatcherFee, fee, timestamp, Proofs.empty, chainId).map(_.signWith(matcher))
 }

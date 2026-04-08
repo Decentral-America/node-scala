@@ -3,8 +3,8 @@ package com.decentralchain.it.sync.smartcontract
 import com.typesafe.config.Config
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.Block
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
@@ -16,13 +16,15 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 class RideBlockInfoSuite extends BaseTransactionSuite {
   val activationHeight = Height(4)
 
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((14, Height(2))))
-      .overrideBase(_.preactivatedFeatures((15, activationHeight)))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    BiggestMiner
+      .quorum(0)
+      .preactivatedFeatures(
+        (BlockchainFeatures.BlockReward, Height(2)),
+        (BlockchainFeatures.BlockV5, activationHeight)
+      )
+  )
 
   private val dAppScriptV4 =
     """

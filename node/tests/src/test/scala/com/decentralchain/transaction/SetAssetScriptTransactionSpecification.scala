@@ -2,14 +2,15 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.contract.DApp
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.script.{ContractScript, Script}
-import io.decentralchain.protobuf.dapp.DAppMeta
+import com.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.transaction.Asset.IssuedAsset
+import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.assets.SetAssetScriptTransaction
-import com.decentralchain.transaction.TxHelpers
 import org.scalacheck.Gen
 import play.api.libs.json.*
 import com.decentralchain.test.*
@@ -36,7 +37,7 @@ class SetAssetScriptTransactionSpecification extends GenericTransactionSpecifica
       asset <- bytes32gen
       fee   <- smallFeeGen
       ts    <- timestampGen
-      txEi = SetAssetScriptTransaction.selfSigned(TxVersion.V2, acc, IssuedAsset(ByteStr(asset)), None, fee, ts)
+      txEi = SetAssetScriptTransaction.create(TxVersion.V2, acc.publicKey, IssuedAsset(ByteStr(asset)), None, fee, ts, Proofs.empty)
     } yield txEi
 
     forAll(gen)(_ should produce("Cannot set empty script"))

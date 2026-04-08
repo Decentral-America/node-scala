@@ -6,16 +6,16 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.Transaction
-import com.decentralchain.it.sync.{calcMassTransferFee, setScriptFee, *}
+import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}
+import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
+import com.decentralchain.transaction.{Asset, TxHelpers}
 
 class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
   val assetName        = "NFTAsset"
@@ -179,20 +179,18 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
       )
       .explicitGet()
 
-    val tx = ExchangeTransaction
-      .signed(
-        2.toByte,
-        matcher = matcher.privateKey,
+    val tx = TxHelpers
+      .exchange(
+        version = 2.toByte,
+        matcher = matcher,
         order1 = buy,
         order2 = sell,
-        amount = 1,
-        price = 1.dcc,
+        price = 1.waves,
         buyMatcherFee = matcherFee,
         sellMatcherFee = matcherFee,
         fee = matcherFee,
         timestamp = ts
       )
-      .explicitGet()
       .json()
 
     sender.signedBroadcast(tx, waitForTx = true)

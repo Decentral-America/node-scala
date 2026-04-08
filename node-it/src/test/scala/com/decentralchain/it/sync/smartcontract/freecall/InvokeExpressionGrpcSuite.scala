@@ -5,7 +5,6 @@ import com.typesafe.config.Config
 import com.decentralchain.account.AddressScheme
 import com.decentralchain.features.BlockchainFeatures.ContinuationTransaction
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.api.{PutDataResponse, StateChangesDetails}
 import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuite
@@ -13,19 +12,17 @@ import com.decentralchain.it.sync.invokeExpressionFee
 import com.decentralchain.lang.directives.values.V6
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import io.decentralchain.protobuf.block.VanillaBlock
+import com.decentralchain.protobuf.block.VanillaBlock
 import com.decentralchain.state.Height
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.smart.InvokeExpressionTransaction
 import org.scalatest.{Assertion, CancelAfterFailure}
 
 class InvokeExpressionGrpcSuite extends GrpcBaseTransactionSuite with CancelAfterFailure {
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((ContinuationTransaction.id, Height(1))))
-      .buildNonConflicting()
+  import NodeConfigs.*
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    BiggestMiner.quorum(0).preactivatedFeatures((ContinuationTransaction, Height(1)))
+  )
 
   private val expr: ExprScript =
     TestCompiler(V6).compileFreeCall(

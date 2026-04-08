@@ -6,14 +6,13 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.NodeConfigs
-import com.decentralchain.it.NodeConfigs.Default
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.{Assertion, CancelAfterFailure}
@@ -21,14 +20,11 @@ import org.scalatest.{Assertion, CancelAfterFailure}
 import scala.concurrent.duration.*
 
 class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure {
+  import NodeConfigs.*
   import RideV4ActivationSuite.*
-
-  override protected def nodeConfigs: Seq[Config] =
-    NodeConfigs
-      .Builder(Default, 1, Seq.empty)
-      .overrideBase(_.quorum(0))
-      .overrideBase(_.preactivatedFeatures((BlockchainFeatures.BlockV5.id, activationHeight - 1)))
-      .buildNonConflicting()
+  override protected def nodeConfigs: Seq[Config] = Seq(
+    Miners(7).quorum(0).preactivatedFeatures((BlockchainFeatures.BlockV5, activationHeight - 1))
+  )
 
   private def smartAccV4 = firstKeyPair
   private def callerAcc  = secondKeyPair
@@ -385,7 +381,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
 
 object RideV4ActivationSuite {
   private val estimator = ScriptEstimatorV2
-  val activationHeight  = Height(9)
+  val activationHeight  = Height(11)
 
   def asAssetV3(body: String): String = {
     s"""{-# STDLIB_VERSION 3 #-}
