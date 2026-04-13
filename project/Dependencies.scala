@@ -4,14 +4,14 @@ import sbt.{Def, *}
 import scalapb.compiler.Version.scalapbVersion
 
 object Dependencies {
-  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.15.Final" // CVE-2026-44249 patch
+  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.12.Final"
 
-  val gProtoVersion = "4.35.1"
+  val gProtoVersion = "4.34.1"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
   val overrides = Def.setting(
     Seq(
       "org.scala-lang"           %% "scala3-library" % scalaVersion.value,
-      "com.google.code.gson"      % "gson"           % "2.14.0",
+      "com.google.code.gson"      % "gson"           % "2.13.2",
       "com.squareup.okio"         % "okio-jvm"       % "3.17.0",
       "org.apache.httpcomponents" % "httpclient"     % "4.5.14",
       "org.slf4j"                 % "slf4j-api"      % "2.0.18",
@@ -36,7 +36,7 @@ object Dependencies {
   lazy val protoSchemasLib =
     "io.decentralchain" % "protobuf-schemas" % "1.6.2" classifier "protobuf-src" intransitive ()
 
-  private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.6.0"
+  private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.5.0"
 
   private def pekkoHttpModule(module: String, version: String = "1.3.0") = "org.apache.pekko" %% module % version
 
@@ -48,14 +48,14 @@ object Dependencies {
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
-  private def grpcModule(module: String) = "io.grpc" % module % "1.82.0"
+  private def grpcModule(module: String) = "io.grpc" % module % "1.80.0"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.6.0-jre"
   val kamonCore       = kamonModule("core")
   val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
-  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.34" // CVE-2026-10532 + CVE-2026-9828 patched
-  val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.10"
+  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.32"
+  val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.9"
   val curve25519      = "io.decentralchain"  % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
 
@@ -108,10 +108,9 @@ object Dependencies {
 
   lazy val it = scalaTest +: Seq(
     logback,
-    "com.github.jnr"       % "jnr-unixsocket"                    % "0.38.24", // To support Apple ARM
-    "com.github.docker-java" % "docker-java-core"                 % "3.7.1",
-    "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
-    jacksonModule("dataformat", "dataformat-properties", "2.22.0"),
+    "com.github.jnr" % "jnr-unixsocket" % "0.38.25", // To support Apple ARM
+    "com.spotify"    % "docker-client"  % "8.16.0",
+    jacksonModule("dataformat", "dataformat-properties", "2.21.2"),
     asyncHttpClient
   ).map(_ % Test)
 
@@ -135,7 +134,7 @@ object Dependencies {
   lazy val node = Def.setting(
     Seq(
       rocksdb,
-      "commons-net"            % "commons-net"               % "3.12.0",
+      "commons-net"            % "commons-net"               % "3.13.0",
       "commons-io"             % "commons-io"                % "2.21.0",
       "com.github.pureconfig" %% "pureconfig-core"           % "0.17.10",
       "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.10",

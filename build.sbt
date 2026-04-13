@@ -196,11 +196,10 @@ lazy val `dcc-node` = (project in file("."))
 
 inScope(Global)(
   Seq(
-    scalaVersion         := "3.8.4",
+    scalaVersion         := "3.8.3",
     organization         := "io.decentralchain",
     organizationName     := "DecentralChain",
     organizationHomepage := Some(url("https://decentralchain.io")),
-    scmInfo := Some(ScmInfo(url("https://github.com/Decentral-America/node-scala"), "scm:git:https://github.com/Decentral-America/node-scala.git")),
     licenses             := Seq(("MIT", url("https://github.com/Decentral-America/node-scala/blob/dev/LICENSE"))),
     publish / skip       := true,
     scalacOptions ++= Seq(
@@ -290,6 +289,7 @@ checkPRRaw := Def
         ScopeFilter(inProjects(`lang-tests`, `repl-jvm`, `lang-tests-js`, `grpc-server`, `node-tests`, `ride-runner`), inConfigurations(Test))
       ),
       fullOptJS.all(ScopeFilter(inProjects(`lang-js`, `repl-js`), inConfigurations(Compile))),
+      assembly.all(ScopeFilter(inProjects(node))),
       buildTarballsForDocker
     )
   )

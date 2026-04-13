@@ -30,9 +30,11 @@ jobs:
           gpg-private-key: ${{ secrets.OSSRH_GPG_KEY }}
           gpg-passphrase: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
       - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1.1.22
+      - uses: proudust/gh-describe@d2398810d922ababf1ec0efb454e42953dfdc460 # v2.1.2
+        id: ghd
       - name: Check PR
-        run: sbt --batch checkPR
-      - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
+        run: sbt -Dproject.version=$(echo ${{ steps.ghd.outputs.describe }} | cut -c 2-) -J-Xlog:gc*=debug:file=./gc.log --batch checkPR
+      - uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
         if: always()
         with:
           report_paths: '**/target/test-reports/*.xml'
@@ -48,13 +50,8 @@ jobs:
               - 'project/*'
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: waves-fat-jar
+          name: waves-all
           path: node/target/waves-all-*.jar
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        if: steps.filter.outputs.lang == 'true'
-        with:
-          name: file-compiler
-          path: lang/jvm/target/file-compiler.jar
       - name: Save debug data
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: always()
@@ -82,7 +79,7 @@ jobs:
           java-version: '17'
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
         with:
-          name: waves-fat-jar
+          name: waves-all
       - run: java -cp '*' com.decentralchain.utils.UtilApp smoke
 
   compile-contracts:
@@ -107,8 +104,8 @@ jobs:
           java-version: '17'
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
         with:
-          name: file-compiler
-      - run: find -name "*.ride" -type f -exec java -jar file-compiler.jar {} +;
+          name: waves-all
+      - run: find -name "*.ride" -type f -exec java -cp '*' com.decentralchain.lang.FileCompiler {} +;
 
   run-integration-tests:
     name: Run integration tests
