@@ -21,20 +21,18 @@ The DecentralChain node connects to the blockchain network and provides:
 
 Linux:
 ```bash
-# Install Eclipse Temurin 25 (recommended)
-wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo apt-key add -
-echo "deb https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
-sudo apt-get update && sudo apt-get install -y temurin-25-jdk
-java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
+sudo apt-get update
+sudo apt-get install openjdk-17-jre
+java -jar node/target/waves-all*.jar path/to/config/waves-{network}.conf
 ```
 
 Mac (with Homebrew):
 ```bash
-brew install --cask temurin@25
-java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
+brew cask install adoptopenjdk/openjdk/adoptopenjdk17
+java -jar node/target/waves-all*.jar path/to/config/waves-{network}.conf
 ```
 
-Windows (with Eclipse Temurin 25 installed):
+Windows systems (assuming already installed OpenJDK 17):
 ```bash
 java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
@@ -50,12 +48,10 @@ The node can be built and installed wherever Java can run.
 ### Setup the environment
 
 ```bash
-# Ubuntu — Eclipse Temurin 25 JDK
-wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo apt-key add -
-echo "deb https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
-sudo apt-get update && sudo apt-get install -y temurin-25-jdk
+sudo apt-get update
+sudo apt-get install openjdk-17-jre                     # Ubuntu
 # or
-# brew install --cask temurin@25                        # Mac
+# brew cask install adoptopenjdk/openjdk/adoptopenjdk17 # Mac
 ```
 
 Install SBT (Scala Build Tool) for your platform: [Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html) | [Mac](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Mac.html) | [Windows](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Windows.html)
