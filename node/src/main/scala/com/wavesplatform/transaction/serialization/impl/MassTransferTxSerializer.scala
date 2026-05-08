@@ -63,7 +63,9 @@ object MassTransferTxSerializer {
       }
 
       val entryCount = buf.getShort
-      require(entryCount >= 0 && buf.remaining() > entryCount, s"Broken array size ($entryCount entries while ${buf.remaining()} bytes available)")
+      val minBytesPerEntry = 26 // Address(26) + Long(8) minimum
+      require(entryCount >= 0 && buf.remaining() >= entryCount.toLong * minBytesPerEntry,
+        s"Broken array size ($entryCount entries requiring at least ${entryCount.toLong * minBytesPerEntry} bytes, but only ${buf.remaining()} available)")
       Vector.fill(entryCount)(readTransfer(buf))
     }
 
