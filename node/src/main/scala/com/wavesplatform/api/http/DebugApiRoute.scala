@@ -72,8 +72,8 @@ case class DebugApiRoute(
   private val serializer = TransactionJsonSerializer(blockchain)
 
   override lazy val route: Route = pathPrefix("debug") {
-    balanceHistory ~ stateHash ~ validate ~ withAuth {
-      state ~ info ~ stateWaves ~ rollback ~ blacklist ~ minerInfo ~ configInfo ~ print
+    withAuth {
+      balanceHistory ~ stateHash ~ validate ~ state ~ info ~ stateWaves ~ rollback ~ blacklist ~ minerInfo ~ configInfo ~ print
     }
   }
 
@@ -171,7 +171,18 @@ case class DebugApiRoute(
   }
 
   def configInfo: Route = (path("configInfo") & get & parameter("full".as[Boolean])) { full =>
-    complete(if (full) fullConfig else wavesConfig)
+    // Redact sensitive fields before returning
+    val redactedConfig = if (full) {
+      val redacted = fullConfig.as[JsObject]
+      val wavesObj = (redacted \ "waves").asOpt[JsObject].getOrElse(Json.obj())
+      val redactedWaves = wavesObj
+        .transform((__ \ "wallet").json.prune)
+        .getOrElse(wavesObj)
+        .transform((__ \ "rest-api" \ "api-key-hash").json.prune)
+        .getOrElse(wavesObj)
+      redacted ++ Json.obj("waves" -> redactedWaves)
+    } else wavesConfig
+    complete(redactedConfig)
   }
 
   def blacklist: Route = (path("blacklist") & post) {
@@ -237,7 +248,6 @@ case class DebugApiRoute(
 
       val response = Json.obj(
         "valid"          -> error.isEmpty,
-        "validationTime" -> (System.nanoTime() - startTime).nanos.toMillis,
         "trace" -> tracedSnapshot.trace.map {
           case ist: InvokeScriptTrace => ist.maybeLoggedJson(logged = true)(using serializer.invokeScriptResultWrites)
           case trace                  => trace.loggedJson

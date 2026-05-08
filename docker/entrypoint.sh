@@ -10,21 +10,40 @@ JAVA_OPTS="-XX:+ExitOnOutOfMemoryError
   -Dwaves.config.directory=/etc/waves
   -Dwaves.defaults.blockchain.type=${WAVES_NETWORK}
   -Dwaves.directory=${WVDATA}
-  -Dwaves.rest-api.bind-address=0.0.0.0
+  -Dwaves.rest-api.bind-address=${WAVES_REST_API_BIND:-127.0.0.1}
   ${JAVA_OPTS}"
 
-echo "JAVA_OPTS=${JAVA_OPTS}" | tee -a ${WVLOG}/waves.log
+# Log non-sensitive JVM options only
+echo "Node starting with WAVES_NETWORK=${WAVES_NETWORK}, WAVES_HEAP_SIZE=${WAVES_HEAP_SIZE}" | tee -a ${WVLOG}/waves.log
 
+# Write wallet secrets to a temp config file (not visible in ps/cmdline)
+WAVES_SECRETS_CONF=$(mktemp /tmp/waves-secrets.XXXXXX.conf)
+chmod 600 "$WAVES_SECRETS_CONF"
+trap 'rm -f "$WAVES_SECRETS_CONF" /tmp/waves-combined.*.conf' EXIT
+
+HAS_SECRETS=false
 if [ -n "$WAVES_WALLET_SEED" ] ; then
-  JAVA_OPTS="-Dwaves.wallet.seed=${WAVES_WALLET_SEED} ${JAVA_OPTS}"
+  printf 'waves.wallet.seed="%s"\n' "$WAVES_WALLET_SEED" >> "$WAVES_SECRETS_CONF"
+  unset WAVES_WALLET_SEED
+  HAS_SECRETS=true
 fi
 
 if [ -n "$WAVES_WALLET_PASSWORD" ] ; then
-  JAVA_OPTS="-Dwaves.wallet.password=${WAVES_WALLET_PASSWORD} ${JAVA_OPTS}"
+  printf 'waves.wallet.password="%s"\n' "$WAVES_WALLET_PASSWORD" >> "$WAVES_SECRETS_CONF"
+  unset WAVES_WALLET_PASSWORD
+  HAS_SECRETS=true
 fi
 
 if [ $# -eq 0 ] && [ -f /etc/waves/waves.conf ] ; then
-  ARGS="/etc/waves/waves.conf"
+  if [ "$HAS_SECRETS" = true ] ; then
+    # Create a wrapper config that includes secrets (higher priority) and user config
+    COMBINED_CONF=$(mktemp /tmp/waves-combined.XXXXXX.conf)
+    chmod 600 "$COMBINED_CONF"
+    printf 'include file("/etc/waves/waves.conf")\ninclude file("%s")\n' "$WAVES_SECRETS_CONF" > "$COMBINED_CONF"
+    ARGS="$COMBINED_CONF"
+  else
+    ARGS="/etc/waves/waves.conf"
+  fi
 else
   ARGS=$@
 fi

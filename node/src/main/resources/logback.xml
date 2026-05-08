@@ -19,7 +19,7 @@
 
     <logger name="scorex.crypto.signatures.Curve25519" level="INFO"/>
 
-    <root level="TRACE"/>
+    <root level="INFO"/>
 
     <property name="logback.file.enabled" value="false"/>
 

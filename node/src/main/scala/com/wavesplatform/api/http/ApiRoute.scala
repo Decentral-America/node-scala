@@ -7,6 +7,8 @@ import com.wavesplatform.crypto
 import com.wavesplatform.settings.RestAPISettings
 import com.wavesplatform.utils.*
 
+import java.security.MessageDigest
+
 trait ApiRoute extends Directives with CustomDirectives with ApiMarshallers with ScorexLogging {
   def route: Route
 }
@@ -17,13 +19,14 @@ trait AuthRoute { this: ApiRoute =>
   protected lazy val apiKeyHash: Option[Array[Byte]] = Base58.tryDecode(settings.apiKeyHash).toOption
 
   def withAuth: Directive0 = apiKeyHash.fold[Directive0](complete(ApiKeyNotValid)) { hashFromSettings =>
-    optionalHeaderValueByType(`X-Api-Key`).flatMap {
-      case Some(k) if java.util.Arrays.equals(crypto.secureHash(k.value.utf8Bytes), hashFromSettings) => pass
-      case _ =>
-        optionalHeaderValueByType(api_key).flatMap {
-          case Some(k) if java.util.Arrays.equals(crypto.secureHash(k.value.utf8Bytes), hashFromSettings) => pass
-          case _                                                                                          => complete(ApiKeyNotValid)
-        }
+    val xApiKey = optionalHeaderValueByType(`X-Api-Key`)
+    val legacyKey = optionalHeaderValueByType(api_key)
+    (xApiKey & legacyKey).tflatMap { case (xKey, legKey) =>
+      val providedKey = xKey.orElse(legKey)
+      providedKey match {
+        case Some(k) if MessageDigest.isEqual(crypto.secureHash(k.value.utf8Bytes), hashFromSettings) => pass
+        case _ => complete(ApiKeyNotValid)
+      }
     }
   }
 }

@@ -34,7 +34,7 @@ abstract class LegacyFrameCodec(peerDatabase: PeerDatabase) extends ByteToMessag
 
       val spec   = specsByCodes(code)
       val length = in.readInt()
-      require(length <= spec.maxLength, s"${spec.messageName} message length $length exceeds ${spec.maxLength}")
+      require(length >= 0 && length <= spec.maxLength, s"${spec.messageName} message length $length is invalid (max ${spec.maxLength})")
 
       val dataBytes = new Array[Byte](length)
       val pushToPipeline = length == 0 || {
