@@ -1,12 +1,12 @@
 package com.wavesplatform.api.grpc
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import com.wavesplatform.common.utils.Base58
 import com.wavesplatform.extensions.{Extension, Context as ExtensionContext}
 import com.wavesplatform.settings.GRPCSettings
 import com.wavesplatform.utils.ScorexLogging
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
-import io.grpc.protobuf.services.ProtoReflectionServiceV1
 import monix.execution.Scheduler
 import pureconfig.ConfigSource
 
@@ -20,16 +20,24 @@ class GRPCServerExtension(context: ExtensionContext) extends Extension with Scor
     Executors.newFixedThreadPool(settings.workerThreads, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("grpc-server-worker-%d").build())
   private implicit val apiScheduler: Scheduler = Scheduler(executor)
   private val bindAddress                      = new InetSocketAddress(settings.host, settings.port)
-  private val server: Server = NettyServerBuilder
-    .forAddress(bindAddress)
-    .executor(executor)
-    .addService(TransactionsApiGrpc.bindService(new TransactionsApiGrpcImpl(context.blockchain, context.transactionsApi), apiScheduler))
-    .addService(BlocksApiGrpc.bindService(new BlocksApiGrpcImpl(context.blocksApi), apiScheduler))
-    .addService(AccountsApiGrpc.bindService(new AccountsApiGrpcImpl(context.accountsApi), apiScheduler))
-    .addService(AssetsApiGrpc.bindService(new AssetsApiGrpcImpl(context.assetsApi, context.accountsApi), apiScheduler))
-    .addService(BlockchainApiGrpc.bindService(new BlockchainApiGrpcImpl(context.blockchain, context.settings.featuresSettings), apiScheduler))
-    .addService(ProtoReflectionServiceV1.newInstance())
-    .build()
+
+  private val apiKeyHash: Array[Byte] = {
+    val hash = context.settings.restAPISettings.apiKeyHash
+    Base58.tryDecode(hash).getOrElse(Array.emptyByteArray)
+  }
+
+  private val server: Server = {
+    val builder = NettyServerBuilder
+      .forAddress(bindAddress)
+      .executor(executor)
+      .intercept(new ApiKeyInterceptor(apiKeyHash))
+      .addService(TransactionsApiGrpc.bindService(new TransactionsApiGrpcImpl(context.blockchain, context.transactionsApi), apiScheduler))
+      .addService(BlocksApiGrpc.bindService(new BlocksApiGrpcImpl(context.blocksApi), apiScheduler))
+      .addService(AccountsApiGrpc.bindService(new AccountsApiGrpcImpl(context.accountsApi), apiScheduler))
+      .addService(AssetsApiGrpc.bindService(new AssetsApiGrpcImpl(context.assetsApi, context.accountsApi), apiScheduler))
+      .addService(BlockchainApiGrpc.bindService(new BlockchainApiGrpcImpl(context.blockchain, context.settings.featuresSettings), apiScheduler))
+    builder.build()
+  }
 
   override def start(): Unit = {
     server.start()

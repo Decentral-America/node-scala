@@ -59,14 +59,12 @@ object Wallet {
       extends ScorexLogging
       with Wallet {
 
-    private lazy val encryptionKey = {
-      val password = passwordOpt.getOrElse(PasswordProvider.askPassword())
-      JsonFileStorage.prepareKey(password)
-    }
+    private lazy val encryptionPassword: String =
+      passwordOpt.getOrElse(PasswordProvider.askPassword())
 
     private lazy val actualSeed = maybeSeedFromConfig.getOrElse {
       val randomSeed = ByteStr(randomBytes(64))
-      log.info(s"Your randomly generated seed is ${randomSeed.toString}")
+      log.info("New wallet seed has been generated (store it securely, it will not be shown again)")
       randomSeed
     }
 
@@ -75,7 +73,7 @@ object Wallet {
         WalletData(actualSeed, Set.empty, 0)
       else {
         def loadOrImport(walletFile: File): Try[WalletData] =
-          Try(JsonFileStorage.load[WalletData](walletFile.getCanonicalPath, Some(this.encryptionKey)))
+          Try(JsonFileStorage.load[WalletData](walletFile.getCanonicalPath, Some(this.encryptionPassword)))
 
         val file = maybeFile.get
         if (file.isFile && file.length() > 0) {
@@ -142,7 +140,7 @@ object Wallet {
       walletData.nonce
 
     private def saveWalletFile(): Unit =
-      maybeFile.foreach(f => JsonFileStorage.save(walletData, f.getCanonicalPath, Some(encryptionKey)))
+      maybeFile.foreach(f => JsonFileStorage.save(walletData, f.getCanonicalPath, Some(encryptionPassword)))
 
     private def generateNewAccountWithoutSave(): Option[SeedKeyPair] = WalletLock.write {
       generateNewAccountWithoutSave(getAndIncrementNonce())

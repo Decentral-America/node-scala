@@ -181,14 +181,17 @@ case class AddressApiRoute(
         complete(accountDataEntry(address, key))
       } ~ strictEntity {
         (formField("matches") | parameter("matches")) { matches =>
-          Try(matches.r)
-            .fold(
-              { e =>
-                log.trace(s"Error compiling regex $matches: ${e.getMessage}")
-                complete(ApiError.fromValidationError(GenericError(s"Cannot compile regex")))
-              },
-              _ => accountData(address, matches)
-            )
+          if (matches.length > 200) {
+            complete(ApiError.fromValidationError(GenericError("Regex pattern too long (max 200 characters)")))
+          } else {
+            Try(matches.r)
+              .fold(
+                { e =>
+                  complete(ApiError.fromValidationError(GenericError(s"Cannot compile regex")))
+                },
+                _ => accountData(address, matches)
+              )
+          }
         } ~ anyParam("key", limit = settings.dataKeysRequestLimit) { keys =>
           extractMethod.filter(_ != HttpMethods.GET || keys.nonEmpty) { _ =>
             val result = Either
@@ -203,7 +206,7 @@ case class AddressApiRoute(
       }
     }
 
-  def root: Route = (path("addresses") & get) {
+  def root: Route = (path("addresses") & get & withAuth) {
     complete(wallet.privateKeyAccounts.map(_.toAddress))
   }
 

@@ -24,7 +24,9 @@ case class PeersApiRoute(
 
   override lazy val route: Route =
     pathPrefix("peers") {
-      allPeers ~ connectedPeers ~ blacklistedPeers ~ suspendedPeers ~ connect ~ clearBlacklist
+      withAuth {
+        allPeers ~ connectedPeers ~ blacklistedPeers ~ suspendedPeers
+      } ~ connect ~ clearBlacklist
     }
 
   def allPeers: Route = (path("all") & get) {
