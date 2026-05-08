@@ -38,11 +38,11 @@ package object crypto {
   def signVRF(account: PrivateKey, message: Array[Byte]): ByteStr =
     ByteStr(provider.calculateVrfSignature(provider.getRandom(DigestLength), account.arr, message))
 
-  def verify(signature: ByteStr, message: Array[Byte], publicKey: PublicKey, checkWeakPk: Boolean = false): Boolean = {
+  def verify(signature: ByteStr, message: Array[Byte], publicKey: PublicKey, checkWeakPk: Boolean = true): Boolean = {
     (!checkWeakPk || !isWeakPublicKey(publicKey.arr)) && Curve25519.verify(signature.arr, message, publicKey.arr)
   }
 
-  def verifyVRF(signature: ByteStr, message: Array[Byte], publicKey: PublicKey, checkWeakPk: Boolean = false): Either[ValidationError, ByteStr] = {
+  def verifyVRF(signature: ByteStr, message: Array[Byte], publicKey: PublicKey, checkWeakPk: Boolean = true): Either[ValidationError, ByteStr] = {
     for {
       _ <- Either.cond(!checkWeakPk || !isWeakPublicKey(publicKey.arr), (), GenericError("Could not verify VRF proof: weak public key is used"))
       result <- Try(ByteStr(provider.verifyVrfSignature(publicKey.arr, message, signature.arr))).toEither.left

@@ -18,8 +18,16 @@ final class ByteBufferOps(private val self: ByteBuffer) extends AnyVal {
 
   def readOpt[T](x: => T): Option[T] = if (readBool()) x.some else none
 
-  def readWithIntLen(): Array[Byte]   = readBytes(readInt())
-  def readWithShortLen(): Array[Byte] = readBytes(readShort())
+  def readWithIntLen(): Array[Byte] = {
+    val len = readInt()
+    require(len >= 0 && len <= self.remaining(), s"Invalid length: $len (remaining: ${self.remaining()})")
+    readBytes(len)
+  }
+  def readWithShortLen(): Array[Byte] = {
+    val len = readShort()
+    require(len >= 0 && len <= self.remaining(), s"Invalid length: $len (remaining: ${self.remaining()})")
+    readBytes(len)
+  }
 
   def readByte(): Byte    = self.get()
   def readShort(): Short  = Shorts.fromBytes(readByte(), readByte())

@@ -34,7 +34,9 @@ object BlsUtils {
     ctx.commit()
     ctx.finalverify()
   } catch {
-    case NonFatal(_) => false
+    case NonFatal(e) =>
+      System.err.println(s"BLS verification failed: ${e.getClass.getSimpleName}")
+      false
   }
 
   def aggSign(baseSig: Array[Byte], appendSig: Array[Byte]): Array[Byte] =

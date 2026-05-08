@@ -87,7 +87,6 @@ object ApiError {
     override lazy val json: JsObject = Json.obj(
       "error"            -> id,
       "message"          -> message,
-      "cause"            -> cause.map(_.toString),
       "validationErrors" -> JsError.toJson(errors)
     )
   }
