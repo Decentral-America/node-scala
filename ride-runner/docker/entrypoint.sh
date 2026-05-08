@@ -34,8 +34,7 @@ if [[ -n "${ASYNCPROF_ENABLE}" && "${ASYNCPROF_ENABLE}" == "true" ]]; then
   JAVA_OPTS="-agentpath:/usr/local/async-profiler/build/libasyncProfiler.so=$ASYNCPROF_OPTS $JAVA_OPTS"
 fi
 
-echo "Ride runner is starting..."
-echo "JAVA_OPTS='${JAVA_OPTS}'"
+echo "Ride runner is starting with RIDE_NETWORK=${RIDE_NETWORK}, RIDE_HEAP_SIZE=${RIDE_HEAP_SIZE}"
 
 if [ $# -eq 0 ]; then
   ARGS="$RIDE_APP $RIDE_CONFIG"

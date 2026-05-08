@@ -39,9 +39,11 @@ case class UtilsApiRoute(
 
   import UtilsApiRoute.*
 
+  private val secureRandom = new SecureRandom()
+
   private def seed(length: Int): JsObject = {
     val seed = new Array[Byte](length)
-    new SecureRandom().nextBytes(seed) // seed mutated here!
+    secureRandom.nextBytes(seed)
     Json.obj("seed" -> Base58.encode(seed))
   }
 
@@ -52,7 +54,10 @@ case class UtilsApiRoute(
       FeeValidation.ScriptExtraFee
 
   override val route: Route = pathPrefix("utils") {
-    decompile ~ compileCode ~ compileWithImports ~ estimate ~ time ~ seedRoute ~ length ~ hashFast ~ hashSecure ~ transactionSerialize ~ evaluate
+    (time ~ seedRoute ~ length ~ hashFast ~ hashSecure) ~
+    withAuth {
+      decompile ~ compileCode ~ compileWithImports ~ estimate ~ evaluate ~ transactionSerialize
+    }
   }
 
   def decompile: Route = path("script" / "decompile") {

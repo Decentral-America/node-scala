@@ -42,7 +42,8 @@ RUN --mount=type=bind,source=target,target=/tmp/ \
     # Set permissions
     chown -R waves:waves $WVDATA $WVLOG $WAVES_INSTALL_PATH && chmod 755 $WVDATA $WVLOG;
 
-EXPOSE 6869 6868 6863 6862 6870
+# Only expose REST API and mainnet P2P by default; override in docker-compose for other networks
+EXPOSE 6869 6868
 VOLUME $WVDATA
 VOLUME $WVLOG
 VOLUME $WAVES_INSTALL_PATH/lib/plugins

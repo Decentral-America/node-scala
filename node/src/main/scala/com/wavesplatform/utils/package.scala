@@ -54,9 +54,11 @@ package object utils {
     }
   }
 
+  private val sharedSecureRandom = new SecureRandom()
+
   def randomBytes(howMany: Int = 32): Array[Byte] = {
     val r = new Array[Byte](howMany)
-    new SecureRandom().nextBytes(r) // overrides r
+    sharedSecureRandom.nextBytes(r)
     r
   }
 

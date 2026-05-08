@@ -116,7 +116,7 @@ object Dependencies {
     logback,
     "org.scalatestplus" %% "scalacheck-1-16" % "3.2.14.0",
     "org.scalacheck"    %% "scalacheck"      % "1.19.0",
-    "org.mockito"        % "mockito-all"     % "1.10.19",
+    "org.mockito"        % "mockito-core"    % "5.14.2",
     "org.scalamock"     %% "scalamock"       % "6.2.0"
   ).map(_ % Test)
 

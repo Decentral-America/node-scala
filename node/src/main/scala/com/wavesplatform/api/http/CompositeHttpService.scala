@@ -63,6 +63,14 @@ case class CompositeHttpService(routes: Seq[ApiRoute], settings: RestAPISettings
         )
       }
 
+  private val securityHeaders: Seq[HttpHeader] = Seq(
+    RawHeader("X-Content-Type-Options", "nosniff"),
+    RawHeader("X-Frame-Options", "DENY"),
+    RawHeader("X-XSS-Protection", "1; mode=block"),
+    RawHeader("Cache-Control", "no-store"),
+    RawHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+  )
+
   private def corsHeaders(requestOrigin: Option[Origin]): Seq[HttpHeader] =
     requestOrigin
       .flatMap(_.origins.headOption)
@@ -78,7 +86,7 @@ case class CompositeHttpService(routes: Seq[ApiRoute], settings: RestAPISettings
 
   private def extendRoute(base: Route): Route = handleAllExceptions {
     optionalHeaderValueByType(Origin) { maybeOrigin =>
-      respondWithDefaultHeaders(corsHeaders(maybeOrigin)) {
+      respondWithDefaultHeaders(securityHeaders ++ corsHeaders(maybeOrigin)) {
         options {
           respondWithDefaultHeaders(preflightCorsHeaders(maybeOrigin)) {
             complete(StatusCodes.OK)
