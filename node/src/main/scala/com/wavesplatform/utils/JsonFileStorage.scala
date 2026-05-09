@@ -19,12 +19,12 @@ object JsonFileStorage {
   private val GcmTagLength = 128
   private val SaltLength   = 32
 
-  // Argon2id parameters — OWASP Password Storage Cheat Sheet 2026 minimum:
-  // m=19456 KiB (19 MiB), t=2 iterations, p=1 lane.
-  // Identical to the monorepo (packages/crypto/src/deriveKey.ts) WASM implementation.
-  private val Argon2Memory      = 19456 // KiB
-  private val Argon2Iterations  = 2
-  private val Argon2Parallelism = 1
+  // Argon2id parameters — high-security tier.
+  // Matches node-go (pkg/wallet/crypt.go) and monorepo (packages/crypto/src/lib.rs).
+  // All wallet encryption across the DCC ecosystem uses identical KDF parameters.
+  private val Argon2Memory      = 65536 // KiB (64 MiB)
+  private val Argon2Iterations  = 4
+  private val Argon2Parallelism = 4
 
   private val secureRandom = new SecureRandom()
 
