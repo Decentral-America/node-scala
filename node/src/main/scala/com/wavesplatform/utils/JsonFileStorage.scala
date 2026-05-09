@@ -12,14 +12,19 @@ import scala.io.Source
 import scala.util.control.NonFatal
 
 object JsonFileStorage {
-  private val AES               = "AES"
-  private val Algorithm         = AES + "/GCM/NoPadding"
-  private val HashingAlgorithm  = "PBKDF2WithHmacSHA512"
-  private val HashingIterations = 999999
-  private val KeySizeBits       = 256
-  private val GcmIvLength       = 12
-  private val GcmTagLength      = 128
-  private val SaltLength        = 32
+  private val AES          = "AES"
+  private val Algorithm    = AES + "/GCM/NoPadding"
+  private val KeySizeBits  = 256
+  private val GcmIvLength  = 12
+  private val GcmTagLength = 128
+  private val SaltLength   = 32
+
+  // Argon2id parameters — OWASP Password Storage Cheat Sheet 2026 minimum:
+  // m=19456 KiB (19 MiB), t=2 iterations, p=1 lane.
+  // Identical to the monorepo (packages/crypto/src/deriveKey.ts) WASM implementation.
+  private val Argon2Memory      = 19456 // KiB
+  private val Argon2Iterations  = 2
+  private val Argon2Parallelism = 1
 
   private val secureRandom = new SecureRandom()
 
@@ -31,25 +36,28 @@ object JsonFileStorage {
     salt
   }
 
+  /** Derives a 256-bit AES key from a password and salt using Argon2id.
+    * Argon2id is the OWASP #1 recommended KDF (memory-hard, GPU-resistant).
+    * Uses Bouncy Castle's Argon2BytesGenerator — no additional dependency
+    * (bcprov-jdk18on is already required by the node for Ethereum/web3j).
+    */
   private def prepareKey(key: String, salt: Array[Byte]): SecretKeySpec = {
-    import java.security.NoSuchAlgorithmException
-    import java.security.spec.InvalidKeySpecException
+    import org.bouncycastle.crypto.generators.Argon2BytesGenerator
+    import org.bouncycastle.crypto.params.Argon2Parameters
 
-    import javax.crypto.SecretKeyFactory
-    import javax.crypto.spec.PBEKeySpec
+    val params = new Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
+      .withSalt(salt)
+      .withMemoryAsKB(Argon2Memory)
+      .withIterations(Argon2Iterations)
+      .withParallelism(Argon2Parallelism)
+      .build()
 
-    def hashPassword(password: Array[Char], salt: Array[Byte], iterations: Int, keyLength: Int): Array[Byte] =
-      try {
-        val keyFactory = SecretKeyFactory.getInstance(HashingAlgorithm)
-        val keySpec    = new PBEKeySpec(password, salt, iterations, keyLength)
-        val key        = keyFactory.generateSecret(keySpec)
-        key.getEncoded
-      } catch {
-        case e @ (_: NoSuchAlgorithmException | _: InvalidKeySpecException) =>
-          throw new RuntimeException("Password hashing error", e)
-      }
+    val generator = new Argon2BytesGenerator()
+    generator.init(params)
 
-    new SecretKeySpec(hashPassword(key.toCharArray, salt, HashingIterations, KeySizeBits), AES)
+    val keyBytes = new Array[Byte](KeySizeBits / 8)
+    generator.generateBytes(key.toCharArray, keyBytes)
+    new SecretKeySpec(keyBytes, AES)
   }
 
   def save[T](value: T, path: String, password: Option[String])(implicit w: Writes[T]): Unit = {

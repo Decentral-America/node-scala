@@ -77,7 +77,7 @@ object Dependencies {
     // macOS aarch64
     amazonCorretto("osx-aarch_64"),
     // fallback Java
-    "org.bouncycastle" % "bcprov-jdk18on" % "1.83"
+    "org.bouncycastle" % "bcprov-jdk18on" % "1.84"
   )
 
   val lang = Def.setting(
