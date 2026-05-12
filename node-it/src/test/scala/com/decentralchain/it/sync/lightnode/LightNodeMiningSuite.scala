@@ -1,0 +1,32 @@
+package com.decentralchain.it.sync.lightnode
+
+import com.typesafe.config.Config
+import com.decentralchain.features.BlockchainFeatures.LightNode
+import com.decentralchain.it.api.SyncHttpApi.*
+import com.decentralchain.it.{BaseFunSuite, NodeConfigs, TransferSending}
+import com.decentralchain.state.Height
+import com.decentralchain.test.NumericExt
+
+class LightNodeMiningSuite extends BaseFunSuite with TransferSending {
+  override def nodeConfigs: Seq[Config] =
+    NodeConfigs.newBuilder
+      .overrideBase(_.preactivatedFeatures(LightNode.id.toInt -> Height(2)))
+      .overrideBase(_.raw("waves.blockchain.custom.functionality.light-node-block-fields-absence-interval = 2"))
+      .withDefault(1)
+      .withSpecial(1, _.lightNode)
+      .buildNonConflicting()
+
+  test("node can mine in light mode after light-node-block-fields-absence-interval") {
+    val lightNode        = nodes.find(_.settings.enableLightMode).get
+    val fullNode         = nodes.find(!_.settings.enableLightMode).get
+    val lightNodeAddress = lightNode.keyPair.toAddress.toString
+    val fullNodeAddress  = fullNode.keyPair.toAddress.toString
+
+    nodes.waitForHeight(Height(5))
+    fullNode.transfer(fullNode.keyPair, lightNodeAddress, fullNode.balance(fullNodeAddress).balance - 1.waves)
+    lightNode.blockSeq(Height(2), Height(5)).foreach(_.generator shouldBe fullNodeAddress)
+
+    lightNode.waitForHeight(Height(6))
+    lightNode.blockAt(Height(6)).generator shouldBe lightNodeAddress
+  }
+}

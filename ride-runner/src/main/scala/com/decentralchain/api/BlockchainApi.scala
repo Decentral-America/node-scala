@@ -1,0 +1,38 @@
+package com.decentralchain.api
+
+import com.decentralchain.account.{Address, Alias, PublicKey}
+import com.decentralchain.api.BlockchainApi.*
+import com.wavesplatform.api.grpc.BalanceResponse.WavesBalances
+import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
+import com.decentralchain.events.WrappedEvent
+import com.wavesplatform.events.api.grpc.protobuf.SubscribeEvent
+import com.decentralchain.lang.script.Script
+import com.decentralchain.state.{AssetDescription, DataEntry, Height, TransactionId}
+import com.decentralchain.transaction.Asset
+import monix.execution.Scheduler
+import monix.reactive.Observable
+
+trait BlockchainApi {
+  def mkBlockchainUpdatesStream(scheduler: Scheduler): BlockchainUpdatesStream
+  def getCurrentBlockchainHeight(): Height
+  def getActivatedFeatures(height: Height): Map[Short, Height]
+  def getAccountDataEntries(address: Address): Seq[DataEntry[?]]
+  def getAccountDataEntry(address: Address, key: String): Option[DataEntry[?]]
+  def getAccountScript(address: Address): Option[(PublicKey, Script)]
+  def getBlockHeader(height: Height): Option[SignedBlockHeaderWithVrf]
+  def getBlockHeaderRange(fromHeight: Height, toHeight: Height): List[SignedBlockHeaderWithVrf]
+  def getAssetDescription(asset: Asset.IssuedAsset): Option[AssetDescription]
+  def resolveAlias(alias: Alias): Option[Address]
+  def getBalance(address: Address, asset: Asset): Long
+  def getLeaseBalance(address: Address): WavesBalances
+  def getTransactionHeight(id: TransactionId): Option[Height]
+}
+
+object BlockchainApi {
+  trait BlockchainUpdatesStream extends AutoCloseable {
+    val downstream: Observable[WrappedEvent[SubscribeEvent]]
+
+    def start(fromHeight: Height): Unit = start(fromHeight, toHeight = Height(0))
+    def start(fromHeight: Height, toHeight: Height): Unit
+  }
+}

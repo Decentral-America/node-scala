@@ -1,0 +1,814 @@
+package com.decentralchain
+
+import com.google.common.collect.{Interners, Maps}
+import com.google.common.io.ByteStreams.{newDataInput, newDataOutput}
+import com.google.common.io.{ByteArrayDataInput, ByteArrayDataOutput}
+import com.google.common.primitives.{Ints, Longs}
+import com.google.protobuf.ByteString
+import com.decentralchain.account.{AddressScheme, PublicKey}
+import com.decentralchain.block.validation.Validators
+import com.decentralchain.block.{Block, BlockHeader}
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.crypto.*
+import com.decentralchain.crypto.bls.BlsPublicKey
+import com.decentralchain.database.protobuf as pb
+import com.decentralchain.database.protobuf.DataEntry.Value
+import com.decentralchain.database.protobuf.TransactionData.Transaction as TD
+import com.decentralchain.lang.script.ScriptReader
+import com.wavesplatform.protobuf.block.PBBlocks
+import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
+import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions}
+import com.wavesplatform.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
+import com.decentralchain.state.*
+import com.decentralchain.state.StateHash.SectionId
+import com.decentralchain.transaction.Asset.IssuedAsset
+import com.decentralchain.transaction.{EthereumTransaction, PBSince, Transaction, TransactionParsers, TxPositiveAmount, TxValidationError, Versioned}
+import com.decentralchain.utils.*
+import monix.eval.Task
+import monix.reactive.Observable
+import org.rocksdb.*
+import sun.nio.ch.Util
+
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+import java.util.Map as JMap
+import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.{View, mutable}
+import scala.jdk.CollectionConverters.*
+
+//noinspection UnstableApiUsage
+package object database {
+  final type DBEntry = JMap.Entry[Array[Byte], Array[Byte]]
+
+  implicit class ByteArrayDataOutputExt(val output: ByteArrayDataOutput) extends AnyVal {
+    def writeByteStr(s: ByteStr): Unit = {
+      output.write(s.arr)
+    }
+  }
+
+  implicit class ByteArrayDataInputExt(val input: ByteArrayDataInput) extends AnyVal {
+    def readBytes(len: Int): Array[Byte] = {
+      val arr = new Array[Byte](len)
+      input.readFully(arr)
+      arr
+    }
+
+    def readByteStr(len: Int): ByteStr = {
+      ByteStr(readBytes(len))
+    }
+  }
+
+  def writeIntSeq(values: Seq[Int]): Array[Byte] = {
+    values.foldLeft(ByteBuffer.allocate(4 * values.length))(_ `putInt` _).array()
+  }
+
+  def readIntSeq(data: Array[Byte]): Seq[Int] = Option(data).fold(Seq.empty[Int]) { d =>
+    val in = ByteBuffer.wrap(data)
+    Seq.fill(d.length / 4)(in.getInt)
+  }
+
+  def readAddressIds(data: Array[Byte]): Seq[AddressId] = Option(data).fold(Seq.empty[AddressId]) { d =>
+    require(d.length % java.lang.Long.BYTES == 0, s"Invalid data length: ${d.length}")
+    val buffer = ByteBuffer.wrap(data)
+    Seq.fill(d.length / java.lang.Long.BYTES)(AddressId(buffer.getLong))
+  }
+
+  def writeAddressIds(values: Seq[AddressId]): Array[Byte] =
+    values.foldLeft(ByteBuffer.allocate(values.length * java.lang.Long.BYTES)) { case (buf, aid) => buf.putLong(aid.toLong) }.array()
+
+  def readAssetIds(data: Array[Byte]): Seq[ByteStr] = Option(data).fold(Seq.empty[ByteStr]) { d =>
+    require(d.length % transaction.AssetIdLength == 0, s"Invalid data length: ${d.length}")
+    val buffer = ByteBuffer.wrap(d)
+    Seq.fill(d.length / transaction.AssetIdLength) {
+      val idBytes = new Array[Byte](transaction.AssetIdLength)
+      buffer.get(idBytes)
+      ByteStr(idBytes)
+    }
+  }
+
+  def writeAssetIds(values: Seq[ByteStr]): Array[Byte] =
+    values.foldLeft(ByteBuffer.allocate(values.length * transaction.AssetIdLength)) { case (buf, ai) => buf.put(ai.arr) }.array()
+
+  def readStrings(data: Array[Byte]): Seq[String] = Option(data).fold(Seq.empty[String]) { _ =>
+    var i = 0
+    val s = Seq.newBuilder[String]
+
+    while (i < data.length) {
+      val len = ((data(i) << 8) | (data(i + 1) & 0xff)).toShort // Optimization
+      s += new String(data, i + 2, len, StandardCharsets.UTF_8)
+      i += (2 + len)
+    }
+    s.result()
+  }
+
+  def writeStrings(strings: Seq[String]): Array[Byte] = {
+    val utfBytes = strings.toVector.map(_.utf8Bytes)
+    utfBytes
+      .foldLeft(ByteBuffer.allocate(utfBytes.map(_.length + 2).sum)) { case (buf, bytes) =>
+        buf.putShort(bytes.length.toShort).put(bytes)
+      }
+      .array()
+  }
+
+  def readLeaseBalanceNode(data: Array[Byte]): LeaseBalanceNode = if (data != null && data.length == 20)
+    LeaseBalanceNode(Longs.fromByteArray(data.take(8)), Longs.fromByteArray(data.slice(8, 16)), Height(Ints.fromByteArray(data.takeRight(4))))
+  else LeaseBalanceNode.Empty
+
+  def writeLeaseBalanceNode(leaseBalanceNode: LeaseBalanceNode): Array[Byte] =
+    Longs.toByteArray(leaseBalanceNode.in) ++ Longs.toByteArray(leaseBalanceNode.out) ++ leaseBalanceNode.prevHeight.toByteArray
+
+  def readLeaseBalance(data: Array[Byte]): CurrentLeaseBalance = if (data != null && data.length == 24)
+    CurrentLeaseBalance(
+      Longs.fromByteArray(data.take(8)),
+      Longs.fromByteArray(data.slice(8, 16)),
+      Height(Ints.fromByteArray(data.slice(16, 20))),
+      Height(Ints.fromByteArray(data.takeRight(4)))
+    )
+  else CurrentLeaseBalance.Unavailable
+
+  def writeLeaseBalance(lb: CurrentLeaseBalance): Array[Byte] =
+    Longs.toByteArray(lb.in) ++ Longs.toByteArray(lb.out) ++ lb.height.toByteArray ++ lb.prevHeight.toByteArray
+
+  def writeLeaseDetails(ld: LeaseDetails): Array[Byte] =
+    pb.LeaseDetails(
+      ByteString.copyFrom(ld.sender.arr),
+      Some(PBRecipients.create(ld.recipientAddress)),
+      ld.amount.value,
+      ByteString.copyFrom(ld.sourceId.arr),
+      ld.height.toInt,
+      ld.status match {
+        case LeaseDetails.Status.Active => pb.LeaseDetails.CancelReason.Empty
+        case LeaseDetails.Status.Cancelled(height, cancelTxId) =>
+          pb.LeaseDetails.CancelReason
+            .Cancelled(pb.LeaseDetails.Cancelled(height.toInt, cancelTxId.fold(ByteString.EMPTY)(id => ByteString.copyFrom(id.arr))))
+        case LeaseDetails.Status.Expired(height) => pb.LeaseDetails.CancelReason.Expired(pb.LeaseDetails.Expired(height.toInt))
+      }
+    ).toByteArray
+
+  def readLeaseDetails(data: Array[Byte]): LeaseDetails = {
+    val d = pb.LeaseDetails.parseFrom(data)
+    LeaseDetails(
+      LeaseStaticInfo(
+        d.senderPublicKey.toPublicKey,
+        PBRecipients.toAddress(d.recipient.get, AddressScheme.current.chainId).explicitGet(),
+        TxPositiveAmount.unsafeFrom(d.amount),
+        TransactionId(d.sourceId.toByteStr),
+        Height(d.height)
+      ),
+      d.cancelReason match {
+        case pb.LeaseDetails.CancelReason.Expired(pb.LeaseDetails.Expired(height, _)) => LeaseDetails.Status.Expired(Height(height))
+        case pb.LeaseDetails.CancelReason.Cancelled(pb.LeaseDetails.Cancelled(height, transactionId, _)) =>
+          LeaseDetails.Status.Cancelled(Height(height), Some(transactionId).collect { case id if !id.isEmpty => TransactionId(id.toByteStr) })
+        case pb.LeaseDetails.CancelReason.Empty => LeaseDetails.Status.Active
+      }
+    )
+  }
+
+  def readVolumeAndFeeNode(data: Array[Byte]): VolumeAndFeeNode = if (data != null && data.length == 20)
+    VolumeAndFeeNode(Longs.fromByteArray(data.take(8)), Longs.fromByteArray(data.slice(8, 16)), Height(Ints.fromByteArray(data.takeRight(4))))
+  else VolumeAndFeeNode.Empty
+
+  def writeVolumeAndFeeNode(volumeAndFeeNode: VolumeAndFeeNode): Array[Byte] =
+    Longs.toByteArray(volumeAndFeeNode.volume) ++ Longs.toByteArray(volumeAndFeeNode.fee) ++ volumeAndFeeNode.prevHeight.toByteArray
+
+  def readVolumeAndFee(data: Array[Byte]): CurrentVolumeAndFee = if (data != null && data.length == 24)
+    CurrentVolumeAndFee(
+      Longs.fromByteArray(data.take(8)),
+      Longs.fromByteArray(data.slice(8, 16)),
+      Height(Ints.fromByteArray(data.slice(16, 20))),
+      Height(Ints.fromByteArray(data.takeRight(4)))
+    )
+  else CurrentVolumeAndFee.Unavailable
+
+  def writeVolumeAndFee(vf: CurrentVolumeAndFee): Array[Byte] =
+    Longs.toByteArray(vf.volume) ++ Longs.toByteArray(vf.fee) ++ vf.height.toByteArray ++ vf.prevHeight.toByteArray
+
+  def readFeatureMap(data: Array[Byte]): Map[Short, Height] = Option(data).fold(Map.empty) { _ =>
+    val b        = ByteBuffer.wrap(data)
+    val features = Map.newBuilder[Short, Height]
+    while (b.hasRemaining) {
+      features += b.getShort -> Height(b.getInt)
+    }
+
+    features.result()
+  }
+
+  def writeFeatureMap(features: Map[Short, Height]): Array[Byte] = {
+    val b = ByteBuffer.allocate(features.size * 6)
+    for ((featureId, height) <- features)
+      b.putShort(featureId).putInt(height.toInt)
+
+    b.array()
+  }
+
+  def readSponsorship(data: Array[Byte]): SponsorshipValue = {
+    val ndi = newDataInput(data)
+    SponsorshipValue(ndi.readLong())
+  }
+
+  def writeSponsorship(ai: SponsorshipValue): Array[Byte] = {
+    val ndo = newDataOutput()
+    ndo.writeLong(ai.minFee)
+    ndo.toByteArray
+  }
+
+  def readAssetDetails(data: Array[Byte]): (AssetInfo, AssetVolumeInfo) = {
+
+    val pbad = pb.AssetDetails.parseFrom(data)
+
+    (
+      AssetInfo(pbad.name, pbad.description, Height(pbad.lastRenamedAt)),
+      AssetVolumeInfo(pbad.reissuable, BigInt(pbad.totalVolume.toByteArray))
+    )
+  }
+
+  def writeAssetDetails(ai: (AssetInfo, AssetVolumeInfo)): Array[Byte] = {
+    val (info, volumeInfo) = ai
+
+    pb.AssetDetails(
+      info.name,
+      info.description,
+      info.lastUpdatedAt.toInt,
+      volumeInfo.isReissuable,
+      ByteString.copyFrom(volumeInfo.volume.toByteArray)
+    ).toByteArray
+  }
+
+  def writeBlockMeta(data: pb.BlockMeta): Array[Byte] = data.toByteArray
+
+  def readBlockMeta(bs: Array[Byte]): pb.BlockMeta = pb.BlockMeta.parseFrom(bs)
+
+  def readTransactionHNSeqAndType(bs: Array[Byte]): (Height, Seq[(Byte, TxNum, Int)]) = {
+    val ndi          = newDataInput(bs)
+    val height       = Height(ndi.readInt())
+    val numSeqLength = ndi.readInt()
+
+    (
+      height,
+      List.fill(numSeqLength) {
+        val tp   = ndi.readByte()
+        val num  = TxNum(ndi.readShort())
+        val size = ndi.readInt()
+        (tp, num, size)
+      }
+    )
+  }
+
+  def writeTransactionHNSeqAndType(v: (Height, Seq[(Byte, TxNum, Int)])): Array[Byte] = {
+    val (height, numSeq) = v
+    val numSeqLength     = numSeq.length
+
+    val outputLength = 4 + 4 + numSeqLength * (1 + 2 + 4)
+    val ndo          = newDataOutput(outputLength)
+
+    ndo.writeInt(height.toInt)
+    ndo.writeInt(numSeqLength)
+    numSeq.foreach { case (tp, num, size) =>
+      ndo.writeByte(tp)
+      ndo.writeShort(num.toShort)
+      ndo.writeInt(size)
+    }
+
+    ndo.toByteArray
+  }
+
+  def readLeaseIdSeq(data: Array[Byte]): Seq[ByteStr] =
+    pb.LeaseIds
+      .parseFrom(data)
+      .ids
+      .map(_.toByteStr)
+
+  def writeLeaseIdSeq(ids: Seq[ByteStr]): Array[Byte] =
+    pb.LeaseIds(ids.map(_.toByteString)).toByteArray
+
+  def readStateHash(bs: Array[Byte]): StateHash = {
+    val ndi           = newDataInput(bs)
+    val sectionsCount = ndi.readByte()
+    val sections = (0 until sectionsCount).map { _ =>
+      val sectionId = ndi.readByte()
+      val value     = ndi.readByteStr(DigestLength)
+      SectionId(sectionId) -> value
+    }
+    val totalHash = ndi.readByteStr(DigestLength)
+    StateHash(totalHash, sections.toMap)
+  }
+
+  def writeStateHash(sh: StateHash): Array[Byte] = {
+    val sorted = sh.sectionHashes.toSeq.sortBy(_._1)
+    val ndo    = newDataOutput(crypto.DigestLength + 1 + sorted.length * (1 + crypto.DigestLength))
+    ndo.writeByte(sorted.length)
+    sorted.foreach { case (sectionId, value) =>
+      ndo.writeByte(sectionId.id.toByte)
+      ndo.writeByteStr(value.ensuring(_.arr.length == DigestLength))
+    }
+    ndo.writeByteStr(sh.totalHash.ensuring(_.arr.length == DigestLength))
+    ndo.toByteArray
+  }
+
+  private def readDataEntry(key: String)(bs: Array[Byte]): DataEntry[?] =
+    if (bs == null || bs.length == 0) EmptyDataEntry(key)
+    else
+      pb.DataEntry.parseFrom(bs).value match {
+        case Value.Empty              => EmptyDataEntry(key)
+        case Value.IntValue(value)    => IntegerDataEntry(key, value)
+        case Value.BoolValue(value)   => BooleanDataEntry(key, value)
+        case Value.BinaryValue(value) => BinaryDataEntry(key, value.toByteStr)
+        case Value.StringValue(value) => StringDataEntry(key, value)
+      }
+
+  private def writeDataEntry(e: DataEntry[?]): Array[Byte] =
+    pb.DataEntry(e match {
+      case IntegerDataEntry(_, value) => pb.DataEntry.Value.IntValue(value)
+      case BooleanDataEntry(_, value) => pb.DataEntry.Value.BoolValue(value)
+      case BinaryDataEntry(_, value)  => pb.DataEntry.Value.BinaryValue(ByteString.copyFrom(value.arr))
+      case StringDataEntry(_, value)  => pb.DataEntry.Value.StringValue(value)
+      case _: EmptyDataEntry          => pb.DataEntry.Value.Empty
+    }).toByteArray
+
+  def readCurrentData(key: String)(bs: Array[Byte]): CurrentData = if (bs == null) CurrentData.empty(key)
+  else
+    CurrentData(
+      readDataEntry(key)(bs.drop(8)),
+      Height(Ints.fromByteArray(bs.take(4))),
+      Height(Ints.fromByteArray(bs.slice(4, 8)))
+    )
+
+  def writeCurrentData(cdn: CurrentData): Array[Byte] =
+    cdn.height.toByteArray ++ cdn.prevHeight.toByteArray ++ writeDataEntry(cdn.entry)
+
+  def readDataNode(key: String)(bs: Array[Byte]): DataNode = if (bs == null) DataNode.empty(key)
+  else
+    DataNode(readDataEntry(key)(bs.drop(4)), Height(Ints.fromByteArray(bs.take(4))))
+
+  def writeDataNode(dn: DataNode): Array[Byte] =
+    dn.prevHeight.toByteArray ++ writeDataEntry(dn.entry)
+
+  def readCurrentBalance(bs: Array[Byte]): CurrentBalance = if (bs != null && bs.length == 16)
+    CurrentBalance(Longs.fromByteArray(bs.take(8)), Height(Ints.fromByteArray(bs.slice(8, 12))), Height(Ints.fromByteArray(bs.takeRight(4))))
+  else CurrentBalance.Unavailable
+
+  def writeCurrentBalance(balance: CurrentBalance): Array[Byte] =
+    Longs.toByteArray(balance.balance) ++ balance.height.toByteArray ++ balance.prevHeight.toByteArray
+
+  def readBalanceNode(bs: Array[Byte]): BalanceNode = if (bs != null && bs.length == BalanceNode.SizeInBytes)
+    BalanceNode(Longs.fromByteArray(bs.take(8)), Height(Ints.fromByteArray(bs.takeRight(4))))
+  else BalanceNode.Empty
+
+  def writeBalanceNode(balance: BalanceNode): Array[Byte] =
+    Longs.toByteArray(balance.balance) ++ balance.prevHeight.toByteArray
+
+  def readGeneratorBalances(data: Array[Byte]): Seq[(GeneratorIndex, Long)] = {
+    val bs = ByteBuffer.wrap(data)
+    Seq.fill(data.length / 12)(GeneratorIndex(bs.getInt) -> bs.getLong)
+  }
+
+  def writeGeneratorBalances(data: Seq[(GeneratorIndex, Long)]): Array[Byte] =
+    data
+      .foldLeft(ByteBuffer.allocate(data.length * 12)) { case (bs, (idx, balance)) =>
+        bs.putInt(idx.toInt).putLong(balance)
+      }
+      .array()
+
+  def readCommittedGenerators(data: Array[Byte]): Seq[(AddressId, BlsPublicKey)] = {
+    val addressSize = Longs.BYTES
+    data
+      .grouped(addressSize + BlsPublicKey.SizeInBytes)
+      .map { data =>
+        val (addressIdBytes, blsPublicKeyBytes) = data.splitAt(addressSize)
+        (
+          Longs.fromByteArray(addressIdBytes),
+          BlsPublicKey(blsPublicKeyBytes).explicitGet()
+        )
+      }
+      .toSeq
+  }
+
+  def writeCommittedGenerators(data: Seq[(AddressId, BlsPublicKey)]): Array[Byte] =
+    data.view.flatMap { (addressId, blsPublicKey) => Longs.toByteArray(addressId) ++ blsPublicKey.arr }.toArray
+
+  def readConflictGenerators(data: Array[Byte]): Seq[GeneratorIndex] = data
+    .grouped(Ints.BYTES)
+    .map { bytes => GeneratorIndex(Ints.fromByteArray(bytes)) }
+    .toSeq
+
+  def writeConflictGenerators(data: Seq[GeneratorIndex]): Array[Byte] = data.view.flatMap(i => Ints.toByteArray(i.toInt)).toArray
+
+  def readCommitmentTransactions(data: Array[Byte]): Seq[TransactionId] = {
+    val transactionSize = DigestLength
+    data
+      .grouped(transactionSize)
+      .map { bytes => TransactionId(ByteStr(bytes)) }
+      .toSeq
+  }
+
+  def writeCommitmentTransactions(data: Seq[TransactionId]): Array[Byte] = data.view.flatMap(_.arr).toArray
+
+  def getKeyBuffersFromKeys(keys: collection.IndexedSeq[Key[?]]): collection.IndexedSeq[ByteBuffer] =
+    keys.map { k =>
+      val arr = k.keyBytes
+      val b   = Util.getTemporaryDirectBuffer(arr.length)
+      b.put(k.keyBytes).flip()
+      b
+    }
+
+  def getKeyBuffers(keys: collection.IndexedSeq[Array[Byte]]): collection.IndexedSeq[ByteBuffer] =
+    keys.map { k =>
+      val b = Util.getTemporaryDirectBuffer(k.length)
+      b.put(k).flip()
+      b
+    }
+
+  def getValueBuffers(amount: Int, bufferSize: Int): IndexedSeq[ByteBuffer] =
+    IndexedSeq
+      .fill(amount) {
+        val buf = Util.getTemporaryDirectBuffer(bufferSize)
+        buf.limit(buf.capacity())
+        buf
+      }
+
+  def getValueBuffers(bufferSizes: collection.IndexedSeq[Int]): collection.IndexedSeq[ByteBuffer] =
+    bufferSizes.map { size =>
+      val buf = Util.getTemporaryDirectBuffer(size)
+      buf.limit(buf.capacity())
+      buf
+    }
+
+  implicit class DBExt(val db: RocksDB) extends AnyVal {
+
+    def readOnly[A](f: ReadOnlyDB => A): A = withReadOptions { ro => f(new ReadOnlyDB(db, ro)) }
+
+    /** @note
+      *   Runs operations in batch, so keep in mind, that previous changes don't appear lately in f
+      */
+    def readWrite[A](f: RW => A): A = withOptions { (ro, wo) => readWriteWithOptions(ro, wo)(f) }
+
+    def readWriteWithOptions[A](readOptions: ReadOptions, writeOptions: WriteOptions)(f: RW => A): A = {
+      val batch = new WriteBatch()
+      val rw    = new RW(db, readOptions, batch)
+      try {
+        val r = f(rw)
+        db.write(writeOptions, batch)
+        r
+      } finally batch.close()
+    }
+
+    def withOptions[A](f: (ReadOptions, WriteOptions) => A): A =
+      withReadOptions { ro =>
+        withWriteOptions { wo =>
+          f(ro, wo)
+        }
+      }
+
+    def withWriteOptions[A](f: WriteOptions => A): A = {
+      val wo = new WriteOptions()
+      try f(wo)
+      finally wo.close()
+    }
+
+    def withReadOptions[A](f: ReadOptions => A): A = {
+      val snapshot = db.getSnapshot
+      // checksum may be verification is **very** expensive, so it's explicitly disabled
+      val ro = new ReadOptions().setSnapshot(snapshot).setVerifyChecksums(false)
+      try f(ro)
+      finally {
+        ro.close()
+        db.releaseSnapshot(snapshot)
+      }
+    }
+
+    def multiGetOpt[A](readOptions: ReadOptions, keys: collection.IndexedSeq[Key[Option[A]]], valBufSize: Int): Seq[Option[A]] =
+      multiGetOpt(readOptions, keys, getKeyBuffersFromKeys(keys), getValueBuffers(keys.size, valBufSize))
+
+    def multiGetOpt[A](
+        readOptions: ReadOptions,
+        keys: collection.IndexedSeq[Key[Option[A]]],
+        valBufSizes: collection.IndexedSeq[Int]
+    ): Seq[Option[A]] =
+      multiGetOpt(readOptions, keys, getKeyBuffersFromKeys(keys), getValueBuffers(valBufSizes))
+
+    def multiGet[A](readOptions: ReadOptions, keys: ArrayBuffer[Key[A]], valBufSizes: ArrayBuffer[Int]): View[A] =
+      multiGet(readOptions, keys, getKeyBuffersFromKeys(keys), getValueBuffers(valBufSizes))
+
+    def multiGet[A](readOptions: ReadOptions, keys: ArrayBuffer[Key[A]], valBufSize: Int): View[A] =
+      multiGet(readOptions, keys, getKeyBuffersFromKeys(keys), getValueBuffers(keys.size, valBufSize))
+
+    def multiGet[A](readOptions: ReadOptions, keys: collection.IndexedSeq[Key[A]], valBufSize: Int): Seq[Option[A]] = {
+      val keyBufs = getKeyBuffersFromKeys(keys)
+      val valBufs = getValueBuffers(keys.size, valBufSize)
+
+      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val result = keys.view
+        .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
+        .map { case (parser, value) =>
+          if (value.status.getCode == Status.Code.Ok) {
+            val arr = new Array[Byte](value.requiredSize)
+            value.value.get(arr)
+            Util.releaseTemporaryDirectBuffer(value.value)
+            Some(parser.parse(arr))
+          } else None
+        }
+        .toSeq
+
+      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      result
+    }
+
+    def multiGetInts(readOptions: ReadOptions, keys: collection.IndexedSeq[Key[Int]]): Seq[Option[Int]] = {
+      val keyBytes = keys.map(_.keyBytes)
+      val keyBufs  = getKeyBuffers(keyBytes)
+      val valBufs  = getValueBuffers(keyBytes.size, 4)
+
+      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val result = db
+        .multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava)
+        .asScala
+        .map { value =>
+          if (value.status.getCode == Status.Code.Ok) {
+            val h = Some(value.value.getInt)
+            Util.releaseTemporaryDirectBuffer(value.value)
+            h
+          } else None
+        }
+        .toSeq
+
+      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      result
+    }
+
+    def multiGetFlat[A](readOptions: ReadOptions, keys: ArrayBuffer[Key[Option[A]]], valBufSizes: ArrayBuffer[Int]): Seq[A] = {
+      val keyBufs = getKeyBuffersFromKeys(keys)
+      val valBufs = getValueBuffers(valBufSizes)
+
+      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val result = keys.view
+        .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
+        .flatMap { case (parser, value) =>
+          if (value.status.getCode == Status.Code.Ok) {
+            val arr = new Array[Byte](value.requiredSize)
+            value.value.get(arr)
+            Util.releaseTemporaryDirectBuffer(value.value)
+            parser.parse(arr)
+          } else None
+        }
+        .toSeq
+
+      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      result
+    }
+
+    def get[A](key: Key[A]): A = key.parse(db.get(key.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily), key.keyBytes))
+    def get[A](key: Key[A], readOptions: ReadOptions): A =
+      key.parse(db.get(key.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily), readOptions, key.keyBytes))
+    def has(key: Key[?]): Boolean = db.get(key.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily), key.keyBytes) != null
+
+    def iterateOver(tag: KeyTag, cfh: Option[ColumnFamilyHandle] = None)(f: DBEntry => Unit): Unit =
+      iterateOver(tag.prefixBytes, cfh)(f)
+
+    def iterateOver(prefix: Array[Byte], cfh: Option[ColumnFamilyHandle])(f: DBEntry => Unit): Unit = {
+      @tailrec
+      def loop(iter: RocksIterator): Unit = {
+        if (iter.isValid && iter.key().startsWith(prefix)) {
+          f(Maps.immutableEntry(iter.key(), iter.value()))
+          iter.next()
+          loop(iter)
+        } else ()
+      }
+
+      withReadOptions { ro =>
+        val iterator = db.newIterator(cfh.getOrElse(db.getDefaultColumnFamily), ro.setTotalOrderSeek(true))
+        try {
+          iterator.seek(prefix)
+          loop(iterator)
+        } finally iterator.close()
+      }
+    }
+
+    def resourceObservable: Observable[DBResource] =
+      Observable.resource(Task(new DBResource(db, None)))(r => Task(r.close()))
+
+    def resourceObservable(iteratorCfHandle: ColumnFamilyHandle): Observable[DBResource] =
+      Observable.resource(Task(new DBResource(db, Some(iteratorCfHandle))))(r => Task(r.close()))
+
+    def withResource[A](f: DBResource => A): A = {
+      val resource = new DBResource(db)
+      try f(resource)
+      finally resource.close()
+    }
+
+    def withResource[A](iteratorCfHandle: ColumnFamilyHandle)(f: DBResource => A): A = {
+      val resource = new DBResource(db, Some(iteratorCfHandle))
+      try f(resource)
+      finally resource.close()
+    }
+
+    private def multiGetOpt[A](
+        readOptions: ReadOptions,
+        keys: collection.IndexedSeq[Key[Option[A]]],
+        keyBufs: collection.IndexedSeq[ByteBuffer],
+        valBufs: collection.IndexedSeq[ByteBuffer]
+    ): Seq[Option[A]] = {
+      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val result = keys.view
+        .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
+        .map { case (parser, value) =>
+          if (value.status.getCode == Status.Code.Ok) {
+            val arr = new Array[Byte](value.requiredSize)
+            value.value.get(arr)
+            Util.releaseTemporaryDirectBuffer(value.value)
+            parser.parse(arr)
+          } else None
+        }
+        .toSeq
+
+      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      result
+    }
+
+    private def multiGet[A](
+        readOptions: ReadOptions,
+        keys: ArrayBuffer[Key[A]],
+        keyBufs: collection.IndexedSeq[ByteBuffer],
+        valBufs: collection.IndexedSeq[ByteBuffer]
+    ): View[A] = {
+      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val result = keys.view
+        .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
+        .flatMap { case (parser, value) =>
+          if (value.status.getCode == Status.Code.Ok) {
+            val arr = new Array[Byte](value.requiredSize)
+            value.value.get(arr)
+            Util.releaseTemporaryDirectBuffer(value.value)
+            Some(parser.parse(arr))
+          } else None
+        }
+
+      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      result
+    }
+  }
+
+  def createBlock(header: BlockHeader, signature: ByteStr, txs: Seq[Transaction]): Either[TxValidationError.GenericError, Block] =
+    Validators.validateBlock(Block(header, signature, txs))
+
+  def writeAssetScript(script: AssetScriptInfo): Array[Byte] =
+    Longs.toByteArray(script.complexity) ++ script.script.bytes().arr
+
+  def readAssetScript(b: Array[Byte]): AssetScriptInfo =
+    AssetScriptInfo(ScriptReader.fromBytes(b.drop(8)).explicitGet(), Longs.fromByteArray(b))
+
+  def writeAccountScriptInfo(scriptInfo: AccountScriptInfo): Array[Byte] =
+    pb.AccountScriptInfo.toByteArray(
+      pb.AccountScriptInfo(
+        ByteString.copyFrom(scriptInfo.publicKey.arr),
+        ByteString.copyFrom(scriptInfo.script.bytes().arr),
+        scriptInfo.verifierComplexity,
+        scriptInfo.complexitiesByEstimator.map { case (version, complexities) =>
+          pb.AccountScriptInfo.ComplexityByVersion(version, complexities)
+        }.toSeq
+      )
+    )
+
+  private val scriptInterner = Interners.newWeakInterner[AccountScriptInfo]()
+
+  def readAccountScriptInfo(b: Array[Byte]): AccountScriptInfo = {
+    val asi = pb.AccountScriptInfo.parseFrom(b)
+    scriptInterner.intern(
+      AccountScriptInfo(
+        PublicKey(asi.publicKey.toByteArray),
+        ScriptReader.fromBytes(asi.scriptBytes.toByteArray).explicitGet(),
+        asi.maxComplexity,
+        asi.callableComplexity.map { c =>
+          c.version -> c.callableComplexity
+        }.toMap
+      )
+    )
+  }
+
+  def readTransaction(height: Height)(b: Array[Byte]): (TxMeta, Transaction) = {
+    val data = pb.TransactionData.parseFrom(b)
+    TxMeta(height, TxMeta.Status.fromProtobuf(data.status), data.spentComplexity) -> toVanillaTransaction(data.transaction)
+  }
+
+  def toVanillaTransaction(tx: pb.TransactionData.Transaction): Transaction = tx match {
+    case tx: TD.LegacyBytes         => TransactionParsers.parseBytes(tx.value.toByteArray).get
+    case tx: TD.WavesTransaction    => PBTransactions.vanilla(tx.value, unsafe = false).explicitGet()
+    case tx: TD.EthereumTransaction => EthereumTransaction(tx.value.toByteArray).explicitGet()
+    case _                          => throw new IllegalArgumentException("Illegal transaction data")
+  }
+
+  def writeTransaction(v: (TxMeta, Transaction)): Array[Byte] = {
+    val (m, tx) = v
+    val ptx = tx match {
+      case lps: (PBSince & Versioned) if PBSince.affects(lps) => TD.WavesTransaction(PBTransactions.protobuf(tx))
+      case et: EthereumTransaction                            => TD.EthereumTransaction(ByteString.copyFrom(et.bytes()))
+      case _                                                  => TD.LegacyBytes(ByteString.copyFrom(tx.bytes()))
+    }
+    pb.TransactionData(ptx, m.status.protobuf, m.spentComplexity).toByteArray
+  }
+
+  def loadTransactions(height: Height, rdb: RDB): Seq[(TxMeta, Transaction)] = {
+    val transactions = Seq.newBuilder[(TxMeta, Transaction)]
+    rdb.db.iterateOver(KeyTag.NthTransactionInfoAtHeight.prefixBytes ++ height.toByteArray, Some(rdb.txHandle.handle)) { e =>
+      transactions += readTransaction(height)(e.getValue)
+    }
+    transactions.result()
+  }
+
+  def loadTxStateSnapshots(height: Height, rdb: RDB): Seq[TransactionStateSnapshot] = {
+    val txSnapshots = Seq.newBuilder[TransactionStateSnapshot]
+    rdb.db.iterateOver(KeyTag.NthTransactionStateSnapshotAtHeight.prefixBytes ++ height.toByteArray, Some(rdb.txSnapshotHandle.handle)) { e =>
+      txSnapshots += TransactionStateSnapshot.parseFrom(e.getValue)
+    }
+    txSnapshots.result()
+  }
+
+  def loadTxStateSnapshotsWithStatus(height: Height, rdb: RDB, transactions: Seq[Transaction]): Seq[(StateSnapshot, TxMeta.Status)] =
+    loadTxStateSnapshots(height, rdb).zip(transactions).map { case (s, tx) => PBSnapshots.fromProtobuf(s, tx.id(), height) }
+
+  def loadBlock(height: Height, rdb: RDB): Option[Block] =
+    for {
+      meta  <- rdb.db.get(Keys.blockMetaAt(height))
+      block <- createBlock(PBBlocks.vanilla(meta.getHeader), meta.signature.toByteStr, loadTransactions(height, rdb).map(_._2)).toOption
+    } yield block
+
+  def fromHistory[A](resource: DBResource, historyKey: Key[Seq[Height]], valueKey: Height => Key[A]): Option[A] =
+    for {
+      h <- resource.get(historyKey).headOption
+    } yield resource.get(valueKey(h))
+
+  def loadAssetDescription(resource: DBResource, asset: IssuedAsset): Option[AssetDescription] =
+    for {
+      pbStaticInfo       <- resource.get(Keys.assetStaticInfo(asset))
+      (info, volumeInfo) <- fromHistory(resource, Keys.assetDetailsHistory(asset), Keys.assetDetails(asset))
+      sponsorship = fromHistory(resource, Keys.sponsorshipHistory(asset), Keys.sponsorship(asset)).fold(0L)(_.minFee)
+      script      = fromHistory(resource, Keys.assetScriptHistory(asset), Keys.assetScript(asset)).flatten
+    } yield AssetDescription(
+      TransactionId(pbStaticInfo.sourceId.toByteStr),
+      PublicKey(pbStaticInfo.issuerPublicKey.toByteStr),
+      info.name,
+      info.description,
+      pbStaticInfo.decimals,
+      volumeInfo.isReissuable,
+      volumeInfo.volume,
+      info.lastUpdatedAt,
+      script,
+      sponsorship,
+      pbStaticInfo.isNft,
+      pbStaticInfo.sequenceInBlock,
+      Height(pbStaticInfo.height)
+    )
+
+  def loadActiveLeases(rdb: RDB, fromHeight: Height, toHeight: Height): Map[ByteStr, LeaseDetails] = rdb.db.withResource { r =>
+    (for {
+      id         <- loadLeaseIds(r, fromHeight, toHeight, includeCancelled = false)
+      newDetails <- loadLease(r, id)
+      if newDetails.isActive
+    } yield (id, newDetails)).toMap
+  }
+
+  def loadLease(resource: DBResource, id: ByteStr): Option[LeaseDetails] =
+    fromHistory(resource, Keys.leaseDetailsHistory(id), Keys.leaseDetails(id)).flatten
+
+  def loadLeaseIds(resource: DBResource, fromHeight: Height, toHeight: Height, includeCancelled: Boolean): Set[ByteStr] = {
+    val leaseIds = mutable.Set.empty[ByteStr]
+    val iterator = resource.fullIterator
+
+    @inline
+    def keyInRange(): Boolean = {
+      val actualKey = iterator.key()
+      actualKey.startsWith(KeyTag.LeaseDetails.prefixBytes) && Height(Ints.fromByteArray(actualKey.slice(2, 6))) <= toHeight
+    }
+
+    iterator.seek(KeyTag.LeaseDetails.prefixBytes ++ fromHeight.toByteArray)
+    while (iterator.isValid && keyInRange()) {
+      val leaseId = ByteStr(iterator.key().drop(6))
+      if (includeCancelled || readLeaseDetails(iterator.value()).isActive)
+        leaseIds += leaseId
+      else
+        leaseIds -= leaseId
+
+      iterator.next()
+    }
+
+    leaseIds.toSet
+  }
+
+  opaque type AddressId = Long
+
+  object AddressId {
+    def apply(l: Long): AddressId                 = l
+    def raw(x: AddressId): Long                   = x
+    def fromByteArray(bs: Array[Byte]): AddressId = Longs.fromByteArray(bs)
+
+    extension (x: AddressId) {
+      def toByteArray: Array[Byte] = Longs.toByteArray(x)
+      def toLong: Long             = x
+    }
+  }
+
+  implicit class LongExt(val l: Long) extends AnyVal {
+    def toByteArray: Array[Byte] = Longs.toByteArray(l)
+  }
+}
