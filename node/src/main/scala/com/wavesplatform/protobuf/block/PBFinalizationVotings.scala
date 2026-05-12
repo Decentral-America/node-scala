@@ -1,10 +1,10 @@
 package com.wavesplatform.protobuf.block
 
 import com.google.protobuf.ByteString
-import com.wavesplatform.common.utils.EitherExt2.explicitGet
-import com.wavesplatform.crypto.bls.BlsSignature
+import com.decentralchain.common.utils.EitherExt2.explicitGet
+import com.decentralchain.crypto.bls.BlsSignature
 import com.wavesplatform.protobuf.*
-import com.wavesplatform.state.{GeneratorIndex, Height}
+import com.decentralchain.state.{GeneratorIndex, Height}
 
 import scala.util.Try
 

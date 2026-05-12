@@ -1,4 +1,4 @@
-# To build: docker build -t wavesplatform/ride-runner:latest -f docker/ride-runner.Dockerfile docker
+# To build: docker build -t ghcr.io/decentral-america/ride-runner:latest -f docker/Dockerfile docker
 # JDK for now, because I need jmap, e.g. ijmap -dump:format=b,file=heap-dump.hprof
 FROM eclipse-temurin:17-jdk-jammy
 
@@ -19,12 +19,12 @@ RUN apt-get update && apt-get install -y wget unzip gosu libjemalloc-dev graphvi
 ENV RIDE_LOG_LEVEL=INFO
 ENV RIDE_HEAP_SIZE=2500m
 ENV RIDE_NETWORK=mainnet
-ENV RIDE_APP=com.wavesplatform.ride.runner.entrypoints.WavesRideRunnerWithBlockchainService
+ENV RIDE_APP=com.decentralchain.ride.runner.entrypoints.DCCRideRunnerWithBlockchainService
 
 # RIDE runner files
-ENV RDATA=/var/lib/waves-ride-runner
-ENV RIDE_INSTALL_PATH=/usr/share/waves-ride-runner
-ENV RIDE_CONFIG=/etc/waves-ride-runner/main.conf
+ENV RDATA=/var/lib/decentralchain-ride-runner
+ENV RIDE_INSTALL_PATH=/usr/share/decentralchain-ride-runner
+ENV RIDE_CONFIG=/etc/decentralchain-ride-runner/main.conf
 ENV RIDE_LOGBACK_CONFIG=$RIDE_INSTALL_PATH/doc/logback.xml
 
 # jemalloc options
@@ -41,7 +41,7 @@ RUN mkdir -p $RDATA/heap-dumps/on-exit; \
     groupadd -r ride --gid=999; \
     useradd -r -g ride --uid=999 --home-dir=$RDATA --shell=/bin/bash ride; \
     # Unpack tgz packages
-    tar zxvf /tmp/waves-ride-runner.tgz -C $RIDE_INSTALL_PATH --strip-components=1; \
+    tar zxvf /tmp/decentralchain-ride-runner.tgz -C $RIDE_INSTALL_PATH --strip-components=1; \
     # Set permissions
     chown -R ride:ride $RDATA $RIDE_INSTALL_PATH && chmod 755 $RDATA; \
     # Cleanup
@@ -54,4 +54,4 @@ WORKDIR $RDATA
 HEALTHCHECK CMD curl -f http://localhost:6890/ride/status || exit 1
 
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/usr/share/waves-ride-runner/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/share/decentralchain-ride-runner/bin/entrypoint.sh"]
