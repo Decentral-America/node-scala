@@ -1,4 +1,4 @@
-name        := "waves-ride-runner"
+name        := "decentralchain-ride-runner"
 description := "Allows to execute RIDE code independently from Waves NODE"
 
 enablePlugins(
@@ -14,7 +14,7 @@ libraryDependencies ++= Dependencies.rideRunner.value
 inConfig(Compile)(
   Seq(
     // Affects sbt-native-packager
-    mainClass                    := Some("com.wavesplatform.ride.runner.entrypoints.WavesRideRunnerWithBlockchainService"),
+    mainClass                    := Some("com.decentralchain.ride.runner.entrypoints.DCCRideRunnerWithBlockchainService"),
     packageDoc / publishArtifact := false,
     packageSrc / publishArtifact := false
   )
@@ -76,7 +76,7 @@ inConfig(Universal)(
 
 inConfig(Debian)(
   Seq(
-    maintainer               := "com.wavesplatform",
+    maintainer               := "com.decentralchain",
     packageSource            := sourceDirectory.value / "package",
     linuxStartScriptTemplate := (packageSource.value / "systemd.service").toURI.toURL,
     debianPackageDependencies += "java17-runtime-headless",
@@ -88,6 +88,6 @@ inConfig(Debian)(
 inTask(assembly)(
   CommonSettings.assemblySettings ++
     Seq(
-      mainClass := Some("com.wavesplatform.ride.runner.entrypoints.WavesRideRunnerWithPreparedStateApp")
+      mainClass := Some("com.decentralchain.ride.runner.entrypoints.DCCRideRunnerWithPreparedStateApp")
     )
 )

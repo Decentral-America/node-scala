@@ -1,6 +1,6 @@
 syntax = "proto3";
 package waves.api;
-option java_package = "com.wavesplatform.database.protobuf";
+option java_package = "com.decentralchain.database.protobuf";
 
 import "waves/block.proto";
 import "waves/transaction.proto";

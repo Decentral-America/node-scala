@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   version: '{{version}}'
-  title: Waves Ride Runner ({{chainId}})
+  title: DecentralChain Ride Runner ({{chainId}})
   description: >-
-    The Waves Ride Runner REST API aims more performant and less resource hungry emulation of some endpoints of Waves node REST API.
+    The DecentralChain Ride Runner REST API aims more performant and less resource hungry emulation of some endpoints of DecentralChain node REST API.
   termsOfService: ''
   license:
     name: MIT License
-    url: 'https://github.com/wavesplatform/Waves/blob/version-1.3.x/LICENSE'
+    url: 'https://github.com/Decentral-America/node-scala/blob/main/LICENSE'
 servers:
   - url: /
 tags:

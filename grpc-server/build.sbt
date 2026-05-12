@@ -5,8 +5,8 @@ name := "waves-grpc-server"
 libraryDependencies ++= Dependencies.grpc
 
 extensionClasses ++= Seq(
-  "com.wavesplatform.api.grpc.GRPCServerExtension",
-  "com.wavesplatform.events.BlockchainUpdates"
+  "com.decentralchain.api.grpc.GRPCServerExtension",
+  "com.decentralchain.events.BlockchainUpdates"
 )
 
 inConfig(Compile)(
@@ -22,7 +22,7 @@ inConfig(Compile)(
 )
 
 enablePlugins(RunApplicationSettings, ExtensionPackaging)
-Universal / maintainer := "com.wavesplatform"
+Universal / maintainer := "com.decentralchain"
 Debian / debianControlFile := {
   val generatedFile = (Debian / debianControlFile).value
   IO.append(generatedFile, s"""Conflicts: grpc-server${network.value.packageSuffix}

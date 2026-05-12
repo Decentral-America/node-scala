@@ -13,9 +13,9 @@
     <logger name="sun.rmi" level="INFO"/>
     <logger name="javax.management" level="INFO"/>
 
-    <logger name="com.wavesplatform.utx.UtxPoolImpl.trace" level="OFF"/>
-    <logger name="com.wavesplatform.network.PeerSynchronizer" level="DEBUG"/>
-    <logger name="com.wavesplatform.transaction.smart" level="INFO"/>
+    <logger name="com.decentralchain.utx.UtxPoolImpl.trace" level="OFF"/>
+    <logger name="com.decentralchain.network.PeerSynchronizer" level="DEBUG"/>
+    <logger name="com.decentralchain.transaction.smart" level="INFO"/>
 
     <logger name="scorex.crypto.signatures.Curve25519" level="INFO"/>
 
@@ -99,7 +99,7 @@
 
             <include resource="file-appender-template.xml"/>
 
-            <logger name="com.wavesplatform.utx.UtxPoolImpl.trace" additivity="false" level="TRACE">
+            <logger name="com.decentralchain.utx.UtxPoolImpl.trace" additivity="false" level="TRACE">
                 <appender-ref ref="UTX-TRACE"/>
             </logger>
         </then>

@@ -167,7 +167,7 @@ object Tasks {
 
     val sourceStr =
       s"""
-         | package com.wavesplatform
+         | package com.decentralchain
          |
          | object DocSource {
          |   private val regex = "\\\\[(.+?)\\\\]\\\\(.+?\\\\)".r
