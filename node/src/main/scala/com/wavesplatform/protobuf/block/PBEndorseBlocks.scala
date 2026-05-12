@@ -1,9 +1,9 @@
 package com.wavesplatform.protobuf.block
 
-import com.wavesplatform.block.BlockEndorsement
-import com.wavesplatform.crypto.bls.BlsSignature
+import com.decentralchain.block.BlockEndorsement
+import com.decentralchain.crypto.bls.BlsSignature
 import com.wavesplatform.protobuf.*
-import com.wavesplatform.state.{GeneratorIndex, Height}
+import com.decentralchain.state.{GeneratorIndex, Height}
 
 object PBEndorseBlocks {
   def vanilla(x: PBEndorseBlock, sig: BlsSignature): BlockEndorsement = BlockEndorsement(

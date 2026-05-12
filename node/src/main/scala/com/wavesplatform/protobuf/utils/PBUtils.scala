@@ -2,7 +2,7 @@ package com.wavesplatform.protobuf.utils
 
 import cats.syntax.applicativeError.*
 import com.google.protobuf.CodedOutputStream
-import com.wavesplatform.common.state.ByteStr
+import com.decentralchain.common.state.ByteStr
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.util.control.NonFatal

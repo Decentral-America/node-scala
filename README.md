@@ -94,7 +94,7 @@ sudo dpkg -i node/target/*.deb
 1. Click Add configuration (or Edit configurations...).
 2. Click + to add a new configuration, choose Application.
 3. Specify:
-   - Main class: com.wavesplatform.Application
+   - Main class: com.decentralchain.Application
    - Program arguments: /path/to/configuration
    - Use classpath of module: extension-module
 4. Click OK.
@@ -110,7 +110,7 @@ For major changes, please open an issue first. Please follow the [code of conduc
 
 - **Predecessor repo:** [Decentral-America/DCC](https://github.com/Decentral-America/DCC) (based on Waves 1.6.x)
 - **Website:** [decentralchain.io](https://decentralchain.io)
-- **API docs:** [Waves-compatible REST API](https://docs.waves.tech/en/waves-node/node-api/)
+- **API docs:** [DecentralChain REST API](https://docs.decentralchain.io/en/waves-node/node-api/)
 
 ## Licence
 

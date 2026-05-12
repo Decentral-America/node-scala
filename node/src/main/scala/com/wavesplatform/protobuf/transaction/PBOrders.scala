@@ -1,18 +1,18 @@
 package com.wavesplatform.protobuf.transaction
 
-import com.wavesplatform.transaction as vt
-import com.wavesplatform.account.{AddressScheme, PublicKey}
-import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.lang.ValidationError
+import com.decentralchain.transaction as vt
+import com.decentralchain.account.{AddressScheme, PublicKey}
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.lang.ValidationError
 import com.wavesplatform.protobuf.*
 import com.wavesplatform.protobuf.order.AssetPair
 import com.wavesplatform.protobuf.order.Order.{PriceMode, Sender}
 import com.wavesplatform.protobuf.order.Order.PriceMode.{ASSET_DECIMALS, FIXED_DECIMALS, DEFAULT as DEFAULT_PRICE_MODE}
-import com.wavesplatform.transaction.assets.exchange.OrderPriceMode.{AssetDecimals, FixedDecimals, Default as DefaultPriceMode}
+import com.decentralchain.transaction.assets.exchange.OrderPriceMode.{AssetDecimals, FixedDecimals, Default as DefaultPriceMode}
 import vt.assets.exchange.OrderAuthentication
-import com.wavesplatform.transaction.TxValidationError.GenericError
-import com.wavesplatform.transaction.assets.exchange.OrderType
-import com.wavesplatform.transaction.{TxExchangeAmount, TxMatcherFee, TxOrderPrice}
+import com.decentralchain.transaction.TxValidationError.GenericError
+import com.decentralchain.transaction.assets.exchange.OrderType
+import com.decentralchain.transaction.{TxExchangeAmount, TxMatcherFee, TxOrderPrice}
 
 object PBOrders {
   import com.wavesplatform.protobuf.utils.PBImplicitConversions.*

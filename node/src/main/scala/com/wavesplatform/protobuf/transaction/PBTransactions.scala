@@ -2,30 +2,30 @@ package com.wavesplatform.protobuf.transaction
 
 import cats.syntax.traverse.*
 import com.google.protobuf.ByteString
-import com.wavesplatform.account.AddressOrAlias
-import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.crypto.bls.{BlsPublicKey, BlsSignature}
-import com.wavesplatform.lang.ValidationError
-import com.wavesplatform.lang.script.ScriptReader
-import com.wavesplatform.lang.script.v1.ExprScript
-import com.wavesplatform.lang.v1.compiler.Terms.EXPR
-import com.wavesplatform.lang.v1.serialization.SerdeV1
+import com.decentralchain.account.AddressOrAlias
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.crypto.bls.{BlsPublicKey, BlsSignature}
+import com.decentralchain.lang.ValidationError
+import com.decentralchain.lang.script.ScriptReader
+import com.decentralchain.lang.script.v1.ExprScript
+import com.decentralchain.lang.v1.compiler.Terms.EXPR
+import com.decentralchain.lang.v1.serialization.SerdeV1
 import com.wavesplatform.protobuf.*
 import com.wavesplatform.protobuf.transaction.Transaction.Data
 import com.wavesplatform.protobuf.utils.PBImplicitConversions.*
-import com.wavesplatform.serialization.Deser
-import com.wavesplatform.state.{BinaryDataEntry, BooleanDataEntry, EmptyDataEntry, Height, IntegerDataEntry, StringDataEntry}
-import com.wavesplatform.transaction as vt
-import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
-import com.wavesplatform.transaction.TxValidationError.{GenericError, NegativeAmount}
-import com.wavesplatform.transaction.assets.UpdateAssetInfoTransaction
-import com.wavesplatform.transaction.serialization.impl.PBTransactionSerializer
-import com.wavesplatform.transaction.smart.InvokeExpressionTransaction
-import com.wavesplatform.transaction.smart.InvokeScriptTransaction.Payment
-import com.wavesplatform.transaction.transfer.MassTransferTransaction
-import com.wavesplatform.transaction.transfer.MassTransferTransaction.ParsedTransfer
-import com.wavesplatform.transaction.{
+import com.decentralchain.serialization.Deser
+import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, EmptyDataEntry, Height, IntegerDataEntry, StringDataEntry}
+import com.decentralchain.transaction as vt
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.TxValidationError.{GenericError, NegativeAmount}
+import com.decentralchain.transaction.assets.UpdateAssetInfoTransaction
+import com.decentralchain.transaction.serialization.impl.PBTransactionSerializer
+import com.decentralchain.transaction.smart.InvokeExpressionTransaction
+import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
+import com.decentralchain.transaction.transfer.MassTransferTransaction
+import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
+import com.decentralchain.transaction.{
   CommitToGenerationTransaction,
   EthereumTransaction,
   Proofs,
@@ -36,7 +36,7 @@ import com.wavesplatform.transaction.{
   TxPositiveAmount,
   TxValidationError
 }
-import com.wavesplatform.utils.StringBytes
+import com.decentralchain.utils.StringBytes
 import scalapb.UnknownFieldSet.empty
 
 import scala.util.Try
@@ -50,13 +50,13 @@ object PBTransactions {
     )
 
   def create(
-      sender: com.wavesplatform.account.PublicKey,
+      sender: com.decentralchain.account.PublicKey,
       chainId: Byte = 0,
       fee: Long = 0L,
       feeAssetId: VanillaAssetId = Waves,
       timestamp: Long = 0L,
       version: Int = 0,
-      proofsArray: Seq[com.wavesplatform.common.state.ByteStr] = Nil,
+      proofsArray: Seq[com.decentralchain.common.state.ByteStr] = Nil,
       data: com.wavesplatform.protobuf.transaction.Transaction.Data = com.wavesplatform.protobuf.transaction.Transaction.Data.Empty
   ): SignedTransaction =
     new SignedTransaction(
@@ -66,7 +66,7 @@ object PBTransactions {
     )
 
   def vanillaUnsafe(signedTx: PBSignedTransaction): VanillaTransaction = {
-    import com.wavesplatform.common.utils.EitherExt2.*
+    import com.decentralchain.common.utils.EitherExt2.*
     vanilla(signedTx, unsafe = true).explicitGet()
   }
 
@@ -378,7 +378,7 @@ object PBTransactions {
       proofs: Proofs,
       data: PBTransaction.Data
   ): VanillaTransaction = {
-    import com.wavesplatform.common.utils.EitherExt2.*
+    import com.decentralchain.common.utils.EitherExt2.*
 
     val signature = proofs.toSignature
     data match {
@@ -755,7 +755,7 @@ object PBTransactions {
     )
   }
 
-  def toVanillaDataEntry(de: DataEntry): com.wavesplatform.state.DataEntry[?] = {
+  def toVanillaDataEntry(de: DataEntry): com.decentralchain.state.DataEntry[?] = {
     import DataEntry.Value as DEV
 
     de.value match {
@@ -767,7 +767,7 @@ object PBTransactions {
     }
   }
 
-  def toPBDataEntry(de: com.wavesplatform.state.DataEntry[?]): DataEntry = {
+  def toPBDataEntry(de: com.decentralchain.state.DataEntry[?]): DataEntry = {
     DataEntry(
       de.key,
       de match {
@@ -780,12 +780,12 @@ object PBTransactions {
     )
   }
 
-  def toVanillaScript(script: ByteString): Option[com.wavesplatform.lang.script.Script] = {
-    import com.wavesplatform.common.utils.EitherExt2.*
+  def toVanillaScript(script: ByteString): Option[com.decentralchain.lang.script.Script] = {
+    import com.decentralchain.common.utils.EitherExt2.*
     if (script.isEmpty) None else Some(ScriptReader.fromBytes(script.toByteArray).explicitGet())
   }
 
-  def toPBScript(script: Option[com.wavesplatform.lang.script.Script]): ByteString = script match {
+  def toPBScript(script: Option[com.decentralchain.lang.script.Script]): ByteString = script match {
     case Some(sc) => ByteString.copyFrom(sc.bytes().arr)
     case None     => ByteString.EMPTY
   }

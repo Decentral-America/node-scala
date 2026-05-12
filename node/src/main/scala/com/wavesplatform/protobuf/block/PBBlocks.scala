@@ -1,10 +1,10 @@
 package com.wavesplatform.protobuf.block
 
 import com.google.protobuf.ByteString
-import com.wavesplatform.account.AddressScheme
-import com.wavesplatform.block.{BlockHeader, ChallengedHeader}
-import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2.*
+import com.decentralchain.account.AddressScheme
+import com.decentralchain.block.{BlockHeader, ChallengedHeader}
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.EitherExt2.*
 import com.wavesplatform.protobuf.block.Block.Header as PBHeader
 import com.wavesplatform.protobuf.transaction.PBTransactions
 import com.wavesplatform.protobuf.transaction.SignedTransaction.Transaction

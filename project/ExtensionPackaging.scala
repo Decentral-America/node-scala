@@ -66,9 +66,9 @@ object ExtensionPackaging extends AutoPlugin {
              |set -e
              |chown -R ${nodePackageName.value}:${nodePackageName.value} /usr/share/${nodePackageName.value}""".stripMargin
       ),
-      Linux / maintainer := "wavesplatform.com",
-      Linux / packageSummary := s"Waves node ${name.value}${network.value.packageSuffix} extension",
-      Linux / packageDescription := s"Waves node ${name.value}${network.value.packageSuffix} extension",
+      Linux / maintainer := "decentralchain.io",
+      Linux / packageSummary := s"DecentralChain node ${name.value}${network.value.packageSuffix} extension",
+      Linux / packageDescription := s"DecentralChain node ${name.value}${network.value.packageSuffix} extension",
       Debian / normalizedName := s"${name.value}${network.value.packageSuffix}",
       Debian / packageName := s"${name.value}${network.value.packageSuffix}",
       libraryDependencies ++= Dependencies.logDeps,

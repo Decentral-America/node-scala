@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   version: '{{version}}'
-  title: Waves Full Node ({{chainId}})
+  title: DecentralChain Full Node ({{chainId}})
   description: >-
-    The Waves node REST API is the main interface for interacting with the
+    The DecentralChain node REST API is the main interface for interacting with the
     blockchain. See
     [documentation](https://docs.waves.tech/en/waves-node/node-api/) for more
     info. If this API lacks data you need, check the [Waves Data Services
@@ -11,7 +11,7 @@ info:
   termsOfService: ''
   license:
     name: MIT License
-    url: 'https://github.com/wavesplatform/Waves/blob/version-1.3.x/LICENSE'
+    url: 'https://github.com/Decentral-America/node-scala/blob/main/LICENSE'
 servers:
   - url: /
 tags:
