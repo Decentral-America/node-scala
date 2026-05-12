@@ -1,0 +1,12 @@
+package com.decentralchain.transaction.smart
+import com.decentralchain.lang.v1.FunctionHeader.User
+import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
+import com.decentralchain.lang.v1.evaluator.ContractEvaluator
+import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
+import com.decentralchain.transaction.{FastHashId, ProvenTransaction, Transaction, TxWithFee}
+
+trait InvokeTransaction extends Transaction with InvokeScriptTransactionLike with ProvenTransaction with TxWithFee.InCustomAsset with FastHashId
+
+object InvokeTransaction {
+  val DefaultCall: FUNCTION_CALL = FUNCTION_CALL(User(ContractEvaluator.DEFAULT_FUNC_NAME), Nil)
+}
