@@ -1,0 +1,353 @@
+package com.decentralchain.api.http
+
+import com.typesafe.config.{ConfigObject, ConfigRenderOptions}
+import com.decentralchain.Version
+import com.decentralchain.account.{Address, PKKeyPair}
+import com.decentralchain.api.common.{CommonAccountsApi, CommonAssetsApi, CommonTransactionsApi, TransactionMeta}
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.database.RocksDBWriter
+import com.decentralchain.lang.ValidationError
+import com.decentralchain.mining.{Miner, MinerDebugInfo}
+import com.decentralchain.network.{PeerDatabase, PeerInfo, *}
+import com.decentralchain.settings.{RestAPISettings, DCCSettings}
+import com.decentralchain.state.diffs.TransactionDiffer
+import com.decentralchain.state.{Blockchain, Height, LeaseBalance, NG, Portfolio, SnapshotBlockchain, TxMeta, StateHash}
+import com.decentralchain.transaction.*
+import com.decentralchain.transaction.Asset.IssuedAsset
+import com.decentralchain.transaction.TxValidationError.GenericError
+import com.decentralchain.transaction.smart.InvokeScriptTransaction
+import com.decentralchain.transaction.smart.script.trace.{InvokeScriptTrace, TracedResult}
+import com.decentralchain.utils.{ScorexLogging, Time, byteStrFormat}
+import com.decentralchain.utx.UtxPool
+import com.decentralchain.wallet.Wallet
+import io.netty.channel.Channel
+import monix.eval.{Coeval, Task}
+import monix.execution.Scheduler
+import org.apache.pekko.http.scaladsl.model.StatusCodes
+import org.apache.pekko.http.scaladsl.model.headers.Accept
+import org.apache.pekko.http.scaladsl.server.Route
+import play.api.libs.json.*
+import play.api.libs.json.Json.JsValueWrapper
+
+import java.net.{InetAddress, InetSocketAddress, URI}
+import java.util.concurrent.ConcurrentMap
+import scala.concurrent.Future
+import scala.concurrent.duration.*
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
+
+case class DebugApiRoute(
+    ws: DCCSettings,
+    time: Time,
+    blockchain: Blockchain & NG,
+    wallet: Wallet,
+    accountsApi: CommonAccountsApi,
+    transactionsApi: CommonTransactionsApi,
+    assetsApi: CommonAssetsApi,
+    peerDatabase: PeerDatabase,
+    establishedConnections: ConcurrentMap[Channel, PeerInfo],
+    rollbackTask: (ByteStr, Boolean) => Task[Either[ValidationError, Unit]],
+    utxStorage: UtxPool,
+    miner: Miner & MinerDebugInfo,
+    historyReplier: HistoryReplier,
+    extLoaderStateReporter: Coeval[RxExtensionLoader.State],
+    mbsCacheSizesReporter: Coeval[MicroBlockSynchronizer.CacheSizes],
+    scoreReporter: Coeval[RxScoreObserver.Stats],
+    configRoot: ConfigObject,
+    db: RocksDBWriter,
+    routeTimeout: RouteTimeout,
+    heavyRequestScheduler: Scheduler
+) extends ApiRoute
+    with AuthRoute
+    with ScorexLogging {
+
+  import DebugApiRoute.*
+
+  private lazy val configStr             = configRoot.render(ConfigRenderOptions.concise().setJson(true).setFormatted(true))
+  private lazy val fullConfig: JsValue   = Json.parse(configStr)
+  private lazy val wavesConfig: JsObject = Json.obj("waves" -> (fullConfig \ "waves").get)
+
+  override val settings: RestAPISettings = ws.restAPISettings
+
+  private val serializer = TransactionJsonSerializer(blockchain)
+
+  override lazy val route: Route = pathPrefix("debug") {
+    withAuth {
+      balanceHistory ~ stateHash ~ validate ~ state ~ info ~ stateWaves ~ rollback ~ blacklist ~ minerInfo ~ configInfo ~ print
+    }
+  }
+
+  def print: Route =
+    path("print")(jsonPost[DebugMessage] { params =>
+      log.debug(params.message.take(250))
+      ""
+    })
+
+  def balanceHistory: Route = (path("balances" / "history" / AddrSegment) & get) { address =>
+    complete(Json.toJson(db.loadBalanceHistory(address).map { case (h, b) =>
+      Json.obj("height" -> h, "balance" -> b)
+    }))
+  }
+
+  private def distribution(height: Int): Route = optionalHeaderValueByType(Accept) { accept =>
+    routeTimeout.executeToFuture {
+      assetsApi
+        .wavesDistribution(height, None)
+        .toListL
+        .map {
+          case l if accept.exists(_.mediaRanges.exists(CustomJson.acceptsNumbersAsStrings)) =>
+            Json.obj(l.map { case (address, balance) => address.toString -> (balance.toString: JsValueWrapper) }*)
+          case l =>
+            Json.obj(l.map { case (address, balance) => address.toString -> (balance: JsValueWrapper) }*)
+        }
+    }
+  }
+
+  def state: Route = (path("state") & get) {
+    distribution(blockchain.height)
+  }
+
+  def stateWaves: Route = (path("stateWaves" / IntNumber) & get) { height =>
+    distribution(height)
+  }
+
+  private def rollbackToBlock(blockId: ByteStr, returnTransactionsToUtx: Boolean): Future[Either[ValidationError, JsObject]] = {
+    implicit val sc: Scheduler = heavyRequestScheduler
+    rollbackTask(blockId, returnTransactionsToUtx)
+      .map(_.map(_ => Json.obj("BlockId" -> blockId.toString)))
+      .runAsyncLogErr
+  }
+
+  def rollback: Route = (path("rollback") & withRequestTimeout(15.minutes)) {
+    jsonPost[RollbackParams] { params =>
+      blockchain.blockHeader(params.rollbackTo) match {
+        case Some(sh) =>
+          rollbackToBlock(sh.id(), params.returnTransactionsToUtx)
+        case None =>
+          (StatusCodes.BadRequest, "Block at height not found")
+      }
+    } ~ complete(StatusCodes.BadRequest)
+  }
+
+  def info: Route = (path("info") & get) {
+    complete(
+      Json.obj(
+        "stateHeight"                      -> blockchain.height,
+        "extensionLoaderState"             -> extLoaderStateReporter().toString,
+        "historyReplierCacheSizes"         -> Json.toJson(historyReplier.cacheSizes),
+        "microBlockSynchronizerCacheSizes" -> Json.toJson(mbsCacheSizesReporter()),
+        "scoreObserverStats"               -> Json.toJson(scoreReporter()),
+        "minerState"                       -> Json.toJson(miner.state)
+      )
+    )
+  }
+
+  def minerInfo: Route = (path("minerInfo") & get) {
+    complete {
+      val accounts = if (ws.minerSettings.privateKeys.nonEmpty) {
+        ws.minerSettings.privateKeys.map(PKKeyPair(_))
+      } else {
+        wallet.privateKeyAccounts
+      }
+
+      accounts
+        .filterNot(account => blockchain.hasAccountScript(account.toAddress))
+        .map { account =>
+          (account.toAddress, miner.getNextBlockGenerationOffset(account))
+        }
+        .collect { case (address, Right(offset)) =>
+          AccountMiningInfo(
+            address.toString,
+            blockchain.effectiveBalance(
+              address,
+              ws.blockchainSettings.functionalitySettings.generatingBalanceDepth(blockchain.height),
+              blockchain.microblockIds.lastOption
+            ),
+            System.currentTimeMillis() + offset.toMillis
+          )
+        }
+
+    }
+  }
+
+  def configInfo: Route = (path("configInfo") & get & parameter("full".as[Boolean])) { full =>
+    // Redact sensitive fields before returning
+    val redactedConfig = if (full) {
+      val redacted = fullConfig.as[JsObject]
+      val wavesObj = (redacted \ "waves").asOpt[JsObject].getOrElse(Json.obj())
+      val redactedWaves = wavesObj
+        .transform((__ \ "wallet").json.prune)
+        .getOrElse(wavesObj)
+        .transform((__ \ "rest-api" \ "api-key-hash").json.prune)
+        .getOrElse(wavesObj)
+      redacted ++ Json.obj("waves" -> redactedWaves)
+    } else wavesConfig
+    complete(redactedConfig)
+  }
+
+  def blacklist: Route = (path("blacklist") & post) {
+    entity(as[String]) { socketAddressString =>
+      try {
+        val uri     = new URI("node://" + socketAddressString)
+        val address = InetAddress.getByName(uri.getHost)
+        establishedConnections.entrySet().stream().forEach { entry =>
+          entry.getValue.remoteAddress match {
+            case x: InetSocketAddress if x.getAddress == address =>
+              peerDatabase.blacklistAndClose(entry.getKey, "Debug API request")
+            case _ =>
+          }
+        }
+        peerDatabase.blacklist(address, "Debug API request")
+        complete(StatusCodes.OK)
+      } catch {
+        case NonFatal(_) => complete(StatusCodes.BadRequest)
+      }
+    } ~ complete(StatusCodes.BadRequest)
+  }
+
+  def validate: Route =
+    path("validate")(jsonPost[JsObject] { jsv =>
+      val startTime = System.nanoTime()
+
+      val parsedTransaction = TransactionFactory.fromSignedRequest(jsv)
+
+      val tracedSnapshot = for {
+        tx   <- TracedResult(parsedTransaction)
+        diff <- TransactionDiffer.forceValidate(blockchain.lastBlockTimestamp, time.correctedTime(), enableExecutionLog = true)(blockchain, tx)
+      } yield (tx, diff)
+
+      val error = tracedSnapshot.resultE match {
+        case Right((tx, diff)) => diff.errorMessage(tx.id()).map(em => GenericError(em.text))
+        case Left(err)         => Some(err)
+      }
+
+      val transactionJson = parsedTransaction.fold(_ => jsv, _.json())
+
+      val serializer = tracedSnapshot.resultE
+        .fold(
+          _ => this.serializer,
+          { case (_, snapshot) =>
+            val snapshotBlockchain = SnapshotBlockchain(blockchain, snapshot)
+            this.serializer.copy(blockchain = snapshotBlockchain)
+          }
+        )
+
+      val extendedJson = tracedSnapshot.resultE
+        .fold(
+          _ => jsv,
+          { case (tx, diff) =>
+            val meta = tx match {
+              case ist: InvokeScriptTransaction =>
+                val result = diff.scriptResults.get(ist.id())
+                TransactionMeta.Invoke(Height(blockchain.height), ist, TxMeta.Status.Succeeded, diff.scriptsComplexity, result)
+              case tx => TransactionMeta.Default(Height(blockchain.height), tx, TxMeta.Status.Succeeded, diff.scriptsComplexity)
+            }
+            serializer.transactionWithMetaJson(meta)
+          }
+        )
+
+      val response = Json.obj(
+        "valid"          -> error.isEmpty,
+        "validationTime" -> (System.nanoTime() - startTime) / 1000000,
+        "trace" -> tracedSnapshot.trace.map {
+          case ist: InvokeScriptTrace => ist.maybeLoggedJson(logged = true)(using serializer.invokeScriptResultWrites)
+          case trace                  => trace.loggedJson
+        },
+        "height" -> blockchain.height
+      )
+
+      error.fold(response ++ extendedJson)(err =>
+        response + ("error" -> JsString(ApiError.fromValidationError(err).message)) + ("transaction" -> transactionJson)
+      )
+    })
+
+  def stateHash: Route = (get & pathPrefix("stateHash")) {
+    path("last")(stateHashAt(blockchain.height - 1)) ~ path(IntNumber)(stateHashAt)
+  }
+
+  private def stateHashAt(height: Int): Route = {
+    val result = for {
+      sh <- db.loadStateHash(Height(height))
+      h  <- blockchain.blockHeader(height)
+    } yield {
+      val deterministicFinalityActivated =
+        blockchain.isFeatureActivated(com.decentralchain.features.BlockchainFeatures.DeterministicFinality, height)
+      val stateHashJson = StateHash.toJson(sh, deterministicFinalityActivated)
+      stateHashJson ++ Json.obj(
+        "snapshotHash" -> db.snapshotStateHash(height),
+        "blockId"      -> h.id().toString,
+        "baseTarget"   -> h.header.baseTarget,
+        "height"       -> height,
+        "version"      -> Version.VersionString
+      )
+    }
+
+    result match {
+      case Some(value) => complete(value)
+      case None        => complete(StatusCodes.NotFound)
+    }
+  }
+}
+
+object DebugApiRoute {
+  implicit val assetsFormat: Format[Map[ByteStr, Long]] = Format[Map[ByteStr, Long]](
+    {
+      case JsObject(m) =>
+        m.foldLeft[JsResult[Map[ByteStr, Long]]](JsSuccess(Map.empty)) {
+          case (e: JsError, _) => e
+          case (JsSuccess(m, _), (rawAssetId, JsNumber(count))) =>
+            (ByteStr.decodeBase58(rawAssetId), count) match {
+              case (Success(assetId), count) if count.isValidLong => JsSuccess(m.updated(assetId, count.toLong))
+              case (Failure(_), _)                                => JsError(s"Can't parse '$rawAssetId' as base58 string")
+              case (_, count)                                     => JsError(s"Invalid count of assets: $count")
+            }
+          case (_, (_, rawCount)) =>
+            JsError(s"Invalid count of assets: $rawCount")
+        }
+      case _ => JsError("The map is expected")
+    },
+    m => Json.toJson(m.map { case (assetId, count) => assetId.toString -> count })
+  )
+
+  implicit val leaseInfoFormat: Format[LeaseBalance] = Json.format
+
+  case class AccountMiningInfo(address: String, miningBalance: Long, timestamp: Long)
+
+  implicit val accountMiningBalanceFormat: Format[AccountMiningInfo] = Json.format
+
+  implicit val addressWrites: Writes[Address] = Writes((a: Address) => JsString(a.toString))
+
+  implicit val hrCacheSizesFormat: Format[HistoryReplier.CacheSizes]          = Json.format
+  implicit val mbsCacheSizesFormat: Format[MicroBlockSynchronizer.CacheSizes] = Json.format
+  implicit val BigIntWrite: Writes[BigInt]                                    = (bigInt: BigInt) => JsNumber(BigDecimal(bigInt))
+  implicit val scoreReporterStatsWrite: Writes[RxScoreObserver.Stats]         = Json.writes[RxScoreObserver.Stats]
+
+  import MinerDebugInfo.*
+  implicit val minerStateWrites: Writes[MinerDebugInfo.State] = (s: MinerDebugInfo.State) =>
+    JsString(s match {
+      case MiningBlocks      => "mining blocks"
+      case MiningMicroblocks => "mining microblocks"
+      case Disabled          => "disabled"
+      case Error(err)        => s"error: $err"
+    })
+
+  implicit val assetMapWrites: Writes[Map[IssuedAsset, Long]] = Writes { m =>
+    Json.toJson(m.map { case (asset, balance) =>
+      asset.id.toString -> JsNumber(balance)
+    })
+  }
+
+  implicit val portfolioJsonWrites: Writes[Portfolio] = {
+    implicit val assetWrites: Writes[IssuedAsset] = Asset.assetWrites
+    Writes { pf =>
+      JsObject(
+        Map(
+          "balance"           -> JsNumber(pf.balance),
+          "lease"             -> Json.toJson(pf.lease),
+          "assets"            -> Json.toJson(pf.assets),
+          "generationDeposit" -> JsNumber(pf.generationDeposit)
+        )
+      )
+    }
+  }
+}
