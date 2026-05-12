@@ -6,5 +6,5 @@ docker run \
   -v "$PWD":/src \
   -e HOME=/opt/sbt/home \
   -w /src \
-  --rm -it wavesplatform/node-sbt-builder:$WAVES_VERSION \
+  --rm -it ghcr.io/decentral-america/node-sbt-builder:$WAVES_VERSION \
   /bin/sh -c "sbt --batch packageAll"

@@ -1,3 +1,3 @@
-ARG baseImage=wavesplatform/wavesnode:latest
+ARG baseImage=ghcr.io/decentral-america/node-scala:latest
 FROM $baseImage
-COPY waves.custom.conf /etc/waves/waves.conf
+COPY decentralchain.custom.conf /etc/waves/waves.conf

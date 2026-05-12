@@ -1,17 +1,17 @@
 package com.wavesplatform.protobuf
 
 import com.google.protobuf.ByteString
-import com.wavesplatform.account.{Address, Alias, PublicKey}
-import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.crypto.bls.BlsPublicKey
-import com.wavesplatform.lang.script.ScriptReader
+import com.decentralchain.account.{Address, Alias, PublicKey}
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.crypto.bls.BlsPublicKey
+import com.decentralchain.lang.script.ScriptReader
 import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
 import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot.NewAsset
 import com.wavesplatform.protobuf.transaction.{PBAmounts, PBTransactions}
-import com.wavesplatform.state.*
-import com.wavesplatform.transaction.Asset.IssuedAsset
-import com.wavesplatform.transaction.{Asset, TxPositiveAmount}
+import com.decentralchain.state.*
+import com.decentralchain.transaction.Asset.IssuedAsset
+import com.decentralchain.transaction.{Asset, TxPositiveAmount}
 
 import scala.collection.immutable.VectorMap
 

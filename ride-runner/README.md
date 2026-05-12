@@ -1,22 +1,22 @@
 # Ride runner
 
-Allows running Ride without a local Waves Node:
+Allows running Ride without a local DecentralChain Node:
 
-* As a service that emulates Waves Node REST API: `/utils/script/evaluate`;
+* As a service that emulates DecentralChain Node REST API: `/utils/script/evaluate`;
 * As an application that allows to run Ride with a prepared state in a file.
 
 ## How to build
 
 1. A common step from the repository root: `./build-with-docker.sh`
-2. _Optional_. If you need a Docker image, run: `docker build -t wavesplatform/ride-runner ride-runner/docker`
+2. _Optional_. If you need a Docker image, run: `docker build -t ghcr.io/decentral-america/ride-runner ride-runner/docker`
 
 ### Artifacts
 
-* DEB package: `ride-runner/target/waves-ride-runner_${version}_all.deb`
-* Fat JAR for running RIDE with a prepared state: `ride-runner/target/waves-ride-runner-all-${version}.jar`
-* Standalone app and service: `ride-runner/docker/ride-runner-targer/waves-ride-runner.tgz`.
-  It has the `waves-ride-runner_${version}` directory. Notable:
-    * `/bin/waves-ride-runner` - main entrypoint.
+* DEB package: `ride-runner/target/decentralchain-ride-runner_${version}_all.deb`
+* Fat JAR for running RIDE with a prepared state: `ride-runner/target/decentralchain-ride-runner-all-${version}.jar`
+* Standalone app and service: `ride-runner/docker/ride-runner-targer/decentralchain-ride-runner.tgz`.
+  It has the `decentralchain-ride-runner_${version}` directory. Notable:
+    * `/bin/decentralchain-ride-runner` - main entrypoint.
         * Runs `RideRunnerWithBlockchainUpdatesService` by default.
         * Use `-help` to see all available switches;
     * `/conf/application.ini` - JVM options.
@@ -25,8 +25,8 @@ Allows running Ride without a local Waves Node:
 
 A default layout:
 
-* `/var/lib/waves-ride-runner` - the data.
-* `/etc/waves-ride-runner` - configs.
+* `/var/lib/decentralchain-ride-runner` - the data.
+* `/etc/decentralchain-ride-runner` - configs.
 
 ### How to install and run
 
@@ -36,12 +36,12 @@ A default layout:
 
 ```shell
 docker run \
-  -v $(pwd)/data:/var/lib/waves-ride-runner \
-  -v $(pwd)/config/local.conf:/etc/waves-ride-runner/local.conf:ro \
+  -v $(pwd)/data:/var/lib/decentralchain-ride-runner \
+  -v $(pwd)/config/local.conf:/etc/decentralchain-ride-runner/local.conf:ro \
   -p 127.0.0.1:6890:6890 \
   -p 127.0.0.1:9095:9095 \
   -e RIDE_HEAP_SIZE="1g" \
-  -ti wavesplatform/ride-runner:latest
+  -ti ghcr.io/decentral-america/ride-runner:latest
 ```
 
 ##### Docker Compose
@@ -50,7 +50,7 @@ docker run \
 version: '3.8'
 services:
   ride-runner:
-    image: wavesplatform/ride-runner:latest
+    image: ghcr.io/decentral-america/ride-runner:latest
     restart: "unless-stopped"
     ports:
       - 127.0.0.1:6890:6890
@@ -58,8 +58,8 @@ services:
     environment:
       - RIDE_HEAP_SIZE=1g
     volumes:
-      - ./waves-ride-runner/data:/var/lib/waves-ride-runner
-      - ./waves-ride-runner/config/local.conf:/etc/waves-ride-runner/local.conf:ro
+      - ./decentralchain-ride-runner/data:/var/lib/decentralchain-ride-runner
+      - ./decentralchain-ride-runner/config/local.conf:/etc/decentralchain-ride-runner/local.conf:ro
 ```
 
 ##### Configuration options
@@ -68,13 +68,13 @@ services:
    sent to JVM using `JAVA_OPTS` environment variable (`-e` argument for Docker). Please refer
    to ([complete configuration file](./src/main/resources/ride-runner.conf)) to get the full path of the configuration
    item you want to change.
-2. The service is looking for a config in `/etc/waves-ride-runner/main.conf`. During image build, a default
+2. The service is looking for a config in `/etc/decentralchain-ride-runner/main.conf`. During image build, a default
    configuration will be copied to this directory.
     * A default configuration is enough for a correct service working on MainNet;
     * While running container if the value of `WAVES_NETWORK` is not `mainnet`, `testnet` or `stagenet`, default
       configuration won't be enough for correct working. This is a scenario of using `CUSTOM` network - correct
       configuration must be provided when running container.
-3. By default, `/etc/waves-ride-runner/main.conf` config includes `/etc/waves-ride-runner/local.conf`.
+3. By default, `/etc/decentralchain-ride-runner/main.conf` config includes `/etc/decentralchain-ride-runner/local.conf`.
     * Custom `local.conf` can be used to override default config entries.
     * Custom `main.conf` can be used to override or the whole configuration.
 
@@ -98,7 +98,7 @@ kamon {
 |------------------|:----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `RIDE_LOG_LEVEL` | `INFO`    | Logging level. Available values: `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`                                                                                                                 |
 | `RIDE_HEAP_SIZE` | `2500m`   | Default Java Heap Size limit in -X Command-line Options notation (`-Xms=[your value]`). More details [here](https://docs.oracle.com/cd/E13150_01/jrockit_jvm/jrockit/jrdocs/refman/optionX.html). |
-| `RIDE_NETWORK`   | `mainnet` | Waves Blockchain network. Available values are `mainnet`, `testnet`, `stagenet`.                                                                                                                  |
+| `RIDE_NETWORK`   | `mainnet` | DCC blockchain network. Available values are `mainnet`, `testnet`, `stagenet`.                                                                                                                  |
 | `JAVA_OPTS`      |           | Additional JVM configuration options. Some options are mandatory and specified in [entrypoint.sh](./docker/entrypoint.sh)                                                                         |
 
 Notes:
@@ -115,43 +115,43 @@ You can use the following tags:
 
 #### DEB package
 
-1. Install the package: `dpkg -i waves-ride-runner_${version}_all.deb`. It shouldn't start after installation.
+1. Install the package: `dpkg -i decentralchain-ride-runner_${version}_all.deb`. It shouldn't start after installation.
 2. _Optional_. Configure the service:
-    1. Update the Java options in `/etc/waves-ride-runner/application.ini`
-    2. Update a custom configuration for service: `/etc/waves-ride-runner/main.conf`
+    1. Update the Java options in `/etc/decentralchain-ride-runner/application.ini`
+    2. Update a custom configuration for service: `/etc/decentralchain-ride-runner/main.conf`
        See [ride-runner.conf](./src/main/resources/ride-runner.conf) for all available options.
-3. Start the service: `systemctl start waves-ride-runner`
+3. Start the service: `systemctl start decentralchain-ride-runner`
 
 #### Standalone
 
-1. Extract the archive: `tar -xzf waves-ride-runner.tgz`
+1. Extract the archive: `tar -xzf decentralchain-ride-runner.tgz`
 2. _Optional_. Configure the service:
-    1. Update the Java options in `waves-ride-runner-${version}/conf/application.ini`
+    1. Update the Java options in `decentralchain-ride-runner-${version}/conf/application.ini`
     2. Write a custom configuration for service:
         1. Copy an example config to the `conf`
-           directory: `cp waves-ride-runner-$version/doc/main.conf waves-ride-runner-$version/conf/`
+           directory: `cp decentralchain-ride-runner-$version/doc/main.conf decentralchain-ride-runner-$version/conf/`
         2. See [ride-runner.conf](./src/main/resources/ride-runner.conf) for all available options.
 3. Run the service:
-    * Without a custom config: `./waves-ride-runner-${version}/bin/waves-ride-runner`
+    * Without a custom config: `./decentralchain-ride-runner-${version}/bin/decentralchain-ride-runner`
     * With a custom
-      config: `./waves-ride-runner-${version}/bin/waves-ride-runner ./waves-ride-runner-${version}/conf/main.conf`
+      config: `./decentralchain-ride-runner-${version}/bin/decentralchain-ride-runner ./decentralchain-ride-runner-${version}/conf/main.conf`
 
 ### REST API
 
 Is available on `6890` port by default. Available endpoints:
 
-1. `/utils/script/evaluate` - works almost as on Waves Node HTTP API.
-   See https://nodes.wavesnodes.com/api-docs/index.html#/utils/evaluateScript for more information about this endpoint.
+1. `/utils/script/evaluate` - works almost as on DecentralChain Node HTTP API.
+   See https://mainnet-node.decentralchain.io/api-docs/index.html#/utils/evaluateScript for more information about this endpoint.
 2. `GET /ride/status` for health checks.
 
 ### Limitations
 
 If you faced one of them, please issue a ticket on GitHub and tell us your use-case.
 
-1. Asset scripts aren't supported as in `GET /utils/script/evaluate` of Waves Node REST API.
+1. Asset scripts aren't supported as in `GET /utils/script/evaluate` of DecentralChain Node REST API.
 2. Unsupported RIDE functions. A script fails with an error if tries to run one of these functions:
-    1. [isDataStorageUntouched](https://docs.waves.tech/en/ride/functions/built-in-functions/account-data-storage-functions#isdatastorageuntouched-address-alias-boolean)
-    2. [transferTransactionById](https://docs.waves.tech/en/ride/functions/built-in-functions/blockchain-functions#transfertransactionbyid)
+    1. [isDataStorageUntouched](https://docs.decentralchain.io/en/ride/functions/built-in-functions/account-data-storage-functions#isdatastorageuntouched-address-alias-boolean)
+    2. [transferTransactionById](https://docs.decentralchain.io/en/ride/functions/built-in-functions/blockchain-functions#transfertransactionbyid)
 
 ## Running Ride with prepared state
 
@@ -165,7 +165,7 @@ See:
 How to run:
 
 ```shell
-java -jar waves-ride-runner-all-${version}.jar ./sample-input.conf
+java -jar decentralchain-ride-runner-all-${version}.jar ./sample-input.conf
 ```
 
 You should see the result in JSON.
@@ -173,7 +173,7 @@ You should see the result in JSON.
 Help:
 
 ```shell
-java -jar waves-ride-runner-all-${version}.jar --help
+java -jar decentralchain-ride-runner-all-${version}.jar --help
 ```
 
 **Important note**: using multiple different networks may cause errors if you run multiple scripts (for example, if you

@@ -11,7 +11,7 @@ enablePlugins(
   PublishedModule
 )
 
-V.scalaPackage := "com.wavesplatform"
+V.scalaPackage := "com.decentralchain"
 
 libraryDependencies ++= Dependencies.node.value
 
@@ -26,18 +26,8 @@ javaAgents ++= {
   }
 }
 
-homepage := Some(url("https://waves.tech/"))
-developers := List(
-  Developer("ismagin", "Ilya Smagin", "ilya.smagin@gmail.com", url("https://github.com/ismagin")),
-  Developer("asayadyan", "Artyom Sayadyan", "xrtm000@gmail.com", url("https://github.com/xrtm000")),
-  Developer("mpotanin", "Mike Potanin", "mpotanin@wavesplatform.com", url("https://github.com/potan")),
-  Developer("irakitnykh", "Ivan Rakitnykh", "mrkr.reg@gmail.com", url("https://github.com/mrkraft")),
-  Developer("akiselev", "Alexey Kiselev", "alexey.kiselev@gmail.com>", url("https://github.com/alexeykiselev")),
-  Developer("phearnot", "Sergey Nazarov", "phearnot@renee.ru", url("https://github.com/phearnot")),
-  Developer("tolsi", "Sergey Tolmachev", "tolsi.ru@gmail.com", url("https://github.com/tolsi")),
-  Developer("vsuharnikov", "Vyatcheslav Suharnikov", "arz.freezy@gmail.com", url("https://github.com/vsuharnikov")),
-  Developer("ivan-mashonskiy", "Ivan Mashonskii", "ivan.mashonsky@gmail.com", url("https://github.com/ivan-mashonskiy"))
-)
+homepage := Some(url("https://decentralchain.io/"))
+
 
 inConfig(Compile)(
   Seq(
@@ -52,7 +42,7 @@ inConfig(Compile)(
 
 inTask(assembly)(
   Seq(
-    name := "waves",
+    name := "decentralchain",
     fullClasspath := {
       val optional = (Optional / update).value.select(configurationFilter("optional")).toSet
       (Runtime / fullClasspath).value.filterNot(item => optional.contains(item.data))
@@ -98,9 +88,9 @@ linuxScriptReplacements += ("network" -> network.value.toString)
 
 inConfig(Universal)(
   Seq(
-    maintainer  := "com.wavesplatform",
-    packageName := s"waves-${version.value}",
-    mappings += (baseDirectory.value / s"waves-sample.conf" -> "doc/waves.conf.sample"),
+    maintainer  := "decentralchain",
+    packageName := s"decentralchain-${version.value}",
+    mappings += (baseDirectory.value / s"decentralchain-sample.conf" -> "doc/decentralchain.conf.sample"),
     javaOptions ++= Seq(
       // -J prefix is required by the bash script
       "-J-server",
@@ -119,9 +109,9 @@ inConfig(Universal)(
 
 inConfig(Linux)(
   Seq(
-    packageSummary     := "Waves node",
-    packageDescription := "Waves node",
-    name               := s"waves${network.value.packageSuffix}",
+    packageSummary     := "DecentralChain node",
+    packageDescription := "DecentralChain node",
+    name               := s"decentralchain${network.value.packageSuffix}",
     normalizedName     := name.value,
     packageName        := normalizedName.value
   )
@@ -160,7 +150,7 @@ linuxPackageSymlinks := linuxPackageSymlinks.value.map { lsl =>
 inConfig(Debian)(
   Seq(
     packageArchitecture      := debArchitecture.value.debString,
-    maintainer               := "com.wavesplatform",
+    maintainer               := "decentralchain",
     packageSource            := sourceDirectory.value / "package",
     linuxStartScriptTemplate := (packageSource.value / "systemd.service").toURI.toURL,
     debianPackageDependencies += "java17-runtime-headless",
@@ -182,4 +172,4 @@ inConfig(Debian)(
   )
 )
 
-V.scalaPackage := "com.wavesplatform"
+V.scalaPackage := "com.decentralchain"

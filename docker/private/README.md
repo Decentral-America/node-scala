@@ -1,19 +1,19 @@
-# Waves private node
+# DecentralChain private node
 
-The image is useful for developing dApps and other smart contracts on Waves blockchain.
+The image is useful for developing dApps and other smart contracts on the DecentralChain blockchain.
 
 ## Getting started
 
 To run the node,\
-`docker run -d --name waves-private-node -p 6869:6869 wavesplatform/waves-private-node`
+`docker run -d --name dcc-private-node -p 6869:6869 ghcr.io/decentral-america/node-scala:private`
 
 To view node API documentation, open http://localhost:6869/
 
 ## Preserve blockchain state
 
 If you want to keep the blockchain state, then just stop the container instead of killing it, and start it again when needed:\
-`docker stop waves-private-node`
-`docker start waves-private-node`
+`docker stop dcc-private-node`
+`docker start dcc-private-node`
 
 ## Configuration details
 
@@ -22,8 +22,8 @@ The node is configured with:
 - faster generation of blocks (**10 sec** interval)
 - all features pre-activated
 - custom chain id - **R**
-- api_key `waves-private-node`
-- default miner account with all Waves tokens (you can distribute these tokens to other accounts as you wish):
+- api_key `dcc-private-node`
+- default miner account with all DecentralChain tokens (you can distribute these tokens to other accounts as you wish):
   ```
   rich account:
       Seed text:           waves private node seed with waves tokens
@@ -34,4 +34,4 @@ The node is configured with:
       Account address:     3M4qwDomRabJKLZxuXhwfqLApQkU592nWxF
   ```
 
-Full node configuration is available on Github in `waves.custom.conf`: https://github.com/wavesplatform/Waves/blob/HEAD/docker/private/waves.custom.conf
+Full node configuration is available on Github in `decentralchain.custom.conf`.
