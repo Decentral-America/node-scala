@@ -62,7 +62,7 @@ lazy val `lang-jvm` = lang.jvm
 lazy val `lang-js` = lang.js
   .enablePlugins(VersionObject)
   .settings(
-    V.scalaPackage := "com.wavesplatform.lang",
+    V.scalaPackage := "com.decentralchain.lang",
     libraryDependencies ++= Dependencies.scalapbRuntimeJS.value
   )
 
@@ -188,10 +188,10 @@ inScope(Global)(
       "-Xmax-inlines",
       "50", // Required for FunctionalitySettings compilation
       "-Wunused:all",
-      "-Wconf:cat=deprecation&origin=com.wavesplatform.api.grpc.*:s",                                // Ignore gRPC warnings
+      "-Wconf:cat=deprecation&origin=com.decentralchain.api.grpc.*:s",                                // Ignore gRPC warnings
       "-Wconf:cat=deprecation&origin=com.wavesplatform.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
-      "-Wconf:cat=deprecation&origin=com.wavesplatform.state.InvokeScriptResult.*:s",
-      "-Wconf:cat=deprecation&origin=com\\.wavesplatform\\.(lang\\..*|JsApiUtils)&origin=com\\.wavesplatform\\.lang\\.v1\\.compiler\\.Terms\\.LET_BLOCK:s",
+      "-Wconf:cat=deprecation&origin=com.decentralchain.state.InvokeScriptResult.*:s",
+      "-Wconf:cat=deprecation&origin=com\\.decentralchain\\.(lang\\..*|JsApiUtils)&origin=com\\.decentralchain\\.lang\\.v1\\.compiler\\.Terms\\.LET_BLOCK:s",
       "-Wconf:src=src_managed/.*:s"
     ),
     crossPaths        := false,
@@ -306,7 +306,7 @@ commands += Command("buildReleaseArtifacts")(_ => Network.networkParser) { (stat
 }
 
 /** Command: generateGenesis <path-to-config>
-  * Runs: node / runMain com.wavesplatform.GenesisBlockGenerator <path>
+  * Runs: node / runMain com.decentralchain.GenesisBlockGenerator <path>
   * Path is always resolved relative to build root, output without "[info]".
   */
 def generateGenesisCommand: Command =
@@ -328,7 +328,7 @@ def generateGenesisCommand: Command =
       state
     )
 
-    val input = s" com.wavesplatform.GenesisBlockGenerator ${absFile.getAbsolutePath}"
+    val input = s" com.decentralchain.GenesisBlockGenerator ${absFile.getAbsolutePath}"
 
     Project
       .extract(stateWithSettings)
