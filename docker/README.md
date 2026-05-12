@@ -1,192 +1,154 @@
-# Waves Node in Docker
+# DecentralChain Node in Docker
 
-## About Waves
-Waves is a decentralized platform that allows any user to issue, transfer, swap and trade custom blockchain tokens on an integrated peer-to-peer exchange. You can find more information about Waves at [waves.tech](https://waves.tech/) and in the official [documentation](https://docs.waves.tech).
+Run a full DecentralChain blockchain node using Docker. The image supports all three networks — mainnet, testnet, and stagenet — and can be configured via environment variables or a mounted configuration file.
 
+## Quick start
 
-## About the image
-This Docker image is focused on fast and convenient deployment of Waves Node.
-The image contains scripts and configs to run Waves Node for `mainnet`, `testnet` or `stagenet` networks.
-If you need to run node in private network, see [Waves private node](https://github.com/wavesplatform/Waves/tree/master/docker#waves-private-node) section.
-
-GitHub repository: https://github.com/wavesplatform/Waves/tree/master/docker
-
-## Prerequisites
-It is highly recommended to read more about [Waves Node configuration](https://docs.waves.tech/en/waves-node/node-configuration) before running the container.
-
-## Building Docker image
-`./build-with-docker.sh && docker build -t wavesplatform/wavesnode docker` (from the repository root) - builds an image with the current local repository
-
-**You can specify following arguments when building the image:**
-
-
-| Argument          | Default value | Description                                                                                                                                                                                                                                                                                   |
-|-------------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `INCLUDE_GRPC`    | `true`        | Whether to include gRPC server files in the image.                                                                                                                                                                                                                                            |
-
-**Note: All build arguments are optional.**
-
-## Running Docker image
-
-
-
-### Configuration options
-
-1. The image supports Waves Node config customization. To change a config field use corresponding JVM options. JVM options can be sent to JVM using `JAVA_OPTS` environment variable. Please refer to ([complete configuration file](https://github.com/wavesplatform/Waves/blob/master/node/src/main/resources/application.conf)) to get the full path of the configuration item you want to change.
-
-    ```
-    docker run -v /docker/waves/waves-data:/var/lib/waves -v /docker/waves/waves-config:/etc/waves -p 6869:6869 -p 6862:6862 -e JAVA_OPTS="-Dwaves.rest-api.enable=yes -Dwaves.wallet.password=myWalletSuperPassword" -ti wavesplatform/wavesnode
-    ```
-
-2. Waves Node is looking for a config in the directory `/etc/waves/waves.conf` which can be mounted using Docker volumes. For custom networks, correct configuration file must be provided when running container. If you use `CUSTOM` network and `/etc/waves/waves.conf` is NOT found Waves Node container will exit.
-
-3. You can use custom config  to override or the whole configuration. For additional information about Docker volumes mapping please refer to `Managing data` item.
-
-4. You can override the default executable by using the following syntax:
-    ```
-    docker run -it wavesplatform/wavesnode [command] [args]
-    ```
-
-### Environment variables
-
-The following environment variables can be passed to the container:
-
-| Env variable            | Description                                                                                                                                                                                                  |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `WAVES_WALLET_SEED`     | Base58 encoded seed, sets `-Dwaves.wallet.seed` system property.                                                                                                                                             |
-| `WAVES_WALLET_PASSWORD` | Password for the wallet file, sets `-Dwaves.wallet.password` system property.                                                                                                                                |
-| `WAVES_LOG_LEVEL`       | Node stdout logging level. Available values: `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`. More details about logging are available [here](https://docs.waves.tech/en/waves-node/logging-configuration). |
-| `WAVES_HEAP_SIZE`       | Default Java Heap Size limit in -X Command-line Options notation (`-Xmx=[your value]`). More details [here](https://docs.oracle.com/cd/E13150_01/jrockit_jvm/jrockit/jrdocs/refman/optionX.html).            |
-| `WAVES_NETWORK`         | Waves Blockchain network. Available values are `mainnet`, `testnet`, `stagenet`.                                                                                                                             |
-| `JAVA_OPTS`             | Additional Waves Node JVM configuration options. 	                                                                                                                                                           |
-
-All environment variables are optional, however you need to specify at least the desired network and wallet password (via environment variables, additional system properties defined in the `JAVA_OPTS` environment variable, or in the config file). 
-
-### Managing data
-We recommend to store the blockchain state as well as Waves configuration on the host side. As such, consider using Docker volumes mapping to map host directories inside the container:
-
-**Example:**
-
-1. Create a directory to store Waves data:
-
-```
-mkdir -p /docker/waves
-mkdir /docker/waves/waves-data
-mkdir /docker/waves/waves-config
+```sh
+docker run -d \
+  --name dcc-node \
+  -p 6869:6869 \
+  -p 6868:6868 \
+  -e WAVES_NETWORK=MAINNET \
+  ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
 
-Once container is launched it will create:
+> **Port 6869** — REST API (HTTP)  
+> **Port 6868** — P2P node communication
 
-- three subdirectories in `/docker/waves/waves-data`:
-```
-/docker/waves/waves-data/log    - Waves Node logs
-/docker/waves/waves-data/data   - Waves Blockchain state
-/docker/waves/waves-data/wallet - Waves Wallet data
-```
-- `/docker/waves/waves-config/waves.conf` - default Waves config
+---
 
+## Image tags
 
-3. If you already have Waves Node configuration/data - place it in the corresponding directories
+| Tag | Description |
+|-----|-------------|
+| `mainnet-latest` | Latest build targeting DecentralChain mainnet |
+| `testnet-latest` | Latest build targeting DecentralChain testnet |
+| `stagenet-latest` | Latest build targeting DecentralChain stagenet |
+| `sha-<commit>` | Pinned build by git commit SHA |
 
-4. Add the appropriate arguments to ```docker run``` command: 
-```
-docker run -v /docker/waves/waves-data:/var/lib/waves -v /docker/waves/waves-config:/etc/waves -e WAVES_NETWORK=stagenet -e WAVES_WALLET_PASSWORD=myWalletSuperPassword -ti wavesplatform/wavesnode
-```
+---
 
-### Blockchain state
+## Configuration
 
-If you are a Waves Blockchain newbie and launching Waves Node for the first time be aware that after launch it will start downloading the whole blockchain state from the other nodes. During this download it will be verifying all blocks one after another. This procedure can take some time.
+### Via environment variables
 
-You can speed this process up by downloading a compressed blockchain state from our official resources, extract it and mount inside the container (as discussed in the previous section). In this scenario Waves Node skips block verifying. This is a reason why it takes less time. This is also a reason why you must download blockchain state *only from our official resources*.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WAVES_NETWORK` | `MAINNET` | Target network: `MAINNET`, `TESTNET`, or `STAGENET` |
+| `WAVES_HEAP_SIZE` | `2g` | JVM heap size passed to `-Xmx` |
+| `WAVES_LOG_LEVEL` | `DEBUG` | Log verbosity: `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE` |
+| `WAVES_WALLET_SEED` | — | Base58-encoded wallet seed (written to `wallet.dat` at startup) |
+| `WAVES_WALLET_PASSWORD` | — | Password for the wallet file |
+| `JAVA_OPTS` | — | Additional JVM options (e.g. `-Dlogback.configurationFile=...`) |
 
-**Note**: We do not guarantee the state consistency if it's downloaded from third-parties.
+### Via mounted config file
 
-|Network     |Link          |
-|------------|--------------|
-|`mainnet`   | http://blockchain.wavesnodes.com/blockchain_last.tar |
-|`testnet`   | http://blockchain-testnet.wavesnodes.com/blockchain_last.tar  |
-|`stagenet`  | http://blockchain-stagenet.wavesnodes.com/blockchain_last.tar |
+Override any setting by mounting a custom HOCON configuration file:
 
-
-**Example:**
-```
-mkdir -p /docker/waves/waves-data
-
-wget -qO- http://blockchain-stagenet.wavesnodes.com/blockchain_last.tar --show-progress | tar -xvf - -C /docker/waves/waves-data
-
-docker run -v /docker/waves/waves-data:/var/lib/waves wavesplatform/Node -e WAVES_NETWORK=stagenet -e WAVES_WALLET_PASSWORD=myWalletSuperPassword -ti wavesplatform/wavesnode
-```
-
-### Network Ports
-
-1. REST-API interaction with Node. Details are available [here](https://docs.waves.tech/en/waves-node/node-configuration#rest-api-settings).
-
-2. Waves Node communication port for incoming connections. Details are available [here](https://docs.waves.tech/en/waves-node/node-configuration#network-settings).
-
-
-**Example:**
-Below command will launch a container:
-- with REST-API port enabled and configured on the socket `0.0.0.0:6870`
-- Waves node communication port enabled and configured on the socket `0.0.0.0:6868`
-- Ports `6868` and `6870` mapped from the host to the container
-
-```
-docker run -v /docker/waves/waves-data:/var/lib/waves -v /docker/waves/waves-config:/etc/waves -p 6870:6870 -p 6868:6868 -e JAVA_OPTS="-Dwaves.network.declared-address=0.0.0.0:6868 -Dwaves.rest-api.port=6870 -Dwaves.rest-api.bind-address=0.0.0.0 -Dwaves.rest-api.enable=yes" -e WAVES_WALLET_PASSWORD=myWalletSuperPassword -e WAVES_NETWORK=stagenet -ti wavesplatform/wavesnode
+```sh
+docker run -d \
+  --name dcc-node \
+  -p 6869:6869 \
+  -p 6868:6868 \
+  -v /path/to/node.conf:/etc/decentralchain/node.conf \
+  -e WAVES_NETWORK=MAINNET \
+  ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
 
-Check that REST API is up by navigating to the following URL from the host side:
-http://localhost:6870/api-docs/index.html
+The entrypoint merges the mounted file with the built-in network defaults using HOCON include resolution.
 
-### Extensions
-You can run custom extensions in this way:
-1. Copy all lib/*.jar files from extension to any directory, lets say `plugins`
-2. Add extension class to configuration file, lets say `local.conf`, located in `config` directory containing also `waves.conf`:
-```hocon
-waves.extensions += com.johndoe.WavesExtension
+---
+
+## Persisting data
+
+Mount a volume to keep blockchain state across container restarts:
+
+```sh
+docker run -d \
+  --name dcc-node \
+  -p 6869:6869 \
+  -p 6868:6868 \
+  -v dcc-data:/var/lib/decentralchain \
+  -e WAVES_NETWORK=MAINNET \
+  ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
-3. Run `docker run -v "$(pwd)/plugins:/usr/share/waves/lib/plugins" -v "$(pwd)/config:/etc/waves" -i wavesplatform/wavesnode`
 
-## Waves private node
+The node stores its data at `/var/lib/decentralchain` inside the container.
 
-The image is useful for developing dApps and other smart contracts on Waves blockchain.
+---
 
-### Getting started
+## Docker Compose example
 
-To run the node,\
-`docker run -d --name waves-private-node -p 6869:6869 wavesplatform/waves-private-node`
+```yaml
+services:
+  dcc-node:
+    image: ghcr.io/decentral-america/node-scala:mainnet-latest
+    container_name: dcc-node
+    restart: unless-stopped
+    ports:
+      - "6869:6869"
+      - "6868:6868"
+    environment:
+      WAVES_NETWORK: MAINNET
+      WAVES_HEAP_SIZE: 4g
+      WAVES_LOG_LEVEL: INFO
+      WAVES_WALLET_SEED: "${DCC_WALLET_SEED}"
+      WAVES_WALLET_PASSWORD: "${DCC_WALLET_PASSWORD}"
+    volumes:
+      - dcc-data:/var/lib/decentralchain
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6869/node/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
-To view node API documentation, open http://localhost:6869/
+volumes:
+  dcc-data:
+```
 
-### Preserve blockchain state
+Store secrets in a `.env` file (never commit to version control):
 
-If you want to keep the blockchain state, then just stop the container instead of killing it, and start it again when needed:\
-`docker stop waves-private-node`
-`docker start waves-private-node`
+```
+DCC_WALLET_SEED=your_base58_wallet_seed_here
+DCC_WALLET_PASSWORD=your_wallet_password_here
+```
 
-### Configuration details
+---
 
-The node is configured with:
+## REST API
 
-- faster generation of blocks (**10 sec** interval)
-- all features pre-activated
-- custom chain id - **R**
-- api_key `waves-private-node`
-- default miner account with all Waves tokens (you can distribute these tokens to other accounts as you wish):
-  ```
-  rich account:
-      Seed text:           waves private node seed with waves tokens
-      Seed:                TBXHUUcVx2n3Rgszpu5MCybRaR86JGmqCWp7XKh7czU57ox5dgjdX4K4
-      Account seed:        HewBh5uTNEGLVpmDPkJoHEi5vbZ6uk7fjKdP5ghiXKBs
-      Private account key: 83M4HnCQxrDMzUQqwmxfTVJPTE9WdE7zjAooZZm2jCyV
-      Public account key:  AXbaBkJNocyrVpwqTzD4TpUY8fQ6eeRto9k1m2bNCzXV
-      Account address:     3M4qwDomRabJKLZxuXhwfqLApQkU592nWxF
-  ```
+Once running, the REST API is available at `http://localhost:6869`. Key endpoints:
 
-Full node configuration is available on Github in `waves.custom.conf`: https://github.com/wavesplatform/Waves/blob/master/docker/private/waves.custom.conf
+| Endpoint | Description |
+|----------|-------------|
+| `GET /node/status` | Node synchronisation status |
+| `GET /node/version` | Node version string |
+| `GET /blocks/height` | Current blockchain height |
+| `GET /addresses` | List node wallet addresses |
 
-### Image tags
+Full API reference: see the `swagger.json` bundled in the image or the online documentation in the [docs](../docs) directory.
 
-You can use the following tags:
+---
 
-- `latest` - current version of Mainnet
-- `vX.X.X` - specific version of Waves Node
+## Building from source
+
+```sh
+# Build the distribution tarball first
+sbt --batch buildTarballsForDocker
+
+# Build the Docker image
+docker build -t decentralchain/node-scala:local ./docker
+```
+
+---
+
+## Security notes
+
+- The container runs as a non-root user (`waves`, UID 999) by default.
+- Wallet seeds are written to a temporary file with `chmod 600` and cleaned up on exit.
+- The `WAVES_WALLET_SEED` environment variable is not logged.
+- The REST API is bound to `0.0.0.0` by default. In production, place it behind a reverse proxy and restrict public exposure.
+
+For the project security policy, see [SECURITY.md](../SECURITY.md).

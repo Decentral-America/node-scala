@@ -2,11 +2,11 @@ package com.wavesplatform.protobuf.transaction
 
 import com.google.common.primitives.Bytes
 import com.google.protobuf.ByteString
-import com.wavesplatform.account.*
-import com.wavesplatform.crypto
-import com.wavesplatform.lang.ValidationError
+import com.decentralchain.account.*
+import com.decentralchain.crypto
+import com.decentralchain.lang.ValidationError
 import com.wavesplatform.protobuf.transaction.{Recipient as PBRecipient}
-import com.wavesplatform.transaction.TxValidationError.GenericError
+import com.decentralchain.transaction.TxValidationError.GenericError
 
 object PBRecipients {
   def create(recipient: AddressOrAlias): PBRecipient = recipient match {

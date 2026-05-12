@@ -1,2 +1,2 @@
-# Waves Node Testkit
-See [docs](https://docs.waves.tech/en/waves-node/) or [sources](https://github.com/wavesplatform/Waves/tree/version-1.5.x/node).
+# DecentralChain Node
+See [docs](https://docs.decentralchain.io/en/waves-node/) or [sources](https://github.com/Decentral-America/node-scala/tree/main/node).

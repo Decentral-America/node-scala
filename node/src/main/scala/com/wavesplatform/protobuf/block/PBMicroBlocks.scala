@@ -1,10 +1,10 @@
 package com.wavesplatform.protobuf.block
 
-import com.wavesplatform.account.PublicKey
-import com.wavesplatform.block.Block.BlockId
-import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.network.MicroBlockResponse
+import com.decentralchain.account.PublicKey
+import com.decentralchain.block.Block.BlockId
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.network.MicroBlockResponse
 import com.wavesplatform.protobuf.*
 import com.wavesplatform.protobuf.transaction.PBTransactions
 

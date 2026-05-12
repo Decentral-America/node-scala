@@ -13,7 +13,7 @@ docker := {
   val log = streams.value.log
 
   val cwd   = baseDirectory.value.getParentFile / "docker"
-  val image = "com.wavesplatform/node-it:latest"
+  val image = "com.decentralchain/node-it:latest"
 
   val cmd = Seq("docker", "build", "-t", image, ".")
   log.info(s"Running `${cmd.mkString(" ")}` from $cwd")

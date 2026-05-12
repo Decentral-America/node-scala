@@ -2,8 +2,8 @@ package com.wavesplatform.protobuf.transaction
 
 import com.google.protobuf.ByteString
 import com.wavesplatform.protobuf.*
-import com.wavesplatform.transaction.Asset
-import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 
 object PBAmounts {
   def toPBAssetId(asset: Asset): ByteString = asset match {

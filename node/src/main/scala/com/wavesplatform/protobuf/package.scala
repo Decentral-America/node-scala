@@ -1,12 +1,12 @@
 package com.wavesplatform
 
 import com.google.protobuf.ByteString
-import com.wavesplatform.account.{Address, AddressScheme, PublicKey}
-import com.wavesplatform.common.state.ByteStr
+import com.decentralchain.account.{Address, AddressScheme, PublicKey}
+import com.decentralchain.common.state.ByteStr
 import com.wavesplatform.protobuf.transaction.PBRecipients
-import com.wavesplatform.state.TransactionId
-import com.wavesplatform.transaction.Asset
-import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.state.TransactionId
+import com.decentralchain.transaction.Asset
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 
 import scala.annotation.targetName
 
