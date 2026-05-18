@@ -1,4 +1,4 @@
-ARG baseImage=eclipse-temurin:21-jre-noble
+ARG baseImage=eclipse-temurin:25-jre-noble
 FROM $baseImage
 
 ARG TARGETARCH
@@ -38,7 +38,7 @@ RUN mkdir -p $WVDATA $WVLOG; \
 RUN --mount=type=bind,source=target,target=/tmp/ \
     # Unpack tgz packages
     tar zxvf /tmp/waves.tgz -C $WAVES_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
-    tar zxvf /tmp/waves-grpc-server.tgz -C $WAVES_INSTALL_PATH --strip-components=1 && \
+    tar zxvf /tmp/dcc-grpc-server.tgz -C $WAVES_INSTALL_PATH --strip-components=1 && \
     # Set permissions
     chown -R waves:waves $WVDATA $WVLOG $WAVES_INSTALL_PATH && chmod 755 $WVDATA $WVLOG;
 

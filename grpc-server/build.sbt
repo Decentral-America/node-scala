@@ -1,6 +1,6 @@
 import sbt.nio.file.FileAttributes
 
-name := "waves-grpc-server"
+name := "dcc-grpc-server"
 
 libraryDependencies ++= Dependencies.grpc
 
