@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@93e926cbdb4a428e41b4ef754124ec82925ffdc2  # v1.1.23
       - run: sbt -Dproject.version=${{ steps.ghd.outputs.describe }} --batch ';lang-tests/test;lang-tests-js/test;repl/test;langJS/fullOptJS;replJS/fullOptJS'
