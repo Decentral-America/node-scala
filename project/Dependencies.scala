@@ -91,7 +91,7 @@ object Dependencies {
       "ch.obermuhlner"  % "big-math"   % "2.3.2",
       googleGuava, // BaseEncoding.base16()
       curve25519,
-      "io.decentralchain" % "groth16-java" % "0.2.1.dcc1",
+      "io.decentralchain" % "groth16" % "0.2.1.dcc1",
       web3jModule("crypto").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
       protoSchemasLib % "protobuf"
     ) ++ cryptoProviders
