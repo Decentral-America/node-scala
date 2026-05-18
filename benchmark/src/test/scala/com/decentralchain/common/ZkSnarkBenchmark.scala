@@ -4,7 +4,7 @@ import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 import com.decentralchain.common.ZkSnarkBenchmark.Groth16St
-import com.wavesplatform.zwaves.bls12.Groth16
+import com.decentralchain.groth16.bls12.Groth16
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
