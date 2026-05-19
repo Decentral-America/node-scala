@@ -4,6 +4,13 @@ FROM $baseImage
 ARG TARGETARCH
 ARG CORRETTO_VERSION=2.5.0
 ARG ROCKSDB_VERSION=10.2.1
+# Supply-chain pinning: SHA-256 hashes verified from Maven Central at release time.
+# Update alongside CORRETTO_VERSION.
+ARG CORRETTO_AMD64_SHA256=94e92977ee52af1f50cf6744684c214f300e668ee6e1793be1802b209543dc9f
+ARG CORRETTO_ARM64_SHA256=e03899f5cc33de706b5059a62107b5a3262dd2816d4295d998f0fb843db0c80d
+# Maven Central publishes only SHA-1 for rocksdbjni; update alongside ROCKSDB_VERSION.
+# See https://github.com/facebook/rocksdb/issues/13893 before bumping ROCKSDB_VERSION.
+ARG ROCKSDB_LINUX64_SHA1=1fb1d6519cd2a7ff61478f766fa985baa890c7b9
 
 ENV WAVES_LOG_LEVEL=INFO
 ENV WAVES_HEAP_SIZE=2g
@@ -17,28 +24,37 @@ ENV WVLOG=/var/log/waves
 ENV WAVES_INSTALL_PATH=/usr/share/waves
 ENV WAVES_CONFIG=/etc/waves/waves.conf
 
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
+RUN set -euo pipefail && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
         export CORRETTO_ARCH="linux-x86_64"; \
+        export CORRETTO_SHA256="${CORRETTO_AMD64_SHA256}"; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
         export CORRETTO_ARCH="linux-aarch_64"; \
+        export CORRETTO_SHA256="${CORRETTO_ARM64_SHA256}"; \
+    else \
+        echo "ERROR: Unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1; \
     fi && \
     export CORRETTO_JAR="AmazonCorrettoCryptoProvider-${CORRETTO_VERSION}-${CORRETTO_ARCH}.jar" && \
     export ROCKSDB_JAR="rocksdbjni-${ROCKSDB_VERSION}-linux64.jar" && \
     mkdir -p "${WAVES_INSTALL_PATH}/lib" && \
-    wget "https://repo1.maven.org/maven2/software/amazon/cryptools/AmazonCorrettoCryptoProvider/${CORRETTO_VERSION}/${CORRETTO_JAR}" -O "${WAVES_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" && \
-    wget "https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/${ROCKSDB_VERSION}/${ROCKSDB_JAR}" -O "${WAVES_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}"
+    wget -q "https://repo1.maven.org/maven2/software/amazon/cryptools/AmazonCorrettoCryptoProvider/${CORRETTO_VERSION}/${CORRETTO_JAR}" \
+         -O "${WAVES_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" && \
+    echo "${CORRETTO_SHA256}  ${WAVES_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" | sha256sum -c - && \
+    wget -q "https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/${ROCKSDB_VERSION}/${ROCKSDB_JAR}" \
+         -O "${WAVES_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" && \
+    echo "${ROCKSDB_LINUX64_SHA1}  ${WAVES_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c -
 
 # Setup node
 COPY entrypoint.sh $WAVES_INSTALL_PATH/bin/entrypoint.sh
 RUN mkdir -p $WVDATA $WVLOG; \
     # Create user
     groupadd -r waves --gid=999; \
-    useradd -r -g waves --uid=999 --home-dir=$WVDATA --shell=/bin/bash waves
+    useradd --no-log-init -r -g waves --uid=999 --home-dir=$WVDATA --shell=/bin/bash waves
 
 RUN --mount=type=bind,source=target,target=/tmp/ \
     # Unpack tgz packages
-    tar zxvf /tmp/waves.tgz -C $WAVES_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
-    tar zxvf /tmp/dcc-grpc-server.tgz -C $WAVES_INSTALL_PATH --strip-components=1 && \
+    tar zxf /tmp/waves.tgz -C $WAVES_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
+    tar zxf /tmp/dcc-grpc-server.tgz -C $WAVES_INSTALL_PATH --strip-components=1 && \
     # Set permissions
     chown -R waves:waves $WVDATA $WVLOG $WAVES_INSTALL_PATH && chmod 755 $WVDATA $WVLOG;
 
@@ -49,7 +65,7 @@ VOLUME $WVLOG
 VOLUME $WAVES_INSTALL_PATH/lib/plugins
 WORKDIR $WVDATA
 
-HEALTHCHECK CMD curl -f http://localhost:6869/node/status || exit 1
+HEALTHCHECK CMD wget -q -O /dev/null http://localhost:6869/node/status || exit 1
 
 STOPSIGNAL SIGINT
 USER waves
