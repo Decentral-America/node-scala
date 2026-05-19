@@ -48,4 +48,4 @@ else
   ARGS=$@
 fi
 
-exec java $JAVA_OPTS -cp "$WAVES_INSTALL_PATH/lib/plugins/*:$WAVES_INSTALL_PATH/lib/*" com.wavesplatform.Application $ARGS
+exec java $JAVA_OPTS -cp "$WAVES_INSTALL_PATH/lib/plugins/*:$WAVES_INSTALL_PATH/lib/*" com.decentralchain.Application $ARGS
