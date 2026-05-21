@@ -14,7 +14,7 @@ object Dependencies {
       "com.google.code.gson"      % "gson"           % "2.13.2",
       "com.squareup.okio"         % "okio-jvm"       % "3.16.4",
       "org.apache.httpcomponents" % "httpclient"     % "4.5.14",
-      "org.slf4j"                 % "slf4j-api"      % "2.0.17",
+      "org.slf4j"                 % "slf4j-api"      % "2.0.18",
       "org.msgpack"               % "msgpack-core"   % "0.9.11",
       nettyModule("codec-http2"),
       nettyModule("codec-http"),
@@ -49,7 +49,7 @@ object Dependencies {
   private def grpcModule(module: String) = "io.grpc" % module % "1.81.0"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
-  val googleGuava     = "com.google.guava"    % "guava"             % "33.5.0-jre"
+  val googleGuava     = "com.google.guava"    % "guava"             % "33.6.0-jre"
   val kamonCore       = kamonModule("core")
   val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
   val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.32"
