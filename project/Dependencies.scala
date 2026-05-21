@@ -4,9 +4,9 @@ import sbt.{Def, *}
 import scalapb.compiler.Version.scalapbVersion
 
 object Dependencies {
-  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.10.Final"
+  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.14.Final"
 
-  val gProtoVersion = "4.33.5"
+  val gProtoVersion = "4.34.2"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
   val overrides = Def.setting(
     Seq(
@@ -32,7 +32,7 @@ object Dependencies {
 
   // Node protobuf schemas
   lazy val protoSchemasLib =
-    "io.decentralchain" % "protobuf-schemas" % "1.6.1" classifier "protobuf-src" intransitive ()
+    "io.decentralchain" % "protobuf-schemas" % "1.6.2" classifier "protobuf-src" intransitive ()
 
   private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.4.0"
 
@@ -40,13 +40,13 @@ object Dependencies {
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.8.1"
 
-  private def jacksonModule(group: String, module: String, version: String = "2.20.1") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
+  private def jacksonModule(group: String, module: String, version: String = "2.21.3") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
   private def web3jModule(module: String) = "org.web3j" % module % "4.13.0" // 4.14+ requires Java 21 https://github.com/LFDT-web3j/web3j/releases/tag/v4.14.0
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
-  private def grpcModule(module: String) = "io.grpc" % module % "1.79.0"
+  private def grpcModule(module: String) = "io.grpc" % module % "1.81.0"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.5.0-jre"
@@ -54,7 +54,7 @@ object Dependencies {
   val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
   val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.32"
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.7"
-  val curve25519      = "com.wavesplatform"   % "curve25519-java"   % "0.6.6"
+  val curve25519      = "io.decentralchain"  % "curve25519-java"   % "0.6.6"
   val nettyHandler    = nettyModule("handler")
 
   val playJson = "org.playframework" %% "play-json" % "3.0.6"
@@ -91,7 +91,7 @@ object Dependencies {
       "ch.obermuhlner"  % "big-math"   % "2.3.2",
       googleGuava, // BaseEncoding.base16()
       curve25519,
-      "io.decentralchain" % "groth16" % "0.2.1.dcc1",
+      "io.decentralchain" % "groth16" % "0.2.1.0",
       web3jModule("crypto").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
       protoSchemasLib % "protobuf"
     ) ++ cryptoProviders
@@ -108,7 +108,7 @@ object Dependencies {
     logback,
     "com.github.jnr" % "jnr-unixsocket" % "0.38.24", // To support Apple ARM
     "com.spotify"    % "docker-client"  % "8.16.0",
-    jacksonModule("dataformat", "dataformat-properties", "2.21.0"),
+    jacksonModule("dataformat", "dataformat-properties", "2.21.3"),
     asyncHttpClient
   ).map(_ % Test)
 
@@ -155,7 +155,7 @@ object Dependencies {
       "com.esaulpaugh"     % "headlong" % "13.3.1",
       "com.github.jbellis" % "jamm"     % "0.4.0", // Weighing caches
       web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
-      "com.wavesplatform"         % "blst-java"                    % "0.3.15",
+      "io.decentralchain"        % "blst"                      % "0.3.15.0",
       amazonCorretto("linux-x86_64") % Optional,
       amazonCorretto("linux-aarch_64") % Optional
     ) ++ console ++ logDeps ++ protobuf.value
