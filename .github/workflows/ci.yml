@@ -70,7 +70,7 @@ jobs:
             "repl/test" \
             "grpc-server/test" \
             "ride-runner/test"
-      - uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
+      - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
         if: always()
         with:
           report_paths: '**/target/test-reports/*.xml'
