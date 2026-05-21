@@ -20,7 +20,7 @@ Seq(
   "pl.project13.scala" % "sbt-jmh"                  % "0.4.8"
 ).map(addSbtPlugin)
 
-val dockerJavaVersion = "3.7.0"
+val dockerJavaVersion = "3.7.1"
 
 libraryDependencies ++= Seq(
   "com.fasterxml.jackson.module" %% "jackson-module-scala"              % "2.21.3",
