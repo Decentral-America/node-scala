@@ -171,7 +171,7 @@ lazy val `dcc-node` = (project in file("."))
 
 inScope(Global)(
   Seq(
-    scalaVersion         := "3.8.1",
+    scalaVersion         := "3.8.3",
     organization         := "io.decentralchain",
     organizationName     := "DecentralChain",
     organizationHomepage := Some(url("https://decentralchain.io")),
