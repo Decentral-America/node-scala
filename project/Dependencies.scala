@@ -34,7 +34,7 @@ object Dependencies {
   lazy val protoSchemasLib =
     "io.decentralchain" % "protobuf-schemas" % "1.6.2" classifier "protobuf-src" intransitive ()
 
-  private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.4.0"
+  private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.6.0"
 
   private def pekkoHttpModule(module: String, version: String = "1.3.0") = "org.apache.pekko" %% module % version
 
@@ -42,7 +42,7 @@ object Dependencies {
 
   private def jacksonModule(group: String, module: String, version: String = "2.21.3") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
-  private def web3jModule(module: String) = "org.web3j" % module % "4.13.0" // 4.14+ requires Java 21 https://github.com/LFDT-web3j/web3j/releases/tag/v4.14.0
+  private def web3jModule(module: String) = "org.web3j" % module % "5.0.2" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
