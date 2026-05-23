@@ -5,8 +5,8 @@ import com.decentralchain.TestValues
 import com.decentralchain.account.AddressScheme
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
-import com.wavesplatform.protobuf.order.AssetPair as PBAssetPair
-import com.wavesplatform.protobuf.transaction.{PBAmounts, PBOrder, PBOrders}
+import io.decentralchain.protobuf.order.AssetPair as PBAssetPair
+import io.decentralchain.protobuf.transaction.{PBAmounts, PBOrder, PBOrders}
 import com.decentralchain.test.FlatSpec
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.smart.Verifier

@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncHttpApi.AssertiveApiError
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.wavesplatform.protobuf.transaction.{DataTransactionData, PBTransactions}
+import io.decentralchain.protobuf.transaction.{DataTransactionData, PBTransactions}
 import com.decentralchain.state.DataEntry
 import com.decentralchain.test.*
 import com.decentralchain.transaction.assets.IssueTransaction

@@ -4,8 +4,8 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.decentralchain.db.WithDomain
 import FakeObserver.*
 import com.decentralchain.db.WithState.AddrWithBalance
-import com.wavesplatform.events.api.grpc.protobuf.{GetBlockUpdateResponse, GetBlockUpdatesRangeRequest, SubscribeRequest}
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.api.grpc.protobuf.{GetBlockUpdateResponse, GetBlockUpdatesRangeRequest, SubscribeRequest}
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
 import com.decentralchain.events.repo.LiquidState
 import com.decentralchain.history.Domain
 import com.decentralchain.settings.{Constants, DCCSettings}

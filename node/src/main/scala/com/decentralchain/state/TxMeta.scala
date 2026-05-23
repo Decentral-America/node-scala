@@ -1,6 +1,6 @@
 package com.decentralchain.state
 
-import com.wavesplatform.protobuf.snapshot.TransactionStatus as PBStatus
+import io.decentralchain.protobuf.snapshot.TransactionStatus as PBStatus
 import com.decentralchain.state.TxMeta.Status
 
 case class TxMeta(height: Height, status: Status, spentComplexity: Long)

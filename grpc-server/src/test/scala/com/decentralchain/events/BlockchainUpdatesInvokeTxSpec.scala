@@ -9,7 +9,7 @@ import com.decentralchain.events.fixtures.BlockchainUpdateGrpcMethod.*
 import com.decentralchain.events.fixtures.InvokeWavesTxCheckers.checkInvokeDoubleNestedBlockchainUpdates
 import com.decentralchain.events.fixtures.PrepareInvokeTestData.*
 import com.decentralchain.events.fixtures.WavesTxChecks.*
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, CONST_LONG, CONST_STRING, EXPR}
 import com.decentralchain.test.NumericExt
 import com.decentralchain.transaction.Asset.Waves

@@ -1,4 +1,4 @@
-package com.wavesplatform.protobuf
+package io.decentralchain.protobuf
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{Address, Alias, PublicKey}
@@ -6,9 +6,9 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.lang.script.ScriptReader
-import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
-import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot.NewAsset
-import com.wavesplatform.protobuf.transaction.{PBAmounts, PBTransactions}
+import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot
+import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot.NewAsset
+import io.decentralchain.protobuf.transaction.{PBAmounts, PBTransactions}
 import com.decentralchain.state.*
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.{Asset, TxPositiveAmount}
@@ -17,7 +17,7 @@ import scala.collection.immutable.VectorMap
 
 object PBSnapshots {
 
-  import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot as S
+  import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot as S
 
   def toProtobuf(snapshot: StateSnapshot, txStatus: TxMeta.Status): TransactionStateSnapshot = {
     import snapshot.*

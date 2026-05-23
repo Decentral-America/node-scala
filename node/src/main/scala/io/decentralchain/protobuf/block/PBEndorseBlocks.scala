@@ -1,8 +1,8 @@
-package com.wavesplatform.protobuf.block
+package io.decentralchain.protobuf.block
 
 import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.crypto.bls.BlsSignature
-import com.wavesplatform.protobuf.*
+import io.decentralchain.protobuf.*
 import com.decentralchain.state.{GeneratorIndex, Height}
 
 object PBEndorseBlocks {

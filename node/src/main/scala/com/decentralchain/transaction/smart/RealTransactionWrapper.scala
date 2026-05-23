@@ -7,7 +7,7 @@ import com.decentralchain.lang.directives.values.StdLibVersion
 import com.decentralchain.lang.v1.compiler.Terms.EVALUATED
 import com.decentralchain.lang.v1.traits.domain.Tx.{Header, Proven}
 import com.decentralchain.lang.v1.traits.domain.{Recipient as RideRecipient, *}
-import com.wavesplatform.protobuf.toByteStr
+import io.decentralchain.protobuf.toByteStr
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
 import com.decentralchain.transaction.assets.*

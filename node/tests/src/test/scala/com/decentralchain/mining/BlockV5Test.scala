@@ -11,7 +11,7 @@ import com.decentralchain.crypto.DigestLength
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.{chainBaseAndMicro, defaultSigner}
 import com.decentralchain.lagonaki.mocks.TestBlock
-import com.wavesplatform.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.block.PBBlocks
 import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings, DCCSettings}
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.state.{Blockchain, BlockchainUpdaterImpl, Height, NG, diffs}
@@ -94,11 +94,11 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
 
     withClue("preserve feature order") {
       val serialized1        = BlockSerializer.toBytes(blockWithBadVotes)
-      val deserialized1      = PBBlocks.vanilla(com.wavesplatform.protobuf.block.PBBlock.parseFrom(serialized1)).get
+      val deserialized1      = PBBlocks.vanilla(io.decentralchain.protobuf.block.PBBlock.parseFrom(serialized1)).get
       val serialized2        = PBBlocks.protobuf(blockWithBadVotes).toByteArray
-      val deserialized2      = PBBlocks.vanilla(com.wavesplatform.protobuf.block.PBBlock.parseFrom(serialized2)).get
+      val deserialized2      = PBBlocks.vanilla(io.decentralchain.protobuf.block.PBBlock.parseFrom(serialized2)).get
       val serializedHeader   = BlockHeaderSerializer.toBytes(blockWithBadVotes.header)
-      val deserializedHeader = PBBlocks.vanilla(com.wavesplatform.protobuf.block.PBBlockHeader.parseFrom(serializedHeader))
+      val deserializedHeader = PBBlocks.vanilla(io.decentralchain.protobuf.block.PBBlockHeader.parseFrom(serializedHeader))
       serialized1 shouldBe serialized2
       all(Seq(deserialized1, deserialized2)) should matchPattern {
         case b: Block if !b.signatureValid() => // Pass
@@ -109,11 +109,11 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
 
     withClue("signature valid") {
       val serialized1        = BlockSerializer.toBytes(block)
-      val deserialized1      = PBBlocks.vanilla(com.wavesplatform.protobuf.block.PBBlock.parseFrom(serialized1)).get
+      val deserialized1      = PBBlocks.vanilla(io.decentralchain.protobuf.block.PBBlock.parseFrom(serialized1)).get
       val serialized2        = PBBlocks.protobuf(block).toByteArray
-      val deserialized2      = PBBlocks.vanilla(com.wavesplatform.protobuf.block.PBBlock.parseFrom(serialized2)).get
+      val deserialized2      = PBBlocks.vanilla(io.decentralchain.protobuf.block.PBBlock.parseFrom(serialized2)).get
       val serializedHeader   = BlockHeaderSerializer.toBytes(block.header)
-      val deserializedHeader = PBBlocks.vanilla(com.wavesplatform.protobuf.block.PBBlockHeader.parseFrom(serializedHeader))
+      val deserializedHeader = PBBlocks.vanilla(io.decentralchain.protobuf.block.PBBlockHeader.parseFrom(serializedHeader))
       serialized1 shouldBe serialized2
       all(Seq(deserialized1, deserialized2)) should matchPattern {
         case b: Block if b.signatureValid() => // Pass

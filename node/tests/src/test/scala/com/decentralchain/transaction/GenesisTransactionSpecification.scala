@@ -3,7 +3,7 @@ package com.decentralchain.transaction
 import com.decentralchain.account.{KeyPair, PublicKey}
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.test.PropSpec
 import org.scalacheck.{Arbitrary, Gen}
 

@@ -10,7 +10,7 @@ import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuiteLike
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.wavesplatform.protobuf.transaction.PBRecipients
+import io.decentralchain.protobuf.transaction.PBRecipients
 import com.decentralchain.state.Sponsorship
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
