@@ -32,7 +32,7 @@ object Dependencies {
 
   // Node protobuf schemas
   lazy val protoSchemasLib =
-    "com.wavesplatform" % "protobuf-schemas" % "1.6.0" classifier "protobuf-src" intransitive ()
+    "io.decentralchain" % "protobuf-schemas" % "1.6.1" classifier "protobuf-src" intransitive ()
 
   private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.4.0"
 
@@ -91,7 +91,7 @@ object Dependencies {
       "ch.obermuhlner"  % "big-math"   % "2.3.2",
       googleGuava, // BaseEncoding.base16()
       curve25519,
-      "com.wavesplatform" % "zwaves" % "0.2.1",
+      "io.decentralchain" % "groth16" % "0.2.1.dcc1",
       web3jModule("crypto").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
       protoSchemasLib % "protobuf"
     ) ++ cryptoProviders
