@@ -136,7 +136,7 @@ object Dependencies {
       "commons-io"             % "commons-io"                % "2.21.0",
       "com.github.pureconfig" %% "pureconfig-core"           % "0.17.10",
       "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.10",
-      "net.logstash.logback"   % "logstash-logback-encoder"  % "9.0" % Runtime,
+      "net.logstash.logback"   % "logstash-logback-encoder"  % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
       kamonCore,
       kamonModule("pekko-http"),
       kamonModule("executors"),
@@ -188,7 +188,7 @@ object Dependencies {
     Seq(
       rocksdb,
       "com.github.ben-manes.caffeine" % "caffeine"                 % "3.2.3",
-      "net.logstash.logback"          % "logstash-logback-encoder" % "9.0" % Runtime,
+      "net.logstash.logback"          % "logstash-logback-encoder" % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
       kamonModule("caffeine"),
       kamonModule("prometheus"),
       sttp3,
