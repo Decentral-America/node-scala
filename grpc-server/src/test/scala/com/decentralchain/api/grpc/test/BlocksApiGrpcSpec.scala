@@ -3,7 +3,7 @@ package com.decentralchain.api.grpc.test
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.api.grpc.{BlocksApiGrpcImpl}
-import com.wavesplatform.api.grpc.{BlockRangeRequest, BlockRequest, BlockWithHeight}
+import io.decentralchain.api.grpc.{BlockRangeRequest, BlockRequest, BlockWithHeight}
 import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
@@ -12,9 +12,9 @@ import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.{Domain, defaultSigner}
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*

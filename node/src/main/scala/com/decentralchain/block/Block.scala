@@ -7,8 +7,8 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.crypto.*
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.settings.GenesisSettings
 import com.decentralchain.state.*
 import com.decentralchain.transaction.*

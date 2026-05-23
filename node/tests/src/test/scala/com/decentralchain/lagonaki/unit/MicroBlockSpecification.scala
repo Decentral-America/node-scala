@@ -9,9 +9,9 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
 import com.decentralchain.mining.Miner
-import com.wavesplatform.protobuf.block.{PBFinalizationVotings, PBMicroBlocks, SignedMicroBlock}
-import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions}
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.block.{PBFinalizationVotings, PBMicroBlocks, SignedMicroBlock}
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.state.{GeneratorIndex, GenesisBlockHeight, Height}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.*

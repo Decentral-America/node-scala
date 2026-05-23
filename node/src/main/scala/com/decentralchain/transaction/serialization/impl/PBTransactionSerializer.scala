@@ -1,8 +1,8 @@
 package com.decentralchain.transaction.serialization.impl
 
 import cats.syntax.applicativeError.*
-import com.wavesplatform.protobuf.transaction.{PBTransactions, SignedTransaction as PBSignedTransaction}
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.transaction.{PBTransactions, SignedTransaction as PBSignedTransaction}
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.transaction.{PBParsingError, Transaction}
 
 import scala.util.Try

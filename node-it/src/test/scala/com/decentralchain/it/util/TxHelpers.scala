@@ -7,10 +7,10 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.*
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.transaction.{MassTransferTransactionData, PBTransaction}
-import com.wavesplatform.protobuf.utils.PBImplicitConversions.*
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.{MassTransferTransactionData, PBTransaction}
+import io.decentralchain.protobuf.utils.PBImplicitConversions.*
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.Deser
 import com.decentralchain.transaction.transfer.MassTransferTransaction
 import com.decentralchain.transaction.{Asset, TxVersion}

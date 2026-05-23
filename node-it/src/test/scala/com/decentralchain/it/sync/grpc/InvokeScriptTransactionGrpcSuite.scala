@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.wavesplatform.protobuf.transaction.{DataEntry, PBRecipients, PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.{DataEntry, PBRecipients, PBTransactions, Recipient}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.script.ScriptCompiler

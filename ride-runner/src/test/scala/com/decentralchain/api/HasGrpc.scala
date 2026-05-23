@@ -1,9 +1,9 @@
 package com.decentralchain.api
 
 import cats.syntax.option.*
-import com.wavesplatform.events.api.grpc.protobuf.BlockchainUpdatesApiGrpc.BlockchainUpdatesApi
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.block.{Block, MicroBlock}
+import io.decentralchain.events.api.grpc.protobuf.BlockchainUpdatesApiGrpc.BlockchainUpdatesApi
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.{Block, MicroBlock}
 import com.decentralchain.state.Height
 import com.decentralchain.{BaseTestSuite, HasTestAccounts}
 import io.grpc.inprocess.{InProcessChannelBuilder, InProcessServerBuilder}

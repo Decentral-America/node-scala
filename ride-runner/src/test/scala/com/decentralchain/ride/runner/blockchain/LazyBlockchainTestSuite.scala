@@ -7,14 +7,14 @@ import com.decentralchain.account.PublicKeys.EmptyPublicKey
 import com.decentralchain.api.{HasGrpc, TestBlockchainApi}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.{BlockchainUpdated, StateUpdate}
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.{BlockchainUpdated, StateUpdate}
 import com.decentralchain.history.DefaultBlockchainSettings
 import com.decentralchain.lang.script.Script
-import com.wavesplatform.protobuf.block.{Block, MicroBlock, SignedMicroBlock}
-import com.wavesplatform.protobuf.transaction.PBAmounts.toPBAssetId
-import com.wavesplatform.protobuf.transaction.{CreateAliasTransactionData, SetScriptTransactionData, SignedTransaction, Transaction}
-import com.wavesplatform.protobuf.{Amount, toByteString}
+import io.decentralchain.protobuf.block.{Block, MicroBlock, SignedMicroBlock}
+import io.decentralchain.protobuf.transaction.PBAmounts.toPBAssetId
+import io.decentralchain.protobuf.transaction.{CreateAliasTransactionData, SetScriptTransactionData, SignedTransaction, Transaction}
+import io.decentralchain.protobuf.{Amount, toByteString}
 import com.decentralchain.ride.runner.caches.*
 import com.decentralchain.ride.runner.caches.disk.DefaultDiskCaches
 import com.decentralchain.ride.runner.caches.mem.{MemBlockchainDataCache, MemCacheKey}

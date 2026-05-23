@@ -10,11 +10,11 @@ import com.decentralchain.lang.v1.compiler.{Terms, Types}
 import com.decentralchain.lang.v1.evaluator.{IncompleteResult, ScriptResult, ScriptResultV3, ScriptResultV4}
 import com.decentralchain.lang.v1.serialization.SerdeV1
 import com.decentralchain.lang.v1.traits.domain.*
-import com.wavesplatform.protobuf.transaction.InvokeScriptResult.Call.Argument
-import com.wavesplatform.protobuf.transaction.InvokeScriptResult.Call.Argument.Value
-import com.wavesplatform.protobuf.transaction.{PBAmounts, PBRecipients, PBTransactions, InvokeScriptResult as PBInvokeScriptResult}
-import com.wavesplatform.protobuf.utils.PBUtils
-import com.wavesplatform.protobuf.{Amount, *}
+import io.decentralchain.protobuf.transaction.InvokeScriptResult.Call.Argument
+import io.decentralchain.protobuf.transaction.InvokeScriptResult.Call.Argument.Value
+import io.decentralchain.protobuf.transaction.{PBAmounts, PBRecipients, PBTransactions, InvokeScriptResult as PBInvokeScriptResult}
+import io.decentralchain.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.{Amount, *}
 import com.decentralchain.transaction.Asset
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
@@ -211,7 +211,7 @@ object InvokeScriptResult {
     }
   }
 
-  import com.wavesplatform.protobuf.transaction.InvokeScriptResult as PBISR
+  import io.decentralchain.protobuf.transaction.InvokeScriptResult as PBISR
 
   def rideExprToPB(arg: Terms.EXPR): PBISR.Call.Argument.Value = {
     import PBISR.Call.Argument.Value

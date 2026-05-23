@@ -4,11 +4,11 @@ import com.google.protobuf.ByteString
 import com.decentralchain.account.{Address, Alias}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
-import com.wavesplatform.events.protobuf.StateUpdate
-import com.wavesplatform.protobuf.transaction.PBAmounts.toAssetAndAmount
-import com.wavesplatform.protobuf.transaction.PBTransactions.{toVanillaDataEntry, toVanillaScript}
-import com.wavesplatform.protobuf.transaction.{CreateAliasTransactionData, Transaction}
-import com.wavesplatform.protobuf.{toAddress, toIssuedAsset, toPublicKey, transaction as pb}
+import io.decentralchain.events.protobuf.StateUpdate
+import io.decentralchain.protobuf.transaction.PBAmounts.toAssetAndAmount
+import io.decentralchain.protobuf.transaction.PBTransactions.{toVanillaDataEntry, toVanillaScript}
+import io.decentralchain.protobuf.transaction.{CreateAliasTransactionData, Transaction}
+import io.decentralchain.protobuf.{toAddress, toIssuedAsset, toPublicKey, transaction as pb}
 import com.decentralchain.ride.runner.caches.{WeighedAccountScriptInfo, WeighedAssetDescription}
 import com.decentralchain.state.{AssetDescription, AssetScriptInfo, DataEntry, Height, LeaseBalance, TransactionId}
 import com.decentralchain.transaction.Asset.IssuedAsset

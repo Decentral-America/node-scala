@@ -5,10 +5,10 @@ import com.decentralchain.api.grpc.*
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.database.{DBExt, DBResource}
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.block.PBBlock
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.PBBlock
 import com.decentralchain.state.Height
 import com.decentralchain.utils.ScorexLogging
 import monix.reactive.Observable

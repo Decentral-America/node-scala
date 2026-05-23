@@ -6,8 +6,8 @@ import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.v1.FunctionHeader.User
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_LONG, FUNCTION_CALL}
-import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions}
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.settings.Constants
 import com.decentralchain.state.Height
 import com.decentralchain.test.FreeSpec

@@ -7,8 +7,8 @@ import com.decentralchain.block.Block.{NgBlockVersion, ProtoBlockVersion, Reward
 import com.decentralchain.block.{Block, BlockHeader, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.SignatureLength
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.ByteBufferOps
 import com.decentralchain.state.{GeneratorIndex, Height}
 import com.decentralchain.transaction.Asset.Waves

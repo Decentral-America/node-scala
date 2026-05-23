@@ -10,7 +10,7 @@ import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.lang.v1.evaluator.ctx.impl.PureContext.*
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.test.PropSpec
 
 class ContractScriptComplexityV1V2Test extends PropSpec {

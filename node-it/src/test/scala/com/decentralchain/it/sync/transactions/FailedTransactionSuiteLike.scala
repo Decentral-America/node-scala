@@ -5,14 +5,14 @@ import scala.concurrent.duration.*
 import com.google.protobuf.ByteString
 import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.account.KeyPair
-import com.wavesplatform.api.grpc.{ApplicationStatus, TransactionsByIdRequest, TransactionStatus as PBTransactionStatus}
+import io.decentralchain.api.grpc.{ApplicationStatus, TransactionsByIdRequest, TransactionStatus as PBTransactionStatus}
 import com.decentralchain.api.http.ApiError.TransactionDoesNotExist
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.{Node, NodeConfigs}
 import com.decentralchain.it.api.TransactionStatus
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.{Asset, TxVersion}
 import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}

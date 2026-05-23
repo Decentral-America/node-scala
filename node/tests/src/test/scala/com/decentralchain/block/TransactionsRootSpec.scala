@@ -5,7 +5,7 @@ import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.TransactionProof
 import com.decentralchain.common.merkle.Merkle.*
 import com.decentralchain.crypto.Blake2b256
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.test.FreeSpec
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.Transaction

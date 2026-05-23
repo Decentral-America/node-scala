@@ -1,8 +1,8 @@
 package com.decentralchain.api
 
-import com.wavesplatform.events.protobuf.BlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.events.protobuf.BlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
 
 sealed abstract class UpdateType(name: String) {
   override val toString: String = name

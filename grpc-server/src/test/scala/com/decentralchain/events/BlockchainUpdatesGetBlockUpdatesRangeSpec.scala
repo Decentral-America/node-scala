@@ -2,7 +2,7 @@ package com.decentralchain.events
 
 import com.decentralchain.TestValues.fee
 import com.decentralchain.db.WithState.AddrWithBalance
-import com.wavesplatform.events.api.grpc.protobuf.GetBlockUpdatesRangeRequest
+import io.decentralchain.events.api.grpc.protobuf.GetBlockUpdatesRangeRequest
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
@@ -10,7 +10,7 @@ import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, TxHelpers, TxVersion}
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
 
 class BlockchainUpdatesGetBlockUpdatesRangeSpec extends BlockchainUpdatesTestBase {
   "BlockchainUpdates getBlockUpdateRange tests" - {

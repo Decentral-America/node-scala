@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_LONG, CONST_STRING, FUNC, FUNCTION_CALL, REF}
 import com.decentralchain.lang.v1.evaluator.FunctionIds
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxHelpers

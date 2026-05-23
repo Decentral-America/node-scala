@@ -1,8 +1,8 @@
-package com.wavesplatform.protobuf.utils
+package io.decentralchain.protobuf.utils
 
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.{Amount, *}
-import com.wavesplatform.protobuf.transaction.*
+import io.decentralchain.protobuf.{Amount, *}
+import io.decentralchain.protobuf.transaction.*
 import com.decentralchain.transaction.Asset
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 
