@@ -59,8 +59,9 @@
                 <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
                     <level>${logback.stdout.level:-INFO}</level>
                 </filter>
-                <encoder>
-                    <pattern>${logback.pattern:-${default.pattern}}</pattern>
+                <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                    <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</timestampPattern>
+                    <timeZone>UTC</timeZone>
                 </encoder>
             </appender>
             <root>
