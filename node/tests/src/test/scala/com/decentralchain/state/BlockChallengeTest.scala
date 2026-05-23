@@ -23,7 +23,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.mining.{BlockChallenger, BlockChallengerImpl}
 import com.decentralchain.network.MicroBlockSynchronizer.MicroblockData
 import com.decentralchain.network.{ExtensionBlocks, InvalidBlockStorage, MessageCodec, PBBlockSpec, PeerDatabase, RawBytes}
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.BlockRewardCalculator.BlockRewardShares
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult

@@ -6,18 +6,18 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
-import com.wavesplatform.events.api.grpc.protobuf.{GetBlockUpdatesRangeRequest, SubscribeRequest}
+import io.decentralchain.events.api.grpc.protobuf.{GetBlockUpdatesRangeRequest, SubscribeRequest}
 import com.decentralchain.events.fixtures.BlockchainUpdateGrpcMethod
 import com.decentralchain.events.fixtures.BlockchainUpdateGrpcMethod.{GetBlockUpdate, GetBlockUpdateRange, Subscribe}
 import com.decentralchain.events.fixtures.InvokeWavesTxCheckers.checkSimpleInvoke
 import com.decentralchain.events.fixtures.PrepareInvokeTestData.*
 import com.decentralchain.events.fixtures.WavesTxChecks.*
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.StateUpdate
-import com.wavesplatform.events.protobuf.TransactionMetadata.InvokeScriptMetadata
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.StateUpdate
+import io.decentralchain.events.protobuf.TransactionMetadata.InvokeScriptMetadata
 import com.decentralchain.lang.script.Script
-import com.wavesplatform.protobuf.transaction.PBAmounts.toVanillaAssetId
+import io.decentralchain.protobuf.transaction.PBAmounts.toVanillaAssetId
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.*
 import com.decentralchain.test.{FreeSpec, NumericExt}

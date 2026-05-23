@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{BLOCK, CONST_BOOLEAN, DECLARATION, EXPR, FUNC, FUNCTION_CALL, LET, REF}
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.TxHelpers.{defaultSigner, setScript}

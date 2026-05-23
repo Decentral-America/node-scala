@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.transfer.MassTransferTransaction

@@ -3,9 +3,9 @@ package com.decentralchain.api
 import com.google.common.primitives.Ints
 import com.google.protobuf.{ByteString, UnsafeByteOperations}
 import com.decentralchain.account.Address
-import com.wavesplatform.events.protobuf.StateUpdate
-import com.wavesplatform.protobuf.toByteString
-import com.wavesplatform.protobuf.transaction.DataEntry
+import io.decentralchain.events.protobuf.StateUpdate
+import io.decentralchain.protobuf.toByteString
+import io.decentralchain.protobuf.transaction.DataEntry
 
 trait CommonGrpcConverters {
   def toByteString32(xs: Int*): ByteString = {

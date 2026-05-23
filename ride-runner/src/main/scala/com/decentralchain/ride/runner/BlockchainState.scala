@@ -3,10 +3,10 @@ package com.decentralchain.ride.runner
 import com.decentralchain.api.BlockchainApi.BlockchainUpdatesStream
 import com.decentralchain.api.UpdateType
 import com.decentralchain.events.WrappedEvent
-import com.wavesplatform.events.api.grpc.protobuf.SubscribeEvent
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
-import com.wavesplatform.protobuf.toByteStr
+import io.decentralchain.events.api.grpc.protobuf.SubscribeEvent
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.protobuf.toByteStr
 import com.decentralchain.ride.runner.stats.RideRunnerStats
 import com.decentralchain.state.Height
 import com.decentralchain.utils.ScorexLogging

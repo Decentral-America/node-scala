@@ -2,7 +2,7 @@ package com.decentralchain.events
 
 import com.decentralchain.block.{Block, MicroBlock}
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.events.api.grpc.protobuf.BlockchainUpdatesApiGrpc
+import io.decentralchain.events.api.grpc.protobuf.BlockchainUpdatesApiGrpc
 import com.decentralchain.events.settings.BlockchainUpdatesSettings
 import com.decentralchain.extensions.{Context, Extension}
 import com.decentralchain.state.{Blockchain, Height, StateSnapshot}

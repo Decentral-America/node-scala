@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.ContractLimits
 import com.decentralchain.lang.v1.compiler.Terms.{DECLARATION, FUNC}
 import com.decentralchain.lang.v1.serialization.Serde.DEC_FUNC
 import com.decentralchain.lang.v1.serialization.SerdeV2
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import monix.eval.Coeval
 
 import java.io.ByteArrayOutputStream

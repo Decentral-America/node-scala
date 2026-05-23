@@ -1,11 +1,11 @@
 package com.decentralchain.events
 
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.events.api.grpc.protobuf.{SubscribeEvent, SubscribeRequest}
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Rollback.RollbackType
+import io.decentralchain.events.api.grpc.protobuf.{SubscribeEvent, SubscribeRequest}
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Rollback.RollbackType
 import com.decentralchain.events.protobuf.serde.BlockchainUpdatedVanilla
-import com.wavesplatform.protobuf.toByteStr
+import io.decentralchain.protobuf.toByteStr
 import com.decentralchain.state.Blockchain
 import com.decentralchain.utils.Schedulers
 import io.grpc.stub.{CallStreamObserver, StreamObserver}

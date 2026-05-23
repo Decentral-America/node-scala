@@ -6,7 +6,7 @@ import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.lang.script.Script
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.test.*
 import com.decentralchain.transaction.assets.IssueTransaction
 import io.grpc.Status.Code

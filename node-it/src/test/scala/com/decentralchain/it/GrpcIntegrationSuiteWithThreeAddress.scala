@@ -4,7 +4,7 @@ import com.google.protobuf.ByteString
 import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
-import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions, Recipient}
 import com.decentralchain.test.NumericExt
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.utils.ScorexLogging

@@ -1,9 +1,9 @@
 package com.decentralchain
 
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.BlockchainUpdated.{Append, Update}
-import com.wavesplatform.protobuf.transaction.SignedTransaction
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.BlockchainUpdated.{Append, Update}
+import io.decentralchain.protobuf.transaction.SignedTransaction
 import org.scalactic.source.Position
 import org.scalatest.OptionValues.*
 import org.scalatest.matchers.should.Matchers

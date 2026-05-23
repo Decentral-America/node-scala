@@ -4,8 +4,8 @@ import com.google.protobuf.ByteString
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
-import com.wavesplatform.protobuf.transaction.MassTransferTransactionData.Transfer
-import com.wavesplatform.protobuf.transaction.{PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.MassTransferTransactionData.Transfer
+import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
 import com.decentralchain.transaction.transfer.MassTransferTransaction.MaxTransferCount
 import com.decentralchain.transaction.transfer.TransferTransaction.MaxAttachmentSize
 import io.grpc.Status.Code

@@ -7,9 +7,9 @@ import com.google.protobuf.ByteString
 import com.decentralchain.lang.v1.evaluator.ctx.impl.EnvironmentFunctions
 import com.decentralchain.lang.v1.traits.domain.Recipient.{Address, Alias}
 import com.decentralchain.lang.v1.traits.domain.Recipient as LangRecipient
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.transaction.*
-import com.wavesplatform.protobuf.transaction.Transaction.Data
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.*
+import io.decentralchain.protobuf.transaction.Transaction.Data
 
 object TransferTxSerializer {
   import ByteString.copyFrom as bs

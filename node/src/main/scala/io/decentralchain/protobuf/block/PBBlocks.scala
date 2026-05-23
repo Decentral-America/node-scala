@@ -1,14 +1,14 @@
-package com.wavesplatform.protobuf.block
+package io.decentralchain.protobuf.block
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.AddressScheme
 import com.decentralchain.block.{BlockHeader, ChallengedHeader}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
-import com.wavesplatform.protobuf.block.Block.Header as PBHeader
-import com.wavesplatform.protobuf.transaction.PBTransactions
-import com.wavesplatform.protobuf.transaction.SignedTransaction.Transaction
-import com.wavesplatform.protobuf.{toByteStr, toByteString, toPublicKey}
+import io.decentralchain.protobuf.block.Block.Header as PBHeader
+import io.decentralchain.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.SignedTransaction.Transaction
+import io.decentralchain.protobuf.{toByteStr, toByteString, toPublicKey}
 
 import scala.util.Try
 

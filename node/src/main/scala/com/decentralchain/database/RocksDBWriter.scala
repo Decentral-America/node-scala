@@ -20,9 +20,9 @@ import com.decentralchain.database.patch.DisableHijackedAliases
 import com.decentralchain.database.protobuf.{BlockMetaExt, StaticAssetInfo, TransactionMeta, BlockMeta as PBBlockMeta}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.snapshot.TransactionStatus as PBStatus
-import com.wavesplatform.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.snapshot.TransactionStatus as PBStatus
+import io.decentralchain.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
 import com.decentralchain.settings.{BlockchainSettings, DBSettings}
 import com.decentralchain.state.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

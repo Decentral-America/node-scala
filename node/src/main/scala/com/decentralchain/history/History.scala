@@ -4,8 +4,8 @@ import com.decentralchain.block.{Block, MicroBlock}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.database
 import com.decentralchain.database.RDB
-import com.wavesplatform.protobuf.PBSnapshots
-import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
+import io.decentralchain.protobuf.PBSnapshots
+import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot
 import com.decentralchain.state.{Blockchain, Height, StateSnapshot}
 
 trait History {

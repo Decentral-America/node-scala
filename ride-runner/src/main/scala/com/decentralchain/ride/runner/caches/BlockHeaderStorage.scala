@@ -4,11 +4,11 @@ import com.decentralchain.api.BlockchainApi
 import com.decentralchain.block.SignedBlockHeader
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.events.protobuf.BlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
-import com.wavesplatform.protobuf.toByteStr
-import com.wavesplatform.protobuf.block.PBBlocks
+import io.decentralchain.events.protobuf.BlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.protobuf.toByteStr
+import io.decentralchain.protobuf.block.PBBlocks
 import com.decentralchain.ride.runner.caches.BlockHeaderStorage.BlockInfo
 import com.decentralchain.ride.runner.caches.disk.BlockDiskCache
 import com.decentralchain.ride.runner.db.{ReadOnly, ReadWrite}

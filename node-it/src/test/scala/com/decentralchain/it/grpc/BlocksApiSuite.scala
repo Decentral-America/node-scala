@@ -3,12 +3,12 @@ package com.decentralchain.it.grpc
 import com.google.common.primitives.Ints
 import com.typesafe.config.Config
 import com.decentralchain.account.{AddressScheme, PublicKey}
-import com.wavesplatform.api.grpc.{BlockRangeRequest, BlockRequest, BlocksApiGrpc}
+import io.decentralchain.api.grpc.{BlockRangeRequest, BlockRequest, BlocksApiGrpc}
 import com.decentralchain.it.NodeConfigs
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuite
-import com.wavesplatform.protobuf.block.*
-import com.wavesplatform.protobuf.transaction.PBRecipients
+import io.decentralchain.protobuf.block.*
+import io.decentralchain.protobuf.transaction.PBRecipients
 
 class BlocksApiSuite extends GrpcBaseTransactionSuite {
   private val BlockV4Height = 3

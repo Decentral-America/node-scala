@@ -9,12 +9,12 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
 import com.decentralchain.events.StateUpdate.{AssetStateUpdate, BalanceUpdate, DataEntryUpdate, LeaseUpdate, LeasingBalanceUpdate, ScriptUpdate}
-import com.wavesplatform.events.protobuf.TransactionMetadata
-import com.wavesplatform.events.protobuf.TransactionMetadata.EthereumMetadata
+import io.decentralchain.events.protobuf.TransactionMetadata
+import io.decentralchain.events.protobuf.TransactionMetadata.EthereumMetadata
 import com.decentralchain.lang.v1.compiler.Terms
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.transaction.InvokeScriptResult.Call.Argument
-import com.wavesplatform.protobuf.transaction.{PBAmounts, PBTransactions, InvokeScriptResult as PBInvokeScriptResult}
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.transaction.InvokeScriptResult.Call.Argument
+import io.decentralchain.protobuf.transaction.{PBAmounts, PBTransactions, InvokeScriptResult as PBInvokeScriptResult}
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
 import com.decentralchain.transaction.Asset.IssuedAsset
@@ -54,7 +54,7 @@ object StateUpdate {
   }
 
   object BalanceUpdate {
-    import com.wavesplatform.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
+    import io.decentralchain.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
 
     def fromPB(v: PBBalanceUpdate): BalanceUpdate = {
       val (asset, after) = PBAmounts.toAssetAndAmount(v.getAmountAfter)
@@ -76,7 +76,7 @@ object StateUpdate {
   }
 
   object DataEntryUpdate {
-    import com.wavesplatform.events.protobuf.StateUpdate.DataEntryUpdate as PBDataEntryUpdate
+    import io.decentralchain.events.protobuf.StateUpdate.DataEntryUpdate as PBDataEntryUpdate
 
     def fromPB(v: PBDataEntryUpdate): DataEntryUpdate = {
       DataEntryUpdate(
@@ -100,7 +100,7 @@ object StateUpdate {
   }
 
   object LeasingBalanceUpdate {
-    import com.wavesplatform.events.protobuf.StateUpdate.LeasingUpdate as PBLeasingUpdate
+    import io.decentralchain.events.protobuf.StateUpdate.LeasingUpdate as PBLeasingUpdate
 
     def fromPB(v: PBLeasingUpdate): LeasingBalanceUpdate = {
       LeasingBalanceUpdate(
@@ -143,8 +143,8 @@ object StateUpdate {
       case object Inactive extends LeaseStatus
     }
 
-    import com.wavesplatform.events.protobuf.StateUpdate.LeaseUpdate as PBLeaseUpdate
-    import com.wavesplatform.events.protobuf.StateUpdate.LeaseUpdate.LeaseStatus as PBLeaseStatus
+    import io.decentralchain.events.protobuf.StateUpdate.LeaseUpdate as PBLeaseUpdate
+    import io.decentralchain.events.protobuf.StateUpdate.LeaseUpdate.LeaseStatus as PBLeaseStatus
 
     def fromPB(v: PBLeaseUpdate): LeaseUpdate = {
       LeaseUpdate(
@@ -188,8 +188,8 @@ object StateUpdate {
   object AssetStateUpdate {
     final case class AssetDetails(assetId: ByteStr, desc: AssetDescription)
 
-    import com.wavesplatform.events.protobuf.StateUpdate.AssetDetails.AssetScriptInfo as PBAssetScriptInfo
-    import com.wavesplatform.events.protobuf.StateUpdate.{AssetDetails as PBAssetDetails, AssetStateUpdate as PBAssetStateUpdate}
+    import io.decentralchain.events.protobuf.StateUpdate.AssetDetails.AssetScriptInfo as PBAssetScriptInfo
+    import io.decentralchain.events.protobuf.StateUpdate.{AssetDetails as PBAssetDetails, AssetStateUpdate as PBAssetStateUpdate}
 
     def fromPB(self: PBAssetStateUpdate): AssetStateUpdate = {
 
@@ -261,7 +261,7 @@ object StateUpdate {
 
   final case class AssetInfo(id: ByteStr, decimals: Int, name: String)
   object AssetInfo {
-    import com.wavesplatform.events.protobuf.StateUpdate.AssetInfo as PBAssetInfo
+    import io.decentralchain.events.protobuf.StateUpdate.AssetInfo as PBAssetInfo
 
     def toPB(ai: AssetInfo): PBAssetInfo = PBAssetInfo(
       ai.id.toByteString,
@@ -282,7 +282,7 @@ object StateUpdate {
   }
 
   object ScriptUpdate {
-    import com.wavesplatform.events.protobuf.StateUpdate.ScriptUpdate as PBScriptUpdate
+    import io.decentralchain.events.protobuf.StateUpdate.ScriptUpdate as PBScriptUpdate
 
     def toPB(su: ScriptUpdate): PBScriptUpdate =
       PBScriptUpdate(su.dApp.toByteString, su.before.fold(ByteString.EMPTY)(_.toByteString), su.after.fold(ByteString.EMPTY)(_.toByteString))
@@ -295,7 +295,7 @@ object StateUpdate {
       )
   }
 
-  import com.wavesplatform.events.protobuf.StateUpdate as PBStateUpdate
+  import io.decentralchain.events.protobuf.StateUpdate as PBStateUpdate
 
   def fromPB(v: PBStateUpdate): StateUpdate = {
     StateUpdate(

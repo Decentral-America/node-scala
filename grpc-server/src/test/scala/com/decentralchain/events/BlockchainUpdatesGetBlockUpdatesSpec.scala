@@ -2,7 +2,7 @@ package com.decentralchain.events
 
 import com.decentralchain.TestValues.fee
 import com.decentralchain.db.WithState.AddrWithBalance
-import com.wavesplatform.events.api.grpc.protobuf.GetBlockUpdateResponse
+import io.decentralchain.events.api.grpc.protobuf.GetBlockUpdateResponse
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
