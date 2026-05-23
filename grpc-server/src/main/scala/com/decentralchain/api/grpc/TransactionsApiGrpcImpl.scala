@@ -1,12 +1,12 @@
 package com.decentralchain.api.grpc
-import com.wavesplatform.api.grpc.*
+import io.decentralchain.api.grpc.*
 
 import com.decentralchain.account.AddressScheme
 import com.decentralchain.api.common.{CommonTransactionsApi, TransactionMeta}
 import com.decentralchain.api.grpc.TransactionsApiGrpcImpl.applicationStatusFromTxStatus
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.transaction.*
-import com.wavesplatform.protobuf.utils.PBImplicitConversions.PBRecipientImplicitConversionOps
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.transaction.*
+import io.decentralchain.protobuf.utils.PBImplicitConversions.PBRecipientImplicitConversionOps
 import com.decentralchain.state.{Blockchain, TxMeta, InvokeScriptResult as VISR}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.{Authorized, EthereumTransaction}

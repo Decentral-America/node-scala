@@ -7,8 +7,8 @@ import com.decentralchain.lang.contract.DApp.*
 import com.decentralchain.lang.contract.serialization.{ContractSerDe, ContractSerDeV1, ContractSerDeV2}
 import com.decentralchain.lang.v1.ContractLimits
 import com.decentralchain.lang.v1.compiler.Terms.*
-import com.wavesplatform.protobuf.dapp.DAppMeta
-import com.wavesplatform.protobuf.dapp.DAppMeta.CallableFuncSignature
+import io.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta.CallableFuncSignature
 import com.decentralchain.test.*
 import org.scalatest.Assertion
 

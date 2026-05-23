@@ -1,15 +1,15 @@
 package com.decentralchain.api.grpc
-import com.wavesplatform.api.grpc.*
+import io.decentralchain.api.grpc.*
 
 import com.google.protobuf.ByteString
 import com.google.protobuf.empty.Empty
 import com.decentralchain.api.BlockMeta
 import com.decentralchain.api.common.CommonBlocksApi
-import com.wavesplatform.api.grpc.BlockRangeRequest.Filter
-import com.wavesplatform.api.grpc.BlockRequest.Request
+import io.decentralchain.api.grpc.BlockRangeRequest.Filter
+import io.decentralchain.api.grpc.BlockRequest.Request
 import com.decentralchain.api.http.ApiError.BlockDoesNotExist
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.block.PBBlock
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.PBBlock
 import com.decentralchain.state.{Height, TxMeta}
 import com.decentralchain.transaction.Transaction
 import io.grpc.stub.StreamObserver

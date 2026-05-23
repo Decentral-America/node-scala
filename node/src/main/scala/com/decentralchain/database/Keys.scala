@@ -6,7 +6,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.database.protobuf.{EthereumTransactionMeta, StaticAssetInfo, TransactionMeta, BlockMeta as PBBlockMeta}
-import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
+import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot
 import com.decentralchain.state.*
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.{ERC20Address, Transaction}

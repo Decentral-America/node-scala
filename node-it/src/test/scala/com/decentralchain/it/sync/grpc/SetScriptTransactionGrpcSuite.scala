@@ -10,8 +10,8 @@ import com.decentralchain.it.sync.smartcontract.setScrTxSupportedVersions
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.transaction.{
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.{
   PBTransactions,
   Recipient,
   SetScriptTransactionData,

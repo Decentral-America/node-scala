@@ -3,7 +3,7 @@ package com.decentralchain.api.grpc.test
 import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
 import com.decentralchain.api.grpc.{TransactionsApiGrpcImpl}
-import com.wavesplatform.api.grpc.{
+import io.decentralchain.api.grpc.{
   ApplicationStatus,
   TransactionResponse,
   TransactionSnapshotResponse,
@@ -17,8 +17,8 @@ import com.decentralchain.crypto.DigestLength
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
-import com.wavesplatform.protobuf.transaction.{PBTransactions, Recipient}
-import com.wavesplatform.protobuf.{PBSnapshots, toByteString}
+import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
+import io.decentralchain.protobuf.{PBSnapshots, toByteString}
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{StateSnapshot, TxMeta, Height}
 import com.decentralchain.test.*

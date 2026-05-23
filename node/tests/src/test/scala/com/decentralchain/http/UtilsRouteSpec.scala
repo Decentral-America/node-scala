@@ -20,8 +20,8 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.lang.v1.evaluator.ctx.impl.PureContext
 import com.decentralchain.lang.{Global, contract}
-import com.wavesplatform.protobuf.dapp.DAppMeta
-import com.wavesplatform.protobuf.dapp.DAppMeta.CallableFuncSignature
+import io.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta.CallableFuncSignature
 import com.decentralchain.settings.{BlockchainSettings, TestSettings}
 import com.decentralchain.state.Height
 import com.decentralchain.state.diffs.FeeValidation

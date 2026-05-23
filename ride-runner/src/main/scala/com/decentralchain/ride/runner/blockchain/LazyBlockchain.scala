@@ -8,16 +8,16 @@ import com.decentralchain.block.SignedBlockHeader
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.bls.BlsPublicKey
-import com.wavesplatform.events.protobuf.BlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.events.protobuf.BlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.lang.script.Script
-import com.wavesplatform.protobuf.{toPublicKey, toAddress}
-import com.wavesplatform.protobuf.transaction.PBTransactions.toVanillaScript
-import com.wavesplatform.protobuf.transaction.SignedTransaction.Transaction
-import com.wavesplatform.protobuf.transaction.Transaction.Data
+import io.decentralchain.protobuf.{toPublicKey, toAddress}
+import io.decentralchain.protobuf.transaction.PBTransactions.toVanillaScript
+import io.decentralchain.protobuf.transaction.SignedTransaction.Transaction
+import io.decentralchain.protobuf.transaction.Transaction.Data
 import com.decentralchain.ride.runner.caches.*
 import com.decentralchain.ride.runner.caches.disk.DiskCaches
 import com.decentralchain.ride.runner.caches.mem.{GrpcCacheKeyConverters, MemBlockchainDataCache, MemCacheKey, MemCacheWeights}

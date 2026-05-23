@@ -5,10 +5,10 @@ import com.decentralchain.block.Block.protoHeaderHash
 import com.decentralchain.block.serialization.BlockHeaderSerializer
 import com.decentralchain.block.{Block, BlockHeader, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.block.PBBlocks
 import monix.eval.Coeval
 import play.api.libs.json.{JsObject, Json}
-import com.wavesplatform.protobuf.toByteStr
+import io.decentralchain.protobuf.toByteStr
 
 case class BlockMeta(
     header: BlockHeader,

@@ -1,14 +1,14 @@
-package com.wavesplatform.protobuf.transaction
+package io.decentralchain.protobuf.transaction
 
 import com.google.protobuf.ByteString
-import com.wavesplatform.protobuf.*
+import io.decentralchain.protobuf.*
 import com.decentralchain.transaction.Asset
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 
 object PBAmounts {
   def toPBAssetId(asset: Asset): ByteString = asset match {
     case Asset.IssuedAsset(id) => id.toByteString
-    case Asset.Waves           => ByteString.EMPTY
+    case Asset.Waves             => ByteString.EMPTY
   }
 
   def toVanillaAssetId(byteStr: ByteString): Asset = {

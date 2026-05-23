@@ -6,8 +6,8 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.transaction.{PBTransactions, Recipient}
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import io.grpc.Status.Code
 

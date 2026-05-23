@@ -20,7 +20,7 @@ object BlsUtils {
 
   def signBasic(sk: blst.SecretKey, message: Array[Byte]): Array[Byte] =
     new blst.P2()
-      .hash_to(message, BlsDomainSeparationTag)
+      .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
       .sign_with(sk)
       .compress()
 
@@ -30,7 +30,7 @@ object BlsUtils {
     if (!pk.in_group()) throw new java.lang.RuntimeException("Not in group")
 
     val ctx = new blst.Pairing(true, BlsDomainSeparationTag)
-    ctx.aggregate(pk, sig, message)
+    ctx.aggregate(pk, sig, message, Array.emptyByteArray)
     ctx.commit()
     ctx.finalverify()
   } catch {
@@ -48,7 +48,7 @@ object BlsUtils {
   def verifyAgg(aggSig: Array[Byte], message: Array[Byte], blsPks: Iterable[Array[Byte]]): Either[String, Boolean] = try {
     val aggPk     = blsPks.map(new blst.P1(_)).reduceLeft(_.add(_))
     val ctx       = new blst.Pairing(true, BlsDomainSeparationTag)
-    val aggResult = ctx.aggregate(new blst.P1_Affine(aggPk), new blst.P2_Affine(aggSig), message)
+    val aggResult = ctx.aggregate(new blst.P1_Affine(aggPk), new blst.P2_Affine(aggSig), message, Array.emptyByteArray)
     if (aggResult != BLST_ERROR.BLST_SUCCESS) Left(s"Can't aggregate during verification of BLS signature: $aggResult")
     else {
       ctx.commit()

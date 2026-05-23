@@ -2,7 +2,7 @@ package com.decentralchain.it.asset
 
 import com.google.protobuf.ByteString
 import com.typesafe.config.Config
-import com.wavesplatform.api.grpc.LeaseResponse
+import io.decentralchain.api.grpc.LeaseResponse
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
@@ -17,7 +17,7 @@ import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.lang.v1.traits.domain.Lease
 import com.decentralchain.lang.v1.traits.domain.Recipient.Address
-import com.wavesplatform.protobuf.transaction.Recipient
+import io.decentralchain.protobuf.transaction.Recipient
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.script.ScriptCompiler

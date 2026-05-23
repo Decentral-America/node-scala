@@ -1,11 +1,11 @@
 package com.decentralchain.api.grpc
-import com.wavesplatform.api.grpc.*
+import io.decentralchain.api.grpc.*
 
 import com.decentralchain.account.Address
 import com.decentralchain.api.common.{CommonAccountsApi, CommonAssetsApi}
 import com.decentralchain.api.http.ApiError.TransactionDoesNotExist
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.{AssetDescription, AssetScriptInfo}
 import com.decentralchain.transaction.Asset.IssuedAsset
 import io.grpc.stub.StreamObserver

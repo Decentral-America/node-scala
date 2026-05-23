@@ -8,8 +8,8 @@ import com.decentralchain.database.{KeyTag, RDB, createBlock, readBlockMeta, rea
 import com.decentralchain.events.BlockchainUpdateTriggers
 import com.decentralchain.history.StorageFactory
 import com.decentralchain.metrics.Metrics
-import com.wavesplatform.protobuf.toByteStr
-import com.wavesplatform.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.toByteStr
+import io.decentralchain.protobuf.block.PBBlocks
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.utils.*

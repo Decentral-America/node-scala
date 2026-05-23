@@ -10,10 +10,10 @@ import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.common.utils.EitherExt2.explicitGet
 import com.decentralchain.database.protobuf.{StaticAssetInfo, BlockMeta as PBBlockMeta}
 import com.decentralchain.database.{protobuf as pb, *}
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.snapshot.TransactionStatus as PBStatus
-import com.wavesplatform.protobuf.transaction.PBTransactions
-import com.wavesplatform.protobuf.{toByteStr, toByteString, toPublicKey}
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.snapshot.TransactionStatus as PBStatus
+import io.decentralchain.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.{toByteStr, toByteString, toPublicKey}
 import com.decentralchain.ride.runner.caches.disk.AsBytes.*
 import com.decentralchain.ride.runner.caches.disk.syntax.*
 import com.decentralchain.ride.runner.caches.{WeighedAccountScriptInfo, WeighedAssetDescription}

@@ -21,8 +21,8 @@ import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.parser.Parser.LibrariesOffset.NoLibraries
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.lang.v1.{ContractLimits, compiler}
-import com.wavesplatform.protobuf.dapp.DAppMeta
-import com.wavesplatform.protobuf.dapp.DAppMeta.CallableFuncSignature
+import io.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta.CallableFuncSignature
 import com.decentralchain.test.*
 import org.scalatest.Assertion
 
