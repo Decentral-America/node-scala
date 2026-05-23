@@ -7,7 +7,7 @@ import com.decentralchain.block.Block.{TransactionProof, TransactionsMerkleTree}
 import com.decentralchain.block.validation.Validators.*
 import com.decentralchain.common.merkle.Merkle.*
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.settings.GenesisSettings
 import com.decentralchain.transaction.Transaction
 

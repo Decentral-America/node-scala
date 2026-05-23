@@ -10,8 +10,8 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.database.protobuf.{BlockMetaExt, BlockMeta as PBBlockMeta}
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.toByteStr
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.toByteStr
 import com.decentralchain.settings.DBSettings
 import com.decentralchain.state.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

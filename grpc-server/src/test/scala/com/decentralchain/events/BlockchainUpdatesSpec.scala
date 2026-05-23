@@ -20,12 +20,12 @@ import com.decentralchain.events.StateUpdate.{
   LeasingBalanceUpdate,
   ScriptUpdate
 }
-import com.wavesplatform.events.api.grpc.protobuf.{GetBlockUpdateRequest, GetBlockUpdatesRangeRequest, SubscribeRequest}
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Rollback.RollbackType
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
-import com.wavesplatform.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
+import io.decentralchain.events.api.grpc.protobuf.{GetBlockUpdateRequest, GetBlockUpdatesRangeRequest, SubscribeRequest}
+import io.decentralchain.events.protobuf.BlockchainUpdated.Rollback.RollbackType
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
 import com.decentralchain.events.protobuf.serde.*
-import com.wavesplatform.events.protobuf.{TransactionMetadata, BlockchainUpdated as PBBlockchainUpdated, StateUpdate as PBStateUpdate}
+import io.decentralchain.events.protobuf.{TransactionMetadata, BlockchainUpdated as PBBlockchainUpdated, StateUpdate as PBStateUpdate}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.BlockchainFeatures.BlockReward
 import com.decentralchain.history.Domain
@@ -33,10 +33,10 @@ import com.decentralchain.lang.directives.values.{V5, V6}
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.transaction.InvokeScriptResult.{Call, Invocation, Payment}
-import com.wavesplatform.protobuf.transaction.{DataEntry, InvokeScriptResult}
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.transaction.InvokeScriptResult.{Call, Invocation, Payment}
+import io.decentralchain.protobuf.transaction.{DataEntry, InvokeScriptResult}
 import com.decentralchain.settings.{Constants, DCCSettings}
 import com.decentralchain.state.{AssetDescription, BlockRewardCalculator, EmptyDataEntry, Height, LeaseBalance, StringDataEntry, TransactionId}
 import com.decentralchain.test.*

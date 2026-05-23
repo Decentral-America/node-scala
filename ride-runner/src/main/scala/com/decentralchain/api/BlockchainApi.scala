@@ -2,10 +2,10 @@ package com.decentralchain.api
 
 import com.decentralchain.account.{Address, Alias, PublicKey}
 import com.decentralchain.api.BlockchainApi.*
-import com.wavesplatform.api.grpc.BalanceResponse.WavesBalances
+import io.decentralchain.api.grpc.BalanceResponse.WavesBalances
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.events.WrappedEvent
-import com.wavesplatform.events.api.grpc.protobuf.SubscribeEvent
+import io.decentralchain.events.api.grpc.protobuf.SubscribeEvent
 import com.decentralchain.lang.script.Script
 import com.decentralchain.state.{AssetDescription, DataEntry, Height, TransactionId}
 import com.decentralchain.transaction.Asset

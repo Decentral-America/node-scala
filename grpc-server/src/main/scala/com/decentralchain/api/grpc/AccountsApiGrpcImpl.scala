@@ -1,13 +1,13 @@
 package com.decentralchain.api.grpc
-import com.wavesplatform.api.grpc.*
+import io.decentralchain.api.grpc.*
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{Address, Alias}
 import com.decentralchain.api.common.{CommonAccountsApi, LeaseInfo}
 import com.decentralchain.api.http.ApiError.CustomValidationError
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions}
-import com.wavesplatform.protobuf.utils.PBImplicitConversions.fromAssetIdAndAmount
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
+import io.decentralchain.protobuf.utils.PBImplicitConversions.fromAssetIdAndAmount
 import com.decentralchain.transaction.Asset
 import io.grpc.stub.StreamObserver
 import monix.execution.Scheduler

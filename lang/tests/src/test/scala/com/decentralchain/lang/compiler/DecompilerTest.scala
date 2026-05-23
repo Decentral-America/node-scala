@@ -20,7 +20,7 @@ import com.decentralchain.lang.v1.parser.BinaryOperation.NE_OP
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.lang.v1.{CTX, FunctionHeader, compiler}
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.test.{PropSpec, produce}
 import org.scalatest.Assertion
 

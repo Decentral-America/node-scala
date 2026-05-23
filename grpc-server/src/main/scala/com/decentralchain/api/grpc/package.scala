@@ -5,8 +5,8 @@ import com.decentralchain.account.{Address, AddressOrAlias}
 import com.decentralchain.api.http.ApiError
 import com.decentralchain.block as vb
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.block.{PBBlock, PBBlocks}
-import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions, VanillaTransaction}
+import io.decentralchain.protobuf.block.{PBBlock, PBBlocks}
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions, VanillaTransaction}
 import com.decentralchain.state.Blockchain
 import io.grpc.stub.{ServerCallStreamObserver, StreamObserver}
 import monix.execution.atomic.AtomicAny

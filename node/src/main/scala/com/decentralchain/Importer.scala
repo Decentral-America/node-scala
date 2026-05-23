@@ -17,8 +17,8 @@ import com.decentralchain.history.StorageFactory
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.mining.Miner
 import com.decentralchain.network.BlockSnapshotResponse
-import com.wavesplatform.protobuf.block.{PBBlocks, VanillaBlock}
-import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
+import io.decentralchain.protobuf.block.{PBBlocks, VanillaBlock}
+import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.decentralchain.state.ParSignatureChecker.sigverify
@@ -251,7 +251,7 @@ object Importer extends ScorexLogging {
             } else {
               val rideV6 = blockchain.isFeatureActivated(BlockchainFeatures.RideV6, blockchain.height + (maxCount - remainCount) + 1)
               lazy val parsedProtoBlock =
-                PBBlocks.vanilla(PBBlocks.addChainId(com.wavesplatform.protobuf.block.PBBlock.parseFrom(blockBytes)), unsafe = true)
+                PBBlocks.vanilla(PBBlocks.addChainId(io.decentralchain.protobuf.block.PBBlock.parseFrom(blockBytes)), unsafe = true)
               val block = (if (1 < blockBytes.head && blockBytes.head < 5 && Longs.fromByteArray(blockBytes.slice(1, 9)) < CurrentTS)
                              Block.parseBytes(blockBytes).orElse(parsedProtoBlock)
                            else

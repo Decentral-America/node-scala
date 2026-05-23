@@ -20,8 +20,8 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, GlobalValNa
 import com.decentralchain.lang.v1.parser.{Expressions, Parser}
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.lang.v1.{CTX, compiler}
-import com.wavesplatform.protobuf.dapp.DAppMeta
-import com.wavesplatform.protobuf.dapp.DAppMeta.CompactNameAndOriginalNamePair
+import io.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta.CompactNameAndOriginalNamePair
 import com.decentralchain.test.*
 import org.scalatest.Assertion
 

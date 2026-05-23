@@ -2,9 +2,9 @@ package com.decentralchain.events
 
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.events.FakeObserver.*
-import com.wavesplatform.events.api.grpc.protobuf.SubscribeRequest
-import com.wavesplatform.events.protobuf.TransactionMetadata
-import com.wavesplatform.protobuf.*
+import io.decentralchain.events.api.grpc.protobuf.SubscribeRequest
+import io.decentralchain.events.protobuf.TransactionMetadata
+import io.decentralchain.protobuf.*
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.RideV6
 import com.decentralchain.transaction.assets.exchange.*

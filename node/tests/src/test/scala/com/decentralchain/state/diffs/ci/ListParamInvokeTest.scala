@@ -14,7 +14,7 @@ import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.lang.v1.evaluator.FunctionIds
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.test.{PropSpec, produce}
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers, TxVersion}

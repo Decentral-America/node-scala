@@ -3,8 +3,8 @@ package com.decentralchain.transaction.serialization.impl
 import java.nio.ByteBuffer
 
 import com.google.common.primitives.{Bytes, Longs}
-import com.wavesplatform.protobuf.transaction.PBOrders
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.transaction.PBOrders
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.ByteBufferOps
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.{Proofs, TxExchangeAmount, TxMatcherFee, TxOrderPrice}

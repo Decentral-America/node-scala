@@ -7,7 +7,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_LONG}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.FeeValidation.FeeUnit
 import com.decentralchain.test.{PropSpec, produce}

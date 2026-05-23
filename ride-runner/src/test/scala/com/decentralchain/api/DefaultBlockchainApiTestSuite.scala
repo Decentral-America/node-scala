@@ -2,8 +2,8 @@ package com.decentralchain.api
 
 import com.decentralchain.BaseTestSuite
 import com.decentralchain.events.WrappedEvent
-import com.wavesplatform.events.api.grpc.protobuf.*
-import com.wavesplatform.events.protobuf.BlockchainUpdated
+import io.decentralchain.events.api.grpc.protobuf.*
+import io.decentralchain.events.protobuf.BlockchainUpdated
 import com.decentralchain.state.Height
 import com.decentralchain.utils.ScorexLogging
 import io.grpc.stub.StreamObserver

@@ -1,7 +1,7 @@
 package com.decentralchain.transaction
 
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.Blockchain
 import com.decentralchain.transaction.Asset.IssuedAsset
 import monix.eval.Coeval
