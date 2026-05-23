@@ -4,8 +4,8 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.google.protobuf.ByteString
 import com.google.protobuf.empty.Empty
 import com.decentralchain.account.{AddressScheme, Alias, KeyPair}
-import com.wavesplatform.api.grpc.BalanceResponse.WavesBalances
-import com.wavesplatform.api.grpc.{TransactionStatus as PBTransactionStatus, *}
+import io.decentralchain.api.grpc.BalanceResponse.WavesBalances
+import io.decentralchain.api.grpc.{TransactionStatus as PBTransactionStatus, *}
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
@@ -17,9 +17,9 @@ import com.decentralchain.lang.script.Script as Scr
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.serialization.SerdeV1
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.Deser
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.IssueTransaction
@@ -39,7 +39,7 @@ import scala.concurrent.duration.*
 object AsyncGrpcApi {
   implicit class NodeAsyncGrpcApi(val n: Node) {
 
-    import com.wavesplatform.protobuf.transaction.{Transaction as PBTransaction, *}
+    import io.decentralchain.protobuf.transaction.{Transaction as PBTransaction, *}
 
     private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
 

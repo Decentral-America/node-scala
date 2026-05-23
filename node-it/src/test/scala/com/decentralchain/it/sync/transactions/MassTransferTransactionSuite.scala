@@ -12,7 +12,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.util.TxHelpers
-import com.wavesplatform.protobuf.transaction.{MassTransferTransactionData, PBRecipients, Recipient}
+import io.decentralchain.protobuf.transaction.{MassTransferTransactionData, PBRecipients, Recipient}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.transfer.*

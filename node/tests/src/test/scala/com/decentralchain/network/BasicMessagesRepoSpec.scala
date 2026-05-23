@@ -6,8 +6,8 @@ import com.google.protobuf.{ByteString, CodedOutputStream, WireFormat}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.mining.MiningConstraints
-import com.wavesplatform.protobuf.block.*
-import com.wavesplatform.protobuf.transaction.*
+import io.decentralchain.protobuf.block.*
+import io.decentralchain.protobuf.transaction.*
 import com.decentralchain.test.FreeSpec
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.smart.SetScriptTransaction

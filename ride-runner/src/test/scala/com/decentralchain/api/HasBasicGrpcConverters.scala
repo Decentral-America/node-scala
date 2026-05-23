@@ -1,8 +1,8 @@
 package com.decentralchain.api
 
-import com.wavesplatform.events.api.grpc.protobuf.SubscribeEvent
-import com.wavesplatform.events.protobuf.{BlockchainUpdated, StateUpdate}
-import com.wavesplatform.protobuf.block.Block
+import io.decentralchain.events.api.grpc.protobuf.SubscribeEvent
+import io.decentralchain.events.protobuf.{BlockchainUpdated, StateUpdate}
+import io.decentralchain.protobuf.block.Block
 import com.decentralchain.state.Height
 
 trait HasBasicGrpcConverters { this: HasGrpc =>

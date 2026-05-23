@@ -11,7 +11,7 @@ import com.decentralchain.lang.directives.values.{V4, V5, V6}
 import com.decentralchain.lang.v1.{ContractLimits, FunctionHeader}
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.wavesplatform.protobuf.transaction.PBRecipients
+import io.decentralchain.protobuf.transaction.PBRecipients
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 

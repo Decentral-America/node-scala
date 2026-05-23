@@ -2,7 +2,7 @@ package com.decentralchain.it.sync.grpc
 
 import com.google.protobuf.ByteString
 import com.typesafe.config.Config
-import com.wavesplatform.api.grpc.BlockRangeRequest
+import io.decentralchain.api.grpc.BlockRangeRequest
 import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto

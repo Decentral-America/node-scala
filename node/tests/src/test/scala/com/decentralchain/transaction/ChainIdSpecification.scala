@@ -6,7 +6,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
-import com.wavesplatform.protobuf.transaction.{PBTransactions, SignedTransaction as PBSignedTransaction}
+import io.decentralchain.protobuf.transaction.{PBTransactions, SignedTransaction as PBSignedTransaction}
 import com.decentralchain.state.{Height, StringDataEntry}
 import com.decentralchain.test.PropSpec
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

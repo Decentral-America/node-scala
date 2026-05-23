@@ -1,9 +1,9 @@
-package com.wavesplatform
+package io.decentralchain
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{Address, AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.protobuf.transaction.PBRecipients
+import io.decentralchain.protobuf.transaction.PBRecipients
 import com.decentralchain.state.TransactionId
 import com.decentralchain.transaction.Asset
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

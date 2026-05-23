@@ -6,13 +6,13 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
-import com.wavesplatform.events.protobuf.StateUpdate.AssetDetails.AssetScriptInfo
-import com.wavesplatform.events.protobuf.StateUpdate.{AssetDetails, BalanceUpdate, DataEntryUpdate, LeaseUpdate, LeasingUpdate, ScriptUpdate}
-import com.wavesplatform.events.protobuf.TransactionMetadata
-import com.wavesplatform.protobuf.order.Order
-import com.wavesplatform.protobuf.transaction.*
-import com.wavesplatform.protobuf.transaction.Transaction.Data
-import com.wavesplatform.protobuf.{Amount, transaction}
+import io.decentralchain.events.protobuf.StateUpdate.AssetDetails.AssetScriptInfo
+import io.decentralchain.events.protobuf.StateUpdate.{AssetDetails, BalanceUpdate, DataEntryUpdate, LeaseUpdate, LeasingUpdate, ScriptUpdate}
+import io.decentralchain.events.protobuf.TransactionMetadata
+import io.decentralchain.protobuf.order.Order
+import io.decentralchain.protobuf.transaction.*
+import io.decentralchain.protobuf.transaction.Transaction.Data
+import io.decentralchain.protobuf.{Amount, transaction}
 import com.decentralchain.state.DataEntry
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.*

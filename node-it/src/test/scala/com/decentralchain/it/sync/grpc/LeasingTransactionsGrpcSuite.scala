@@ -1,11 +1,11 @@
 package com.decentralchain.it.sync.grpc
 
 import com.google.protobuf.ByteString
-import com.wavesplatform.api.grpc.LeaseResponse
+import io.decentralchain.api.grpc.LeaseResponse
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
-import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions, Recipient}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.transaction.lease.LeaseTransaction

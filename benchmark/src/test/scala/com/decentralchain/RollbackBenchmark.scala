@@ -7,7 +7,7 @@ import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.database.{RDB, RocksDBWriter}
-import com.wavesplatform.protobuf.transaction.PBRecipients
+import io.decentralchain.protobuf.transaction.PBRecipients
 import com.decentralchain.state.{GenesisBlockHeight, Height, Portfolio, StateSnapshot}
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.assets.IssueTransaction

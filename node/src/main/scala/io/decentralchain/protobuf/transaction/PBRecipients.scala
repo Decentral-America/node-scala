@@ -1,11 +1,11 @@
-package com.wavesplatform.protobuf.transaction
+package io.decentralchain.protobuf.transaction
 
 import com.google.common.primitives.Bytes
 import com.google.protobuf.ByteString
 import com.decentralchain.account.*
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.transaction.{Recipient as PBRecipient}
+import io.decentralchain.protobuf.transaction.{Recipient as PBRecipient}
 import com.decentralchain.transaction.TxValidationError.GenericError
 
 object PBRecipients {

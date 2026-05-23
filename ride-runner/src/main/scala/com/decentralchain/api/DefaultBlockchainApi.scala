@@ -5,8 +5,8 @@ import com.google.protobuf.empty.Empty
 import com.decentralchain.account.{Address, Alias, PublicKey}
 import com.decentralchain.api.BlockchainApi.BlockchainUpdatesStream
 import com.decentralchain.api.DefaultBlockchainApi.*
-import com.wavesplatform.api.grpc.BalanceResponse.Balance
-import com.wavesplatform.api.grpc.{
+import io.decentralchain.api.grpc.BalanceResponse.Balance
+import io.decentralchain.api.grpc.{
   AccountRequest,
   AccountsApiGrpc,
   ActivationStatusRequest,
@@ -28,12 +28,12 @@ import com.decentralchain.block.SignedBlockHeader
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.collections.syntax.*
 import com.decentralchain.events.WrappedEvent
-import com.wavesplatform.events.api.grpc.protobuf.*
+import io.decentralchain.events.api.grpc.protobuf.*
 import com.decentralchain.lang.script.Script
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.transaction.PBAmounts
-import com.wavesplatform.protobuf.transaction.PBTransactions.{toVanillaDataEntry, toVanillaScript}
-import com.wavesplatform.protobuf.{toByteStr, toByteString, toPublicKey}
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.transaction.PBAmounts
+import io.decentralchain.protobuf.transaction.PBTransactions.{toVanillaDataEntry, toVanillaScript}
+import io.decentralchain.protobuf.{toByteStr, toByteString, toPublicKey}
 import com.decentralchain.state.{AssetDescription, AssetScriptInfo, DataEntry, Height, TransactionId}
 import com.decentralchain.transaction.Asset
 import com.decentralchain.utils.{ScorexLogging, StringBytes}

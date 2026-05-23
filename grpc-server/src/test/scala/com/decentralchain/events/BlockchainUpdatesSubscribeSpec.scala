@@ -9,7 +9,7 @@ import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, TxHelpers, TxVersion}
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
 
 class BlockchainUpdatesSubscribeSpec extends BlockchainUpdatesTestBase {
   "BlockchainUpdates subscribe tests" - {

@@ -8,7 +8,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import com.decentralchain.mining.MiningConstraint
 import com.decentralchain.network.{BlockSnapshotResponse, ExtensionBlocks, InvalidBlockStorage, PeerDatabase}
-import com.wavesplatform.protobuf.PBSnapshots
+import io.decentralchain.protobuf.PBSnapshots
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.state.appender.{BlockAppender, ExtensionAppender}

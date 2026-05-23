@@ -4,11 +4,11 @@ import cats.syntax.option.*
 import com.typesafe.config.ConfigMemorySize
 import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.api.DefaultBlockchainApi.*
-import com.wavesplatform.api.grpc.{BalanceResponse, BlockWithHeight}
+import io.decentralchain.api.grpc.{BalanceResponse, BlockWithHeight}
 import com.decentralchain.api.{HasBasicGrpcConverters, HasGrpc, TestBlockchainApi}
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.events.WrappedEvent
-import com.wavesplatform.events.api.grpc.protobuf.SubscribeEvent
+import io.decentralchain.events.api.grpc.protobuf.SubscribeEvent
 import com.decentralchain.lang.script.Script
 import com.decentralchain.ride.ScriptUtil
 import com.decentralchain.ride.runner.blockchain.LazyBlockchain
