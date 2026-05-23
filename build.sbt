@@ -150,7 +150,7 @@ lazy val `repl-js` = repl.js
 
 lazy val `curve25519-test` = project.dependsOn(node)
 
-lazy val `waves-node` = (project in file("."))
+lazy val `dcc-node` = (project in file("."))
   .aggregate(
     `lang-js`,
     `lang-jvm`,
@@ -232,7 +232,7 @@ buildTarballsForDocker := {
   )
   IO.copyFile(
     (`grpc-server` / Universal / packageZipTarball).value,
-    baseDirectory.value / "docker" / "target" / "waves-grpc-server.tgz"
+    baseDirectory.value / "docker" / "target" / "dcc-grpc-server.tgz"
   )
 }
 
