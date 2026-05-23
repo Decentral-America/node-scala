@@ -3,7 +3,7 @@ package com.decentralchain.api.grpc.test
 import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
 import com.decentralchain.api.grpc.{AssetsApiGrpcImpl}
-import com.wavesplatform.api.grpc.{AssetInfoResponse, NFTRequest, NFTResponse}
+import io.decentralchain.api.grpc.{AssetInfoResponse, NFTRequest, NFTResponse}
 import com.decentralchain.block.Block.ProtoBlockVersion
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
@@ -46,9 +46,9 @@ class AssetsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
               nftTx.reissuable,
               nftTx.quantity.value,
               None,
-              0,
+              0L,
+              0L,
               None,
-              0,
               sequenceInBlock = i + 1,
               issueHeight = 2
             )

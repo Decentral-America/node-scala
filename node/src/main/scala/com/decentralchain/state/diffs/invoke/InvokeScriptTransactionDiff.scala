@@ -28,7 +28,7 @@ import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.lang.v1.traits.domain.{Recipient as RideRecipient, *}
 import com.decentralchain.metrics.TxProcessingStats as Stats
 import com.decentralchain.metrics.TxProcessingStats.measureForType
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.invoke.CallArgumentPolicy.*
 import com.decentralchain.transaction.TransactionBase

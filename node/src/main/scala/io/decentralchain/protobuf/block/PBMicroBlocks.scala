@@ -1,12 +1,12 @@
-package com.wavesplatform.protobuf.block
+package io.decentralchain.protobuf.block
 
 import com.decentralchain.account.PublicKey
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.network.MicroBlockResponse
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.transaction.PBTransactions
 
 import scala.util.{Failure, Success, Try}
 

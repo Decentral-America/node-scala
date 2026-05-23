@@ -9,7 +9,7 @@ import com.decentralchain.metrics.*
 import com.decentralchain.mining.BlockChallenger
 import com.decentralchain.network.*
 import com.decentralchain.network.MicroBlockSynchronizer.MicroblockData
-import com.wavesplatform.protobuf.PBSnapshots
+import io.decentralchain.protobuf.PBSnapshots
 import com.decentralchain.state.{Blockchain, Height}
 import com.decentralchain.transaction.BlockchainUpdater
 import com.decentralchain.transaction.TxValidationError.{InvalidSignature, InvalidStateHash}

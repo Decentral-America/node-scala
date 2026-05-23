@@ -1,7 +1,7 @@
 package com.decentralchain.it.asset
 
 import com.decentralchain.account.KeyPair
-import com.wavesplatform.api.grpc.AssetInfoResponse
+import io.decentralchain.api.grpc.AssetInfoResponse
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
@@ -12,7 +12,7 @@ import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuiteLike
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions}
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.SetScriptTransaction

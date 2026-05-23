@@ -2,9 +2,9 @@ package com.decentralchain.ride.runner
 
 import com.decentralchain.api.UpdateType
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.events.protobuf.BlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.events.protobuf.BlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
 import com.decentralchain.ride.runner.blockchain.LazyBlockchain
 import com.decentralchain.ride.runner.caches.AffectedTags
 import com.decentralchain.ride.runner.requests.{RequestService, RideScriptRunRequest}

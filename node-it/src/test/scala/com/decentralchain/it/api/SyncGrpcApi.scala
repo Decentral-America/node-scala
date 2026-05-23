@@ -2,8 +2,8 @@ package com.decentralchain.it.api
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{AddressScheme, KeyPair}
-import com.wavesplatform.api.grpc.BalanceResponse.WavesBalances
-import com.wavesplatform.api.grpc.{TransactionStatus as PBTransactionStatus, *}
+import io.decentralchain.api.grpc.BalanceResponse.WavesBalances
+import io.decentralchain.api.grpc.{TransactionStatus as PBTransactionStatus, *}
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.Node
@@ -12,10 +12,10 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.block.Block.Header
-import com.wavesplatform.protobuf.block.{PBBlocks, VanillaBlock}
-import com.wavesplatform.protobuf.transaction.*
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.block.Block.Header
+import io.decentralchain.protobuf.block.{PBBlocks, VanillaBlock}
+import io.decentralchain.protobuf.transaction.*
 import com.decentralchain.transaction.Asset.Waves
 import com.decentralchain.transaction.assets.exchange.Order
 import com.decentralchain.transaction.{Asset, TxVersion}

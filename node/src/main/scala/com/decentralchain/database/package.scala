@@ -16,10 +16,10 @@ import com.decentralchain.database.protobuf as pb
 import com.decentralchain.database.protobuf.DataEntry.Value
 import com.decentralchain.database.protobuf.TransactionData.Transaction as TD
 import com.decentralchain.lang.script.ScriptReader
-import com.wavesplatform.protobuf.block.PBBlocks
-import com.wavesplatform.protobuf.snapshot.TransactionStateSnapshot
-import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions}
-import com.wavesplatform.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.snapshot.TransactionStateSnapshot
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
+import io.decentralchain.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
 import com.decentralchain.state.*
 import com.decentralchain.state.StateHash.SectionId
 import com.decentralchain.transaction.Asset.IssuedAsset

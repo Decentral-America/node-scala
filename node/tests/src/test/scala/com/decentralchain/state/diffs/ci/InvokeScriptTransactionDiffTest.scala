@@ -29,7 +29,7 @@ import com.decentralchain.lang.v1.evaluator.ScriptResultV3
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
 import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.FieldNames
 import com.decentralchain.lang.v1.traits.domain.{AssetTransfer, Issue}
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.state.*
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.FeeValidation.FeeConstants

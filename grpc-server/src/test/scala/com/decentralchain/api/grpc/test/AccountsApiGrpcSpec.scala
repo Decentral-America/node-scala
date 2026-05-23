@@ -4,15 +4,15 @@ import com.google.protobuf.ByteString
 import com.decentralchain.TestValues
 import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.api.grpc.*
-import com.wavesplatform.api.grpc.*
+import io.decentralchain.api.grpc.*
 import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.transaction.{DataEntry, Recipient}
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.{DataEntry, Recipient}
 import com.decentralchain.state.{Height, BlockRewardCalculator, EmptyDataEntry, IntegerDataEntry}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.Waves

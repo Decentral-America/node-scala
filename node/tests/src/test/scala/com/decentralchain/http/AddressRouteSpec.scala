@@ -11,7 +11,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.directives.values.{V5, V6}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.{WalletSettings, DCCSettings}
 import com.decentralchain.state.IntegerDataEntry
 import com.decentralchain.state.diffs.FeeValidation

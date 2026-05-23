@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigMemorySize
 import com.decentralchain.BaseTestSuite
 import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.api.DefaultBlockchainApi.toVanilla
-import com.wavesplatform.api.grpc.{BalanceResponse, BlockWithHeight}
+import io.decentralchain.api.grpc.{BalanceResponse, BlockWithHeight}
 import com.decentralchain.api.http.ApiError.CustomValidationError
 import com.decentralchain.api.{HasBasicGrpcConverters, HasGrpc, TestBlockchainApi}
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf

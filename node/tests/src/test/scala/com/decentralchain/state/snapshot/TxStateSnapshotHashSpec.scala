@@ -8,9 +8,9 @@ import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.crypto.fastHash
 import com.decentralchain.lang.directives.values.V6
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.snapshot.{TransactionStatus, TransactionStateSnapshot as TSS}
-import com.wavesplatform.protobuf.transaction.DataEntry
-import com.wavesplatform.protobuf.{Amount, PBSnapshots}
+import io.decentralchain.protobuf.snapshot.{TransactionStatus, TransactionStateSnapshot as TSS}
+import io.decentralchain.protobuf.transaction.DataEntry
+import io.decentralchain.protobuf.{Amount, PBSnapshots}
 import com.decentralchain.state.*
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxHelpers

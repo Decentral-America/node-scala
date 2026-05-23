@@ -5,11 +5,11 @@ import com.google.protobuf.ByteString
 import com.decentralchain.account.Address
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.events.StateUpdate.AssetInfo
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append.Body
-import com.wavesplatform.events.protobuf.{BlockchainUpdated, StateUpdate}
-import com.wavesplatform.events.protobuf.BlockchainUpdated.{Append, Rollback, Update}
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.block.{PBBlocks, PBMicroBlocks}
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
+import io.decentralchain.events.protobuf.{BlockchainUpdated, StateUpdate}
+import io.decentralchain.events.protobuf.BlockchainUpdated.{Append, Rollback, Update}
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.{PBBlocks, PBMicroBlocks}
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.events as ve
 

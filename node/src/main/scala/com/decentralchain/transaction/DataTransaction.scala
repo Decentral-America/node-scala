@@ -3,7 +3,7 @@ package com.decentralchain.transaction
 import com.decentralchain.account.{AddressScheme, KeyPair, PrivateKey, PublicKey}
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.*
 import com.decentralchain.transaction.serialization.impl.DataTxSerializer
 import com.decentralchain.transaction.validation.TxValidator

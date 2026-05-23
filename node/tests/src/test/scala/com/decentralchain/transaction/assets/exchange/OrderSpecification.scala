@@ -3,7 +3,7 @@ package com.decentralchain.transaction.assets.exchange
 import com.decentralchain.NTPTime
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
-import com.wavesplatform.protobuf.transaction.PBOrders
+import io.decentralchain.protobuf.transaction.PBOrders
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.assets.exchange.OrderAuthentication.OrderProofs

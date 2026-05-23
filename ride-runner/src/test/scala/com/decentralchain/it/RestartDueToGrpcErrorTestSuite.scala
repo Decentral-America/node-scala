@@ -4,7 +4,7 @@ import com.decentralchain.BaseTestSuite
 import com.decentralchain.api.{DefaultBlockchainApi, EmptyChannel, HasGrpc}
 import com.decentralchain.blockchain.TestProcessor
 import com.decentralchain.events.WrappedEvent
-import com.wavesplatform.events.api.grpc.protobuf.*
+import io.decentralchain.events.api.grpc.protobuf.*
 import com.decentralchain.ride.runner.BlockchainState
 import com.decentralchain.state.Height
 import io.grpc.*

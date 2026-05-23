@@ -15,7 +15,7 @@ import com.decentralchain.lang.directives.values.{V5, V7, V8}
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, CONST_STRING, FUNCTION_CALL}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{BinaryDataEntry, EmptyDataEntry, Height, InvokeScriptResult, StringDataEntry}
 import com.decentralchain.test.*
