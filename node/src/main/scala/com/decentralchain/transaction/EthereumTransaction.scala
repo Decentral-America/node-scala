@@ -8,7 +8,7 @@ import com.decentralchain.features.BlockchainFeatures.BlockRewardDistribution
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.lang.v1.ContractLimits
 import com.decentralchain.lang.v1.compiler.Terms
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.Blockchain
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

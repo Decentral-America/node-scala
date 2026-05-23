@@ -6,11 +6,11 @@ import com.decentralchain.block.{Block, BlockEndorsement, MicroBlock}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.network.message.MessageSpec
-import com.wavesplatform.protobuf.block.EndorseBlock as PBEndorseBlock
-import com.wavesplatform.protobuf.snapshot.{TransactionStateSnapshot, BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
+import io.decentralchain.protobuf.block.EndorseBlock as PBEndorseBlock
+import io.decentralchain.protobuf.snapshot.{TransactionStateSnapshot, BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
 import com.decentralchain.state.{GeneratorIndex, Height}
 import com.decentralchain.transaction.{Signed, Transaction}
-import com.wavesplatform.protobuf.{toByteString, toByteStr}
+import io.decentralchain.protobuf.{toByteString, toByteStr}
 import monix.eval.Coeval
 
 import java.net.InetSocketAddress

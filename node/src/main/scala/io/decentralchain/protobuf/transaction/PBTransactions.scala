@@ -1,4 +1,4 @@
-package com.wavesplatform.protobuf.transaction
+package io.decentralchain.protobuf.transaction
 
 import cats.syntax.traverse.*
 import com.google.protobuf.ByteString
@@ -11,9 +11,9 @@ import com.decentralchain.lang.script.ScriptReader
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.Terms.EXPR
 import com.decentralchain.lang.v1.serialization.SerdeV1
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.transaction.Transaction.Data
-import com.wavesplatform.protobuf.utils.PBImplicitConversions.*
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.transaction.Transaction.Data
+import io.decentralchain.protobuf.utils.PBImplicitConversions.*
 import com.decentralchain.serialization.Deser
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, EmptyDataEntry, Height, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.transaction as vt
@@ -57,7 +57,7 @@ object PBTransactions {
       timestamp: Long = 0L,
       version: Int = 0,
       proofsArray: Seq[com.decentralchain.common.state.ByteStr] = Nil,
-      data: com.wavesplatform.protobuf.transaction.Transaction.Data = com.wavesplatform.protobuf.transaction.Transaction.Data.Empty
+      data: io.decentralchain.protobuf.transaction.Transaction.Data = io.decentralchain.protobuf.transaction.Transaction.Data.Empty
   ): SignedTransaction =
     new SignedTransaction(
       SignedTransaction.Transaction

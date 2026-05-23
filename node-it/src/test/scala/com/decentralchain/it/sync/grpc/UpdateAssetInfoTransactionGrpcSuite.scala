@@ -6,7 +6,7 @@ import com.decentralchain.it.NodeConfigs.Miners
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.transaction.assets.IssueTransaction.{MaxAssetDescriptionLength, MaxAssetNameLength, MinAssetNameLength}
 import io.grpc.Status.Code
 import org.scalatest.prop.TableDrivenPropertyChecks

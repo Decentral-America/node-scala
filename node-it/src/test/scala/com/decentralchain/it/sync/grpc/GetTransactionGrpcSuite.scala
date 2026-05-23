@@ -5,7 +5,7 @@ import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
-import com.wavesplatform.protobuf.transaction.{PBRecipients, PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions, Recipient}
 
 class GetTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 

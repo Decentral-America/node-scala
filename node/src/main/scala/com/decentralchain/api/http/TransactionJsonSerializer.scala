@@ -25,7 +25,7 @@ import com.decentralchain.lang.v1.compiler.Terms.{
   FUNCTION_CALL
 }
 import com.decentralchain.lang.v1.serialization.SerdeV1
-import com.wavesplatform.protobuf.transaction.PBAmounts
+import io.decentralchain.protobuf.transaction.PBAmounts
 import com.decentralchain.state.InvokeScriptResult.{
   AttachedPayment,
   Burn,

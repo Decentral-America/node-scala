@@ -8,8 +8,8 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.wavesplatform.protobuf.Amount
-import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions, Recipient}
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions, Recipient}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
 class InvokeScriptPayAndTransferAssetGrpcSuite extends GrpcBaseTransactionSuite {

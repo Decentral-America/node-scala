@@ -7,10 +7,10 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
 import com.decentralchain.events.fixtures.PrepareInvokeTestData.*
 import com.decentralchain.events.fixtures.WavesTxChecks.*
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
-import com.wavesplatform.events.protobuf.BlockchainUpdated.Append
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.protobuf.BlockchainUpdated.Append
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, CONST_LONG, CONST_STRING, EXPR}
-import com.wavesplatform.protobuf.transaction.PBAmounts.toVanillaAssetId
+import io.decentralchain.protobuf.transaction.PBAmounts.toVanillaAssetId
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.{FreeSpec, NumericExt}

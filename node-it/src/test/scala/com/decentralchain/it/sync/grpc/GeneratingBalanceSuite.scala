@@ -4,7 +4,7 @@ import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.minFee
-import com.wavesplatform.protobuf.transaction.Recipient
+import io.decentralchain.protobuf.transaction.Recipient
 
 class GeneratingBalanceSuite extends GrpcBaseTransactionSuite {
 

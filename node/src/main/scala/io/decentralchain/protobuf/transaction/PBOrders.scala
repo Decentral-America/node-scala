@@ -1,13 +1,13 @@
-package com.wavesplatform.protobuf.transaction
+package io.decentralchain.protobuf.transaction
 
 import com.decentralchain.transaction as vt
 import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.ValidationError
-import com.wavesplatform.protobuf.*
-import com.wavesplatform.protobuf.order.AssetPair
-import com.wavesplatform.protobuf.order.Order.{PriceMode, Sender}
-import com.wavesplatform.protobuf.order.Order.PriceMode.{ASSET_DECIMALS, FIXED_DECIMALS, DEFAULT as DEFAULT_PRICE_MODE}
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.order.AssetPair
+import io.decentralchain.protobuf.order.Order.{PriceMode, Sender}
+import io.decentralchain.protobuf.order.Order.PriceMode.{ASSET_DECIMALS, FIXED_DECIMALS, DEFAULT as DEFAULT_PRICE_MODE}
 import com.decentralchain.transaction.assets.exchange.OrderPriceMode.{AssetDecimals, FixedDecimals, Default as DefaultPriceMode}
 import vt.assets.exchange.OrderAuthentication
 import com.decentralchain.transaction.TxValidationError.GenericError
@@ -15,7 +15,7 @@ import com.decentralchain.transaction.assets.exchange.OrderType
 import com.decentralchain.transaction.{TxExchangeAmount, TxMatcherFee, TxOrderPrice}
 
 object PBOrders {
-  import com.wavesplatform.protobuf.utils.PBImplicitConversions.*
+  import io.decentralchain.protobuf.utils.PBImplicitConversions.*
 
   def vanilla(order: PBOrder): Either[ValidationError, VanillaOrder] =
     for {
@@ -80,7 +80,7 @@ object PBOrders {
     )
   }
 
-  private def vanillaOrderType(orderSide: com.wavesplatform.protobuf.order.Order.Side): Either[GenericError, OrderType] =
+  private def vanillaOrderType(orderSide: io.decentralchain.protobuf.order.Order.Side): Either[GenericError, OrderType] =
     orderSide match {
       case PBOrder.Side.BUY             => Right(vt.assets.exchange.OrderType.BUY)
       case PBOrder.Side.SELL            => Right(vt.assets.exchange.OrderType.SELL)

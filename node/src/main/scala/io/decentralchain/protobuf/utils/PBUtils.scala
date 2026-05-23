@@ -1,4 +1,4 @@
-package com.wavesplatform.protobuf.utils
+package io.decentralchain.protobuf.utils
 
 import cats.syntax.applicativeError.*
 import com.google.protobuf.CodedOutputStream

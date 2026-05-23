@@ -5,8 +5,8 @@ import java.nio.ByteBuffer
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.decentralchain.block.Block.{PlainBlockVersion, ProtoBlockVersion}
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.protobuf.transaction.PBTransactions
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.ByteBufferOps
 import com.decentralchain.transaction.{EthereumTransaction, Transaction, TransactionParsers}
 

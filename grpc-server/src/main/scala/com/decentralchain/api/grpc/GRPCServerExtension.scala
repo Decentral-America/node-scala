@@ -1,5 +1,5 @@
 package com.decentralchain.api.grpc
-import com.wavesplatform.api.grpc.*
+import io.decentralchain.api.grpc.*
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.decentralchain.common.utils.Base58

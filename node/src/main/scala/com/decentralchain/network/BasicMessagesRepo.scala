@@ -12,9 +12,9 @@ import com.decentralchain.mining.Miner.MaxTransactionsPerMicroblock
 import com.decentralchain.mining.MiningConstraints
 import com.decentralchain.network.message.*
 import com.decentralchain.network.message.Message.*
-import com.wavesplatform.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, SignedMicroBlock, EndorseBlock as PBEndorseBlock}
-import com.wavesplatform.protobuf.snapshot.{BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
-import com.wavesplatform.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import io.decentralchain.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, SignedMicroBlock, EndorseBlock as PBEndorseBlock}
+import io.decentralchain.protobuf.snapshot.{BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.decentralchain.transaction.{DataTransaction, EthereumTransaction, Transaction, TransactionParsers}
 import io.netty.channel.ChannelHandler.Sharable
 

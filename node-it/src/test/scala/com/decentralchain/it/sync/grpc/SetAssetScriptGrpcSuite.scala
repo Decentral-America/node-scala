@@ -4,7 +4,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import io.grpc.Status.Code
 
 import scala.concurrent.duration.*

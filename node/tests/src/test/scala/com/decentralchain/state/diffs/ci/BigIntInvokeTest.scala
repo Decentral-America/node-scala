@@ -17,7 +17,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.lang.v1.evaluator.FunctionIds
 import com.decentralchain.lang.v1.evaluator.FunctionIds.TO_BIGINT
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
-import com.wavesplatform.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxHelpers
 import org.scalatest.{EitherValues, Inside}

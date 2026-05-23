@@ -2,8 +2,8 @@ package com.decentralchain.blockchain
 
 import com.decentralchain.BaseTestSuite
 import com.decentralchain.common.state.ByteStr
-import com.wavesplatform.events.api.grpc.protobuf.SubscribeEvent
-import com.wavesplatform.events.protobuf.BlockchainUpdated
+import io.decentralchain.events.api.grpc.protobuf.SubscribeEvent
+import io.decentralchain.events.protobuf.BlockchainUpdated
 import com.decentralchain.ride.runner.BlockchainState
 import com.decentralchain.state.Height
 

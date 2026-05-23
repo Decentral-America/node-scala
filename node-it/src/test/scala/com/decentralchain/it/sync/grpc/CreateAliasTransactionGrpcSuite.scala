@@ -7,7 +7,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{aliasTxSupportedVersions, minFee, transferAmount}
-import com.wavesplatform.protobuf.transaction.{PBRecipients, Recipient}
+import io.decentralchain.protobuf.transaction.{PBRecipients, Recipient}
 import com.decentralchain.test.*
 import io.grpc.Status.Code
 import org.scalatest.prop.TableDrivenPropertyChecks

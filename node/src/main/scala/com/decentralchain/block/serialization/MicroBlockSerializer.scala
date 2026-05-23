@@ -5,8 +5,8 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.decentralchain.block.{Block, MicroBlock}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.{DigestLength, SignatureLength}
-import com.wavesplatform.protobuf.block.PBFinalizationVotings
-import com.wavesplatform.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.block.PBFinalizationVotings
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.ByteBufferOps
 
 import scala.util.Try

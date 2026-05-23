@@ -4,7 +4,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.*
-import com.wavesplatform.protobuf.transaction.{PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
 import com.decentralchain.test.*
 import io.grpc.Status.Code
 

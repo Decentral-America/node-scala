@@ -8,9 +8,9 @@ import com.decentralchain.block.{Block, MicroBlock}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.database.DBExt
 import com.decentralchain.events.Repo.keyForHeight
-import com.wavesplatform.events.api.grpc.protobuf.*
-import com.wavesplatform.events.api.grpc.protobuf.BlockchainUpdatesApiGrpc.BlockchainUpdatesApi
-import com.wavesplatform.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
+import io.decentralchain.events.api.grpc.protobuf.*
+import io.decentralchain.events.api.grpc.protobuf.BlockchainUpdatesApiGrpc.BlockchainUpdatesApi
+import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
 import com.decentralchain.events.protobuf.serde.*
 import com.decentralchain.events.repo.LiquidState
 import com.decentralchain.state.{Blockchain, Height, StateSnapshot}

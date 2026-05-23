@@ -5,7 +5,7 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.either.*
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.{ContractLimits, FunctionHeader}
-import com.wavesplatform.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.transaction.PBSince
 import com.decentralchain.transaction.TxValidationError.{GenericError, NonPositiveAmount}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
