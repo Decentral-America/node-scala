@@ -66,7 +66,11 @@ case class CompositeHttpService(routes: Seq[ApiRoute], settings: RestAPISettings
   private val securityHeaders: Seq[HttpHeader] = Seq(
     RawHeader("X-Content-Type-Options", "nosniff"),
     RawHeader("X-Frame-Options", "DENY"),
-    RawHeader("X-XSS-Protection", "1; mode=block"),
+    // X-XSS-Protection: 0 — explicitly disables the deprecated browser XSS auditor.
+    // Setting "1; mode=block" is harmful: the auditor was removed from Chrome (v78+),
+    // Firefox (never), and Safari (iOS 15.4+) and the blocking behaviour itself was
+    // exploitable for XSS reflection (OWASP ref: Testing_for_Reflected_XSS §12.2).
+    RawHeader("X-XSS-Protection", "0"),
     RawHeader("Cache-Control", "no-store"),
     RawHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
   )
