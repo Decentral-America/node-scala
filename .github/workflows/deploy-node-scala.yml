@@ -1,0 +1,56 @@
+name: Deploy DCC Node (Scala)
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network to deploy to'
+        required: true
+        default: 'mainnet'
+        type: choice
+        options:
+          - mainnet
+          - testnet
+          - stagenet
+      ref:
+        description: 'Branch, tag or commit SHA to build from (defaults to the default branch)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: deploy-node-scala-${{ github.event.inputs.network }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/decentral-america/node-scala
+
+jobs:
+  # ── 1. Build and push the node-scala Docker image ───────────────────────────
+  publish:
+    name: Build & push node-scala image
+    uses: ./.github/workflows/publish-docker-image.yml
+    with:
+      raw-docker-tags: |
+        type=raw,value=node-scala-${{ github.event.inputs.network }}-${{ github.sha }}
+        type=raw,value=node-scala-${{ github.event.inputs.network }}-latest
+      environment: ${{ github.event.inputs.network }}
+      ref: ${{ github.event.inputs.ref || github.sha }}
+    secrets: inherit
+
+  # ── 2. Deploy the freshly-built image via the infra reusable workflow ────────
+  deploy:
+    name: Deploy node-scala → ${{ github.event.inputs.network }}
+    needs: publish
+    uses: Decentral-America/infra/.github/workflows/deploy-container.yml@main
+    with:
+      network:     ${{ github.event.inputs.network }}
+      image:       ghcr.io/decentral-america/node-scala:node-scala-${{ github.event.inputs.network }}-${{ github.sha }}
+      service:     node-scala
+      compose_dir: /opt/dcc/compose
+    secrets: inherit
