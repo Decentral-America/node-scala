@@ -76,7 +76,9 @@ private[repl] case class WebEnvironment(settings: NodeConnectionSettings, client
       generator          <- c.downField("generator").as[ByteString]
       generatorPublicKey <- c.downField("generatorPublicKey").as[ByteString]
       vrf                <- c.downField("VRF").as[Option[ByteString]]
-    } yield BlockInfoResponse(timestamp, height, nxt, generator, generatorPublicKey, vrf)
+      reward             <- c.downField("reward").as[Option[Long]]
+      rewardShares       <- c.downField("rewardShares").as[Option[Map[String, Long]]]
+    } yield BlockInfoResponse(timestamp, height, nxt, generator, generatorPublicKey, vrf, reward, rewardShares.getOrElse(Map.empty))
 
   override def blockInfoByHeight(height: Int): Future[Option[BlockInfo]] =
     getEntity[Option, BlockInfoResponse, BlockInfo](s"/blocks/at/$height")

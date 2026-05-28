@@ -31,7 +31,8 @@ final case class InvokeScriptResult(
     leases: Seq[InvokeScriptResult.Lease] = Nil,
     leaseCancels: Seq[InvokeScriptResult.LeaseCancel] = Nil,
     invokes: Seq[InvokeScriptResult.Invocation] = Nil,
-    error: Option[InvokeScriptResult.ErrorMessage] = None
+    error: Option[InvokeScriptResult.ErrorMessage] = None,
+    returnValue: Option[EVALUATED] = None
 )
 
 //noinspection TypeAnnotation
@@ -130,7 +131,8 @@ object InvokeScriptResult {
         invokes = x.invokes ++ y.invokes,
         leases = x.leases ++ y.leases,
         leaseCancels = x.leaseCancels ++ y.leaseCancels,
-        error = x.error.orElse(y.error)
+        error = x.error.orElse(y.error),
+        returnValue = y.returnValue.orElse(x.returnValue)
       )
     }
   }
@@ -182,8 +184,7 @@ object InvokeScriptResult {
       case ScriptResultV3(ds, ts, _) =>
         InvokeScriptResult(data = ds.map(DataEntry.fromLangDataOp), transfers = ts.map(langTransferToPayment))
 
-      case ScriptResultV4(actions, _, _) =>
-        // XXX need return value processing
+      case ScriptResultV4(actions, _, returnedValue) =>
         val issues       = actions.collect { case i: lang.Issue => i }
         val reissues     = actions.collect { case ri: lang.Reissue => ri }
         val burns        = actions.collect { case b: lang.Burn => b }
@@ -192,6 +193,10 @@ object InvokeScriptResult {
         val transfers    = actions.collect { case t: lang.AssetTransfer => langTransferToPayment(t) }
         val leases       = actions.collect { case l: lang.Lease => langLeaseToLease(l) }
         val leaseCancels = actions.collect { case l: lang.LeaseCancel => l }
+        val retVal = returnedValue match {
+          case CaseObj(caseType, _) if caseType == Types.UNIT => None
+          case v                                              => Some(v)
+        }
         val invokes = result.invokes.map { case (dApp, fname, args, payments, r) =>
           Invocation(
             langAddressToAddress(dApp),
@@ -205,7 +210,7 @@ object InvokeScriptResult {
             fromLangResult(invokeId, r)
           )
         }
-        InvokeScriptResult(dataOps, transfers, issues, reissues, burns, sponsorFees, leases, leaseCancels, invokes)
+        InvokeScriptResult(dataOps, transfers, issues, reissues, burns, sponsorFees, leases, leaseCancels, invokes, returnValue = retVal)
 
       case i: IncompleteResult => throw new IllegalArgumentException(s"Cannot cast incomplete result: $i")
     }

@@ -78,7 +78,13 @@ private[node] class ChainDependentMapper(chainId: Byte) {
       generator = b.generator.byteStr,
       generatorPublicKey = b.generatorPublicKey.byteStr,
       vrf = b.VRF.map(_.byteStr),
-      rewards = List.empty // TODO: fill with correct value
+      rewards =
+        if (b.rewardShares.nonEmpty)
+          b.rewardShares.map { case (addr, amount) =>
+            addressFromString(addr).getOrElse(throw new IllegalArgumentException(s"Invalid address: $addr")) -> amount
+          }.toList
+        else
+          b.reward.fold(List.empty[(Address, Long)])(r => List(Address(b.generator.byteStr) -> r))
     )
 
   def pkToAddress(publicKey: ByteString): ByteStr = {
