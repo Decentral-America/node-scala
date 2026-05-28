@@ -22,7 +22,7 @@ import scala.util.Using
 
 /** Tests over real database. How to test:
   *   1. Download a database 2. Import it:
-  *      https://github.com/wavesplatform/Waves/wiki/Export-and-import-of-the-blockchain#import-blocks-from-the-binary-file 3. Run ExtractInfo to
+  *      https://github.com/Decentral-America/node-scala/wiki/Export-and-import-of-the-blockchain#import-blocks-from-the-binary-file 3. Run ExtractInfo to
   *      collect queries for tests 4. Make Caches.MaxSize = 1 5. Run this test
   */
 @OutputTimeUnit(TimeUnit.NANOSECONDS)

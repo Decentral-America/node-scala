@@ -54,13 +54,13 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     val zeroSk = BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1))
     val zeroPk = new blst.P1(zeroSk)
     val zeroSig = new blst.P2()
-      .hash_to(message, BlsDomainSeparationTag)
+      .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
       .sign_with(zeroSk)
 
     val okSk = BlsUtils.mkBlsSecretKey(Array.fill[Byte](32)(0))
     val okPk = new blst.P1(okSk)
     val okSig = new blst.P2()
-      .hash_to(message, BlsDomainSeparationTag)
+      .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
       .sign_with(okSk)
 
     "can't create pk from zero bytes" in {
