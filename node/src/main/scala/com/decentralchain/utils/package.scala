@@ -9,6 +9,7 @@ import play.api.libs.json.*
 
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
+import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 
 package object utils {
@@ -22,8 +23,11 @@ package object utils {
   def base64Length(byteArrayLength: Int): Int = math.ceil(byteArrayLength * 4 / 3.0).toInt
   def base58Length(byteArrayLength: Int): Int = math.ceil(BytesLog / BaseLog * byteArrayLength).toInt
 
+  private[decentralchain] val applicationStopHandler: AtomicReference[ApplicationStopReason => Unit] =
+    new AtomicReference(reason => System.exit(reason.code))
+
   def forceStopApplication(reason: ApplicationStopReason = Default): Unit =
-    System.exit(reason.code)
+    applicationStopHandler.get()(reason)
 
   def humanReadableSize(bytes: Long, si: Boolean = true): String = {
     val (baseValue, unitStrings) =
@@ -90,10 +94,11 @@ package object utils {
 
   implicit val evaluatedWrites: Writes[EVALUATED] = (o: EVALUATED) =>
     (o: @unchecked) match {
-      case CONST_LONG(num)   => Json.obj("type" -> "Int", "value" -> num)
-      case CONST_BYTESTR(bs) => Json.obj("type" -> "ByteVector", "value" -> bs.toString)
-      case CONST_STRING(str) => Json.obj("type" -> "String", "value" -> str)
-      case CONST_BOOLEAN(b)  => Json.obj("type" -> "Boolean", "value" -> b)
+      case CONST_LONG(num)    => Json.obj("type" -> "Int", "value" -> num)
+      case CONST_BIGINT(b)    => Json.obj("type" -> "BigInt", "value" -> b.toString)
+      case CONST_BYTESTR(bs)  => Json.obj("type" -> "ByteVector", "value" -> bs.toString)
+      case CONST_STRING(str)  => Json.obj("type" -> "String", "value" -> str)
+      case CONST_BOOLEAN(b)   => Json.obj("type" -> "Boolean", "value" -> b)
       case CaseObj(caseType, fields) =>
         Json.obj("type" -> caseType.name, "value" -> JsObject(fields.view.mapValues(evaluatedWrites.writes).toSeq))
       case ARR(xs)      => Json.obj("type" -> "Array", "value" -> xs.map(evaluatedWrites.writes))

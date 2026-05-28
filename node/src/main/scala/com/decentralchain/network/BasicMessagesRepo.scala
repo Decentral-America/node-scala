@@ -216,7 +216,7 @@ object ScoreSpec extends MessageSpec[BigInt] {
 object TransactionSpec extends MessageSpec[Transaction] {
   override val messageCode: MessageCode = 25: Byte
 
-  // Modeled after Data Transaction https://wavesplatform.atlassian.net/wiki/spaces/MAIN/pages/119734321/Data+Transaction
+  // Modeled after Data Transaction https://decentralchain.atlassian.net/wiki/spaces/MAIN/pages/119734321/Data+Transaction
   override val maxLength: Int = (DataTransaction.MaxBytes * 1.2).toInt // 150 * 1024
 
   override def deserializeData(bytes: Array[Byte]): Try[Transaction] =
