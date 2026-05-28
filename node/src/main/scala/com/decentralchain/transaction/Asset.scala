@@ -30,6 +30,9 @@ object Asset {
 
   case object Waves extends Asset
 
+  /** Migration alias: DCC-branded code should use `Dcc` instead of `Waves`. */
+  val Dcc: Waves.type = Waves
+
   val WavesName = "DCC"
 
   implicit val assetReads: Reads[IssuedAsset] = Reads {
