@@ -12,6 +12,6 @@ RUN apt-get update && apt-get -y install git
 
 VOLUME /src
 
-RUN git clone --depth 1 -b v$WAVES_VERSION https://github.com/wavesplatform/Waves.git /src && \
+RUN git clone --depth 1 -b v$WAVES_VERSION https://github.com/Decentral-America/node-scala.git /src && \
   cd /src && \
   sbt --batch ";node/compile;grpc-server/compile"

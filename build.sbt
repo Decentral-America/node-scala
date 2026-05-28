@@ -189,7 +189,7 @@ inScope(Global)(
       "50", // Required for FunctionalitySettings compilation
       "-Wunused:all",
       "-Wconf:cat=deprecation&origin=com.decentralchain.api.grpc.*:s",                                // Ignore gRPC warnings
-      "-Wconf:cat=deprecation&origin=com.wavesplatform.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
+      "-Wconf:cat=deprecation&origin=com.decentralchain.protobuf.transaction.InvokeScriptResult.*:s", // Ignore deprecated argsBytes
       "-Wconf:cat=deprecation&origin=com.decentralchain.state.InvokeScriptResult.*:s",
       "-Wconf:cat=deprecation&origin=com\\.decentralchain\\.(lang\\..*|JsApiUtils)&origin=com\\.decentralchain\\.lang\\.v1\\.compiler\\.Terms\\.LET_BLOCK:s",
       "-Wconf:src=src_managed/.*:s"
