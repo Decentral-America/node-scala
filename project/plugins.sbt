@@ -17,6 +17,7 @@ Seq(
   "org.portable-scala" % "sbt-scalajs-crossproject" % "1.3.2",
   "org.scala-js"       % "sbt-scalajs"              % "1.21.0",
   "org.scalameta"      % "sbt-scalafmt"             % "2.6.1",
+  "org.scoverage"      % "sbt-scoverage"            % "2.4.4",
   "pl.project13.scala" % "sbt-jmh"                  % "0.4.8"
 ).map(addSbtPlugin)
 

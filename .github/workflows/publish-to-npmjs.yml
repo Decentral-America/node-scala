@@ -13,6 +13,9 @@ on:
         required: true
         default: snapshot
 
+permissions:
+  contents: read
+
 concurrency:
   group: "npm-packages"
   cancel-in-progress: false
@@ -36,7 +39,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - run: sbt -Dproject.version=${{ steps.ghd.outputs.describe }} --batch ';lang-tests/test;lang-tests-js/test;repl/test;langJS/fullOptJS;replJS/fullOptJS'
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:

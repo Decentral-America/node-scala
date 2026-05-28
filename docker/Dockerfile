@@ -1,4 +1,5 @@
-ARG baseImage=eclipse-temurin:25-jre-noble
+# renovate: image=eclipse-temurin tag=25-jre-noble
+ARG baseImage=eclipse-temurin:25-jre-noble@sha256:b27ca47660a8fa837e47a8533b9b1a3a430295cf29ca28d91af4fd121572dc29
 FROM $baseImage
 
 ARG TARGETARCH
@@ -17,6 +18,9 @@ ENV WAVES_HEAP_SIZE=2g
 ENV WAVES_NETWORK=mainnet
 
 SHELL ["/bin/bash", "-c"]
+
+# Install wget for downloading runtime JARs
+RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 
 # Node files
 ENV WVDATA=/var/lib/waves
