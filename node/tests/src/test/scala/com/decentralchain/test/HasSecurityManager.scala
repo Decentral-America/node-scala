@@ -1,40 +1,36 @@
 package com.decentralchain.test
 
-import com.decentralchain.utils.ApplicationStopReason
+import com.decentralchain.utils.{ApplicationStopReason, applicationStopHandler}
 
-import java.security.Permission
 import java.util.concurrent.Semaphore
-import scala.annotation.nowarn
 
-trait HasSecurityManager {
+trait HasExitInterceptor {
 
-  /** @return
-    *   Stop reason code
-    */
-  @nowarn("cat=deprecation")
-  protected def withSecurityManager(okIf: ApplicationStopReason)(f: Semaphore => Unit): Int = {
+  protected def withExitInterceptor(okIf: ApplicationStopReason)(f: Semaphore => Unit): Int = {
     var stopReasonCode = 0
 
     val signal = new Semaphore(1)
     signal.acquire()
 
-    System.setSecurityManager(new SecurityManager {
-      override def checkPermission(perm: Permission): Unit = {}
-
-      override def checkPermission(perm: Permission, context: Object): Unit = {}
-
-      override def checkExit(status: Int): Unit = signal.synchronized {
-        super.checkExit(status)
-        stopReasonCode = status
-        if (status == okIf.code)
+    val originalHandler = applicationStopHandler.get()
+    applicationStopHandler.set { reason =>
+      signal.synchronized {
+        stopReasonCode = reason.code
+        if (reason.code == okIf.code)
           signal.release()
         throw new SecurityException("System exit is not allowed")
       }
-    })
+    }
 
     try {
       f(signal)
       stopReasonCode
-    } finally System.setSecurityManager(null)
+    } finally applicationStopHandler.set(originalHandler)
   }
+}
+
+@deprecated("Use HasExitInterceptor instead — SecurityManager removed in JDK 24+", "1.0")
+trait HasSecurityManager extends HasExitInterceptor {
+  protected def withSecurityManager(okIf: ApplicationStopReason)(f: Semaphore => Unit): Int =
+    withExitInterceptor(okIf)(f)
 }
