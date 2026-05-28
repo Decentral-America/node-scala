@@ -516,6 +516,7 @@ final case class TransactionJsonSerializer(blockchain: Blockchain) {
 
   private[http] implicit val invokeScriptResultWrites: OWrites[InvokeScriptResult] = {
     import InvokeScriptResult.{issueFormat, reissueFormat, burnFormat, sponsorFeeFormat}
+    import com.decentralchain.utils.evaluatedWrites
     Json.writes[InvokeScriptResult]
   }
 }
