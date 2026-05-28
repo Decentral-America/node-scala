@@ -12,6 +12,9 @@ on:
         description: 'Version'
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   prepare-release-draft:
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - run: ./.github/workflows/prepare-release-draft.sh
         id: prepare-release-draft
         env:

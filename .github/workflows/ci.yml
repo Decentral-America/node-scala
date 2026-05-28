@@ -14,6 +14,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Build
@@ -26,7 +29,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: |
@@ -51,7 +54,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: |
@@ -61,17 +64,26 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         # node-tests excluded pending DCC-143: 3 pre-existing failures from
         # Waves blockchain settings that require updating for DCC chain config.
         # All other suites must pass cleanly.
         run: |
-          sbt --batch \
+          sbt --batch coverage \
             "lang-tests/test" \
             "lang-tests-js/test" \
             "repl/test" \
             "grpc-server/test" \
-            "ride-runner/test"
+            "ride-runner/test" \
+            coverageAggregate
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6.0.1
+        with:
+          files: target/scala-2.13/scoverage-report/scoverage.xml
+          flags: node-scala
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
       - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
         if: always()
         with:
@@ -101,7 +113,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: |
@@ -137,7 +149,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: |
@@ -170,3 +182,30 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ── Security Scan (Trivy) ──────────────────────────────────────────────────
+  security:
+    name: Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: '.'
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa  # v4.36.0
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif

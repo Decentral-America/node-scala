@@ -1,0 +1,22 @@
+.git
+.github
+target
+*.md
+LICENSE
+CODE_OF_CONDUCT.md
+SECURITY.md
+# CI/CD and tooling config
+.gitignore
+scalastyle-config.xml
+renovate.json
+# Docker files (prevent recursive COPY)
+docker/
+# Sensitive and local-env files
+*.env
+.envrc
+# IDE settings
+.idea/
+.bsp/
+.metals/
+# Test output
+node-it/

@@ -26,12 +26,12 @@ The node is configured with:
 - default miner account with all DecentralChain tokens (you can distribute these tokens to other accounts as you wish):
   ```
   rich account:
-      Seed text:           waves private node seed with waves tokens
-      Seed:                TBXHUUcVx2n3Rgszpu5MCybRaR86JGmqCWp7XKh7czU57ox5dgjdX4K4
-      Account seed:        HewBh5uTNEGLVpmDPkJoHEi5vbZ6uk7fjKdP5ghiXKBs
-      Private account key: 83M4HnCQxrDMzUQqwmxfTVJPTE9WdE7zjAooZZm2jCyV
-      Public account key:  AXbaBkJNocyrVpwqTzD4TpUY8fQ6eeRto9k1m2bNCzXV
-      Account address:     3M4qwDomRabJKLZxuXhwfqLApQkU592nWxF
+      Seed text:           <set via DCC_TEST_MINER_SEED env var — see .env.example>
+      Seed:                <Base58 encoded>
+      Account seed:        <derived from seed>
+      Private account key: <derived from seed>
+      Public account key:  <derived from seed>
+      Account address:     <derived from seed>
   ```
 
 Full node configuration is available on Github in `decentralchain.custom.conf`.

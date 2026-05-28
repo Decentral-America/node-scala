@@ -23,10 +23,8 @@ on:
       ref:
         type: string
     secrets:
-      DOCKERHUB_USER:
-        required: true
-      DOCKERHUB_PASSWORD:
-        required: true
+      DOCKERHUB_TOKEN:
+        required: false
     outputs:
       digest:
         value: ${{ jobs.publish.outputs.digest }}
@@ -39,6 +37,7 @@ jobs:
   publish:
     name: Publish Docker image
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: ${{ inputs.environment }}
     permissions:
       contents: read
@@ -70,7 +69,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@2e222825582620cc38d2a54e674f3c01b7c14f5d  # v1.1.24
+      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
       - name: Build tarballs for docker
         run: sbt --batch -Dproject.version=${{ steps.versions.outputs.node-version }} buildTarballsForDocker
       - name: Extract image name and tags from workflow_call inputs
@@ -116,8 +115,8 @@ jobs:
       - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         if: inputs.environment != ''
         with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
       - uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
         id: meta
@@ -158,6 +157,7 @@ jobs:
     needs: [publish]
     name: Publish private node image
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
