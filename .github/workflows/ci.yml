@@ -24,6 +24,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-serialization
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -39,6 +48,13 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Compile
         run: sbt --batch compile
 
@@ -49,6 +65,15 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-serialization
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -64,6 +89,13 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Run unit tests with coverage
         # node-tests excluded pending DCC-143: 3 pre-existing failures from
         # Dcc blockchain settings that require updating for DCC chain config.
@@ -80,7 +112,7 @@ jobs:
         if: always()
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6.0.1
         with:
-          files: target/scala-2.13/scoverage-report/scoverage.xml
+          files: target/scala-3/scoverage-report/scoverage.xml
           flags: node-scala
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
@@ -108,6 +140,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-serialization
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -123,6 +164,13 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Assembly
         run: sbt --batch "node/assembly"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -144,6 +192,15 @@ jobs:
         network: [mainnet, testnet, stagenet]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-serialization
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -159,6 +216,13 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Build tarballs for docker
         run: sbt --batch buildTarballsForDocker
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
