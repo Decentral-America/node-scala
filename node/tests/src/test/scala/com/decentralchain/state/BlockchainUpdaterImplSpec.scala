@@ -14,7 +14,7 @@ import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.appender.BlockAppender
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxValidationError.BlockAppendError
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
@@ -112,8 +112,8 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
               snapshot.balances.size == 1 &&
               snapshot.balances.head._2 == FEE_AMT * 5 &&
               // first Tx updated balances
-              snapshot.transactions.head._2.snapshot.balances((tx.recipient.asInstanceOf[Address], Waves)) == (ENOUGH_AMT / 5) &&
-              snapshot.transactions.head._2.snapshot.balances((tx.sender.toAddress, Waves)) == ENOUGH_AMT - ENOUGH_AMT / 5 - FEE_AMT
+              snapshot.transactions.head._2.snapshot.balances((tx.recipient.asInstanceOf[Address], Dcc)) == (ENOUGH_AMT / 5) &&
+              snapshot.transactions.head._2.snapshot.balances((tx.sender.toAddress, Dcc)) == ENOUGH_AMT - ENOUGH_AMT / 5 - FEE_AMT
             })
             .once()
 
@@ -278,7 +278,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
         )
 
         val invoke =
-          Signed.invokeScript(3.toByte, sender, dapp.toAddress, None, Seq.empty, 50_0000L, Waves, ntpTime.getTimestamp())
+          Signed.invokeScript(3.toByte, sender, dapp.toAddress, None, Seq.empty, 50_0000L, Dcc, ntpTime.getTimestamp())
 
         d.appendBlock(d.createBlock(5.toByte, Seq(invoke)))
       }

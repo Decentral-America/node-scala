@@ -45,7 +45,7 @@ object Explorer extends ScorexLogging {
 
   def main(argsRaw: Array[String]): Unit = {
     if (argsRaw.isEmpty || Seq("-h", "--help").exists(argsRaw.contains)) {
-      System.err.println("Usage: waves explore <command> [args] [--config|-c <cfg file>]")
+      System.err.println("Usage: dcc explore <command> [args] [--config|-c <cfg file>]")
       return
     }
 
@@ -96,12 +96,12 @@ object Explorer extends ScorexLogging {
       flag match {
         case "WB" =>
           var accountsBaseTotalBalance = 0L
-          var wavesBalanceRecords      = 0
-          rdb.db.iterateOver(KeyTag.WavesBalance) { e =>
+          var dccBalanceRecords      = 0
+          rdb.db.iterateOver(KeyTag.DccBalance) { e =>
             val addressId = AddressId(Longs.fromByteArray(e.getKey.drop(Shorts.BYTES)))
-            val key       = Keys.wavesBalance(addressId)
+            val key       = Keys.dccBalance(addressId)
             accountsBaseTotalBalance += key.parse(e.getValue).balance
-            wavesBalanceRecords += 1
+            dccBalanceRecords += 1
           }
 
           var actualTotalReward = 0L
@@ -113,19 +113,19 @@ object Explorer extends ScorexLogging {
             blocksRecords += 1
           }
 
-          log.info(s"Found $wavesBalanceRecords waves balance records and $blocksRecords block records")
+          log.info(s"Found $dccBalanceRecords dcc balance records and $blocksRecords block records")
 
           val actualTotalBalance   = accountsBaseTotalBalance + reader.carryFee(None)
-          val expectedTotalBalance = Constants.UnitsInWave * Constants.TotalWaves + actualTotalReward
-          val byKeyTotalBalance    = reader.wavesAmount(blockchainHeight)
+          val expectedTotalBalance = Constants.UnitsInWave * Constants.TotalDcc + actualTotalReward
+          val byKeyTotalBalance    = reader.dccAmount(blockchainHeight)
 
           if (actualTotalBalance != expectedTotalBalance || expectedTotalBalance != byKeyTotalBalance)
             log.error(
-              s"Something wrong, actual total waves balance: $actualTotalBalance," +
-                s" expected total waves balance: $expectedTotalBalance, total waves balance by key: $byKeyTotalBalance"
+              s"Something wrong, actual total dcc balance: $actualTotalBalance," +
+                s" expected total dcc balance: $expectedTotalBalance, total dcc balance by key: $byKeyTotalBalance"
             )
           else
-            log.info(s"Correct total waves balance: $actualTotalBalance WAVELETS")
+            log.info(s"Correct total dcc balance: $actualTotalBalance WAVELETS")
 
         case "DA" =>
           val addressIds = mutable.Seq[(BigInt, Address)]()
@@ -190,7 +190,7 @@ object Explorer extends ScorexLogging {
           val addressId = aid.parse(rdb.db.get(aid.keyBytes)).get
           log.info(s"Address id = $addressId")
 
-          loadBalanceHistory(Keys.wavesBalance(addressId), Keys.wavesBalanceAt(addressId, _)).foreach { case (h, balance) =>
+          loadBalanceHistory(Keys.dccBalance(addressId), Keys.dccBalanceAt(addressId, _)).foreach { case (h, balance) =>
             log.info(s"h = $h: balance = $balance")
           }
 
@@ -271,7 +271,7 @@ object Explorer extends ScorexLogging {
         case "AP" =>
           val address = Address.fromString(argument(1, "address")).explicitGet()
           val pf      = portfolio(rdb.db, reader, address)
-          log.info(s"$address : ${pf.balance} WAVES, ${pf.lease}, ${pf.assets.size} assets")
+          log.info(s"$address : ${pf.balance} DCC, ${pf.lease}, ${pf.assets.size} assets")
           pf.assets.toSeq.sortBy(_._1.toString) foreach { case (assetId, balance) =>
             log.info(s"$assetId : $balance")
           }
@@ -465,7 +465,7 @@ object Explorer extends ScorexLogging {
           var thisAddressId = 0L
           var prevHeight    = Height(0)
           var addressCount  = 0
-          rdb.db.iterateOver(KeyTag.WavesBalanceHistory.prefixBytes, None) { e =>
+          rdb.db.iterateOver(KeyTag.DccBalanceHistory.prefixBytes, None) { e =>
             val addressIdFromKey = Longs.fromByteArray(e.getKey.slice(2, 10))
             val heightFromKey    = Height(Ints.fromByteArray(e.getKey.takeRight(4)))
             if (addressIdFromKey != thisAddressId) {

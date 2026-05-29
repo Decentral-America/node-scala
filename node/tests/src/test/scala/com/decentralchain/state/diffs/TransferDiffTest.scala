@@ -11,7 +11,7 @@ import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.diffs.FeeValidation.FeeUnit
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.ScriptsAndSponsorship
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.transfer.*
@@ -39,7 +39,7 @@ class TransferDiffTest extends PropSpec with WithDomain {
     } yield (genesis, sponsor1, sponsor2, issue1, issue2, transfer)
   }
 
-  property("transfers assets to recipient preserving waves invariant") {
+  property("transfers assets to recipient preserving dcc invariant") {
     preconditionsAndTransfer.foreach { case (genesis, sponsor1, sponsor2, issue1, issue2, transfer) =>
       withDomain(ScriptsAndSponsorship) { d =>
         d.appendBlock(genesis)
@@ -55,7 +55,7 @@ class TransferDiffTest extends PropSpec with WithDomain {
             case aid @ IssuedAsset(_) =>
               d.balance(recipient) shouldBe 0
               d.balance(recipient, aid) shouldBe transfer.amount.value
-            case Waves =>
+            case Dcc =>
               d.balance(recipient) shouldBe transfer.amount.value
           }
         }

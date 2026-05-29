@@ -13,7 +13,7 @@ import com.decentralchain.lagonaki.mocks.TestBlock.{create as block}
 import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings}
 import com.decentralchain.state.diffs.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.{IssueTransaction, SponsorFeeTransaction}
 import com.decentralchain.transaction.serialization.impl.SponsorFeeTxSerializer
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -213,7 +213,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       minFee <- Gen.choose(1L, issue.quantity.value)
       sponsor = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer = TransferTransaction
-        .selfSigned(1.toByte, acc, acc.toAddress, Waves, 1L, feeAsset = IssuedAsset(issue.id()), minFee, ByteStr.empty, ts)
+        .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee, ByteStr.empty, ts)
         .explicitGet()
     } yield (acc, genesis, issue, sponsor, transfer)
 
@@ -223,7 +223,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       val b2 = block(acc, Seq.empty)
 
       assertNgDiffState(Seq(b0, b1), b2, NgAndSponsorshipSettings) { case (_, state) =>
-        state.balance(acc.toAddress, Waves) - ENOUGH_AMT shouldBe 0
+        state.balance(acc.toAddress, Dcc) - ENOUGH_AMT shouldBe 0
       }
     }
   }
@@ -238,10 +238,10 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       minFee <- Gen.choose(1000000L, issue.quantity.value)
       sponsor = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer1 = TransferTransaction
-        .selfSigned(1.toByte, acc, acc.toAddress, Waves, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 7, ByteStr.empty, ts)
+        .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 7, ByteStr.empty, ts)
         .explicitGet()
       transfer2 = TransferTransaction
-        .selfSigned(1.toByte, acc, acc.toAddress, Waves, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 9, ByteStr.empty, ts)
+        .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 9, ByteStr.empty, ts)
         .explicitGet()
     } yield (acc, genesis, issue, sponsor, transfer1, transfer2)
 
@@ -251,7 +251,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       val b2 = block(acc, Seq.empty)
 
       assertNgDiffState(Seq(b0, b1), b2, NgAndSponsorshipSettings) { case (_, state) =>
-        state.balance(acc.toAddress, Waves) - ENOUGH_AMT shouldBe 0
+        state.balance(acc.toAddress, Dcc) - ENOUGH_AMT shouldBe 0
       }
     }
   }
@@ -267,11 +267,11 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
 
       sponsor1 = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer1 = TransferTransaction
-        .selfSigned(1.toByte, acc, acc.toAddress, Waves, 1L, IssuedAsset(issue.id()), fee = minFee, ByteStr.empty, ts)
+        .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, IssuedAsset(issue.id()), fee = minFee, ByteStr.empty, ts)
         .explicitGet()
       sponsor2 = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee * 10), One, ts).explicitGet()
       transfer2 = TransferTransaction
-        .selfSigned(1.toByte, acc, acc.toAddress, Waves, 1L, IssuedAsset(issue.id()), fee = minFee * 10, ByteStr.empty, ts)
+        .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, IssuedAsset(issue.id()), fee = minFee * 10, ByteStr.empty, ts)
         .explicitGet()
     } yield (acc, genesis, issue, sponsor1, transfer1, sponsor2, transfer2)
 
@@ -281,7 +281,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       val b2 = block(acc, Seq.empty)
 
       assertNgDiffState(Seq(b0, b1), b2, NgAndSponsorshipSettings) { case (_, state) =>
-        state.balance(acc.toAddress, Waves) - ENOUGH_AMT shouldBe 0
+        state.balance(acc.toAddress, Dcc) - ENOUGH_AMT shouldBe 0
       }
     }
   }

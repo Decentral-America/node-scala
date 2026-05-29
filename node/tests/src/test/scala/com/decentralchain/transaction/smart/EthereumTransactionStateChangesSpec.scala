@@ -5,7 +5,7 @@ import com.decentralchain.db.WithDomain
 import com.decentralchain.state.StringDataEntry
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.test.FlatSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{EthTxGenerator, TxHelpers}
 import com.decentralchain.utils.{EthHelpers, JsonMatchers}
 import play.api.libs.json.Json
@@ -15,8 +15,8 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
   "Failed ethereum invoke" should "preserve meta with payload" in withDomain(DomainPresets.RideV6) { d =>
     val dApp = TxHelpers.secondSigner
 
-    d.helpers.creditWavesToDefaultSigner()
-    d.helpers.creditWavesFromDefaultSigner(dApp.toAddress, 1_000_000)
+    d.helpers.creditDccToDefaultSigner()
+    d.helpers.creditDccFromDefaultSigner(dApp.toAddress, 1_000_000)
     d.helpers.setScript(
       dApp,
       TxHelpers.scriptV5(s"""@Callable(i)
@@ -31,7 +31,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
       dApp.toAddress,
       "deposit",
       Nil,
-      Seq(InvokeScriptTransaction.Payment(100, Waves))
+      Seq(InvokeScriptTransaction.Payment(100, Dcc))
     )
 
     d.appendAndAssertFailed(invoke)
@@ -55,8 +55,8 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
   "Ethereum invoke with complexity>1000" should "handle error" in withDomain(DomainPresets.RideV6) { d =>
     val dApp = TxHelpers.secondSigner
 
-    d.helpers.creditWavesToDefaultSigner()
-    d.helpers.creditWavesFromDefaultSigner(dApp.toAddress, 1_000_000)
+    d.helpers.creditDccToDefaultSigner()
+    d.helpers.creditDccFromDefaultSigner(dApp.toAddress, 1_000_000)
     d.helpers.setScript(
       dApp,
       TxHelpers.scriptV5(s"""@Callable(i)
@@ -71,7 +71,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
       dApp.toAddress,
       "deposit",
       Nil,
-      Seq(InvokeScriptTransaction.Payment(100, Waves))
+      Seq(InvokeScriptTransaction.Payment(100, Dcc))
     )
 
     d.appendBlock(invoke)
@@ -106,8 +106,8 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
   it should "handle success" in withDomain(DomainPresets.RideV6) { d =>
     val dApp = TxHelpers.signer(10)
 
-    d.helpers.creditWavesToDefaultSigner()
-    d.helpers.creditWavesFromDefaultSigner(dApp.toAddress, 1_000_000)
+    d.helpers.creditDccToDefaultSigner()
+    d.helpers.creditDccFromDefaultSigner(dApp.toAddress, 1_000_000)
 
     d.helpers.setScript(
       dApp,
@@ -123,7 +123,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
       dApp.toAddress,
       "deposit",
       Nil,
-      Seq(InvokeScriptTransaction.Payment(100, Waves))
+      Seq(InvokeScriptTransaction.Payment(100, Dcc))
     )
 
     d.appendBlock(invoke)
@@ -158,9 +158,9 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
     val dApp       = TxHelpers.signer(10)
     val nestedDApp = TxHelpers.signer(11)
 
-    d.helpers.creditWavesToDefaultSigner()
-    d.helpers.creditWavesFromDefaultSigner(dApp.toAddress, 1_000_000)
-    d.helpers.creditWavesFromDefaultSigner(nestedDApp.toAddress, 1_000_000)
+    d.helpers.creditDccToDefaultSigner()
+    d.helpers.creditDccFromDefaultSigner(dApp.toAddress, 1_000_000)
+    d.helpers.creditDccFromDefaultSigner(nestedDApp.toAddress, 1_000_000)
 
     d.helpers.setScript(
       dApp,
@@ -186,7 +186,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
       dApp.toAddress,
       "deposit",
       Nil,
-      Seq(InvokeScriptTransaction.Payment(100, Waves))
+      Seq(InvokeScriptTransaction.Payment(100, Dcc))
     )
 
     d.appendBlock(invoke)
@@ -246,9 +246,9 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
     val dApp       = TxHelpers.signer(10)
     val nestedDApp = TxHelpers.signer(11)
 
-    d.helpers.creditWavesToDefaultSigner()
-    d.helpers.creditWavesFromDefaultSigner(dApp.toAddress, 1_000_000)
-    d.helpers.creditWavesFromDefaultSigner(nestedDApp.toAddress, 1_000_000)
+    d.helpers.creditDccToDefaultSigner()
+    d.helpers.creditDccFromDefaultSigner(dApp.toAddress, 1_000_000)
+    d.helpers.creditDccFromDefaultSigner(nestedDApp.toAddress, 1_000_000)
 
     d.helpers.setScript(
       dApp,
@@ -274,7 +274,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
       dApp.toAddress,
       "deposit",
       Nil,
-      Seq(InvokeScriptTransaction.Payment(100, Waves))
+      Seq(InvokeScriptTransaction.Payment(100, Dcc))
     )
 
     d.appendBlock(invoke)

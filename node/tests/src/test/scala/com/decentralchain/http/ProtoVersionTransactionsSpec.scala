@@ -13,7 +13,7 @@ import com.decentralchain.settings.Constants
 import com.decentralchain.state.IntegerDataEntry
 import com.decentralchain.test.SharedDomain
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
@@ -179,7 +179,7 @@ class ProtoVersionTransactionsSpec
     "ExchangeTransaction" in {
       val buyer     = TxHelpers.signer(0)
       val seller    = TxHelpers.signer(1)
-      val assetPair = AssetPair(asset, Waves)
+      val assetPair = AssetPair(asset, Dcc)
 
       val buyOrder =
         Order
@@ -215,7 +215,7 @@ class ProtoVersionTransactionsSpec
           account.publicKey,
           dapp,
           Some(FUNCTION_CALL(User("hello"), List(CONST_LONG(42L)))),
-          Seq(InvokeScriptTransaction.Payment(100L, Waves)),
+          Seq(InvokeScriptTransaction.Payment(100L, Dcc)),
           InvokeScriptTxFee,
           feeAssetId = asset,
           now,
@@ -286,7 +286,7 @@ class ProtoVersionTransactionsSpec
       val recipient = TxHelpers.secondAddress
       val transferTxUnsigned =
         TransferTransaction
-          .create(TxVersion.V3, account.publicKey, recipient, asset, 100L, Waves, MinFee, ByteStr(attachment), now, Proofs.empty)
+          .create(TxVersion.V3, account.publicKey, recipient, asset, 100L, Dcc, MinFee, ByteStr(attachment), now, Proofs.empty)
           .explicitGet()
 
       val (proofs, transferTxJson) = Post(routePath("/sign"), transferTxUnsigned.json()) ~> ApiKeyHeader ~> route ~> check {
@@ -315,7 +315,7 @@ class ProtoVersionTransactionsSpec
 
       val massTransferTxUnsigned =
         MassTransferTransaction
-          .create(TxVersion.V2, account.publicKey, Waves, transfers, MassTransferTxFee, now, ByteStr(attachment), Proofs.empty)
+          .create(TxVersion.V2, account.publicKey, Dcc, transfers, MassTransferTxFee, now, ByteStr(attachment), Proofs.empty)
           .explicitGet()
 
       val (proofs, massTransferTxJson) = Post(routePath("/sign"), massTransferTxUnsigned.json()) ~> ApiKeyHeader ~> route ~> check {
@@ -409,7 +409,7 @@ class ProtoVersionTransactionsSpec
           "Test",
           ntpNow,
           MinFee,
-          Waves,
+          Dcc,
           Proofs.empty
         )
         .explicitGet()

@@ -59,7 +59,7 @@ class MicroblocksSponsoredFeeTestSuite extends BaseFreeSpec with ScorexLogging {
       }
 
       val block   = notMiner.blockAt(height)
-      val realFee = block.transactions.map(tx => Sponsorship.toWaves(tx.fee, Token)).sum
+      val realFee = block.transactions.map(tx => Sponsorship.toDcc(tx.fee, Token)).sum
       blockHeadersSeq(1).totalFee shouldBe realFee
     }
   }
@@ -67,8 +67,8 @@ class MicroblocksSponsoredFeeTestSuite extends BaseFreeSpec with ScorexLogging {
   override def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.quorum(0))
-      .overrideBase(_.raw("waves.blockchain.custom.functionality.blocks-for-feature-activation=1"))
-      .overrideBase(_.raw("waves.blockchain.custom.functionality.feature-check-blocks-period=1"))
+      .overrideBase(_.raw("dcc.blockchain.custom.functionality.blocks-for-feature-activation=1"))
+      .overrideBase(_.raw("dcc.blockchain.custom.functionality.feature-check-blocks-period=1"))
       .overrideBase(_.preactivatedFeatures((14, Height(1000000))))
       .withDefault(1)
       .withSpecial(2, _.nonMiner)

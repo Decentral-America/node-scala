@@ -156,14 +156,14 @@ class DCCEnvironment(
     } yield balance).left.map(_.toString)
   }
 
-  override def accountWavesBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails] = {
+  override def accountDccBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails] = {
     val addressE = addressOrAlias match {
       case Address(bytes) => account.Address.fromBytes(bytes.arr)
       case Alias(name)    => account.Alias.create(name).flatMap(a => blockchain.resolveAlias(a))
     }
     for {
       address <- addressE.leftMap(_.toString)
-      portfolio = currentBlockchain().wavesPortfolio(address)
+      portfolio = currentBlockchain().dccPortfolio(address)
       isBanned  = currentBlockchain().hasBannedEffectiveBalance(address)
       effectiveBalance <- portfolio.effectiveBalance(isBanned)
     } yield Environment.BalanceDetails(
@@ -392,7 +392,7 @@ trait DAppEnvironmentInterface extends Environment[Id] {
   def invocationRoot: DAppEnvironment.InvocationTreeTracker
 }
 
-// todo move to separate class
+// NOTE: Could be extracted to a separate class for clarity
 // Not thread safe
 class DAppEnvironment(
     nByte: Byte,
@@ -445,7 +445,7 @@ class DAppEnvironment(
         currentDAppPk,
         address,
         FUNCTION_CALL(User(func, func), args),
-        payments.map(p => Payment(p._2, p._1.fold(Waves: Asset)(a => IssuedAsset(ByteStr(a))))),
+        payments.map(p => Payment(p._2, p._1.fold(Dcc: Asset)(a => IssuedAsset(ByteStr(a))))),
         tx
       )
       invocationTracker = {
@@ -456,7 +456,7 @@ class DAppEnvironment(
       invocation = InvokeScriptResult.Invocation(
         address,
         InvokeScriptResult.Call(func, args),
-        payments.map(p => InvokeScriptResult.AttachedPayment(p._1.fold(Asset.Waves: Asset)(a => IssuedAsset(ByteStr(a))), p._2)),
+        payments.map(p => InvokeScriptResult.AttachedPayment(p._1.fold(Asset.Dcc: Asset)(a => IssuedAsset(ByteStr(a))), p._2)),
         InvokeScriptResult.empty
       )
       (

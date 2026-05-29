@@ -5,7 +5,7 @@ import com.decentralchain.account.{Address, AddressOrAlias}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{Asset, TxValidationError}
@@ -30,7 +30,7 @@ object TransferDiff {
   ): Either[ValidationError, StateSnapshot] = {
 
     val isSmartAsset = feeAssetId match {
-      case Waves => false
+      case Dcc => false
       case asset @ IssuedAsset(_) =>
         blockchain
           .assetDescription(asset)
@@ -44,7 +44,7 @@ object TransferDiff {
 
       _ <- validateOverflow(blockchain, blockchain.height, amount, fee)
       transferPf <- assetId match {
-        case Waves =>
+        case Dcc =>
           Portfolio
             .combine(
               Map(senderAddress -> Portfolio(-amount)),
@@ -60,7 +60,7 @@ object TransferDiff {
             .leftMap(GenericError(_))
       }
       feePf <- feeAssetId match {
-        case Waves => Right(Map(senderAddress -> Portfolio(-fee)))
+        case Dcc => Right(Map(senderAddress -> Portfolio(-fee)))
         case asset @ IssuedAsset(_) =>
           val senderPf = Map(senderAddress -> Portfolio.build(asset -> -fee))
           if (Height(blockchain.height) >= Sponsorship.sponsoredFeesSwitchHeight(blockchain)) {
@@ -68,8 +68,8 @@ object TransferDiff {
               .assetDescription(asset)
               .collect {
                 case desc if desc.sponsorship > 0 =>
-                  val feeInWaves = Sponsorship.toWaves(fee, desc.sponsorship)
-                  Map[Address, Portfolio](desc.issuer.toAddress -> Portfolio.build(-feeInWaves, asset, fee))
+                  val feeInDcc = Sponsorship.toDcc(fee, desc.sponsorship)
+                  Map[Address, Portfolio](desc.issuer.toAddress -> Portfolio.build(-feeInDcc, asset, fee))
               }
               .getOrElse(Map.empty)
             Portfolio.combine(senderPf, sponsorPf).leftMap(GenericError(_))

@@ -24,7 +24,7 @@ class ChallengingAfterFinalizationSuite extends BaseFinalizationSpec, TestSchedu
 
   "Anyone can challenge" in withDomain(
     defaultSettings,
-    AddrWithBalance.enoughBalances(otherNodeAcc) // thisNodeAcc has no WAVES
+    AddrWithBalance.enoughBalances(otherNodeAcc) // thisNodeAcc has no DCC
   ) { d =>
     d.wallet.generateNewAccounts(1)
 
@@ -40,7 +40,7 @@ class ChallengingAfterFinalizationSuite extends BaseFinalizationSpec, TestSchedu
       strictTime = true,
       generator = otherNodeAcc,
       stateHash = Some(Some(invalidStateHash)),
-      timestamp = Some(d.nextBlockTime(otherNodeAcc) + 1L) // HACK: challenger block timestamp will be better
+      timestamp = Some(d.nextBlockTime(otherNodeAcc) + 1L) // NOTE: Challenger block timestamp uses simplified approach
     )
     d.appender.appendBlock(invalidBlock, requireAppended = false)
 

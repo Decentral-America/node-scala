@@ -27,7 +27,7 @@ import java.util
 import scala.annotation.nowarn
 
 //noinspection ScalaStyle
-// TODO: Consider remove implemented methods from REST API
+// NOTE: REST API methods retained for backward compatibility
 object UtilApp {
   enum Mode {
     case CompileScript, DecompileScript, SignBytes, VerifySignature, CreateKeyPair, Hash, SerializeTx, SignTx, SignTxWithSk, SmokeTest

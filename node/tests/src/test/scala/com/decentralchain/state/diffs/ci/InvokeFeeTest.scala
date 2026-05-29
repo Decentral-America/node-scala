@@ -7,7 +7,7 @@ import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.diffs.FeeValidation.FeeUnit
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.*
 
 class InvokeFeeTest extends PropSpec with WithDomain {
@@ -72,12 +72,12 @@ class InvokeFeeTest extends PropSpec with WithDomain {
       d.appendAndAssertFailed(invoke(invoker = invoker, dApp = dAppAcc.toAddress, fee = invokeFee / coeff, feeAssetId = asset))
       d.liquidSnapshot.balances((invoker.toAddress, asset)) shouldBe d.rocksDBWriter.balance(invoker.toAddress, asset) - invokeFee / coeff
       d.liquidSnapshot.balances((issuer.toAddress, asset)) shouldBe d.rocksDBWriter.balance(issuer.toAddress, asset) + invokeFee / coeff
-      d.liquidSnapshot.balances.get((dAppAcc.toAddress, Waves)) shouldBe None
+      d.liquidSnapshot.balances.get((dAppAcc.toAddress, Dcc)) shouldBe None
     }
   }
 
-  property("invoke is rejected if fee sponsor has not enough Waves") {
-    withDomain(RideV5, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(signer(9).toAddress, 2.waves)) { d =>
+  property("invoke is rejected if fee sponsor has not enough Dcc") {
+    withDomain(RideV5, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(signer(9).toAddress, 2.dcc)) { d =>
       val dApp = TestCompiler(V5).compileContract(
         """
           | @Callable(i)
@@ -89,7 +89,7 @@ class InvokeFeeTest extends PropSpec with WithDomain {
       val sponsorTx = sponsor(asset, Some(FeeUnit), signer(9))
       d.appendBlock(setScript(secondSigner, dApp))
       d.appendBlock(issueTx, sponsorTx)
-      d.appendBlockE(invoke(feeAssetId = asset)) should produce(s"negative waves balance: ${signer(9).toAddress}, old: 0, new: -$invokeFee")
+      d.appendBlockE(invoke(feeAssetId = asset)) should produce(s"negative dcc balance: ${signer(9).toAddress}, old: 0, new: -$invokeFee")
     }
   }
 

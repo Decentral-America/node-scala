@@ -8,7 +8,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.database.protobuf.EthereumTransactionMeta
 import com.decentralchain.lang.ValidationError
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.{Asset, ERC20Address, Transaction}
 
@@ -121,7 +121,7 @@ object StateSnapshot {
 
   // ignores lease balances from portfolios
   private def balances(portfolios: Map[Address, Portfolio], blockchain: Blockchain): Either[String, VectorMap[(Address, Asset), Long]] =
-    flatTraverse(portfolios) { case (address, Portfolio(wavesAmount, _, assets, _)) =>
+    flatTraverse(portfolios) { case (address, Portfolio(dccAmount, _, assets, _)) =>
       val assetBalancesE = flatTraverse(assets) {
         case (_, 0) =>
           Right(VectorMap[(Address, Asset), Long]())
@@ -129,11 +129,11 @@ object StateSnapshot {
           safeSum(blockchain.balance(address, assetId), balance, s"$address -> Asset balance")
             .map(newBalance => VectorMap((address, assetId: Asset) -> newBalance))
       }
-      if (wavesAmount != 0)
+      if (dccAmount != 0)
         for {
           assetBalances   <- assetBalancesE
-          newWavesBalance <- safeSum(blockchain.balance(address), wavesAmount, s"$address -> Waves balance")
-        } yield assetBalances + ((address, Waves) -> newWavesBalance)
+          newDccBalance <- safeSum(blockchain.balance(address), dccAmount, s"$address -> Dcc balance")
+        } yield assetBalances + ((address, Dcc) -> newDccBalance)
       else
         assetBalancesE
     }

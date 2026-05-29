@@ -15,7 +15,7 @@ import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.compiler.{CompilerContext, ScriptResultSource, Terms, TestCompiler}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.lang.v1.evaluator.FunctionIds
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.{FieldNames, Types, WavesContext}
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.{FieldNames, Types, DccContext}
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, GlobalValNames, PureContext}
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.parser.Parser.LibrariesOffset.NoLibraries
@@ -33,7 +33,7 @@ class ContractCompilerTest extends PropSpec {
         Seq(
           PureContext.build(version, useNewPowPrecision = true).withEnvironment[Environment],
           CryptoContext.build(com.decentralchain.lang.Global, version, fixEcrecover = true).withEnvironment[Environment],
-          WavesContext.build(
+          DccContext.build(
             Global,
             DirectiveSet(version, Account, DAppType).explicitGet(),
             fixBigScriptField = true
@@ -372,7 +372,7 @@ class ContractCompilerTest extends PropSpec {
           |	@Callable(i)
           |	func deposit() = {
           |   let pmt = i.payment.value()
-          |   if (isDefined(pmt.assetId)) then throw("can hodl waves only at the moment")
+          |   if (isDefined(pmt.assetId)) then throw("can hodl dcc only at the moment")
           |   else {
           |	  	let currentKey = toBase58String(i.caller.bytes)
           |	  	let currentAmount = match getInteger(this, currentKey) {
@@ -422,7 +422,7 @@ class ContractCompilerTest extends PropSpec {
         | @Callable(i)
         | func bar() = {
         |   if (true) then WriteSet([DataEntry("entr1","entr2")])
-        |   else TransferSet([ScriptTransfer(i.caller, wavesBalance(this), base58'somestr')])
+        |   else TransferSet([ScriptTransfer(i.caller, dccBalance(this), base58'somestr')])
         | }
         |
         | @Verifier(t)
@@ -433,18 +433,18 @@ class ContractCompilerTest extends PropSpec {
     ) shouldBe Symbol("right")
   }
 
-  property("wavesBalanceV4 have type BalanceDetails") {
+  property("dccBalanceV4 have type BalanceDetails") {
     TestCompiler(V4).compile(
       """
         | @Callable(i)
         | func bar() = {
-        |   [ScriptTransfer(i.caller, wavesBalance(this), base58'somestr')]
+        |   [ScriptTransfer(i.caller, dccBalance(this), base58'somestr')]
         | }
       """.stripMargin
     ) should produce("Non-matching types: expected: Int, actual: BalanceDetails")
   }
 
-  property("wavesBalanceV4 have type BalanceDetails with fields") {
+  property("dccBalanceV4 have type BalanceDetails with fields") {
     val ctx = dAppV4Ctx
     val expr = {
       val script =
@@ -452,10 +452,10 @@ class ContractCompilerTest extends PropSpec {
           | @Callable(i)
           | func bar() = {
           |   [
-          |     ScriptTransfer(i.caller, wavesBalance(this).available, base58'somestr'),
-          |     ScriptTransfer(i.caller, wavesBalance(this).regular, base58'somestr'),
-          |     ScriptTransfer(i.caller, wavesBalance(this).generating, base58'somestr'),
-          |     ScriptTransfer(i.caller, wavesBalance(this).effective, base58'somestr')
+          |     ScriptTransfer(i.caller, dccBalance(this).available, base58'somestr'),
+          |     ScriptTransfer(i.caller, dccBalance(this).regular, base58'somestr'),
+          |     ScriptTransfer(i.caller, dccBalance(this).generating, base58'somestr'),
+          |     ScriptTransfer(i.caller, dccBalance(this).effective, base58'somestr')
           |   ]
           | }
         """.stripMargin
@@ -479,7 +479,7 @@ class ContractCompilerTest extends PropSpec {
     compiler.ContractCompiler(ctx, expr, V4) should produce("Non-matching types: expected: ByteVector, actual: Unit")
   }
 
-  property("assetBalanceV3 allow issued assets and waves") {
+  property("assetBalanceV3 allow issued assets and dcc") {
     val ctx = dAppV3Ctx
     val expr = {
       val script =
@@ -791,7 +791,7 @@ class ContractCompilerTest extends PropSpec {
     }
     val ctx =
       PureContext.build(V4, useNewPowPrecision = true).withEnvironment[Environment] |+|
-        WavesContext.build(Global, DirectiveSet(V4, Account, DAppType).explicitGet(), fixBigScriptField = true)
+        DccContext.build(Global, DirectiveSet(V4, Account, DAppType).explicitGet(), fixBigScriptField = true)
 
     compiler.ContractCompiler(ctx.compilerContext, expr, V4) shouldBe Symbol("right")
   }
@@ -886,7 +886,7 @@ class ContractCompilerTest extends PropSpec {
     }
     val ctx =
       PureContext.build(V5, useNewPowPrecision = true).withEnvironment[Environment] |+|
-        WavesContext.build(Global, DirectiveSet(V5, Account, DAppType).explicitGet(), fixBigScriptField = true)
+        DccContext.build(Global, DirectiveSet(V5, Account, DAppType).explicitGet(), fixBigScriptField = true)
 
     compiler.ContractCompiler(ctx.compilerContext, expr, V5) shouldBe Symbol("right")
   }
@@ -924,7 +924,7 @@ class ContractCompilerTest extends PropSpec {
     }
     val ctx =
       PureContext.build(V4, useNewPowPrecision = true).withEnvironment[Environment] |+|
-        WavesContext.build(Global, DirectiveSet(V4, Account, DAppType).explicitGet(), fixBigScriptField = true)
+        DccContext.build(Global, DirectiveSet(V4, Account, DAppType).explicitGet(), fixBigScriptField = true)
 
     compiler.ContractCompiler(ctx.compilerContext, expr, V4) shouldBe Symbol("left")
   }
@@ -947,7 +947,7 @@ class ContractCompilerTest extends PropSpec {
     }
     val ctx =
       PureContext.build(V4, useNewPowPrecision = true).withEnvironment[Environment] |+|
-        WavesContext.build(Global, DirectiveSet(V4, Account, DAppType).explicitGet(), fixBigScriptField = true)
+        DccContext.build(Global, DirectiveSet(V4, Account, DAppType).explicitGet(), fixBigScriptField = true)
 
     val result = compiler.ContractCompiler(ctx.compilerContext, expr, V4)
     result should produce("Undefined field `originCaller` of variable of type `Invocation`")

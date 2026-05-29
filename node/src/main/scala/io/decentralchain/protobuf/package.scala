@@ -6,7 +6,7 @@ import com.decentralchain.common.state.ByteStr
 import io.decentralchain.protobuf.transaction.PBRecipients
 import com.decentralchain.state.TransactionId
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 
 import scala.annotation.targetName
 
@@ -27,7 +27,7 @@ package object protobuf {
     def toByteStr: ByteStr           = ByteStr(bs.toByteArray)
     def toTxId: TransactionId        = TransactionId(toByteStr)
     def toIssuedAssetId: IssuedAsset = IssuedAsset(ByteStr(bs.toByteArray))
-    def toAssetId: Asset             = if (bs.isEmpty) Waves else toIssuedAssetId
+    def toAssetId: Asset             = if (bs.isEmpty) Dcc else toIssuedAssetId
     def toPublicKey: PublicKey       = PublicKey(bs.toByteArray)
     def toAddress(chainId: Byte = AddressScheme.current.chainId): Address =
       PBRecipients

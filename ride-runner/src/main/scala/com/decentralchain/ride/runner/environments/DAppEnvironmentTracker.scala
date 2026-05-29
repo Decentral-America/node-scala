@@ -14,7 +14,7 @@ trait DAppEnvironmentTracker {
   def hasData(address: Address): Unit
   def resolveAlias(name: String): Unit
   def accountBalanceOf(address: Address, assetId: Option[Array[Byte]]): Unit
-  def accountWavesBalanceOf(address: Address): Unit
+  def accountDccBalanceOf(address: Address): Unit
   def accountScript(address: Address): Unit
   def callScript(dApp: Address): Unit
 }

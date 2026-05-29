@@ -4,7 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.decentralchain.account.{Address, KeyPair, SeedKeyPair}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.lease.LeaseTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -41,7 +41,7 @@ object Preconditions {
     val transfers = accounts.map { account =>
       // val acc = GeneratorSettings.toKeyPair(accountSeed)
       TransferTransaction
-        .selfSigned(2.toByte, settings.faucet, account.toAddress, Waves, settings.balance, Waves, Fee, ByteStr.empty, time.correctedTime())
+        .selfSigned(2.toByte, settings.faucet, account.toAddress, Dcc, settings.balance, Dcc, Fee, ByteStr.empty, time.correctedTime())
         .explicitGet()
     }.toList
 
@@ -90,7 +90,7 @@ object Preconditions {
             acc.toAddress,
             IssuedAsset(issuedAsset.assetId),
             balance,
-            Waves,
+            Dcc,
             Fee,
             ByteStr.empty,
             time.correctedTime()

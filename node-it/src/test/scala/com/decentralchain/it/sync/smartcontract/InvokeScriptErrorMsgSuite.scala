@@ -21,8 +21,8 @@ class InvokeScriptErrorMsgSuite extends BaseTransactionSuite with CancelAfterFai
   protected override def beforeAll(): Unit = {
     super.beforeAll()
 
-    sender.transfer(sender.keyPair, recipient = contractAddress, assetId = None, amount = 5.waves, fee = minFee, waitForTx = true).id
-    sender.transfer(sender.keyPair, recipient = contractAddress, assetId = None, amount = 5.waves, fee = minFee, waitForTx = true).id
+    sender.transfer(sender.keyPair, recipient = contractAddress, assetId = None, amount = 5.dcc, fee = minFee, waitForTx = true).id
+    sender.transfer(sender.keyPair, recipient = contractAddress, assetId = None, amount = 5.dcc, fee = minFee, waitForTx = true).id
 
     val scriptText =
       """
@@ -75,7 +75,7 @@ class InvokeScriptErrorMsgSuite extends BaseTransactionSuite with CancelAfterFai
         fee = 1000
       ),
       "State check failed. Reason: Transaction sent from smart account. Requires 400000 extra fee. Transaction involves 1 scripted assets." +
-        " Requires 400000 extra fee. Fee for InvokeScriptTransaction (1000 in WAVES) does not exceed minimal value of 1300000 WAVES."
+        " Requires 400000 extra fee. Fee for InvokeScriptTransaction (1000 in DCC) does not exceed minimal value of 1300000 DCC."
     )
 
     assertApiError(
@@ -91,7 +91,7 @@ class InvokeScriptErrorMsgSuite extends BaseTransactionSuite with CancelAfterFai
         ),
       AssertiveApiError(
         ScriptExecutionError.Id,
-        "Error while executing dApp: Fee in WAVES for InvokeScriptTransaction (1300000 in WAVES) with 12 total scripts invoked does not exceed minimal value of 5300000 WAVES."
+        "Error while executing dApp: Fee in DCC for InvokeScriptTransaction (1300000 in DCC) with 12 total scripts invoked does not exceed minimal value of 5300000 DCC."
       )
     )
   }

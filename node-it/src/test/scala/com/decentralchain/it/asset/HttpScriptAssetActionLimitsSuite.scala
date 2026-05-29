@@ -24,14 +24,14 @@ class HttpScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite {
       .explicitGet()
       ._1
 
-    miner.transfer(sender.keyPair, address.publicKey.toAddress.toString, initialWavesBalance, minFee, waitForTx = true)
+    miner.transfer(sender.keyPair, address.publicKey.toAddress.toString, initialDccBalance, minFee, waitForTx = true)
     nodes.waitForHeightArise()
 
     nodes.waitForHeightAriseAndTxPresent(
       miner
         .signedBroadcast(
           SetScriptTransaction
-            .selfSigned(1.toByte, address, Some(compiledScript), 1.waves, System.currentTimeMillis())
+            .selfSigned(1.toByte, address, Some(compiledScript), 1.dcc, System.currentTimeMillis())
             .explicitGet()
             .json()
         )

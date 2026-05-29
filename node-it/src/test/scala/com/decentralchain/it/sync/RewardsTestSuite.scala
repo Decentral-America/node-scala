@@ -18,7 +18,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
   override protected def nodeConfigs: Seq[Config] = Configs
 
   lazy val initMinerBalance: Long = miner.balanceAtHeight(miner.address, Height(1))
-  val InitialAmount               = Docker.initialWavesAmount
+  val InitialAmount               = Docker.initialDccAmount
 
   "reward changes accordingly node's votes and miner's balance changes by reward amount after block generation" - {
     "when miner votes for increase" in {
@@ -43,7 +43,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardAtActivation.votingThreshold shouldBe votingInterval / 2 + 1
       rewardAtActivation.votes.increase shouldBe 0
       rewardAtActivation.votes.decrease shouldBe 0
-      rewardAtActivation.totalWavesAmount shouldBe InitialAmount + initial
+      rewardAtActivation.totalDccAmount shouldBe InitialAmount + initial
 
       miner.waitForHeight(activationHeight + 1) // 5
       miner.balanceAtHeight(miner.address, activationHeight + 1) shouldBe minerBalanceAtActivationHeight + miner.rewardStatus().currentReward
@@ -59,7 +59,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardAfterFirstVote.votingThreshold shouldBe votingInterval / 2 + 1
       rewardAfterFirstVote.votes.increase shouldBe 1
       rewardAfterFirstVote.votes.decrease shouldBe 0
-      rewardAfterFirstVote.totalWavesAmount shouldBe InitialAmount + BigInt(initial) * BigInt(votingStartHeight - activationHeight + 1)
+      rewardAfterFirstVote.totalDccAmount shouldBe InitialAmount + BigInt(initial) * BigInt(votingStartHeight - activationHeight + 1)
 
       val termEndHeight   = activationHeight + term
       val newReward       = initial + minIncrement
@@ -81,7 +81,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardAtTermEnd.votingThreshold shouldBe votingInterval / 2 + 1
       rewardAtTermEnd.votes.increase shouldBe 0
       rewardAtTermEnd.votes.decrease shouldBe 0
-      rewardAtTermEnd.totalWavesAmount shouldBe amountAfterTerm
+      rewardAtTermEnd.totalDccAmount shouldBe amountAfterTerm
       val minerBalanceAtTermEndHeight = miner.balanceAtHeight(miner.address, termEndHeight)
       minerBalanceAtTermEndHeight shouldBe minerBalanceBeforeTermEnd + miner.rewardStatus().currentReward
 
@@ -101,7 +101,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardSecVoting.votingThreshold shouldBe votingInterval / 2 + 1
       rewardSecVoting.votes.increase shouldBe 3
       rewardSecVoting.votes.decrease shouldBe 0
-      rewardSecVoting.totalWavesAmount shouldBe amountAfterTerm + newReward * BigInt(secondVotingStartHeightPlusTwo - termEndHeight)
+      rewardSecVoting.totalDccAmount shouldBe amountAfterTerm + newReward * BigInt(secondVotingStartHeightPlusTwo - termEndHeight)
     }
     "when miner votes for decrease" in {
       docker.restartNode(dockerNodes().head, configWithDecreasedDesired)
@@ -120,7 +120,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardAtActivation.votingThreshold shouldBe votingInterval / 2 + 1
       rewardAtActivation.votes.increase shouldBe 0
       rewardAtActivation.votes.decrease shouldBe 0
-      rewardAtActivation.totalWavesAmount shouldBe InitialAmount + initial
+      rewardAtActivation.totalDccAmount shouldBe InitialAmount + initial
 
       val termEndHeight   = activationHeight + term
       val newReward       = initial - minIncrement
@@ -140,7 +140,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardAtTermEnd.votingThreshold shouldBe votingInterval / 2 + 1
       rewardAtTermEnd.votes.increase shouldBe 0
       rewardAtTermEnd.votes.decrease shouldBe 0
-      rewardAtTermEnd.totalWavesAmount shouldBe amountAfterTerm
+      rewardAtTermEnd.totalDccAmount shouldBe amountAfterTerm
       val minerBalanceAtTermEnd = miner.balanceAtHeight(miner.address, termEndHeight)
       minerBalanceAtTermEnd shouldBe minerBalanceBeforeTermEnd + miner.rewardStatus().currentReward
 
@@ -159,7 +159,7 @@ class RewardsTestSuite extends BaseFreeSpec with ActivationStatusRequest with Op
       rewardSecVoting.votingThreshold shouldBe votingInterval / 2 + 1
       rewardSecVoting.votes.increase shouldBe 0
       rewardSecVoting.votes.decrease shouldBe 3
-      rewardSecVoting.totalWavesAmount shouldBe amountAfterTerm + newReward * BigInt(secondVotingStartHeightPlusTwo - termEndHeight)
+      rewardSecVoting.totalDccAmount shouldBe amountAfterTerm + newReward * BigInt(secondVotingStartHeightPlusTwo - termEndHeight)
     }
   }
 }
@@ -174,7 +174,7 @@ object RewardsTestSuite {
   private val votingInterval   = 4
 
   val configWithIncreasedDesired: Config = ConfigFactory.parseString(
-    s"""waves {
+    s"""dcc {
        |  blockchain.custom.functionality {
        |    pre-activated-features = {
        |      ${BlockchainFeatures.BlockReward.id} = $activationHeight
@@ -192,7 +192,7 @@ object RewardsTestSuite {
   )
 
   val configWithDecreasedDesired: Config = ConfigFactory.parseString(
-    s"""waves {
+    s"""dcc {
        |  blockchain.custom.functionality {
        |    pre-activated-features = {
        |      ${BlockchainFeatures.BlockReward.id} = $activationHeight

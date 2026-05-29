@@ -8,7 +8,7 @@ import com.decentralchain.it.api.TransferTransactionInfo
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.TransferTransaction.MaxAttachmentSize
 import com.decentralchain.transaction.{Proofs, TxPositiveAmount, TxVersion, TransactionSignOps}
@@ -21,13 +21,13 @@ import scala.concurrent.duration.*
 class TransferTransactionSuite extends BaseTransactionSuite with CancelAfterFailure {
   test("transfer with empty string assetId") {
     val tx = TransferTransaction
-      .selfSigned(2.toByte, sender.keyPair, sender.keyPair.toAddress, Waves, 100L, Waves, minFee, ByteStr.empty, System.currentTimeMillis())
+      .selfSigned(2.toByte, sender.keyPair, sender.keyPair.toAddress, Dcc, 100L, Dcc, minFee, ByteStr.empty, System.currentTimeMillis())
       .explicitGet()
     val json = tx.json() ++ Json.obj("assetId" -> "", "feeAssetId" -> "")
     sender.signedBroadcast(json, waitForTx = true)
   }
 
-  test("asset transfer changes sender's and recipient's asset balance; issuer's.waves balance is decreased by fee") {
+  test("asset transfer changes sender's and recipient's asset balance; issuer's.dcc balance is decreased by fee") {
     for (v <- transferTxSupportedVersions) {
       val (firstBalance, firstEffBalance)   = miner.accountBalances(firstAddress)
       val (secondBalance, secondEffBalance) = miner.accountBalances(secondAddress)
@@ -53,7 +53,7 @@ class TransferTransactionSuite extends BaseTransactionSuite with CancelAfterFail
     }
   }
 
-  test("waves transfer changes waves balances and eff.b.") {
+  test("dcc transfer changes dcc balances and eff.b.") {
     for (v <- transferTxSupportedVersions) {
       val (firstBalance, firstEffBalance)   = miner.accountBalances(firstAddress)
       val (secondBalance, secondEffBalance) = miner.accountBalances(secondAddress)
@@ -67,7 +67,7 @@ class TransferTransactionSuite extends BaseTransactionSuite with CancelAfterFail
     }
   }
 
-  test("invalid signed waves transfer should not be in UTX or blockchain") {
+  test("invalid signed dcc transfer should not be in UTX or blockchain") {
     def invalidTx(
         version: TxVersion,
         timestamp: Long = System.currentTimeMillis,
@@ -78,9 +78,9 @@ class TransferTransactionSuite extends BaseTransactionSuite with CancelAfterFail
         version = version,
         sender = sender.keyPair.publicKey,
         recipient = AddressOrAlias.fromString(sender.address).explicitGet(),
-        assetId = Waves,
+        assetId = Dcc,
         amount = TxPositiveAmount.unsafeFrom(1),
-        feeAssetId = Waves,
+        feeAssetId = Dcc,
         fee = TxPositiveAmount.unsafeFrom(fee),
         attachment = ByteStr(attachment),
         timestamp = timestamp,
@@ -132,7 +132,7 @@ class TransferTransactionSuite extends BaseTransactionSuite with CancelAfterFail
       val (secondBalance, secondEffBalance) = miner.accountBalances(secondAddress)
 
       assertBadRequestAndResponse(
-        sender.transfer(secondKeyPair, firstAddress, secondBalance + 1.waves, minFee, version = v),
+        sender.transfer(secondKeyPair, firstAddress, secondBalance + 1.dcc, minFee, version = v),
         "Attempt to transfer unavailable funds"
       )
       miner.assertBalances(secondAddress, secondBalance, secondEffBalance)

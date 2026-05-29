@@ -31,7 +31,7 @@ class BlockHeadersTestSuite
     NodeConfigs.newBuilder
       .overrideBase(
         _.raw(
-          s"""waves {
+          s"""dcc {
              |  blockchain.custom.functionality {
              |    pre-activated-features = {
              |      ${BlockchainFeatures.BlockReward.id} = $activationHeight

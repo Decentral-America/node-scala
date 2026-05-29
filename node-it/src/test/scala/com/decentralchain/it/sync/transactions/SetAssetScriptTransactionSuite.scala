@@ -178,7 +178,7 @@ class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
     }
   }
 
-  test("sender's waves balance is decreased by fee") {
+  test("sender's dcc balance is decreased by fee") {
     val script2 = TestCompiler.DefaultVersion
       .compileAsset(
         s"""
@@ -206,7 +206,7 @@ class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
     }
   }
 
-  test("cannot transact without having enough waves") {
+  test("cannot transact without having enough dcc") {
     val (balance, eff) = miner.accountBalances(firstAddress)
     for (v <- setAssetScrTxSupportedVersions) {
       assertApiError(sender.setAssetScript(assetWScript, firstKeyPair, balance + 1, Some(scriptBase64), version = v)) { error =>
@@ -217,7 +217,7 @@ class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
       miner.assertBalances(firstAddress, balance, eff)
     }
 
-    val leaseAmount = 1.waves
+    val leaseAmount = 1.dcc
     val leaseId     = sender.lease(firstKeyPair, secondAddress, leaseAmount, minFee).id
     nodes.waitForHeightAriseAndTxPresent(leaseId)
 

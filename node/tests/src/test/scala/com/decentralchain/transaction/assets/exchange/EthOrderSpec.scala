@@ -2,7 +2,7 @@ package com.decentralchain.transaction.assets.exchange
 
 import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
@@ -50,7 +50,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
         "0xc3b8c59ee779ef7b308e44d3c24b0f05687eaebc49f7f94fe0cc4f6fb13bae351adfce1419d6d35c41d5bd7fdefd87871f1ed3b9df8771d1eb76e981adf48e741b"
       ),
       PublicKey.fromBase58String("9cpfKN9suPNvfeUNphzxXMjcnn974eme8ZhWUjaktzU5").explicitGet(),
-      AssetPair(Waves, IssuedAsset(ByteStr(Base58.decode("34N9YcEETLWn93qYQ64EsP1x89tSruJU44RrEMSXXEPJ")))),
+      AssetPair(Dcc, IssuedAsset(ByteStr(Base58.decode("34N9YcEETLWn93qYQ64EsP1x89tSruJU44RrEMSXXEPJ")))),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(211125290L),
       TxOrderPrice.unsafeFrom(2357071L),
@@ -74,7 +74,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
         "0x12f72d3bba93bda930ee5c280e1d39b7e7dcc439d789c92eff40ea860480213a0e79323093c8aee04c2a269de01c7d587a18b02d02746dec75ec1457accb72a301"
       ),
       PublicKey.fromBase58String("8QUAqtTckM5B8gvcuP7mMswat9SjKUuafJMusEoSn1Gy").explicitGet(),
-      AssetPair(Waves, IssuedAsset(ByteStr(Base58.decode("25FEqEjRkqK6yCkiT7Lz6SAYz7gUFCtxfCChnrVFD5AT")))),
+      AssetPair(Dcc, IssuedAsset(ByteStr(Base58.decode("25FEqEjRkqK6yCkiT7Lz6SAYz7gUFCtxfCChnrVFD5AT")))),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(100000000L),
       TxOrderPrice.unsafeFrom(14781968L),
@@ -96,14 +96,14 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
         "0x0a897d382e4e4a066e1d98e5c3c1051864a557c488571ff71e036c0f5a2c7204274cb293cd4aa7ad40f8c2f650e1a2770ecca6aa14a1da883388fa3b5b9fa8b71c"
       ),
       TxHelpers.matcher.publicKey,
-      AssetPair(IssuedAsset(ByteStr(EthStubBytes32)), Waves),
+      AssetPair(IssuedAsset(ByteStr(EthStubBytes32)), Dcc),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       1,
       123,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     val json  = Json.toJson(ethBuyOrder).as[JsObject] - "senderPublicKey"
@@ -122,14 +122,14 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
         "0xb557dae4c614146dd35ba6fd80e4702a75d33ffcb8af09e80e0c1a7386b8ffcb5b76bd8037f6484de809a80a5b39a224301c76e8bad9b1a9e7ada53ba6fa7e361c"
       ),
       PublicKey(EthStubBytes32),
-      AssetPair(IssuedAsset(ByteStr(EthStubBytes32)), Waves),
+      AssetPair(IssuedAsset(ByteStr(EthStubBytes32)), Dcc),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(1),
       123,
       321,
       TxMatcherFee.unsafeFrom(1),
-      Waves
+      Dcc
     )
 
     testOrder.isValid(123).labels shouldBe Set("eip712Signature available only in V4")
@@ -141,9 +141,9 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
@@ -153,7 +153,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val ethBuyOrder  = ethBuyOrderSigned(testAsset, buyerEthAccount, TxHelpers.timestamp)
       val ethSellOrder = ethSellOrderSigned(testAsset, sellerEthAccount, TxHelpers.timestamp)
@@ -171,9 +171,9 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerAccount.toAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerAccount.toAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
@@ -183,21 +183,21 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val buyOrder = Order
         .selfSigned(
           Order.V3,
           buyerAccount,
           TxHelpers.matcher.publicKey,
-          AssetPair(testAsset, Waves),
+          AssetPair(testAsset, Dcc),
           OrderType.BUY,
           1,
           100L,
           TxHelpers.timestamp,
           TxHelpers.timestamp + 10000,
           100000,
-          Waves
+          Dcc
         )
         .explicitGet()
 
@@ -216,9 +216,9 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerAccount.toAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerAccount.toAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
@@ -228,7 +228,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val timestamp = TxHelpers.timestamp
 
@@ -237,14 +237,14 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
           Order.V3,
           buyerAccount,
           TxHelpers.matcher.publicKey,
-          AssetPair(testAsset, Waves),
+          AssetPair(testAsset, Dcc),
           OrderType.BUY,
           1,
           100L,
           timestamp,
           timestamp + 10000,
           100000,
-          Waves
+          Dcc
         )
         .explicitGet()
 
@@ -325,9 +325,9 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
@@ -337,7 +337,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val ethBuyOrder  = ethBuyOrderSigned(testAsset, buyerEthAccount, TxHelpers.timestamp)
       val ethSellOrder = ethSellOrderSigned(testAsset, sellerEthAccount, TxHelpers.timestamp)
@@ -353,7 +353,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
         )
 
       d.appendBlockE(transaction) should matchPattern {
-        case Left(err) if err.toString.contains("negative waves balance") =>
+        case Left(err) if err.toString.contains("negative dcc balance") =>
       }
     }
   }
@@ -364,14 +364,14 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
       // Issue an asset
-      // TODO: something more smart ?
+      // NOTE: Assertion uses string matching — sufficient for current test scope
       val script = TxHelpers.script("""
                                       |match tx {
                                       |  case _: ExchangeTransaction => true
@@ -383,7 +383,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val ethBuyOrder  = ethBuyOrderSigned(testAsset, buyerEthAccount, TxHelpers.timestamp)
       val ethSellOrder = ethSellOrderSigned(testAsset, sellerEthAccount, TxHelpers.timestamp)
@@ -401,9 +401,9 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
@@ -413,7 +413,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val script = TxHelpers.script(
         """
@@ -461,7 +461,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
           Order.V4,
           TxHelpers.defaultSigner,
           TxHelpers.secondSigner.publicKey,
-          AssetPair(Waves, IssuedAsset(ByteStr.fill(32)(1))),
+          AssetPair(Dcc, IssuedAsset(ByteStr.fill(32)(1))),
           100,
           100,
           100,
@@ -494,7 +494,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
           Order.V4,
           TxHelpers.defaultSigner,
           TxHelpers.secondSigner.publicKey,
-          AssetPair(Waves, IssuedAsset(ByteStr.fill(32)(1))),
+          AssetPair(Dcc, IssuedAsset(ByteStr.fill(32)(1))),
           100,
           100,
           100,
@@ -526,14 +526,14 @@ object EthOrderSpec extends EthHelpers {
       Order.V4,
       emptySignature,
       TxHelpers.matcher.publicKey,
-      AssetPair(testAsset, Waves),
+      AssetPair(testAsset, Dcc),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       timestamp,
       timestamp + 10000,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     ethBuyOrderTemplate.copy(
@@ -546,14 +546,14 @@ object EthOrderSpec extends EthHelpers {
       Order.V4,
       emptySignature,
       TxHelpers.matcher.publicKey,
-      AssetPair(testAsset, Waves),
+      AssetPair(testAsset, Dcc),
       OrderType.SELL,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       timestamp,
       timestamp + 10000,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     ethSellOrderTemplate.copy(

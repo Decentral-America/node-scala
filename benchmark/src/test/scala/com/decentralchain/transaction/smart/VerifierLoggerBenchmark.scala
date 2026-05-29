@@ -12,7 +12,7 @@ import com.decentralchain.lang.directives.values.V4
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, EVALUATED}
 import com.decentralchain.lang.v1.evaluator.Log
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Bindings
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Bindings
 import com.decentralchain.state.BinaryDataEntry
 import com.decentralchain.transaction.DataTransaction
 import com.decentralchain.transaction.smart.VerifierLoggerBenchmark.BigLog

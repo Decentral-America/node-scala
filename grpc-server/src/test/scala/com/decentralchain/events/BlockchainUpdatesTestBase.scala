@@ -9,9 +9,9 @@ import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
 import io.decentralchain.events.api.grpc.protobuf.{GetBlockUpdatesRangeRequest, SubscribeRequest}
 import com.decentralchain.events.fixtures.BlockchainUpdateGrpcMethod
 import com.decentralchain.events.fixtures.BlockchainUpdateGrpcMethod.{GetBlockUpdate, GetBlockUpdateRange, Subscribe}
-import com.decentralchain.events.fixtures.InvokeWavesTxCheckers.checkSimpleInvoke
+import com.decentralchain.events.fixtures.InvokeDccTxCheckers.checkSimpleInvoke
 import com.decentralchain.events.fixtures.PrepareInvokeTestData.*
-import com.decentralchain.events.fixtures.WavesTxChecks.*
+import com.decentralchain.events.fixtures.DccTxChecks.*
 import io.decentralchain.events.protobuf.BlockchainUpdated.Append
 import io.decentralchain.events.protobuf.BlockchainUpdated.Append.Body
 import io.decentralchain.events.protobuf.StateUpdate
@@ -21,7 +21,7 @@ import io.decentralchain.protobuf.transaction.PBAmounts.toVanillaAssetId
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.*
 import com.decentralchain.test.{FreeSpec, NumericExt}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.secondSigner
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
@@ -44,19 +44,19 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
   val additionalAmount: Long                           = 5000000
   val customFee: Long                                  = 5234567L
   val customAssetIssueFee                              = 234567654L
-  val invokeFee: Long                                  = 1.005.waves
+  val invokeFee: Long                                  = 1.005.dcc
   val firstTxParticipant: SeedKeyPair                  = TxHelpers.signer(2)
   val firstTxParticipantAddress: Address               = firstTxParticipant.toAddress
   val ethKeyPairExt: EthereumKeyPairExt                = EthereumKeyPairExt(firstTxParticipant)
   val firstTxParticipantEthereum: Bip32ECKeyPair       = ethKeyPairExt.toEthKeyPair
-  val firstTxParticipantEthereumAddress: Address       = ethKeyPairExt.toEthWavesAddress
+  val firstTxParticipantEthereumAddress: Address       = ethKeyPairExt.toEthDccAddress
   val firstTxParticipantEthereumPublicKey: Array[Byte] = firstTxParticipantEthereum.getPublicKey.toByteArray
   val ethKeyPair: SeedKeyPair                          = SeedKeyPair.apply(firstTxParticipantEthereum.getPrivateKeyBytes33)
-  val firstTxParticipantBalanceBefore: Long            = 20.waves
+  val firstTxParticipantBalanceBefore: Long            = 20.dcc
   val secondTxParticipant: SeedKeyPair                 = TxHelpers.signer(3)
   val secondTxParticipantAddress: Address              = secondTxParticipant.toAddress
   val secondTxParticipantPKHash: Array[Byte]           = secondTxParticipantAddress.publicKeyHash
-  val secondTxParticipantBalanceBefore: Long           = 20.waves
+  val secondTxParticipantBalanceBefore: Long           = 20.dcc
   val recipients: Seq[ParsedTransfer]                  = TxHelpers.accountSeqGenerator(100, additionalAmount)
   val firstToken: IssueTransaction                     = TxHelpers.issue(firstTxParticipant, amount = 2000000000L, 2)
   val firstTokenAsset: IssuedAsset                     = firstToken.asset
@@ -94,7 +94,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
       orderType,
       secondToken.asset,
       firstToken.asset,
-      Waves,
+      Dcc,
       amount = 50000L,
       price = 400000000L,
       fee = customFee,
@@ -109,7 +109,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkCreateAlias(append.transactionIds.head, append.transactionAt(0), aliasTx)
     checkBalances(
       filterOutMinerBalanceUpdates(append),
-      Map((firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter))
+      Map((firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter))
     )
   }
 
@@ -120,8 +120,8 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves)  -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter),
-        (secondTxParticipantAddress, Waves) -> (secondTxParticipantBalanceBefore, secondTxParticipantBalanceAfter)
+        (firstTxParticipantAddress, Dcc)  -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter),
+        (secondTxParticipantAddress, Dcc) -> (secondTxParticipantBalanceBefore, secondTxParticipantBalanceAfter)
       )
     )
   }
@@ -135,7 +135,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves)       -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter),
+        (firstTxParticipantAddress, Dcc)       -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter),
         (firstTxParticipantAddress, issue.asset) -> (0, issueQuantity)
       )
     )
@@ -155,7 +155,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves)         -> (firstTxParticipantBalanceBeforeReissue, firstTxParticipantBalanceAfterReissue),
+        (firstTxParticipantAddress, Dcc)         -> (firstTxParticipantBalanceBeforeReissue, firstTxParticipantBalanceAfterReissue),
         (firstTxParticipantAddress, reissue.asset) -> (amount, quantityAfter)
       )
     )
@@ -173,7 +173,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves)      -> (firstTxParticipantBalanceBeforeBurn, firstTxParticipantBalanceAfterBurn),
+        (firstTxParticipantAddress, Dcc)      -> (firstTxParticipantBalanceBeforeBurn, firstTxParticipantBalanceAfterBurn),
         (firstTxParticipantAddress, burn.asset) -> (amount, amountAfterTx)
       )
     )
@@ -194,10 +194,10 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves)              -> (firstTxParticipantBalanceBeforeExchange, firstTxParticipantBalanceAfterExchange),
+        (firstTxParticipantAddress, Dcc)              -> (firstTxParticipantBalanceBeforeExchange, firstTxParticipantBalanceAfterExchange),
         (secondTxParticipantAddress, firstToken.asset)  -> (0, normalizedPrice),
         (firstTxParticipantAddress, secondToken.asset)  -> (0, orderAmount),
-        (secondTxParticipantAddress, Waves)             -> (secondTxParticipantBalanceBeforeExchange, secondTxParticipantBalanceAfterExchange),
+        (secondTxParticipantAddress, Dcc)             -> (secondTxParticipantBalanceBeforeExchange, secondTxParticipantBalanceAfterExchange),
         (firstTxParticipantAddress, firstToken.asset)   -> (firstTokenQuantity, firstTokenQuantity - normalizedPrice),
         (secondTxParticipantAddress, secondToken.asset) -> (amountAssetQuantity, amountAssetQuantity - orderAmount)
       )
@@ -210,7 +210,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceBefore - customFee)
+        (firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceBefore - customFee)
       )
     )
     checkLeasingForAddress(
@@ -236,7 +236,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBeforeTx, firstTxParticipantBalanceAfterTx)
+        (firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBeforeTx, firstTxParticipantBalanceAfterTx)
       )
     )
     checkLeasingForAddress(
@@ -260,7 +260,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     val firstTxParticipantAssetBalanceAfterTx = firstTokenQuantity - additionalAmount * recipients.size
 
     val balancesMap = Map(
-      (firstTxParticipantAddress, Waves)                -> (firstTxParticipantBalanceBeforeTx, firstTxParticipantBalanceAfterTx),
+      (firstTxParticipantAddress, Dcc)                -> (firstTxParticipantBalanceBeforeTx, firstTxParticipantBalanceAfterTx),
       (firstTxParticipantAddress, massTransfer.assetId) -> (firstTokenQuantity, firstTxParticipantAssetBalanceAfterTx)
     ) ++ recipients.map(r => (Address.fromBytes(r.address.bytes).explicitGet(), massTransfer.assetId) -> (0L, additionalAmount)).toMap
     checkMassTransfer(
@@ -282,7 +282,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkDataTransaction(append.transactionIds.head, append.transactionAt(0), data)
     checkBalances(
       filterOutMinerBalanceUpdates(append),
-      Map((firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceBefore - customFee))
+      Map((firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceBefore - customFee))
     )
     checkDataEntriesStateUpdate(txUpdates.dataEntries, data.data, firstTxParticipantAddress.bytes)
   }
@@ -292,7 +292,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkSetScriptTransaction(append.transactionIds.head, append.transactionAt(0), setScript)
     checkBalances(
       filterOutMinerBalanceUpdates(append),
-      Map((firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceBefore - customFee))
+      Map((firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceBefore - customFee))
     )
     checkSetScriptStateUpdate(txUpdates.scripts.head, setScript)
   }
@@ -309,7 +309,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBeforeSetAssetScriptTx, firstTxParticipantBalanceAfterSetAssetScriptTx)
+        (firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBeforeSetAssetScriptTx, firstTxParticipantBalanceAfterSetAssetScriptTx)
       )
     )
     checkAssetsStateUpdates(assetDetails.before, issue, isNft = false, quantity)
@@ -327,7 +327,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (firstTxParticipantAddress, Waves) -> (firstTxParticipantBalanceBeforeUpdateAssetInfoTx, firstTxParticipantBalanceAfterUpdateAssetInfoTx)
+        (firstTxParticipantAddress, Dcc) -> (firstTxParticipantBalanceBeforeUpdateAssetInfoTx, firstTxParticipantBalanceAfterUpdateAssetInfoTx)
       )
     )
     checkAssetsStateUpdates(assetDetails.before, firstToken, isNft = false, firstTokenQuantity)
@@ -343,7 +343,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkSponsorFeeTransaction(append.transactionIds.head, append.transactionAt(0), sponsorFee)
     checkBalances(
       filterOutMinerBalanceUpdates(append),
-      Map((firstTxParticipantAddress, Waves) -> (balanceBefore, balanceAfter))
+      Map((firstTxParticipantAddress, Dcc) -> (balanceBefore, balanceAfter))
     )
     checkAssetsStateUpdates(assetDetails.before, firstToken, isNft = false, firstTokenQuantity)
     checkAssetsStateUpdates(assetDetails.after, firstToken, isNft = false, firstTokenQuantity)
@@ -357,7 +357,7 @@ class BlockchainUpdatesTestBase extends FreeSpec with WithBUDomain with ScalaFut
     checkBalances(
       filterOutMinerBalanceUpdates(append),
       Map(
-        (ethAddress, Waves)                            -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter),
+        (ethAddress, Dcc)                            -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter),
         (ethAddress, secondTokenAsset)                 -> (secondTokenQuantity, recipientTokenBalanceAfter),
         (secondTxParticipantAddress, secondTokenAsset) -> (0, amount)
       )

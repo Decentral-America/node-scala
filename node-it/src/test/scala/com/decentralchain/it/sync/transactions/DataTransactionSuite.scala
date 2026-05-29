@@ -28,8 +28,8 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
   override def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.quorum(0))
-      .overrideBase(_.raw("waves.blockchain.custom.functionality.blocks-for-feature-activation = 1"))
-      .overrideBase(_.raw("waves.blockchain.custom.functionality.feature-check-blocks-period = 1"))
+      .overrideBase(_.raw("dcc.blockchain.custom.functionality.blocks-for-feature-activation = 1"))
+      .overrideBase(_.raw("dcc.blockchain.custom.functionality.feature-check-blocks-period = 1"))
       .overrideBase(_.preactivatedFeatures(15 -> Height(0)))
       .withDefault(1)
       .withSpecial(1, _.nonMiner)
@@ -43,12 +43,12 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
     // explicitly create two new addresses in node's wallet
     sender.postForm("/addresses")
     sender.postForm("/addresses")
-    sender.transfer(firstKeyPair, fourthAddress, 10.waves, minFee, waitForTx = true)
+    sender.transfer(firstKeyPair, fourthAddress, 10.dcc, minFee, waitForTx = true)
   }
 
   test("should not put 65-sized proof") {
     val keyPair = sender.createKeyPair()
-    sender.transfer(sender.keyPair, keyPair.toAddress.toString, 1.waves, waitForTx = true)
+    sender.transfer(sender.keyPair, keyPair.toAddress.toString, 1.dcc, waitForTx = true)
     sender.setScript(
       keyPair,
       Some(
@@ -162,7 +162,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
     sender.getData(sender.address).filter(_.key == "del") shouldBe List.empty
   }
 
-  test("sender's waves balance is decreased by fee") {
+  test("sender's dcc balance is decreased by fee") {
     for (v <- dataTxSupportedVersions) {
       val (balance1, eff1) = miner.accountBalances(firstAddress)
       val entry            = IntegerDataEntry("int", 0xcafebabe)
@@ -178,7 +178,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
     }
   }
 
-  test("cannot broadcast data without having enough waves") {
+  test("cannot broadcast data without having enough dcc") {
     for (v <- dataTxSupportedVersions) {
       val (balance1, eff1) = miner.accountBalances(firstAddress)
 
@@ -186,7 +186,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
       assertBadRequestAndResponse(sender.putData(firstKeyPair, data, balance1 + 1, version = v), "Accounts balance errors")
       miner.assertBalances(firstAddress, balance1, eff1)
 
-      val leaseAmount = 1.waves
+      val leaseAmount = 1.dcc
       val leaseId     = sender.lease(firstKeyPair, secondAddress, leaseAmount, minFee).id
       nodes.waitForTransaction(leaseId)
 
@@ -415,16 +415,16 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
       )
 
       val extraValueData = List(BinaryDataEntry("key", ByteStr(Array.fill(maxValueSize + 1)(1.toByte))))
-      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, extraValueData, 1.waves, version = v), TooBig)
+      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, extraValueData, 1.dcc, version = v), TooBig)
 
       val largeBinData = List.tabulate(5)(n => BinaryDataEntry(extraKey + n.toString, ByteStr(Array.fill(maxValueSize)(n.toByte))))
-      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, largeBinData, 1.waves, version = v), TooBig)
+      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, largeBinData, 1.dcc, version = v), TooBig)
 
       val largeStrData = List.tabulate(5)(n => StringDataEntry(extraKey + n.toString, "A" * maxValueSize))
-      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, largeStrData, 1.waves, version = v), TooBig)
+      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, largeStrData, 1.dcc, version = v), TooBig)
 
       val tooManyEntriesData = List.tabulate(maxEntryCount + 1)(n => IntegerDataEntry("key" + n.toString, 88))
-      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, tooManyEntriesData, 1.waves, version = v), TooBig)
+      assertBadRequestAndResponse(postDataTxJson(firstKeyPair, tooManyEntriesData, 1.dcc, version = v), TooBig)
     }
   }
 
@@ -465,8 +465,8 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
   test("put data in liquid block") {
     val newAddress = sender.createKeyPair()
     val entries    = List(StringDataEntry("test", "test"))
-    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 2 waves, 1 waves, waitForTx = true)
-    sender.broadcastData(newAddress, entries, 0.1 waves, waitForTx = true)
+    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 2 dcc, 1 dcc, waitForTx = true)
+    sender.broadcastData(newAddress, entries, 0.1 dcc, waitForTx = true)
     sender.getData(newAddress.toAddress.toString) shouldBe entries
     nodes.waitForHeightArise()
     sender.getData(newAddress.toAddress.toString) shouldBe entries

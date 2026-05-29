@@ -14,7 +14,7 @@ import com.decentralchain.state.StateSnapshot
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
@@ -24,9 +24,9 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
   private val oldVersions = Seq(V1, V2, V3)
 
   property("multi payment with verifier and transfer set") {
-    val wavesTransfer = 111
+    val dccTransfer = 111
     paymentPreconditions(
-      dApp(V4, transferPaymentAmount = wavesTransfer, _),
+      dApp(V4, transferPaymentAmount = dccTransfer, _),
       accountVerifiers(V4),
       verifier(V4, Asset)
     ).foreach { case (genesis, setVerifier, setDApp, ci, issues, dAppAcc, invoker, fee) =>
@@ -39,8 +39,8 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
           val asset = IssuedAsset(tx.id())
           blockchain.balance(dAppAcc.toAddress, asset) shouldBe snapshot.balances((dAppAcc.toAddress, asset))
         }
-        snapshot.balances((dAppAcc.toAddress, Waves)) shouldBe ENOUGH_AMT - setDApp.fee.value - wavesTransfer
-        snapshot.balances((invoker.toAddress, Waves)) shouldBe ENOUGH_AMT - setVerifier.fee.value - issues.map(_.fee.value).sum - fee + wavesTransfer
+        snapshot.balances((dAppAcc.toAddress, Dcc)) shouldBe ENOUGH_AMT - setDApp.fee.value - dccTransfer
+        snapshot.balances((invoker.toAddress, Dcc)) shouldBe ENOUGH_AMT - setVerifier.fee.value - issues.map(_.fee.value).sum - fee + dccTransfer
       }
     }
   }
@@ -125,9 +125,9 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
   }
 
   property("single payment V3 scripts with activated multi payment") {
-    val wavesTransfer = 100
+    val dccTransfer = 100
     paymentPreconditions(
-      dApp(V3, transferPaymentAmount = wavesTransfer, _),
+      dApp(V3, transferPaymentAmount = dccTransfer, _),
       accountVerifiers(V3),
       verifier(V3, Asset),
       multiPayment = false
@@ -141,16 +141,16 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
           val asset = IssuedAsset(tx.id())
           snapshot.balances((dAppAcc.toAddress, asset)) shouldBe blockchain.balance(dAppAcc.toAddress, asset)
         }
-        snapshot.balances((dAppAcc.toAddress, Waves)) shouldBe ENOUGH_AMT - setDApp.fee.value - wavesTransfer
-        snapshot.balances((invoker.toAddress, Waves)) shouldBe ENOUGH_AMT - setVerifier.fee.value - issues.map(_.fee.value).sum - fee + wavesTransfer
+        snapshot.balances((dAppAcc.toAddress, Dcc)) shouldBe ENOUGH_AMT - setDApp.fee.value - dccTransfer
+        snapshot.balances((invoker.toAddress, Dcc)) shouldBe ENOUGH_AMT - setVerifier.fee.value - issues.map(_.fee.value).sum - fee + dccTransfer
       }
     }
   }
 
   property("disallowed multi payment") {
-    val wavesTransfer = 111
+    val dccTransfer = 111
     paymentPreconditions(
-      dApp(V3, transferPaymentAmount = wavesTransfer, _),
+      dApp(V3, transferPaymentAmount = dccTransfer, _),
       accountVerifiers(V3),
       verifier(V3, Asset)
     ).foreach { case (genesis, setVerifier, setDApp, ci, issues, _, _, _) =>

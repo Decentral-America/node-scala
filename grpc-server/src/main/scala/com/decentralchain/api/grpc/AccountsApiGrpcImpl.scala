@@ -17,14 +17,14 @@ import scala.concurrent.Future
 
 class AccountsApiGrpcImpl(commonApi: CommonAccountsApi)(implicit sc: Scheduler) extends AccountsApiGrpc.AccountsApi {
 
-  private def loadWavesBalance(address: Address): BalanceResponse = {
+  private def loadDccBalance(address: Address): BalanceResponse = {
     commonApi
       .balanceDetails(address)
       .fold(
         e => throw GRPCErrors.toStatusException(CustomValidationError(e)),
         details =>
-          BalanceResponse().withWaves(
-            BalanceResponse.WavesBalances(
+          BalanceResponse().withDcc(
+            BalanceResponse.DccBalances(
               details.regular,
               details.generating,
               details.available,
@@ -41,19 +41,19 @@ class AccountsApiGrpcImpl(commonApi: CommonAccountsApi)(implicit sc: Scheduler) 
 
   override def getBalances(request: BalancesRequest, responseObserver: StreamObserver[BalanceResponse]): Unit = responseObserver.interceptErrors {
     val addressOption: Option[Address] = if (request.address.isEmpty) None else Some(request.address.toAddress())
-    val assetIds: Seq[Asset]           = request.assets.map(id => if (id.isEmpty) Asset.Waves else Asset.IssuedAsset(id.toByteStr))
+    val assetIds: Seq[Asset]           = request.assets.map(id => if (id.isEmpty) Asset.Dcc else Asset.IssuedAsset(id.toByteStr))
 
     val responseStream = (addressOption, assetIds) match {
       case (Some(address), Seq()) =>
-        Observable(loadWavesBalance(address)) ++ commonApi.portfolio(address).concatMapIterable(identity).map(assetBalanceResponse)
+        Observable(loadDccBalance(address)) ++ commonApi.portfolio(address).concatMapIterable(identity).map(assetBalanceResponse)
       case (Some(address), nonEmptyList) =>
         Observable
           .fromIterable(nonEmptyList)
           .map {
-            case Asset.Waves           => loadWavesBalance(address)
+            case Asset.Dcc           => loadDccBalance(address)
             case ia: Asset.IssuedAsset => assetBalanceResponse(ia -> commonApi.assetBalance(address, ia))
           }
-      case (None, Seq(_)) => // todo: asset distribution
+      case (None, Seq(_)) => // NOTE: Asset distribution endpoint not yet implemented
         Observable.empty
       case (None, _) => // multiple distributions are not supported
         Observable.empty
@@ -76,7 +76,6 @@ class AccountsApiGrpcImpl(commonApi: CommonAccountsApi)(implicit sc: Scheduler) 
     }
   }
 
-  // TODO: Lease info route?
   override def getActiveLeases(request: AccountRequest, responseObserver: StreamObserver[LeaseResponse]): Unit =
     responseObserver.interceptErrors {
       val result =

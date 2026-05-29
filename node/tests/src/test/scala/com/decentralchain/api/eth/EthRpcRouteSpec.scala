@@ -69,7 +69,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
     ) { d =>
       val testKP = randomKeyPair()
       d.appendBlock(
-        GenesisTransaction.create(testKP.toAddress, 1.waves, ntpTime.getTimestamp()).explicitGet(),
+        GenesisTransaction.create(testKP.toAddress, 1.dcc, ntpTime.getTimestamp()).explicitGet(),
         Signed.setScript(
           2.toByte,
           testKP,
@@ -84,7 +84,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
                                                   |  ]
                                                   |}
                                                   |""".stripMargin)),
-          0.01.waves,
+          0.01.dcc,
           ntpTime.getTimestamp()
         )
       )
@@ -110,10 +110,10 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   "eth_call" - {
     "asset calls" in withDomain() { d =>
       val randomKP         = randomKeyPair()
-      val issueTransaction = Signed.issue(2.toByte, randomKP, "TEST", "test asset", 100000, 2, false, None, 1.waves, ntpTime.getTimestamp())
+      val issueTransaction = Signed.issue(2.toByte, randomKP, "TEST", "test asset", 100000, 2, false, None, 1.dcc, ntpTime.getTimestamp())
 
       d.appendBlock(
-        GenesisTransaction.create(randomKP.toAddress, 5.waves, ntpTime.getTimestamp()).explicitGet(),
+        GenesisTransaction.create(randomKP.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet(),
         issueTransaction
       )
 
@@ -141,9 +141,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
 
   "eth_getTransactionReceipt" - {
     "success" in withDomain(settingsWithFeatures(BlockchainFeatures.BlockV5, BlockchainFeatures.RideV6)) { d =>
-      val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultSigner.toEthKeyPair, TxHelpers.secondAddress, 10L, Asset.Waves)
+      val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultSigner.toEthKeyPair, TxHelpers.secondAddress, 10L, Asset.Dcc)
 
-      d.appendBlock(GenesisTransaction.create(transaction.senderAddress(), 50.waves, ntpTime.getTimestamp()).explicitGet())
+      d.appendBlock(GenesisTransaction.create(transaction.senderAddress(), 50.dcc, ntpTime.getTimestamp()).explicitGet())
       d.appendBlock(transaction)
 
       routeTest(d, "eth_getTransactionReceipt", transaction.id().toHexString)(
@@ -174,9 +174,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   }
 
   "eth_getTransactionByHash" in withDomain(settingsWithFeatures(BlockchainFeatures.BlockV5, BlockchainFeatures.RideV6)) { d =>
-    val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultSigner.toEthKeyPair, TxHelpers.secondAddress, 10L, Asset.Waves)
+    val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultSigner.toEthKeyPair, TxHelpers.secondAddress, 10L, Asset.Dcc)
 
-    d.appendBlock(GenesisTransaction.create(transaction.senderAddress(), 50.waves, ntpTime.getTimestamp()).explicitGet())
+    d.appendBlock(GenesisTransaction.create(transaction.senderAddress(), 50.dcc, ntpTime.getTimestamp()).explicitGet())
     d.appendBlock(transaction)
 
     routeTest(d, "eth_getTransactionByHash", transaction.id().toHexString)(
@@ -206,9 +206,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   }
 
   "eth_sendRawTransaction" in withDomain(settingsWithFeatures(BlockchainFeatures.RideV6, BlockchainFeatures.BlockV5)) { d =>
-    val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultSigner.toEthKeyPair, TxHelpers.secondAddress, 10, Asset.Waves)
+    val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultSigner.toEthKeyPair, TxHelpers.secondAddress, 10, Asset.Dcc)
     d.appendBlock(
-      GenesisTransaction.create(transaction.senderAddress(), 50.waves, ntpTime.getTimestamp()).explicitGet()
+      GenesisTransaction.create(transaction.senderAddress(), 50.dcc, ntpTime.getTimestamp()).explicitGet()
     )
     routeTest(d, "eth_sendRawTransaction", EthEncoding.toHexString(transaction.bytes()))(
       result shouldBe transaction.id().toHexString
@@ -225,12 +225,12 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   ) { d =>
     val randomKP = randomKeyPair()
     val invoker  = randomKeyPair()
-    val issue1   = Signed.issue(2.toByte, randomKP, "TEST1", "test asset", 100000, 2, true, None, 1.waves, ntpTime.getTimestamp())
-    val issue2   = Signed.issue(2.toByte, randomKP, "NFT1", "test asset", 1, 0, false, None, 0.001.waves, ntpTime.getTimestamp())
+    val issue1   = Signed.issue(2.toByte, randomKP, "TEST1", "test asset", 100000, 2, true, None, 1.dcc, ntpTime.getTimestamp())
+    val issue2   = Signed.issue(2.toByte, randomKP, "NFT1", "test asset", 1, 0, false, None, 0.001.dcc, ntpTime.getTimestamp())
 
     d.appendBlock(
-      GenesisTransaction.create(randomKP.toAddress, 5.waves, ntpTime.getTimestamp()).explicitGet(),
-      GenesisTransaction.create(invoker.toAddress, 5.waves, ntpTime.getTimestamp()).explicitGet()
+      GenesisTransaction.create(randomKP.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet(),
+      GenesisTransaction.create(invoker.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet()
     )
 
     val invoke = Signed.invokeScript(
@@ -238,9 +238,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
       invoker,
       randomKP.toAddress,
       None,
-      Seq(InvokeScriptTransaction.Payment(1.waves, Asset.Waves)),
-      1.005.waves,
-      Asset.Waves,
+      Seq(InvokeScriptTransaction.Payment(1.dcc, Asset.Dcc)),
+      1.005.dcc,
+      Asset.Dcc,
       ntpTime.getTimestamp()
     )
     d.appendBlock(
@@ -262,7 +262,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
                                                 |  ]
                                                 |}
                                                 |""".stripMargin)),
-        0.01.waves,
+        0.01.dcc,
         ntpTime.getTimestamp()
       ),
       invoke

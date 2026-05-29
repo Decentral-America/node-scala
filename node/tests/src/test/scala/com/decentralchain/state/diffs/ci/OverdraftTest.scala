@@ -72,7 +72,7 @@ class OverdraftTest extends PropSpec with WithDomain {
       val (genesis, setDApp, ci, issue) = paymentPreconditions(withEnoughFee = true, withPayment = true, payingDApp(V3))
 
       assertDiffEi(Seq(TestBlock.create(genesis ++ List(setDApp, issue))), TestBlock.create(Seq(ci)), settings) {
-        _ should produce("leads to negative waves balance to (at least) temporary negative state")
+        _ should produce("leads to negative dcc balance to (at least) temporary negative state")
       }
     }
   }

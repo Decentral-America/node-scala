@@ -18,7 +18,7 @@ import com.decentralchain.settings.RestAPISettings
 import com.decentralchain.state.diffs.FeeValidation
 import com.decentralchain.state.{Blockchain, DataEntry}
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.utils.Time
 import com.decentralchain.wallet.Wallet
@@ -105,7 +105,7 @@ case class AddressApiRoute(
       val height = maybeHeight.getOrElse(blockchain.height)
       validateBalanceDepth(height)(
         complete(
-          balancesJson(height, addresses.toSeq, assetId.fold(Waves: Asset)(a => IssuedAsset(ByteStr.decodeBase58(a).get)))
+          balancesJson(height, addresses.toSeq, assetId.fold(Dcc: Asset)(a => IssuedAsset(ByteStr.decodeBase58(a).get)))
         )
       )
   }
@@ -114,7 +114,7 @@ case class AddressApiRoute(
     val height    = (request \ "height").asOpt[Int].getOrElse(blockchain.height)
     val addresses = (request \ "addresses").as[Seq[String]]
     val assetId   = (request \ "asset").asOpt[String]
-    validateBalanceDepth(height)(complete(balancesJson(height, addresses, assetId.fold(Waves: Asset)(a => IssuedAsset(ByteStr.decodeBase58(a).get)))))
+    validateBalanceDepth(height)(complete(balancesJson(height, addresses, assetId.fold(Dcc: Asset)(a => IssuedAsset(ByteStr.decodeBase58(a).get)))))
   }
 
   def balanceDetails: Route = (path("balance" / "details" / AddrSegment) & get) { address =>

@@ -23,13 +23,13 @@ object Sponsorship {
     }
   }
 
-  def calcWavesFeeAmount(tx: Transaction, getSponsorship: IssuedAsset => Option[Long]): Long = tx.assetFee match {
+  def calcDccFeeAmount(tx: Transaction, getSponsorship: IssuedAsset => Option[Long]): Long = tx.assetFee match {
     case (asset @ IssuedAsset(_), amountInAsset) =>
       val sponsorship = getSponsorship(asset).getOrElse(0L)
-      Sponsorship.toWaves(amountInAsset, sponsorship)
+      Sponsorship.toDcc(amountInAsset, sponsorship)
 
-    case (Asset.Waves, amountInWaves) =>
-      amountInWaves
+    case (Asset.Dcc, amountInDcc) =>
+      amountInDcc
   }
 
   def sponsoredFeesSwitchHeight(blockchain: Blockchain): Height =
@@ -38,17 +38,17 @@ object Sponsorship {
       .map(h => h + blockchain.settings.functionalitySettings.activationWindowSize(h.toInt))
       .getOrElse(Height(Int.MaxValue))
 
-  def toWaves(assetFee: Long, sponsorship: Long): Long =
+  def toDcc(assetFee: Long, sponsorship: Long): Long =
     if (sponsorship == 0) Long.MaxValue
     else {
-      val waves = BigInt(assetFee) * FeeValidation.FeeUnit / sponsorship
-      waves.bigInteger.longValueExact()
+      val dcc = BigInt(assetFee) * FeeValidation.FeeUnit / sponsorship
+      dcc.bigInteger.longValueExact()
     }
 
-  def fromWaves(wavesFee: Long, sponsorship: Long): Long =
-    if (wavesFee == 0 || sponsorship == 0) 0
+  def fromDcc(dccFee: Long, sponsorship: Long): Long =
+    if (dccFee == 0 || sponsorship == 0) 0
     else {
-      val assetFee = BigInt(wavesFee) * sponsorship / FeeValidation.FeeUnit
+      val assetFee = BigInt(dccFee) * sponsorship / FeeValidation.FeeUnit
       assetFee.bigInteger.longValueExact()
     }
 }

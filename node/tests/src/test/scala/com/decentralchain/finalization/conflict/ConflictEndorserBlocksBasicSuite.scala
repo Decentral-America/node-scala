@@ -51,10 +51,10 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
     override def after5WithNewPeriodCheck                = notRemoved
   }.run()
 
-  "waves amount" in new Scenario[Long] {
-    override def getData = d => d.blockchain.wavesAmount(d.blockchain.height).toLong
+  "dcc amount" in new Scenario[Long] {
+    override def getData = d => d.blockchain.dccAmount(d.blockchain.height).toLong
 
-    def base(height: Int): IgnorePosition[Long] = 100_000_000.waves + (height - 1) * 6.waves // init + n * mining rewards
+    def base(height: Int): IgnorePosition[Long] = 100_000_000.dcc + (height - 1) * 6.dcc // init + n * mining rewards
 
     override def after2WithCommitmentsCheck              = _ shouldBe base(2)
     override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe base(3)
@@ -62,8 +62,8 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
     override def after5WithNewPeriodCheck                = _ shouldBe (base(5) - DepositInWavelets)
   }.run()
 
-  "waves portfolio" in new Scenario[Portfolio] {
-    override def getData = d => d.blockchain.wavesPortfolio(conflictGeneratorAddr)
+  "dcc portfolio" in new Scenario[Portfolio] {
+    override def getData = d => d.blockchain.dccPortfolio(conflictGeneratorAddr)
 
     val after1          = ENOUGH_AMT
     val after2          = after1 - TestValues.commitToGenerationFee

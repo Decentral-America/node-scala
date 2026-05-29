@@ -10,13 +10,13 @@ import java.net.{InetAddress, InetSocketAddress}
 
 class BlacklistParallelSpecification extends FeatureSpec with GivenWhenThen with ParallelTestExecution {
 
-  private val config = loadConfig(ConfigFactory.parseString("""waves.network {
+  private val config = loadConfig(ConfigFactory.parseString("""dcc.network {
                                                               |  known-peers = []
                                                               |  file = null
                                                               |  black-list-residence-time: 1s
                                                               |}""".stripMargin))
 
-  private val networkSettings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+  private val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
 
   info("As a Peer")
   info("I want to blacklist other peers for certain time")

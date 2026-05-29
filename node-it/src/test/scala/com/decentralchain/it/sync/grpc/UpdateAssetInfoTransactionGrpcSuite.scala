@@ -127,7 +127,7 @@ class UpdateAssetInfoTransactionGrpcSuite extends GrpcBaseTransactionSuite with 
   test("not able to update asset info without paying enough fee") {
     assertGrpcError(
       sender.updateAssetInfo(issuer, assetId, "updatedName", "updatedDescription", minFee - 1),
-      s"does not exceed minimal value of $minFee WAVES",
+      s"does not exceed minimal value of $minFee DCC",
       Code.INVALID_ARGUMENT
     )
   }
@@ -192,7 +192,7 @@ class UpdateAssetInfoTransactionGrpcSuite extends GrpcBaseTransactionSuite with 
 object UpdateAssetInfoTransactionGrpcSuite {
   private def configWithUpdateIntervalSetting(interval: Long) =
     ConfigFactory.parseString(
-      s"""waves {
+      s"""dcc {
          |  blockchain.custom.functionality.min-asset-info-update-interval = $interval
          |  miner.quorum = 0
          |}""".stripMargin

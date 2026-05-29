@@ -20,7 +20,7 @@ import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.{Applied,
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{BlockAppendError, GenericError, MicroBlockAppendError}
 import com.decentralchain.transaction.transfer.TransferTransactionLike
 import com.decentralchain.utils.{ScorexLogging, Time, UnsupportedFeature, forceStopApplication}
@@ -33,7 +33,7 @@ import scala.collection.immutable.VectorMap
 
 class BlockchainUpdaterImpl(
     val rocksdb: RocksDBWriter,
-    wavesSettings: DCCSettings,
+    dccSettings: DCCSettings,
     time: Time,
     blockchainUpdateTriggers: BlockchainUpdateTriggers,
     collectActiveLeases: (Height, Height) => Map[ByteStr, LeaseDetails],
@@ -44,7 +44,7 @@ class BlockchainUpdaterImpl(
     with ScorexLogging {
 
   import com.decentralchain.state.BlockchainUpdaterImpl.*
-  import wavesSettings.blockchainSettings.functionalitySettings
+  import dccSettings.blockchainSettings.functionalitySettings
 
   private def inLock[R](l: Lock, f: => R): R = {
     l.lock()
@@ -56,8 +56,8 @@ class BlockchainUpdaterImpl(
   private def writeLock[B](f: => B): B = inLock(lock.writeLock(), f)
   private def readLock[B](f: => B): B  = inLock(lock.readLock(), f)
 
-  private lazy val maxBlockReadinessAge = wavesSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis
-  private val maxSyncRollbackLength     = wavesSettings.synchronizationSettings.maxRollback
+  private lazy val maxBlockReadinessAge = dccSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis
+  private val maxSyncRollbackLength     = dccSettings.synchronizationSettings.maxRollback
 
   @volatile
   private var ngState: Option[NgState] = Option.empty
@@ -103,7 +103,7 @@ class BlockchainUpdaterImpl(
 
   override def bestLiquidSnapshotAndFees: Option[(StateSnapshot, Long, Long)] = readLock(ngState.map(_.bestLiquidSnapshotAndFees))
 
-  override val settings: BlockchainSettings = wavesSettings.blockchainSettings
+  override val settings: BlockchainSettings = dccSettings.blockchainSettings
 
   override def isLastBlockId(id: ByteStr): Boolean = readLock {
     ngState.fold(rocksdb.lastBlockId.contains(id))(_.contains(id))
@@ -140,7 +140,7 @@ class BlockchainUpdaterImpl(
       if (unimplementedActivated.nonEmpty) {
         log.error(s"UNIMPLEMENTED ${displayFeatures(unimplementedActivated)} ACTIVATED ON BLOCKCHAIN")
         log.error("PLEASE, UPDATE THE NODE IMMEDIATELY")
-        if (wavesSettings.featuresSettings.autoShutdownOnUnsupportedFeature) {
+        if (dccSettings.featuresSettings.autoShutdownOnUnsupportedFeature) {
           log.error("FOR THIS REASON THE NODE WAS STOPPED AUTOMATICALLY")
           forceStopApplication(UnsupportedFeature)
         } else log.error("OTHERWISE THE NODE WILL END UP ON A FORK")
@@ -236,7 +236,7 @@ class BlockchainUpdaterImpl(
 
       Either
         .cond(
-          !wavesSettings.featuresSettings.autoShutdownOnUnsupportedFeature || notImplementedFeatures.isEmpty,
+          !dccSettings.featuresSettings.autoShutdownOnUnsupportedFeature || notImplementedFeatures.isEmpty,
           (),
           GenericError(s"UNIMPLEMENTED ${displayFeatures(notImplementedFeatures)} ACTIVATED ON BLOCKCHAIN, UPDATE THE NODE IMMEDIATELY")
         )
@@ -345,7 +345,7 @@ class BlockchainUpdaterImpl(
                         carry,
                         reward,
                         Some(referencedComputedStateHash)
-                        // TODO: generatorBalances? With this we can't remove a hacky fallback calculation
+                        // NOTE: generatorBalances fallback calculation is required for backward compatibility
                       )
 
                       for {
@@ -413,7 +413,6 @@ class BlockchainUpdaterImpl(
                 }
           }).map {
             _ map {
-              // TODO: case class instead of tuple
               case (
                     BlockDiffer.Result(newBlockSnapshot, carry, totalFee, updatedTotalConstraint, _, computedStateHash),
                     discDiffs,
@@ -454,7 +453,7 @@ class BlockchainUpdaterImpl(
 
                 if (
                   (block.header.timestamp > time
-                    .getTimestamp() - wavesSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis) || (newHeight.toInt % 100 == 0)
+                    .getTimestamp() - dccSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis) || (newHeight.toInt % 100 == 0)
                 ) {
                   log.info(s"New height: $newHeight")
                 }
@@ -520,7 +519,7 @@ class BlockchainUpdaterImpl(
           ngState = None
           val liquidBlockData = maybeNg.map { ng =>
             val block = ng.bestLiquidBlock
-            val snapshot = if (wavesSettings.enableLightMode && block.transactionData.nonEmpty) {
+            val snapshot = if (dccSettings.enableLightMode && block.transactionData.nonEmpty) {
               Some(
                 BlockSnapshot(
                   block.id(),
@@ -670,15 +669,15 @@ class BlockchainUpdaterImpl(
     }
   }
 
-  override def wavesAmount(height: Int): BigInt = readLock {
+  override def dccAmount(height: Int): BigInt = readLock {
     ngState match {
       case Some(ng) if this.height == height =>
         val parentConflictEndorsements = rocksdb.lastBlockHeader.flatMap(_.header.finalizationVoting).fold(0)(_.conflict.size)
-        rocksdb.wavesAmount(height - 1) +
+        rocksdb.dccAmount(height - 1) +
           BigInt(ng.reward.getOrElse(0L)) * this.blockRewardBoost(Height(height)) -
           parentConflictEndorsements * CommitToGenerationTransaction.DepositInWavelets
       case _ =>
-        rocksdb.wavesAmount(height)
+        rocksdb.dccAmount(height)
     }
   }
 
@@ -774,7 +773,7 @@ class BlockchainUpdaterImpl(
     snapshotBlockchain.filledVolumeAndFee(orderId)
   }
 
-  override def balanceAtHeight(address: Address, h: Int, assetId: Asset = Waves): Option[(Int, Long)] = readLock {
+  override def balanceAtHeight(address: Address, h: Int, assetId: Asset = Dcc): Option[(Int, Long)] = readLock {
     snapshotBlockchain.balanceAtHeight(address, h, assetId)
   }
 
@@ -829,8 +828,8 @@ class BlockchainUpdaterImpl(
     snapshotBlockchain.balances(req)
   }
 
-  override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] = readLock {
-    snapshotBlockchain.wavesBalances(addresses)
+  override def dccBalances(addresses: Seq[Address]): Map[Address, Long] = readLock {
+    snapshotBlockchain.dccBalances(addresses)
   }
 
   override def effectiveBalanceBanHeights(address: Address): Seq[Int] = readLock {

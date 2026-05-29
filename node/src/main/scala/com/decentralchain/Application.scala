@@ -247,7 +247,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       override def wallet: Wallet                                                               = app.wallet
       override def utx: UtxPool                                                                 = utxStorage
       override def broadcastTransaction(tx: Transaction): TracedResult[ValidationError, Boolean] =
-        Await.result(transactionPublisher.validateAndBroadcast(tx, None), Duration.Inf) // TODO: Replace with async if possible
+        Await.result(transactionPublisher.validateAndBroadcast(tx, None), Duration.Inf) // NOTE: Blocking call — async replacement requires significant refactor of tx publishing pipeline
       override def utxEvents: Observable[UtxEvent] = app.utxEvents
 
       override val transactionsApi: CommonTransactionsApi = CommonTransactionsApi(
@@ -578,13 +578,13 @@ object Application extends ScorexLogging {
     val config              = loadConfig(maybeExternalConfig.getOrElse(None))
 
     // DO NOT LOG BEFORE THIS LINE, THIS PROPERTY IS USED IN logback.xml
-    System.setProperty("waves.directory", config.getString("waves.directory"))
-    if (config.hasPath("waves.config.directory")) System.setProperty("waves.config.directory", config.getString("waves.config.directory"))
+    System.setProperty("dcc.directory", config.getString("dcc.directory"))
+    if (config.hasPath("dcc.config.directory")) System.setProperty("dcc.config.directory", config.getString("dcc.config.directory"))
 
     maybeExternalConfig match {
       case Success(None) =>
-        val currentBlockchainType = Try(ConfigFactory.defaultOverrides().getString("waves.blockchain.type"))
-          .orElse(Try(ConfigFactory.defaultOverrides().getString("waves.defaults.blockchain.type")))
+        val currentBlockchainType = Try(ConfigFactory.defaultOverrides().getString("dcc.blockchain.type"))
+          .orElse(Try(ConfigFactory.defaultOverrides().getString("dcc.defaults.blockchain.type")))
           .map(_.toUpperCase)
           .getOrElse("TESTNET")
 
@@ -617,7 +617,7 @@ object Application extends ScorexLogging {
 
     val DisabledHash = "H6nsiifwYKYEx6YzYD7woP1XCn72RVvx6tC1zjjLXqsu"
     if (settings.restAPISettings.enable && settings.restAPISettings.apiKeyHash == DisabledHash) {
-      log.error(s"Usage of the default api key hash ($DisabledHash) is prohibited, please change it in the waves.conf")
+      log.error(s"Usage of the default api key hash ($DisabledHash) is prohibited, please change it in the dcc.conf")
       forceStopApplication(Misconfiguration)
     }
 
@@ -665,7 +665,7 @@ object Application extends ScorexLogging {
       case "explore"                => Explorer.main(args.tail)
       case "util"                   => UtilApp.main(args.tail)
       case "gengen"                 => GenesisBlockGenerator.main(args.tail)
-      case "help" | "--help" | "-h" => println("Usage: waves <config> | export | import | explore | util | gengen")
+      case "help" | "--help" | "-h" => println("Usage: dcc <config> | export | import | explore | util | gengen")
       case _                        => startNode(args.headOption)
     }
   }

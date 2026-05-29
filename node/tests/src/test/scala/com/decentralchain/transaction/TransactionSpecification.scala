@@ -13,7 +13,7 @@ class TransactionSpecification extends PropSpec {
         val sender    = KeyPair(senderSeed)
         val recipient = KeyPair(recipientSeed)
 
-        val tx = createWavesTransfer(sender, recipient.toAddress, amount, fee, time).explicitGet()
+        val tx = createDccTransfer(sender, recipient.toAddress, amount, fee, time).explicitGet()
 
         tx.timestamp shouldEqual time
         tx.amount.value shouldEqual amount
@@ -28,7 +28,7 @@ class TransactionSpecification extends PropSpec {
       (senderSeed: Array[Byte], recipientSeed: Array[Byte], time: Long, amount: Long, fee: Long) =>
         val sender    = KeyPair(senderSeed)
         val recipient = KeyPair(recipientSeed)
-        val tx        = createWavesTransfer(sender, recipient.toAddress, amount, fee, time).explicitGet()
+        val tx        = createDccTransfer(sender, recipient.toAddress, amount, fee, time).explicitGet()
         val txAfter   = TransferTransaction.parseBytes(tx.bytes()).get
 
         txAfter.getClass.shouldBe(tx.getClass)
@@ -47,7 +47,7 @@ class TransactionSpecification extends PropSpec {
       (senderSeed: Array[Byte], recipientSeed: Array[Byte], time: Long, amount: Long, fee: Long) =>
         val sender    = KeyPair(senderSeed)
         val recipient = KeyPair(recipientSeed)
-        val tx        = createWavesTransfer(sender, recipient.toAddress, amount, fee, time).explicitGet()
+        val tx        = createDccTransfer(sender, recipient.toAddress, amount, fee, time).explicitGet()
         val txAfter   = TransactionParsers.parseBytes(tx.bytes()).get.asInstanceOf[TransferTransaction]
 
         txAfter.getClass.shouldBe(tx.getClass)

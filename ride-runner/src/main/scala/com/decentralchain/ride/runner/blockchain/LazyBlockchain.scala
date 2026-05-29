@@ -99,7 +99,7 @@ class LazyBlockchain[TagT] private (
 
   override def balances(req: Seq[(Address, Asset)]): Map[(Address, Asset), Long] = ???
 
-  override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] = ???
+  override def dccBalances(addresses: Seq[Address]): Map[Address, Long] = ???
 
   override def effectiveBalanceBanHeights(address: Address): Seq[Int] = ???
 
@@ -112,12 +112,12 @@ class LazyBlockchain[TagT] private (
     blockHeaders.getOrFetch(atHeight)
   }
 
-  // Ride: wavesBalance, height, lastBlock
+  // Ride: dccBalance, height, lastBlock
   override def height: Int = heightUntagged.toInt
 
-  override def finalizedHeight: Option[Height] = None // TODO:
+  override def finalizedHeight: Option[Height] = None // NOTE: Not implemented in lazy blockchain — finalization requires full state
 
-  override def finalizedHeightAt(at: Height): Option[Height] = None // TODO:
+  override def finalizedHeightAt(at: Height): Option[Height] = None // NOTE: Not implemented in lazy blockchain
 
   // Ride: environment initialization
   override def activatedFeatures: ActivatedFeatures = currentActivatedFeatures.get()
@@ -142,7 +142,7 @@ class LazyBlockchain[TagT] private (
   // Ride (indirectly): asset script validation
   override def assetScript(id: Asset.IssuedAsset): Option[AssetScriptInfo] = assetDescription(id).flatMap(_.script)
 
-  // Ride: get*Value (data), get* (data), isDataStorageUntouched, balance, scriptHash, wavesBalance
+  // Ride: get*Value (data), get* (data), isDataStorageUntouched, balance, scriptHash, dccBalance
   override def resolveAlias(a: Alias): Either[ValidationError, Address] = db
     .directReadWrite { implicit ctx =>
       memCache.getOrLoad(MemCacheKey.Alias(a)) { key =>
@@ -157,7 +157,7 @@ class LazyBlockchain[TagT] private (
     .mayBeValue
     .toRight(AliasDoesNotExist(a))
 
-  // Ride: wavesBalance
+  // Ride: dccBalance
   override def leaseBalance(address: Address): LeaseBalance = db
     .directReadWrite { implicit ctx =>
       val atMaxHeight = heightUntagged
@@ -174,7 +174,7 @@ class LazyBlockchain[TagT] private (
     .mayBeValue
     .getOrElse(LeaseBalance.empty)
 
-  // Ride: assetBalance, wavesBalance
+  // Ride: assetBalance, dccBalance
   override def balance(address: Address, asset: Asset): Long = db
     .directReadWrite { implicit ctx =>
       val atMaxHeight = heightUntagged
@@ -190,13 +190,13 @@ class LazyBlockchain[TagT] private (
     .mayBeValue
     .getOrElse(0L)
 
-  // Retrieves Waves balance snapshot in the [from, to] range (inclusive)
-  // Ride: wavesBalance (specifies to=None), "to" always None and means "to the end"
+  // Retrieves Dcc balance snapshot in the [from, to] range (inclusive)
+  // Ride: dccBalance (specifies to=None), "to" always None and means "to the end"
   override def balanceSnapshots(address: Address, from: Int, to: Option[BlockId]): Seq[BalanceSnapshot] = {
     // NOTE: This code leads to a wrong generating balance, but we see no use-cases for now
     val lb           = leaseBalance(address)
-    val wavesBalance = balance(address, Asset.Waves)
-    List(BalanceSnapshot(Height(height), wavesBalance, lb.in, lb.out, 0))
+    val dccBalance = balance(address, Asset.Dcc)
+    List(BalanceSnapshot(Height(height), dccBalance, lb.in, lb.out, 0))
   }
 
   // Ride: transactionHeightById
@@ -320,7 +320,7 @@ class LazyBlockchain[TagT] private (
           .map(_.transaction)
           .foldLeft(initialAffectedTags) { case (r, tx) =>
             tx match {
-              case Transaction.WavesTransaction(tx) =>
+              case Transaction.DccTransaction(tx) =>
                 tx.data match {
                   case Data.CreateAlias(txData) =>
                     val cacheKey = conv.aliasKey(txData)
@@ -464,7 +464,7 @@ class LazyBlockchain[TagT] private (
     val setScriptTxSenderPublicKeys = mutable.Map.empty[Address, PublicKey]
     val withTxAffectedTags = txs.view.map(_.transaction).foldLeft(empty) { case (r, tx) =>
       tx match {
-        case Transaction.WavesTransaction(tx) =>
+        case Transaction.DccTransaction(tx) =>
           tx.data match {
             case Data.CreateAlias(txData) =>
               val cacheKey = conv.aliasKey(txData)

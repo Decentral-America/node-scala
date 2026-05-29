@@ -24,7 +24,7 @@ package object serialization {
       Asset.IssuedAsset(ByteStr(getByteArray(transaction.AssetIdLength)))
 
     def getAsset: Asset = buf.getByte match {
-      case 0 => Asset.Waves
+      case 0 => Asset.Dcc
       case 1 => this.getIssuedAsset
       case b => throw new IllegalArgumentException(s"Invalid asset id prefix: $b")
     }

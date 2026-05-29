@@ -31,7 +31,7 @@ case class RewardApiRoute(blockchain: Blockchain) extends ApiRoute {
         .filter(_ <= height)
         .toRight(GenericError("Block reward feature is not activated yet"))
       reward <- blockchain.blockReward(height.toInt).toRight(GenericError(s"No information about rewards at height = $height"))
-      amount          = blockchain.wavesAmount(height.toInt)
+      amount          = blockchain.dccAmount(height.toInt)
       rewardsSettings = blockchain.settings.rewardsSettings
       funcSettings    = blockchain.settings.functionalitySettings
       nextCheck = rewardsSettings.nearestTermEnd(activatedAt, height, blockchain.isFeatureActivated(BlockchainFeatures.CappedReward, height.toInt))
@@ -61,7 +61,7 @@ case class RewardApiRoute(blockchain: Blockchain) extends ApiRoute {
 object RewardApiRoute {
   final case class RewardStatus(
       height: Height,
-      totalWavesAmount: BigInt,
+      totalDccAmount: BigInt,
       currentReward: Long,
       minIncrement: Long,
       term: Int,

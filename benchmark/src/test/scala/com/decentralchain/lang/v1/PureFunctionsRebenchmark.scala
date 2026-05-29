@@ -10,7 +10,7 @@ import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.compiler.Terms.CONST_BYTESTR.NoLimit
 import com.decentralchain.lang.v1.evaluator.FunctionIds
 import com.decentralchain.lang.v1.evaluator.ctx.impl.PureContext
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Types
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Types
 import com.decentralchain.lang.{Global, v1}
 import org.apache.commons.lang3.RandomStringUtils
 import org.openjdk.jmh.annotations.*

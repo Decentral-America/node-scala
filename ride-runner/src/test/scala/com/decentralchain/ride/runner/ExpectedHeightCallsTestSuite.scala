@@ -164,7 +164,7 @@ class ExpectedHeightCallsTestSuite extends BaseTestSuite with HasTestAccounts {
     override def accountBalanceOf(address: Address, assetId: Option[Array[Byte]]): Unit =
       kill(s"accountBalanceOf($address, ${assetId.map(ByteStr(_))})")
 
-    override def accountWavesBalanceOf(address: Address): Unit = kill(s"accountWavesBalanceOf($address)")
+    override def accountDccBalanceOf(address: Address): Unit = kill(s"accountDccBalanceOf($address)")
 
     override def accountScript(address: Address): Unit = kill(s"accountScript($address)")
 

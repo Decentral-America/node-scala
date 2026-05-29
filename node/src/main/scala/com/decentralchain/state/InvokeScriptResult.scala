@@ -16,7 +16,7 @@ import io.decentralchain.protobuf.transaction.{PBAmounts, PBRecipients, PBTransa
 import io.decentralchain.protobuf.utils.PBUtils
 import io.decentralchain.protobuf.{Amount, *}
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.utils.*
 import play.api.libs.json.*
@@ -85,9 +85,9 @@ object InvokeScriptResult {
   }
 
   def paymentsFromPortfolio(addr: Address, portfolio: Portfolio): Seq[Payment] = {
-    val waves  = InvokeScriptResult.Payment(addr, Waves, portfolio.balance)
+    val dcc  = InvokeScriptResult.Payment(addr, Dcc, portfolio.balance)
     val assets = portfolio.assets.map { case (assetId, amount) => InvokeScriptResult.Payment(addr, assetId, amount) }
-    (assets.toVector ++ Some(waves)).filter(_.amount != 0)
+    (assets.toVector ++ Some(dcc)).filter(_.amount != 0)
   }
 
   implicit val issueFormat: Writes[Issue] = Writes[Issue] { iss =>
@@ -204,7 +204,7 @@ object InvokeScriptResult {
             payments.map { case CaseObj(_, fields) =>
               ((fields("assetId"), fields("amount")): @unchecked) match {
                 case (CONST_BYTESTR(b), CONST_LONG(a)) => InvokeScriptResult.AttachedPayment(IssuedAsset(b), a)
-                case (_, CONST_LONG(a))                => InvokeScriptResult.AttachedPayment(Waves, a)
+                case (_, CONST_LONG(a))                => InvokeScriptResult.AttachedPayment(Dcc, a)
               }
             },
             fromLangResult(invokeId, r)

@@ -28,7 +28,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
   private lazy val callerAddress: String = caller.toAddress.toString
   private lazy val dAppAddress: String   = dApp.toAddress.toString
   test("NFT should be correctly transferred via transfer transaction") {
-    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.waves / 1000, waitForTx = true).id
+    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true).id
     sender.transfer(caller, dAppAddress, 1, minFee, Some(nftAsset), waitForTx = true)
 
     sender.assetBalance(callerAddress, nftAsset).balance shouldBe 0
@@ -38,7 +38,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
   }
 
   test("NFT should be correctly transferred via invoke script transaction") {
-    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.waves / 1000, waitForTx = true).id
+    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true).id
     val scriptText =
       s"""
          |{-# STDLIB_VERSION 4 #-}
@@ -128,7 +128,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
   }
 
   test("NFT should be correctly transferred via mass transfer transaction") {
-    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.waves / 1000, waitForTx = true).id
+    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true).id
     sender.massTransfer(caller, List(Transfer(receiver.toAddress.toString, 1)), calcMassTransferFee(1), assetId = Some(nftAsset), waitForTx = true)
 
     sender.assetBalance(callerAddress, nftAsset).balance shouldBe 0
@@ -142,14 +142,14 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
     val seller  = KeyPair("seller".getBytes("UTF-8"))
     val matcher = KeyPair("matcher".getBytes("UTF-8"))
     val transfers = List(
-      Transfer(buyer.toAddress.toString, 10.waves),
-      Transfer(seller.toAddress.toString, 10.waves),
-      Transfer(matcher.toAddress.toString, 10.waves)
+      Transfer(buyer.toAddress.toString, 10.dcc),
+      Transfer(seller.toAddress.toString, 10.dcc),
+      Transfer(matcher.toAddress.toString, 10.dcc)
     )
     sender.massTransfer(caller, transfers, calcMassTransferFee(transfers.size), waitForTx = true)
 
     val nftAsset =
-      sender.broadcastIssue(seller, assetName, assetDescription, 1, 0, reissuable = false, 1.waves / 1000, waitForTx = true, script = None).id
+      sender.broadcastIssue(seller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true, script = None).id
     val pair = AssetPair.createAssetPair(nftAsset, "DCC")
     val ts   = ntpTime.correctedTime()
     val buy = Order
@@ -159,7 +159,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
         matcher = matcher.publicKey,
         pair = pair.get,
         amount = 1,
-        price = 1.waves,
+        price = 1.dcc,
         timestamp = ts,
         expiration = ts + Order.MaxLiveTime / 2,
         matcherFee = matcherFee
@@ -172,7 +172,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
         matcher = matcher.publicKey,
         pair = pair.get,
         amount = 1,
-        price = 1.waves,
+        price = 1.dcc,
         timestamp = ts,
         expiration = ts + Order.MaxLiveTime / 2,
         matcherFee = matcherFee
@@ -186,7 +186,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
         order1 = buy,
         order2 = sell,
         amount = 1,
-        price = 1.waves,
+        price = 1.dcc,
         buyMatcherFee = matcherFee,
         sellMatcherFee = matcherFee,
         fee = matcherFee,

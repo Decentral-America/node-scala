@@ -2,7 +2,7 @@ package com.decentralchain.common.utils
 import scala.util.control.NonFatal
 
 object Base58 extends BaseXXEncDec {
-  private val useSlowBase58: Boolean   = sys.props.get("waves.use-slow-base58").exists(s => s.toLowerCase == "true" || s == "1")
+  private val useSlowBase58: Boolean   = sys.props.get("dcc.use-slow-base58").exists(s => s.toLowerCase == "true" || s == "1")
   override val defaultDecodeLimit: Int = 192
 
   override def encode(array: Array[Byte]): String = {

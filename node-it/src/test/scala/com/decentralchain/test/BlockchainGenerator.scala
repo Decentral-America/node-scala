@@ -43,8 +43,8 @@ import scala.language.reflectiveCalls
 import scala.util.{Failure, Success, Using}
 
 /** Usage example: <pre>object Example extends App {
-  *  val wavesSettings = Application.loadApplicationConfig(Some(new File("path-to-config-file")))
-  *  val generator = new BlockchainGenerator(wavesSettings)
+  *  val dccSettings = Application.loadApplicationConfig(Some(new File("path-to-config-file")))
+  *  val generator = new BlockchainGenerator(dccSettings)
   *  val sender = KeyPair("123".getBytes)
   *  val recipient = Address.fromString("3FddHK1Y3vPdcVKZshWCWea4gS5th6G1UE6").getOrElse(sender.toAddress)
   *  val genBlocks = (1 to 10).map { idx =>
@@ -61,10 +61,10 @@ import scala.util.{Failure, Success, Using}
   * }
   * </pre>
   */
-class BlockchainGenerator(wavesSettings: DCCSettings) extends ScorexLogging {
+class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
   private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
 
-  private val settings: DCCSettings = wavesSettings.copy(minerSettings = wavesSettings.minerSettings.copy(quorum = 0))
+  private val settings: DCCSettings = dccSettings.copy(minerSettings = dccSettings.minerSettings.copy(quorum = 0))
 
   def generateDb(genBlocks: Iterator[GenBlock], dbDirPath: String = settings.dbSettings.directory): Unit =
     generateBlockchain(genBlocks, settings.dbSettings.copy(directory = dbDirPath))

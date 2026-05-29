@@ -23,7 +23,7 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.quorum(0))
-      .overrideBase(_ => """waves.blockchain.custom.functionality.pre-activated-features.16 = 0""")
+      .overrideBase(_ => """dcc.blockchain.custom.functionality.pre-activated-features.16 = 0""")
       .withDefault(1)
       .withSpecial(_.nonMiner)
       .buildNonConflicting()
@@ -97,8 +97,8 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     val script  = ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
     val script2 = ScriptCompiler.compile(scriptTextV4, ScriptEstimatorV3.latest).explicitGet()._1
     val script3 = ScriptCompiler.compile(scriptTextV5, ScriptEstimatorV3.latest).explicitGet()._1
-    sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(thirdContractAddr), 10.waves, minFee, waitForTx = true)
-    sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(fourthContractAddr), 10.waves, minFee, waitForTx = true)
+    sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(thirdContractAddr), 10.dcc, minFee, waitForTx = true)
+    sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(fourthContractAddr), 10.dcc, minFee, waitForTx = true)
     sender.setScript(firstContract, Right(Some(script)), setScriptFee, waitForTx = true)
     sender.setScript(secondContract, Right(Some(script)), setScriptFee, waitForTx = true)
     sender.setScript(thirdContract, Right(Some(script2)), setScriptFee, waitForTx = true)
@@ -114,7 +114,7 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       caller,
       Recipient().withPublicKeyHash(fourthContractAddr),
       Some(FUNCTION_CALL(FunctionHeader.User("foo"), Nil)),
-      fee = 1.waves,
+      fee = 1.dcc,
       waitForTx = true
     )
 
@@ -130,7 +130,7 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         caller,
         Recipient().withPublicKeyHash(contract),
         Some(FUNCTION_CALL(FunctionHeader.User("foo"), List(CONST_BYTESTR(arg).explicitGet()))),
-        fee = 1.waves,
+        fee = 1.dcc,
         waitForTx = true
       )
 
@@ -148,7 +148,7 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         caller,
         Recipient().withPublicKeyHash(contract),
         functionCall = None,
-        fee = 1.waves,
+        fee = 1.dcc,
         waitForTx = true
       )
       sender.getDataByKey(contract, "a") shouldBe List(DataEntry("a", DataEntry.Value.StringValue("b")))
@@ -159,13 +159,13 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
   test("verifier works") {
     for (v <- invokeScrTxSupportedVersions) {
       val contract    = if (v < 2) firstContractAddr else secondContractAddr
-      val dAppBalance = sender.wavesBalance(contract)
+      val dAppBalance = sender.dccBalance(contract)
       assertGrpcError(
-        sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(contract), transferAmount, 1.waves),
+        sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(contract), transferAmount, 1.dcc),
         "Transaction is not allowed by account-script",
         Code.INVALID_ARGUMENT
       )
-      sender.wavesBalance(contract) shouldBe dAppBalance
+      sender.dccBalance(contract) shouldBe dAppBalance
     }
   }
 
@@ -176,7 +176,7 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         caller,
         Recipient().withPublicKeyHash(secondContractAddr),
         Some(FUNCTION_CALL(FunctionHeader.User("emptyKey"), List.empty)),
-        fee = 1.waves,
+        fee = 1.dcc,
         version = TxVersion.V2
       ),
       "Empty keys aren't allowed in tx version >= 2"
@@ -187,7 +187,7 @@ class InvokeScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         caller,
         Recipient().withPublicKeyHash(thirdContractAddr),
         Some(FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)),
-        fee = 1.waves,
+        fee = 1.dcc,
         version = TxVersion.V2,
         waitForTx = true
       ),

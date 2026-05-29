@@ -7,7 +7,7 @@ import com.decentralchain.common.merkle.Merkle.*
 import com.decentralchain.crypto.Blake2b256
 import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.test.FreeSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.transaction.transfer.TransferTransaction
 import org.scalacheck.Gen
@@ -21,7 +21,7 @@ class TransactionsRootSpec extends FreeSpec with OptionValues with BlockGen {
       sender    <- accountGen
       recipient <- accountGen
       txsLength <- Gen.choose(1, 1000)
-      txs       <- Gen.listOfN(txsLength, versionedTransferGeneratorP(sender, recipient.toAddress, Waves, Waves))
+      txs       <- Gen.listOfN(txsLength, versionedTransferGeneratorP(sender, recipient.toAddress, Dcc, Dcc))
     } yield (signer, txs)
 
   val validProofsScenario: Gen[(List[Transaction], Int)] =
@@ -91,7 +91,7 @@ class TransactionsRootSpec extends FreeSpec with OptionValues with BlockGen {
       (signer, txs)    <- commonGen
       anotherSender    <- accountGen
       anotherRecipient <- accountGen
-      tx               <- versionedTransferGeneratorP(anotherSender, anotherRecipient.toAddress, Waves, Waves)
+      tx               <- versionedTransferGeneratorP(anotherSender, anotherRecipient.toAddress, Dcc, Dcc)
       block            <- versionedBlockGen(txs, signer, Block.ProtoBlockVersion)
     } yield (block, tx)
 

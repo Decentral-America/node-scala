@@ -21,7 +21,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit, ScriptExtraFee}
 import com.decentralchain.state.{DataEntry, Height, StringDataEntry, TransactionId}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
@@ -70,16 +70,16 @@ object TxHelpers {
   def genesis(address: Address, amount: Long = ENOUGH_AMT, timestamp: TxTimestamp = timestamp): GenesisTransaction =
     GenesisTransaction.create(address, amount, timestamp).explicitGet()
 
-  def payment(from: KeyPair = defaultSigner, to: Address = secondAddress, amount: Long = 1.waves): PaymentTransaction =
+  def payment(from: KeyPair = defaultSigner, to: Address = secondAddress, amount: Long = 1.dcc): PaymentTransaction =
     PaymentTransaction.create(from, to, amount, TestValues.fee, timestamp).explicitGet()
 
   def transfer(
       from: KeyPair = defaultSigner,
       to: AddressOrAlias = secondAddress,
-      amount: Long = 1.waves,
-      asset: Asset = Waves,
+      amount: Long = 1.dcc,
+      asset: Asset = Dcc,
       fee: Long = TestValues.fee,
-      feeAsset: Asset = Waves,
+      feeAsset: Asset = Dcc,
       attachment: ByteStr = ByteStr.empty,
       timestamp: TxTimestamp = timestamp,
       version: Byte = TxVersion.V2,
@@ -90,10 +90,10 @@ object TxHelpers {
   def transferUnsigned(
       from: KeyPair = defaultSigner,
       to: AddressOrAlias = secondAddress,
-      amount: Long = 1.waves,
-      asset: Asset = Waves,
+      amount: Long = 1.dcc,
+      asset: Asset = Dcc,
       fee: Long = TestValues.fee,
-      feeAsset: Asset = Waves,
+      feeAsset: Asset = Dcc,
       version: Byte = TxVersion.V2
   ): TransferTransaction =
     TransferTransaction(
@@ -112,8 +112,8 @@ object TxHelpers {
 
   def massTransfer(
       from: KeyPair = defaultSigner,
-      to: Seq[(AddressOrAlias, Long)] = Seq(secondAddress -> 1.waves),
-      asset: Asset = Waves,
+      to: Seq[(AddressOrAlias, Long)] = Seq(secondAddress -> 1.dcc),
+      asset: Asset = Dcc,
       fee: Long = FeeConstants(TransactionType.MassTransfer) * FeeUnit,
       timestamp: TxTimestamp = timestamp,
       version: Byte = TxVersion.V2,
@@ -138,7 +138,7 @@ object TxHelpers {
       decimals: Byte = 0,
       name: String = "test",
       description: String = "description",
-      fee: Long = 1.waves,
+      fee: Long = 1.dcc,
       script: Option[Script] = None,
       reissuable: Boolean = true,
       timestamp: TxTimestamp = timestamp,
@@ -198,21 +198,21 @@ object TxHelpers {
       desc: String = "updated_desc",
       sender: KeyPair = defaultSigner,
       fee: Long = TestValues.fee,
-      feeAsset: Asset = Waves,
+      feeAsset: Asset = Dcc,
       version: TxVersion = TxVersion.V1,
       chainId: Byte = AddressScheme.current.chainId
   ): UpdateAssetInfoTransaction =
     UpdateAssetInfoTransaction.selfSigned(version, sender, assetId, name, desc, timestamp, fee, feeAsset, chainId).explicitGet()
 
-  def orderV3(orderType: OrderType, asset: Asset, feeAsset: Asset = Waves): Order = {
-    order(orderType, asset, Waves, feeAsset)
+  def orderV3(orderType: OrderType, asset: Asset, feeAsset: Asset = Dcc): Order = {
+    order(orderType, asset, Dcc, feeAsset)
   }
 
   def order(
       orderType: OrderType,
       amountAsset: Asset,
       priceAsset: Asset,
-      feeAsset: Asset = Waves,
+      feeAsset: Asset = Dcc,
       amount: Long = 1L,
       price: Long = 1L,
       priceMode: OrderPriceMode = OrderPriceMode.Default,
@@ -402,7 +402,7 @@ object TxHelpers {
       payments: Seq[Payment] = Nil,
       invoker: KeyPair = defaultSigner,
       fee: Long = FeeConstants(TransactionType.InvokeScript) * FeeUnit,
-      feeAssetId: Asset = Waves,
+      feeAssetId: Asset = Dcc,
       version: TxVersion = TxVersion.V2,
       timestamp: TxTimestamp = timestamp
   ): InvokeScriptTransaction = {
@@ -414,7 +414,7 @@ object TxHelpers {
       expression: ExprScript,
       sender: KeyPair = defaultSigner,
       fee: Long = TestValues.fee,
-      feeAssetId: Asset = Waves
+      feeAssetId: Asset = Dcc
   ): InvokeExpressionTransaction =
     InvokeExpressionTransaction.selfSigned(TxVersion.V1, sender, expression, fee, feeAssetId, timestamp).explicitGet()
 
@@ -425,7 +425,7 @@ object TxHelpers {
   def lease(
       sender: KeyPair = defaultSigner,
       recipient: AddressOrAlias = secondAddress,
-      amount: Long = 10.waves,
+      amount: Long = 10.dcc,
       fee: Long = FeeConstants(TransactionType.Lease) * FeeUnit,
       timestamp: TxTimestamp = timestamp,
       version: TxVersion = TxVersion.V2
@@ -448,7 +448,7 @@ object TxHelpers {
       asset: IssuedAsset,
       minSponsoredAssetFee: Option[Long] = Some(TestValues.fee),
       sender: KeyPair = defaultSigner,
-      fee: Long = 1.waves,
+      fee: Long = 1.dcc,
       version: TxVersion = TxVersion.V1,
       chainId: Byte = AddressScheme.current.chainId
   ): SponsorFeeTransaction = {

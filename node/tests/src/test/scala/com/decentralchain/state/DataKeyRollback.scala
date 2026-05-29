@@ -11,7 +11,7 @@ import com.decentralchain.transaction.TxHelpers
 class DataKeyRollback extends PropSpec with SharedDomain {
   private val richAccount = TxHelpers.signer(1500)
 
-  override def genesisBalances: Seq[WithState.AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 10_000_000.waves))
+  override def genesisBalances: Seq[WithState.AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 10_000_000.dcc))
   override def settings: DCCSettings                           = DomainPresets.TransactionStateSnapshot
 
   property("check new entries") {
@@ -26,9 +26,9 @@ class DataKeyRollback extends PropSpec with SharedDomain {
       TxHelpers
         .massTransfer(
           richAccount,
-          dataSenders.map(kp => kp.toAddress -> 100.waves) ++
-            Seq(oracleAccount.toAddress -> 100.waves, dappAccount.toAddress -> 10.waves),
-          fee = 0.05.waves
+          dataSenders.map(kp => kp.toAddress -> 100.dcc) ++
+            Seq(oracleAccount.toAddress -> 100.dcc, dappAccount.toAddress -> 10.dcc),
+          fee = 0.05.dcc
         ),
       TxHelpers.setScript(
         dappAccount,
@@ -42,10 +42,10 @@ class DataKeyRollback extends PropSpec with SharedDomain {
       ),
       TxHelpers.data(oracleAccount, Seq(IntegerDataEntry("lastUpdatedBlock", 2)))
     )
-    domain.appendBlock(dataSenders.map(kp => TxHelpers.data(kp, Seq.tabulate(dataEntryCount)(i => IntegerDataEntry("kv_" + i, 501)), 0.01.waves))*)
-    domain.appendBlock(dataSenders.map(kp => TxHelpers.data(kp, Seq.tabulate(dataEntryCount)(i => IntegerDataEntry("kv_" + i, 503)), 0.01.waves))*)
+    domain.appendBlock(dataSenders.map(kp => TxHelpers.data(kp, Seq.tabulate(dataEntryCount)(i => IntegerDataEntry("kv_" + i, 501)), 0.01.dcc))*)
+    domain.appendBlock(dataSenders.map(kp => TxHelpers.data(kp, Seq.tabulate(dataEntryCount)(i => IntegerDataEntry("kv_" + i, 503)), 0.01.dcc))*)
     domain.appendBlock(
-      (dataSenders.map(kp => TxHelpers.data(kp, Seq.tabulate(dataEntryCount)(i => IntegerDataEntry("kv_" + i, 504)), 0.01.waves)) ++
+      (dataSenders.map(kp => TxHelpers.data(kp, Seq.tabulate(dataEntryCount)(i => IntegerDataEntry("kv_" + i, 504)), 0.01.dcc)) ++
         Seq(
           TxHelpers.invoke(dappAccount.toAddress, invoker = richAccount),
           TxHelpers.data(oracleAccount, Seq(IntegerDataEntry("lastUpdatedBlock", 5)))

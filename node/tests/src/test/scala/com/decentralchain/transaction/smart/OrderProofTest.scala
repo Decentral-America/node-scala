@@ -2,7 +2,7 @@ package com.decentralchain.transaction.smart
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.directives.values.{V1, V2, V3}
 import com.decentralchain.lang.v1.compiler.Terms.{ARR, CaseObj}
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Bindings
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Bindings
 import com.decentralchain.lang.v1.traits.domain.{APair, Ord, OrdType, Recipient}
 import com.decentralchain.test.FreeSpec
 

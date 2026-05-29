@@ -188,15 +188,15 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         )
         d.appender.appendBlock(block2)
 
-        log.debug("Append block3 with spending all waves by miner")
+        log.debug("Append block3 with spending all dcc by miner")
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Seq(
             TxHelpers.transfer(
               otherNodeAcc,
               thisNodeAcc.toAddress,
-              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-              fee = 1.waves
+              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+              fee = 1.dcc
             )
           ),
           generator = otherNodeAcc,
@@ -252,15 +252,15 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         )
         d.appender.appendBlock(block2)
 
-        log.debug("Append micro block with spending all waves by miner")
+        log.debug("Append micro block with spending all dcc by miner")
         d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = otherNodeAcc, strictTime = true))
         d.appendMicroBlock(
           d.createMicroBlock(signer = Some(otherNodeAcc))(
             TxHelpers.transfer(
               otherNodeAcc,
               thisNodeAcc.toAddress,
-              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-              fee = 1.waves
+              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+              fee = 1.dcc
             )
           )
         )
@@ -398,10 +398,10 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
     val generators = Seq(generator1, generator2, generator3)
     val initBalances = Seq(
-      AddrWithBalance(generator1.toAddress, 2000.waves), // this node miner
-      AddrWithBalance(generator2.toAddress, 3000.waves),
-      AddrWithBalance(generator3.toAddress, 5000.waves), // endorser
-      AddrWithBalance(otherAcc1.toAddress, 2000.waves)
+      AddrWithBalance(generator1.toAddress, 2000.dcc), // this node miner
+      AddrWithBalance(generator2.toAddress, 3000.dcc),
+      AddrWithBalance(generator3.toAddress, 5000.dcc), // endorser
+      AddrWithBalance(otherAcc1.toAddress, 2000.dcc)
     ).map(x => x.copy(balance = x.balance + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee))
 
     val minerScheduler    = TestScheduler()
@@ -488,9 +488,9 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
     val generators = Seq(generator1, generator2, generator3)
     val initBalances = Seq(
-      AddrWithBalance(generator1.toAddress, 5000.waves),
-      AddrWithBalance(generator2.toAddress, 2000.waves),
-      AddrWithBalance(generator3.toAddress, 3000.waves)
+      AddrWithBalance(generator1.toAddress, 5000.dcc),
+      AddrWithBalance(generator2.toAddress, 2000.dcc),
+      AddrWithBalance(generator3.toAddress, 3000.dcc)
     )
 
     val minerScheduler    = TestScheduler()

@@ -32,7 +32,7 @@ import com.decentralchain.state.diffs.BlockDiffer.CurrentBlockFeePart
 import com.decentralchain.state.diffs.{BlockDiffer, ENOUGH_AMT}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.{TransactionStateSnapshot, DCCSettingsOps}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxValidationError.{BlockAppendError, GenericError, InvalidStateHash, MicroBlockAppendError}
 import com.decentralchain.transaction.assets.exchange.OrderType
 import com.decentralchain.transaction.utils.EthConverters.*
@@ -110,8 +110,8 @@ class BlockChallengeTest
 
       val extraForDeposit = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
       d.appendBlock(
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMinerAddr, 1000.waves + extraForDeposit),
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 2000.waves + extraForDeposit)
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMinerAddr, 1000.dcc + extraForDeposit),
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 2000.dcc + extraForDeposit)
       )
       (1 to 998).foreach(_ => d.appendBlock(d.createBlock(Block.PlainBlockVersion, txs = Nil, strictTime = true)))
 
@@ -160,7 +160,7 @@ class BlockChallengeTest
   property("NODE-885. Consensus data for challenging block should be recalculated") {
     withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
       appendAndCheck(
         d.createBlock(
@@ -192,7 +192,7 @@ class BlockChallengeTest
     withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner, challengedMiner)) { d =>
       val challengingMiner1 = d.wallet.generateNewAccount().get
       val challengingMiner2 = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner1.toAddress, 1001.waves))
+      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner1.toAddress, 1001.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
 
       def check(block: Block): Unit = {
@@ -213,7 +213,7 @@ class BlockChallengeTest
         d
       )(check)
 
-      d.appendBlock(TxHelpers.transfer(challengingMiner1, challengingMiner2.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(challengingMiner1, challengingMiner2.toAddress, 1000.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
 
       appendAndCheck(
@@ -240,8 +240,8 @@ class BlockChallengeTest
       challengingAccs.size shouldBe accNum
 
       val transfers = challengingAccs.zipWithIndex.map { case (acc, idx) =>
-        TxHelpers.transfer(TxHelpers.defaultSigner, acc.toAddress, (1000 + idx).waves)
-      } :+ TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(TxHelpers.defaultSigner, acc.toAddress, (1000 + idx).dcc)
+      } :+ TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 1000.dcc)
 
       d.appendBlock(transfers*)
       (1 to 999).foreach(_ => d.appendBlock())
@@ -326,7 +326,7 @@ class BlockChallengeTest
       AddrWithBalance(challengingMiner.toAddress, ENOUGH_AMT),
       AddrWithBalance(
         challengedMiner.toAddress,
-        GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets + 1.waves
+        GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets + 1.dcc
       )
     )
 
@@ -407,7 +407,7 @@ class BlockChallengeTest
   property("NODE-890. Challenging block should contain all transactions from original block") {
     withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
@@ -425,7 +425,7 @@ class BlockChallengeTest
   property("NODE-891. Challenging block should contain only transactions from original block") {
     withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
       val originalBlock = d.createBlock(Block.ProtoBlockVersion, Seq.empty, strictTime = true, stateHash = Some(Some(invalidStateHash)))
       val invalidChallengingBlock = d.createChallengingBlock(
@@ -450,7 +450,7 @@ class BlockChallengeTest
   property("NODE-892. Challenging block should reference the same block as original") {
     withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
@@ -468,7 +468,7 @@ class BlockChallengeTest
   property("NODE-893. Challenging block can't reference blocks before previous") {
     withDomain(settings, balances = AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
-      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 1000.dcc))
       (1 to 999).foreach(_ => d.appendBlock())
       val grandParent = d.blockchain.blockHeader(d.blockchain.height - 2).map(_.id())
       val originalBlock =
@@ -485,7 +485,7 @@ class BlockChallengeTest
       val lastBlockIdBefore = d.lastBlockId
       d.appendBlock()
 
-      val txs = () => Seq(TxHelpers.transfer(amount = 1.waves), TxHelpers.transfer(amount = 2.waves))
+      val txs = () => Seq(TxHelpers.transfer(amount = 1.dcc), TxHelpers.transfer(amount = 2.dcc))
 
       val appender = createMicroBlockAppender(d)
       val channel  = new EmbeddedChannel()
@@ -532,8 +532,8 @@ class BlockChallengeTest
 
       val extraForDeposit = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
       d.appendBlock(
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 2000.waves + extraForDeposit),
-        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMinerAddr, 3000.waves + extraForDeposit)
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 2000.dcc + extraForDeposit),
+        TxHelpers.transfer(TxHelpers.defaultSigner, challengedMinerAddr, 3000.dcc + extraForDeposit)
       )
 
       (1 to 998).foreach(_ => d.appendBlock())
@@ -544,7 +544,7 @@ class BlockChallengeTest
 
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
-        Seq(TxHelpers.transfer(challengedMiner, TxHelpers.defaultAddress, amount = 1.waves)),
+        Seq(TxHelpers.transfer(challengedMiner, TxHelpers.defaultAddress, amount = 1.dcc)),
         strictTime = true,
         generator = challengedMiner,
         stateHash = Some(Some(invalidStateHash))
@@ -578,7 +578,7 @@ class BlockChallengeTest
       d.blockAppender(newBlock).runSyncUnsafe() should beRight
       d.blockchain.height shouldBe 1003 // Same generation period as 1002
 
-      val expectedEffectiveBalance = effBalanceBefore - 1.waves - TestValues.fee
+      val expectedEffectiveBalance = effBalanceBefore - 1.dcc - TestValues.fee
       d.blockchain.effectiveBalance(challengedMinerAddr, 0) shouldBe expectedEffectiveBalance
 
       withClue(s"challenged $challengedMinerAddr: ") {
@@ -587,7 +587,7 @@ class BlockChallengeTest
           .collectFirst {
             case x if x.address == challengedMinerAddr => x.balance
           }
-          .value shouldBe 0 // expectedEffectiveBalance // TODO: ?`
+          .value shouldBe 0 // expectedEffectiveBalance // NOTE: Expected effective balance is 0 after challenge
       }
     }
   }
@@ -597,7 +597,7 @@ class BlockChallengeTest
     withDomain(settings, balances = AddrWithBalance.enoughBalances(sender)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
 
-      d.appendBlock(TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc))
 
       (1 to 999).foreach(_ => d.appendBlock())
       val prevBlockTx = TxHelpers.transfer(sender)
@@ -641,8 +641,8 @@ class BlockChallengeTest
       )
       val assetScript = TestCompiler(V6).compileAsset("true")
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves),
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc),
         TxHelpers.setScript(dApp, script)
       )
 
@@ -651,7 +651,7 @@ class BlockChallengeTest
       val issue             = TxHelpers.issue(recipient)
       val issueSmart        = TxHelpers.issue(recipient, name = "smart", script = Some(assetScript))
       val lease             = TxHelpers.lease(recipient)
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, recipient.toAddress, 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, recipient.toAddress, 1001.dcc)
       val recipientTxs = Seq(
         issue,
         issueSmart,
@@ -659,22 +659,22 @@ class BlockChallengeTest
         TxHelpers.createAlias("alias", recipient),
         TxHelpers.dataSingle(recipient),
         TxHelpers.exchange(
-          TxHelpers.order(OrderType.BUY, issue.asset, Waves, matcher = recipient),
-          TxHelpers.order(OrderType.SELL, issue.asset, Waves, matcher = recipient),
+          TxHelpers.order(OrderType.BUY, issue.asset, Dcc, matcher = recipient),
+          TxHelpers.order(OrderType.SELL, issue.asset, Dcc, matcher = recipient),
           recipient
         ),
         TxHelpers.invoke(dApp.toAddress, Some("foo"), invoker = recipient),
         lease,
         TxHelpers.leaseCancel(lease.id(), recipient),
         TxHelpers
-          .massTransfer(recipient, Seq(recipientEth.toWavesAddress -> 1.waves), fee = TestValues.fee),
+          .massTransfer(recipient, Seq(recipientEth.toDccAddress -> 1.dcc), fee = TestValues.fee),
         TxHelpers.reissue(issue.asset, recipient),
-        TxHelpers.setAssetScript(recipient, issueSmart.asset, assetScript, fee = 2.waves),
-        TxHelpers.transfer(recipient, recipientEth.toWavesAddress, 100.waves),
+        TxHelpers.setAssetScript(recipient, issueSmart.asset, assetScript, fee = 2.dcc),
+        TxHelpers.transfer(recipient, recipientEth.toDccAddress, 100.dcc),
         TxHelpers.sponsor(issue.asset, sender = recipient),
         TxHelpers.updateAssetInfo(issue.assetId, sender = recipient),
         TxHelpers.setScript(recipient, script),
-        EthTxGenerator.generateEthTransfer(recipientEth, dApp.toAddress, 1, Waves),
+        EthTxGenerator.generateEthTransfer(recipientEth, dApp.toAddress, 1, Dcc),
         EthTxGenerator.generateEthInvoke(recipientEth, dApp.toAddress, "foo", Seq.empty, Seq.empty)
       )
       val validOriginalBlock = d.createBlock(
@@ -707,10 +707,10 @@ class BlockChallengeTest
       val expectedSnapshot = StateSnapshot
         .build(
           d.rocksDBWriter,
-          Map(challengingMiner.toAddress -> Portfolio.waves(blockRewards.miner)) ++
-            d.blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten.map(_ -> Portfolio.waves(blockRewards.daoAddress)) ++
+          Map(challengingMiner.toAddress -> Portfolio.dcc(blockRewards.miner)) ++
+            d.blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten.map(_ -> Portfolio.dcc(blockRewards.daoAddress)) ++
             d.blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
-              .map(_ -> Portfolio.waves(blockRewards.xtnBuybackAddress)),
+              .map(_ -> Portfolio.dcc(blockRewards.xtnBuybackAddress)),
           transactions = blockSnapshot.transactions
         )
         .explicitGet()
@@ -764,9 +764,9 @@ class BlockChallengeTest
       val issue = TxHelpers.issue(sender, script = Some(assetVerifier))
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, invokerEth.toWavesAddress, 1000.waves),
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, invokerEth.toDccAddress, 1000.dcc),
         TxHelpers.setScript(dApp, script),
         issue
       )
@@ -777,10 +777,10 @@ class BlockChallengeTest
         TxHelpers.invoke(dApp.toAddress, Some("foo"), invoker = invoker),
         EthTxGenerator.generateEthInvoke(invokerEth, dApp.toAddress, "foo", Seq.empty, Seq.empty)
       )
-      val price = 2.waves
+      val price = 2.dcc
       val exchangeTx = TxHelpers.exchange(
-        TxHelpers.order(OrderType.BUY, issue.asset, Waves, price = price, sender = buyer, matcher = matcher),
-        TxHelpers.order(OrderType.SELL, issue.asset, Waves, price = price, sender = sender, matcher = matcher),
+        TxHelpers.order(OrderType.BUY, issue.asset, Dcc, price = price, sender = buyer, matcher = matcher),
+        TxHelpers.order(OrderType.SELL, issue.asset, Dcc, price = price, sender = sender, matcher = matcher),
         matcher,
         price = (price / 1e8).toLong,
         version = TxVersion.V3
@@ -802,9 +802,9 @@ class BlockChallengeTest
       val challengingBlock = d.createChallengingBlock(challengingMiner, invalidOriginalBlock)
 
       val sellerAssetBalance = issue.quantity.value
-      val sellerWavesBalance = d.balance(sender.toAddress)
+      val sellerDccBalance = d.balance(sender.toAddress)
       val buyerAssetBalance  = 0
-      val buyerWavesBalance  = d.balance(buyer.toAddress)
+      val buyerDccBalance  = d.balance(buyer.toAddress)
 
       d.appendBlockE(validOriginalBlock) should beRight
       invokeTxs.foreach { tx =>
@@ -813,9 +813,9 @@ class BlockChallengeTest
       }
       d.transactionsApi.transactionById(exchangeTx.id()).map(_.status).contains(TxMeta.Status.Succeeded) shouldBe true
       d.balance(sender.toAddress, issue.asset) shouldBe sellerAssetBalance - exchangeTx.order1.amount.value
-      d.balance(sender.toAddress) shouldBe sellerWavesBalance + exchangeTx.price.value - exchangeTx.order2.matcherFee.value
+      d.balance(sender.toAddress) shouldBe sellerDccBalance + exchangeTx.price.value - exchangeTx.order2.matcherFee.value
       d.balance(buyer.toAddress, issue.asset) shouldBe buyerAssetBalance + exchangeTx.order1.amount.value
-      d.balance(buyer.toAddress) shouldBe buyerWavesBalance - exchangeTx.price.value - exchangeTx.order1.matcherFee.value
+      d.balance(buyer.toAddress) shouldBe buyerDccBalance - exchangeTx.price.value - exchangeTx.order1.matcherFee.value
 
       d.rollbackTo(validOriginalBlock.header.reference)
 
@@ -827,9 +827,9 @@ class BlockChallengeTest
       }
       d.transactionsApi.transactionById(exchangeTx.id()).map(_.status).contains(TxMeta.Status.Failed) shouldBe true
       d.balance(sender.toAddress, issue.asset) shouldBe sellerAssetBalance
-      d.balance(sender.toAddress) shouldBe sellerWavesBalance
+      d.balance(sender.toAddress) shouldBe sellerDccBalance
       d.balance(buyer.toAddress, issue.asset) shouldBe buyerAssetBalance
-      d.balance(buyer.toAddress) shouldBe buyerWavesBalance
+      d.balance(buyer.toAddress) shouldBe buyerDccBalance
     }
   }
 
@@ -840,13 +840,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -872,13 +872,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 10000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 10000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 10000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 10000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 10001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 10001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -892,7 +892,7 @@ class BlockChallengeTest
         d.transactionsApi.transactionById(challengedBlockTx.id()).map(_.status).contains(TxMeta.Status.Elided) shouldBe true
         block.transactionData.head.id() shouldBe challengedBlockTx.id()
 
-        d.appendBlock(TxHelpers.transfer(sender, challengedMiner.toAddress, 10.waves))
+        d.appendBlock(TxHelpers.transfer(sender, challengedMiner.toAddress, 10.dcc))
         d.transactionDiffer(challengedBlockTx).resultE should produce("AlreadyInTheState")
       }
     }
@@ -905,13 +905,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -976,14 +976,14 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves),
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc),
         TxHelpers.setScript(dApp, script)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -1001,7 +1001,7 @@ class BlockChallengeTest
     }
   }
 
-  property("NODE-906. wavesBalance() should return correct balances for challenged and challenging addresses") {
+  property("NODE-906. dccBalance() should return correct balances for challenged and challenging addresses") {
     val sender          = TxHelpers.signer(1)
     val challengedMiner = TxHelpers.signer(2)
     val dApp            = TxHelpers.signer(3)
@@ -1018,8 +1018,8 @@ class BlockChallengeTest
         s"""
            |@Callable(i)
            |func foo(challenged: ByteVector, challenging: ByteVector) = {
-           |   let challengedBalance = wavesBalance(Address(challenged))
-           |   let challengingBalance = wavesBalance(Address(challenging))
+           |   let challengedBalance = dccBalance(Address(challenged))
+           |   let challengingBalance = dccBalance(Address(challenging))
            |
            |   [
            |     IntegerEntry("$challengedRegularKey", challengedBalance.regular),
@@ -1036,8 +1036,8 @@ class BlockChallengeTest
     withDomain(settings, balances = AddrWithBalance.enoughBalances(sender, dApp)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
 
-      val initChallengedBalance  = 2000.waves
-      val initChallengingBalance = 1000.waves
+      val initChallengedBalance  = 2000.dcc
+      val initChallengingBalance = 1000.dcc
 
       val invoke = () =>
         TxHelpers.invoke(
@@ -1147,7 +1147,7 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
@@ -1195,7 +1195,7 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
@@ -1234,7 +1234,7 @@ class BlockChallengeTest
     ) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
 
-      d.appendBlock(TxHelpers.transfer(defaultSigner, challengingMiner.toAddress, 1000.waves))
+      d.appendBlock(TxHelpers.transfer(defaultSigner, challengingMiner.toAddress, 1000.dcc))
       (1 to 1000).foreach(_ => d.appendBlock())
 
       d.blockchain.isFeatureActivated(BlockchainFeatures.LightNode) shouldBe false
@@ -1270,13 +1270,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 10000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 10000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 10000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 10000.dcc)
       )
       (1 to 999).foreach(_ => d.appendBlock())
       val rollbackTarget = d.blockchain.lastBlockId.get
 
-      val txs = Seq(TxHelpers.transfer(challengedMiner, amount = 10001.waves))
+      val txs = Seq(TxHelpers.transfer(challengedMiner, amount = 10001.dcc))
       rollbackMiddleScenario(d, challengedMiner, txs)
       val middleScenarioStateHash = d.lastBlock.header.stateHash
       middleScenarioStateHash shouldBe defined
@@ -1307,14 +1307,14 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 10000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 10000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 10000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 10000.dcc)
       )
       (1 to 999).foreach(_ => d.appendBlock())
 
       val rollbackTarget = d.blockchain.lastBlockId.get
 
-      val txs = Seq(TxHelpers.transfer(challengedMiner, amount = 10001.waves))
+      val txs = Seq(TxHelpers.transfer(challengedMiner, amount = 10001.dcc))
       rollbackActivationHeightScenario(d, challengedMiner, txs)
       val stateHash = d.lastBlock.header.stateHash
       stateHash shouldBe defined
@@ -1330,7 +1330,7 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(defaultSigner, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(defaultSigner, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
@@ -1373,14 +1373,14 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
-        Seq(TxHelpers.transfer(sender, challengingMiner.toAddress, 1.waves)),
+        Seq(TxHelpers.transfer(sender, challengingMiner.toAddress, 1.dcc)),
         strictTime = true
       )
 
@@ -1398,7 +1398,7 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
@@ -1463,13 +1463,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -1511,13 +1511,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -1598,13 +1598,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.waves)
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, amount = 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(challengedBlockTx),
@@ -1683,8 +1683,8 @@ class BlockChallengeTest
     withDomain(settings, balances = AddrWithBalance.enoughBalances(sender)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
 
-      val initChallengingBalance = 1000.waves
-      val initChallengedBalance  = 2000.waves
+      val initChallengingBalance = 1000.dcc
+      val initChallengedBalance  = 2000.dcc
 
       d.appendBlock(
         TxHelpers.transfer(sender, challengingMiner.toAddress, initChallengingBalance),
@@ -1773,13 +1773,13 @@ class BlockChallengeTest
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(defaultSigner, challengingMiner.toAddress, 10000.waves),
-        TxHelpers.transfer(defaultSigner, challengedMiner.toAddress, 10000.waves)
+        TxHelpers.transfer(defaultSigner, challengingMiner.toAddress, 10000.dcc),
+        TxHelpers.transfer(defaultSigner, challengedMiner.toAddress, 10000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val txs = Seq(TxHelpers.transfer(amount = 1.waves), TxHelpers.transfer(amount = 2.waves))
+      val txs = Seq(TxHelpers.transfer(amount = 1.dcc), TxHelpers.transfer(amount = 2.dcc))
       val invalidBlock =
         d.createBlock(
           Block.ProtoBlockVersion,
@@ -1891,13 +1891,13 @@ class BlockChallengeTest
       val challengingMiner       = d.wallet.generateNewAccount().get
       val betterChallengingMiner = d.wallet.generateNewAccount().get
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, betterChallengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 2000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, betterChallengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 2000.dcc)
       )
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val txs       = Seq(TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 1.waves))
+      val txs       = Seq(TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 1.dcc))
       val bestBlock = d.createBlock(Block.ProtoBlockVersion, txs, generator = bestBlockSender)
       val originalBlock =
         d.createBlock(
@@ -1959,8 +1959,8 @@ class BlockChallengeTest
     withDomain(settings, balances = AddrWithBalance.enoughBalances(sender)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 2000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 2000.dcc)
       )
       (1 to 999).foreach(_ => d.appendBlock())
       val txs = Seq(TxHelpers.transfer(sender, amount = 1), TxHelpers.transfer(sender, amount = 2))
@@ -1998,13 +1998,13 @@ class BlockChallengeTest
     val sender          = TxHelpers.signer(2)
     withDomain(settings, balances = AddrWithBalance.enoughBalances(sender)) { d =>
       val challengingMiner       = d.wallet.generateNewAccount().get
-      val challengedMinerBalance = 2000.waves
+      val challengedMinerBalance = 2000.dcc
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
         TxHelpers.transfer(sender, challengedMiner.toAddress, challengedMinerBalance)
       )
       (1 to 999).foreach(_ => d.appendBlock())
-      val transferAmount = 1.waves
+      val transferAmount = 1.dcc
       val txs            = Seq(TxHelpers.transfer(sender, challengedMiner.toAddress, transferAmount))
       val originalBlock =
         d.createBlock(Block.ProtoBlockVersion, txs, strictTime = true, generator = challengedMiner, stateHash = Some(Some(invalidStateHash)))
@@ -2036,14 +2036,14 @@ class BlockChallengeTest
     withDomain(settings, balances = AddrWithBalance.enoughBalances(sender, currentBlockSender, betterBlockSender)) { d =>
       val challengingMiner = d.wallet.generateNewAccount().get
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 2000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 2000.dcc)
       )
       (1 to 999).foreach(_ => d.appendBlock())
 
       val txs = Seq(
-        TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 1.waves),
-        TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 2.waves)
+        TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 1.dcc),
+        TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 2.dcc)
       )
       val betterBlock = d.createBlock(Block.ProtoBlockVersion, Seq.empty, strictTime = true, generator = betterBlockSender)
       val originalBlock =

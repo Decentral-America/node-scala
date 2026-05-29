@@ -35,7 +35,7 @@ class AddressRouteSpec extends RouteSpec("/addresses") with RestAPISettingsHelpe
   private val richAccount = TxHelpers.signer(0xaaff)
 
   override def settings: DCCSettings                           = DomainPresets.RideV6.copy(restAPISettings = restAPISettings)
-  override def genesisBalances: Seq[WithState.AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 10_000.waves))
+  override def genesisBalances: Seq[WithState.AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 10_000.dcc))
 
   private val wallet = Wallet(WalletSettings(None, Some("123"), Some(ByteStr(Longs.toByteArray(System.nanoTime())))))
   wallet.generateNewAccounts(10)
@@ -446,7 +446,7 @@ class AddressRouteSpec extends RouteSpec("/addresses") with RestAPISettingsHelpe
     val dataOwner        = TxHelpers.signer(0xaaff05)
     val dataTransactions = (1 to 500) map { d => TxHelpers.data(dataOwner, Seq.tabulate(100)(i => IntegerDataEntry(s"k_${d}_$i", i))) }
 
-    domain.appendBlock(TxHelpers.transfer(richAccount, dataOwner.toAddress, 100.waves))
+    domain.appendBlock(TxHelpers.transfer(richAccount, dataOwner.toAddress, 100.dcc))
     domain.appendBlock(dataTransactions*)
     domain.appendBlock()
 

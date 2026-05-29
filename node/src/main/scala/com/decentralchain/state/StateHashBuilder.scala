@@ -45,8 +45,8 @@ class StateHashBuilder {
     maps(section.id)(solidKey) = solidValue
   }
 
-  def addWavesBalance(address: Address, balance: Long): Unit = {
-    addEntry(SectionId.WavesBalance, address.bytes)(Longs.toByteArray(balance))
+  def addDccBalance(address: Address, balance: Long): Unit = {
+    addEntry(SectionId.DccBalance, address.bytes)(Longs.toByteArray(balance))
   }
 
   def addAssetBalance(address: Address, asset: IssuedAsset, balance: Long): Unit = {

@@ -9,7 +9,7 @@ import com.decentralchain.it.api.*
 import com.decentralchain.it.api.AsyncHttpApi.*
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -44,7 +44,7 @@ class NFTBalanceSuite extends BaseFreeSpec {
     val fundAndIssue =
       for {
         _      <- traverse(nodes)(_.waitForHeight(Height(2)))
-        fundTx <- node.transfer(node.keyPair, issuer.toAddress.toString, 1000.waves, 0.001.waves)
+        fundTx <- node.transfer(node.keyPair, issuer.toAddress.toString, 1000.dcc, 0.001.dcc)
         _      <- node.waitForTransaction(fundTx.id)
         _ <- Future.sequence((simple ++ nft) map { tx =>
           for {
@@ -84,7 +84,7 @@ class NFTBalanceSuite extends BaseFreeSpec {
       val other = KeyPair("other".getBytes)
 
       val transfer = TransferTransaction
-        .selfSigned(1.toByte, issuer, other.toAddress, randomTokenToTransfer, 1, Waves, 0.001.waves, ByteStr.empty, System.currentTimeMillis())
+        .selfSigned(1.toByte, issuer, other.toAddress, randomTokenToTransfer, 1, Dcc, 0.001.dcc, ByteStr.empty, System.currentTimeMillis())
         .explicitGet()
 
       val assertion = for {
@@ -166,7 +166,7 @@ object NFTBalanceSuite {
           8,
           reissuable = true,
           script = None,
-          1.waves,
+          1.dcc,
           System.currentTimeMillis()
         )
         .explicitGet()
@@ -183,7 +183,7 @@ object NFTBalanceSuite {
           0,
           reissuable = false,
           script = None,
-          1.waves,
+          1.dcc,
           System.currentTimeMillis()
         )
         .explicitGet()
@@ -198,7 +198,7 @@ object NFTBalanceSuite {
     val transactions =
       Future.sequence(addrs map { addr =>
         NodeAsyncHttpApi(faucet)
-          .transfer(faucet.keyPair, addr, 1000.waves, 0.001.waves)
+          .transfer(faucet.keyPair, addr, 1000.dcc, 0.001.dcc)
           .flatMap { tx =>
             NodeAsyncHttpApi(faucet)
               .waitForTransaction(tx.id, retryInterval = 1.second)

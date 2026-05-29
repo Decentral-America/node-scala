@@ -79,7 +79,7 @@ object AddressTransactions {
       fromId.filter(id => maybeSnapshot.exists(s => !s._2.transactions.contains(id)))
     )
 
-    // TODO: temporary
+    // NOTE: temporary deduplication of diff vs db transactions
     Observable.fromIterable(diffTxs) ++ dbTxs.filterNot { case (_, dbTx, _) =>
       diffTxs.exists { case (_, diffTx, _) => diffTx.id() == dbTx.id() }
     }

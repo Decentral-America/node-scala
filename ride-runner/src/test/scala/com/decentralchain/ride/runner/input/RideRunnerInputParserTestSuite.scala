@@ -306,7 +306,7 @@ func foo(x: Int) = {
   let x6 = size(value(scriptHash(this)))
   let x7 = value(transactionHeightById(txId))
   let x8 = value(transferTransactionById(txId)).amount
-  let x9 = wavesBalance(carl).available
+  let x9 = dccBalance(carl).available
   strict x10 = invoke(this, "bar", [], []).exactAs[Int]
 
   # Vals

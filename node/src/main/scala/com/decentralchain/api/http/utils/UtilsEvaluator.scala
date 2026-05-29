@@ -27,7 +27,7 @@ import com.decentralchain.state.diffs.TransactionDiffer
 import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionLike, StructuredCallableActions}
 import com.decentralchain.state.SnapshotBlockchain
 import com.decentralchain.state.{AccountScriptInfo, Blockchain, InvokeScriptResult, Portfolio, StateSnapshot}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TransactionType.InvokeScript
 import com.decentralchain.transaction.TxValidationError.{GenericError, InvokeRejectError}
 import com.decentralchain.transaction.smart.*
@@ -196,16 +196,16 @@ object UtilsEvaluator {
         )
         .merge
       totalDiff     = paymentsSnapshot |+| snapshot
-      totalSnapshot = addWavesToDefaultInvoker(totalDiff, blockchain)
+      totalSnapshot = addDccToDefaultInvoker(totalDiff, blockchain)
       _ <- TransactionDiffer.validateBalance(blockchain, InvokeScript, totalSnapshot)
       _ <- TransactionDiffer.assetsVerifierDiff(blockchain, invoke, verify = true, totalSnapshot, Int.MaxValue, enableExecutionLog = true).resultE
       rootScriptResult  = snapshot.scriptResults.headOption.map(_._2).getOrElse(InvokeScriptResult.empty)
       innerScriptResult = environment.currentSnapshot.scriptResults.values.fold(InvokeScriptResult.empty)(_ |+| _)
     } yield ExecuteResult(evaluated, usedComplexity, log, innerScriptResult |+| rootScriptResult)
 
-  private def addWavesToDefaultInvoker(snapshot: StateSnapshot, blockchain: Blockchain) =
-    if (snapshot.balances.get((UtilsApiRoute.DefaultAddress, Waves)).exists(_ >= Long.MaxValue / 10))
+  private def addDccToDefaultInvoker(snapshot: StateSnapshot, blockchain: Blockchain) =
+    if (snapshot.balances.get((UtilsApiRoute.DefaultAddress, Dcc)).exists(_ >= Long.MaxValue / 10))
       snapshot
     else
-      snapshot.addBalances(Map(UtilsApiRoute.DefaultAddress -> Portfolio.waves(Long.MaxValue / 10)), blockchain).explicitGet()
+      snapshot.addBalances(Map(UtilsApiRoute.DefaultAddress -> Portfolio.dcc(Long.MaxValue / 10)), blockchain).explicitGet()
 }

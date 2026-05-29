@@ -28,26 +28,26 @@ case class DCCSettings(
 
 object DCCSettings {
   def fromRootConfig(rootConfig: Config): DCCSettings = {
-    val waves             = rootConfig.getConfig("waves")
-    val wavesConfigSource = ConfigSource.fromConfig(waves)
+    val dcc             = rootConfig.getConfig("dcc")
+    val dccConfigSource = ConfigSource.fromConfig(dcc)
 
-    val directory                 = wavesConfigSource.at("directory").loadOrThrow[String]
-    val ntpServer                 = wavesConfigSource.at("ntp-server").loadOrThrow[String]
-    val maxTxErrorLogSize         = wavesConfigSource.at("max-tx-error-log-size").loadOrThrow[Int]
-    val dbSettings                = wavesConfigSource.at("db").loadOrThrow[DBSettings]
-    val extensions                = wavesConfigSource.at("extensions").loadOrThrow[Seq[String]]
-    val extensionsShutdownTimeout = wavesConfigSource.at("extensions-shutdown-timeout").loadOrThrow[FiniteDuration]
-    val networkSettings           = wavesConfigSource.at("network").loadOrThrow[NetworkSettings]
-    val walletSettings            = wavesConfigSource.at("wallet").loadOrThrow[WalletSettings]
-    val blockchainSettings        = wavesConfigSource.at("blockchain").loadOrThrow[BlockchainSettings]
-    val minerSettings             = wavesConfigSource.at("miner").loadOrThrow[MinerSettings]
-    val restAPISettings           = wavesConfigSource.at("rest-api").loadOrThrow[RestAPISettings]
-    val synchronizationSettings   = wavesConfigSource.at("synchronization").loadOrThrow[SynchronizationSettings]
-    val utxSettings               = wavesConfigSource.at("utx").loadOrThrow[UtxSettings]
-    val featuresSettings          = wavesConfigSource.at("features").loadOrThrow[FeaturesSettings]
-    val rewardsSettings           = wavesConfigSource.at("rewards").loadOrThrow[RewardsVotingSettings]
-    val metrics                   = ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // TODO: Move to waves section
-    val enableLightMode           = wavesConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
+    val directory                 = dccConfigSource.at("directory").loadOrThrow[String]
+    val ntpServer                 = dccConfigSource.at("ntp-server").loadOrThrow[String]
+    val maxTxErrorLogSize         = dccConfigSource.at("max-tx-error-log-size").loadOrThrow[Int]
+    val dbSettings                = dccConfigSource.at("db").loadOrThrow[DBSettings]
+    val extensions                = dccConfigSource.at("extensions").loadOrThrow[Seq[String]]
+    val extensionsShutdownTimeout = dccConfigSource.at("extensions-shutdown-timeout").loadOrThrow[FiniteDuration]
+    val networkSettings           = dccConfigSource.at("network").loadOrThrow[NetworkSettings]
+    val walletSettings            = dccConfigSource.at("wallet").loadOrThrow[WalletSettings]
+    val blockchainSettings        = dccConfigSource.at("blockchain").loadOrThrow[BlockchainSettings]
+    val minerSettings             = dccConfigSource.at("miner").loadOrThrow[MinerSettings]
+    val restAPISettings           = dccConfigSource.at("rest-api").loadOrThrow[RestAPISettings]
+    val synchronizationSettings   = dccConfigSource.at("synchronization").loadOrThrow[SynchronizationSettings]
+    val utxSettings               = dccConfigSource.at("utx").loadOrThrow[UtxSettings]
+    val featuresSettings          = dccConfigSource.at("features").loadOrThrow[FeaturesSettings]
+    val rewardsSettings           = dccConfigSource.at("rewards").loadOrThrow[RewardsVotingSettings]
+    val metrics                   = ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // NOTE: Metrics config is outside dcc {} root — known structure
+    val enableLightMode           = dccConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
 
     DCCSettings(
       directory,

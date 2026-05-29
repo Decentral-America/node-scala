@@ -19,7 +19,7 @@ import com.decentralchain.lang.script.ContractScript
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_LONG}
 import com.decentralchain.lang.v1.compiler.{ContractCompiler, TestCompiler}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.traits.Environment
@@ -57,7 +57,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
 
     val setScripts = Seq(
       scriptWithV1PureFunctions(dataTx, transfer),
-      scriptWithV1WavesFunctions(dataTx, transfer),
+      scriptWithV1DccFunctions(dataTx, transfer),
       scriptWithCryptoFunctions
     ).map(scriptText => TxHelpers.setScript(recipient, TestCompiler(V2).compileExpression(scriptText)))
 
@@ -557,7 +557,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
         ConsensusImprovements.blockchainSettings.copy(
           functionalitySettings = ConsensusImprovements.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString)),
-          rewardsSettings = ConsensusImprovements.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = ConsensusImprovements.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(BlockchainFeatures.BlockRewardDistribution -> 3, BlockchainFeatures.CappedReward -> 5)
@@ -642,9 +642,9 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
     withDomain(
       settings,
       Seq(
-        AddrWithBalance(miner.toAddress, 100_000.waves),
-        AddrWithBalance(invoker.toAddress, 100.waves),
-        AddrWithBalance(dapp.toAddress, 100.waves)
+        AddrWithBalance(miner.toAddress, 100_000.dcc),
+        AddrWithBalance(invoker.toAddress, 100.dcc),
+        AddrWithBalance(dapp.toAddress, 100.dcc)
       )
     ) { d =>
       d.appendBlock(
@@ -685,15 +685,15 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
         d.blockchain.accountData(dapp.toAddress, invocation.id().toString + "_xtn").value.value shouldBe xtnShare
       }
 
-      checkHeight(3, 2.waves, 2.waves, 2.waves)
+      checkHeight(3, 2.dcc, 2.dcc, 2.dcc)
       d.appendBlock()
-      (1 to 10).foreach(i => checkHeight(i + 4, 20.waves, 20.waves, 20.waves))
-      checkHeight(15, 2.waves, 2.waves, 2.waves)
+      (1 to 10).foreach(i => checkHeight(i + 4, 20.dcc, 20.dcc, 20.dcc))
+      checkHeight(15, 2.dcc, 2.dcc, 2.dcc)
 
       // check historic blocks again after deactivation
-      checkHeight(3, 2.waves, 2.waves, 2.waves)
-      checkHeight(5, 20.waves, 20.waves, 20.waves)
-      checkHeight(15, 2.waves, 2.waves, 2.waves)
+      checkHeight(3, 2.dcc, 2.dcc, 2.dcc)
+      checkHeight(5, 20.dcc, 20.dcc, 20.dcc)
+      checkHeight(15, 2.dcc, 2.dcc, 2.dcc)
     }
   }
 
@@ -916,7 +916,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
           val ctx =
             PureContext.build(version, useNewPowPrecision = true).withEnvironment[Environment] |+|
               CryptoContext.build(Global, version, fixEcrecover = true).withEnvironment[Environment] |+|
-              WavesContext.build(Global, DirectiveSet(version, Account, DApp).explicitGet(), fixBigScriptField = true)
+              DccContext.build(Global, DirectiveSet(version, Account, DApp).explicitGet(), fixBigScriptField = true)
 
           val compiledScript = ContractScript(version, ContractCompiler(ctx.compilerContext, expr, version).explicitGet()).explicitGet()
           val setScriptTx    = TxHelpers.setScript(recipient, compiledScript)

@@ -72,7 +72,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
 
   "caches are properly updated so that hasScript works as expected" in withDomain(
     DomainPresets.ScriptsAndSponsorship,
-    Seq(AddrWithBalance(scriptOwner.toAddress, 100.waves))
+    Seq(AddrWithBalance(scriptOwner.toAddress, 100.dcc))
   ) { d =>
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe false
 
@@ -82,7 +82,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
                                            |{-# CONTENT_TYPE EXPRESSION #-}
                                            |{-# SCRIPT_TYPE ACCOUNT #-}
                                            |true""".stripMargin),
-      0.01.waves
+      0.01.dcc
     )
     d.appendBlock(setScript)
     // check liquid block
@@ -92,7 +92,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe true
 
     // removing account script
-    d.appendBlock(SetScriptTransaction.selfSigned(1.toByte, scriptOwner, None, 0.014.waves, ntpNow).explicitGet())
+    d.appendBlock(SetScriptTransaction.selfSigned(1.toByte, scriptOwner, None, 0.014.dcc, ntpNow).explicitGet())
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe false
 
     d.appendBlock()
@@ -109,20 +109,20 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
   }
 
   private val settingsWithGenesis: DCCSettings = DomainPresets.NG.setFeaturesHeight(BlockchainFeatures.BlockReward -> 2)
-  private val genesisBalance: Long             = 10 * 100.waves
+  private val genesisBalance: Long             = 10 * 100.dcc
 
-  "wavesAmount includes genesis transactions" in withDomain(
+  "dccAmount includes genesis transactions" in withDomain(
     settingsWithGenesis.copy(blockchainSettings =
       settingsWithGenesis.blockchainSettings.copy(
         genesisSettings = settingsWithGenesis.blockchainSettings.genesisSettings.copy(
           initialBalance = genesisBalance,
           signature = None,
-          transactions = (1 to 10).map(_ => GenesisTransactionSettings(TxHelpers.address(1000 + 1).toString, 100.waves))
+          transactions = (1 to 10).map(_ => GenesisTransactionSettings(TxHelpers.address(1000 + 1).toString, 100.dcc))
         )
       )
     )
   ) { d =>
-    d.blockchain.wavesAmount(1) shouldBe genesisBalance
+    d.blockchain.dccAmount(1) shouldBe genesisBalance
   }
 
   "readTransaction" - {
@@ -130,7 +130,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     val dapp    = TxHelpers.signer(1003)
     "reads correct failed transactions" in withDomain(
       DomainPresets.RideV5,
-      Seq(AddrWithBalance(invoker.toAddress, 100.waves), AddrWithBalance(dapp.toAddress, 100.waves))
+      Seq(AddrWithBalance(invoker.toAddress, 100.dcc), AddrWithBalance(dapp.toAddress, 100.dcc))
     ) { d =>
       val successfulInvoke = TxHelpers.invoke(dapp.toAddress, Some("foo"), Seq(CONST_BOOLEAN(true)), invoker = invoker)
       val failedInvoke     = TxHelpers.invoke(dapp.toAddress, Some("foo"), Seq(CONST_BOOLEAN(false)), invoker = invoker)
@@ -150,7 +150,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
                                              |    override) then [] else throw("error")
                                              |}
                                              |""".stripMargin),
-          fee = 0.01.waves
+          fee = 0.01.dcc
         ),
         successfulInvoke,
         failedInvoke
@@ -167,8 +167,8 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
   }
 
   val aliasOwner: KeyPair = TxHelpers.signer(1001)
-  "alias cache" in withDomain(DomainPresets.ScriptsAndSponsorship, Seq(AddrWithBalance(aliasOwner.toAddress, 200.waves))) { d =>
-    val createAlias = TxHelpers.createAlias("foobar", aliasOwner, 0.001.waves)
+  "alias cache" in withDomain(DomainPresets.ScriptsAndSponsorship, Seq(AddrWithBalance(aliasOwner.toAddress, 200.dcc))) { d =>
+    val createAlias = TxHelpers.createAlias("foobar", aliasOwner, 0.001.dcc)
 
     d.blockchain.resolveAlias(createAlias.alias) shouldEqual Left(AliasDoesNotExist(createAlias.alias))
 
@@ -204,12 +204,12 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     val minerAddresses = Seq(TxHelpers.defaultAddress)
     val allAddresses   = userAddresses ++ minerAddresses
 
-    def transferWavesTx = TxHelpers.massTransfer(
+    def transferDccTx = TxHelpers.massTransfer(
       to = Seq(
-        aliceAddress -> 100.waves,
-        bobAddress   -> 100.waves
+        aliceAddress -> 100.dcc,
+        bobAddress   -> 100.dcc
       ),
-      fee = 1.waves
+      fee = 1.dcc
     )
 
     val issueTx         = TxHelpers.issue(issuer = alice, amount = 100)
@@ -223,7 +223,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
       settings.copy(dbSettings = settings.dbSettings.copy(cleanupInterval = None)),
       Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress))
     ) { d =>
-      d.appendBlock(transferWavesTx, issueTx, transferAssetTx, dataTx)
+      d.appendBlock(transferDccTx, issueTx, transferAssetTx, dataTx)
       (3 to 10).foreach(_ => d.appendBlock())
       d.blockchain.height shouldBe 10
 
@@ -234,7 +234,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     }
 
     "doesn't delete sole data" in withDomain(settings, Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress))) { d =>
-      d.appendBlock(transferWavesTx, issueTx, transferAssetTx, dataTx) // Last user data
+      d.appendBlock(transferDccTx, issueTx, transferAssetTx, dataTx) // Last user data
       d.blockchain.height shouldBe 2
 
       (3 to 11).foreach(_ => d.appendBlock())
@@ -248,12 +248,12 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     }
 
     "deletes old data and doesn't delete recent data" in withDomain(settings, Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress))) { d =>
-      d.appendBlock(transferWavesTx, issueTx, transferAssetTx, dataTx)
+      d.appendBlock(transferDccTx, issueTx, transferAssetTx, dataTx)
 
       d.appendBlock()
 
       d.appendBlock(
-        transferWavesTx,
+        transferDccTx,
         transferAssetTx,
         dataTx
       ) // Last user data
@@ -272,7 +272,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
       (2 to 3).foreach(_ => d.appendBlock())
 
       d.appendBlock(
-        transferWavesTx,
+        transferDccTx,
         issueTx,
         transferAssetTx,
         dataTx
@@ -282,7 +282,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
       d.appendBlock()
 
       d.appendBlock(
-        transferWavesTx,
+        transferDccTx,
         transferAssetTx,
         dataTx
       ) // Last user data
@@ -301,10 +301,10 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     "doesn't affect other sequences" in {
       def appendBlocks(d: Domain): Unit = {
         (2 to 3).foreach(_ => d.appendBlock())
-        d.appendBlock(transferWavesTx, issueTx, transferAssetTx, dataTx)
+        d.appendBlock(transferDccTx, issueTx, transferAssetTx, dataTx)
 
         d.appendBlock()
-        d.appendBlock(transferWavesTx, transferAssetTx, dataTx)
+        d.appendBlock(transferDccTx, transferAssetTx, dataTx)
 
         (7 to 14).foreach(_ => d.appendBlock())
       }
@@ -329,23 +329,23 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
       val richAccount = TxHelpers.signer(1001)
       val account1    = TxHelpers.signer(1002)
       val account2    = TxHelpers.signer(1003)
-      withDomain(DomainPresets.TransactionStateSnapshot, Seq(AddrWithBalance(richAccount.toAddress, 10_000.waves))) { d =>
+      withDomain(DomainPresets.TransactionStateSnapshot, Seq(AddrWithBalance(richAccount.toAddress, 10_000.dcc))) { d =>
         val issueTx = TxHelpers.issue(richAccount, amount = 10000, decimals = 2.toByte, name = "IA01")
         d.appendBlock(issueTx)
         (1 to 3).foreach(_ => d.appendBlock())
         d.blockchain.height shouldBe 5
 
-        d.appendBlock(TxHelpers.transfer(richAccount, account1.toAddress, 10.waves))
+        d.appendBlock(TxHelpers.transfer(richAccount, account1.toAddress, 10.dcc))
         d.appendBlock(TxHelpers.transfer(richAccount, account1.toAddress, 100, asset = issueTx.asset))
         d.appendBlock()
-        d.appendBlock(TxHelpers.transfer(richAccount, account1.toAddress, 1.waves))
+        d.appendBlock(TxHelpers.transfer(richAccount, account1.toAddress, 1.dcc))
         d.appendBlock(TxHelpers.transfer(richAccount, account1.toAddress, 500, asset = issueTx.asset))
         d.blockchain.height shouldBe 10
 
-        d.blockchain.balanceAtHeight(account1.toAddress, 10) shouldBe Some(9 -> 11.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress, 9) shouldBe Some(9 -> 11.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress, 8) shouldBe Some(6 -> 10.waves)
-        d.blockchain.balanceAtHeight(account1.toAddress, 6) shouldBe Some(6 -> 10.waves)
+        d.blockchain.balanceAtHeight(account1.toAddress, 10) shouldBe Some(9 -> 11.dcc)
+        d.blockchain.balanceAtHeight(account1.toAddress, 9) shouldBe Some(9 -> 11.dcc)
+        d.blockchain.balanceAtHeight(account1.toAddress, 8) shouldBe Some(6 -> 10.dcc)
+        d.blockchain.balanceAtHeight(account1.toAddress, 6) shouldBe Some(6 -> 10.dcc)
         d.blockchain.balanceAtHeight(account1.toAddress, 5) shouldBe None
 
         d.blockchain.balanceAtHeight(account1.toAddress, 10, issueTx.asset) shouldBe Some(10 -> 600)
@@ -353,11 +353,11 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
         d.blockchain.balanceAtHeight(account1.toAddress, 8, issueTx.asset) shouldBe Some(7 -> 100)
         d.blockchain.balanceAtHeight(account1.toAddress, 6, issueTx.asset) shouldBe None
 
-        d.appendBlock(TxHelpers.transfer(richAccount, account2.toAddress, 20.waves))
+        d.appendBlock(TxHelpers.transfer(richAccount, account2.toAddress, 20.dcc))
         d.appendBlock(TxHelpers.transfer(richAccount, account2.toAddress, 700, issueTx.asset))
 
-        d.blockchain.balanceAtHeight(account2.toAddress, 12) shouldBe Some(11 -> 20.waves)
-        d.blockchain.balanceAtHeight(account2.toAddress, 11) shouldBe Some(11 -> 20.waves)
+        d.blockchain.balanceAtHeight(account2.toAddress, 12) shouldBe Some(11 -> 20.dcc)
+        d.blockchain.balanceAtHeight(account2.toAddress, 11) shouldBe Some(11 -> 20.dcc)
         d.blockchain.balanceAtHeight(account2.toAddress, 10) shouldBe None
 
         d.blockchain.balanceAtHeight(account2.toAddress, 12, issueTx.asset) shouldBe Some(12 -> 700)
@@ -368,8 +368,8 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
 
   private val HistoricalKeyTags = Seq(
     KeyTag.ChangedAssetBalances,
-    KeyTag.ChangedWavesBalances,
-    KeyTag.WavesBalanceHistory,
+    KeyTag.ChangedDccBalances,
+    KeyTag.DccBalanceHistory,
     KeyTag.AssetBalanceHistory,
     KeyTag.ChangedDataKeys,
     KeyTag.DataHistory,
@@ -414,13 +414,13 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
 
   private def getHeightAndAddressIds(tag: KeyTag, bytes: DBEntry): (Int, Seq[AddressId]) = {
     val (heightBytes, addresses) = tag match {
-      case KeyTag.ChangedAddresses | KeyTag.ChangedAssetBalances | KeyTag.ChangedWavesBalances =>
+      case KeyTag.ChangedAddresses | KeyTag.ChangedAssetBalances | KeyTag.ChangedDccBalances =>
         (
           bytes.getKey.drop(Shorts.BYTES),
           readAddressIds(bytes.getValue)
         )
 
-      case KeyTag.WavesBalanceHistory | KeyTag.AssetBalanceHistory | KeyTag.ChangedDataKeys =>
+      case KeyTag.DccBalanceHistory | KeyTag.AssetBalanceHistory | KeyTag.ChangedDataKeys =>
         (
           bytes.getKey.takeRight(Ints.BYTES),
           Seq(AddressId.fromByteArray(bytes.getKey.dropRight(Ints.BYTES).takeRight(Longs.BYTES)))

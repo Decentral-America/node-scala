@@ -68,11 +68,11 @@ object Keys {
 
   def heightOf(blockId: ByteStr): Key[Option[Int]] = Key.opt[Int](HeightOf, blockId.arr, Ints.fromByteArray, Ints.toByteArray)
 
-  def wavesBalance(addressId: AddressId): Key[CurrentBalance] =
-    Key(WavesBalance, addressId.toByteArray, readCurrentBalance, writeCurrentBalance)
+  def dccBalance(addressId: AddressId): Key[CurrentBalance] =
+    Key(DccBalance, addressId.toByteArray, readCurrentBalance, writeCurrentBalance)
 
-  def wavesBalanceAt(addressId: AddressId, height: Height): Key[BalanceNode] =
-    Key(WavesBalanceHistory, hBytes(addressId.toByteArray, height), readBalanceNode, writeBalanceNode)
+  def dccBalanceAt(addressId: AddressId, height: Height): Key[BalanceNode] =
+    Key(DccBalanceHistory, hBytes(addressId.toByteArray, height), readBalanceNode, writeBalanceNode)
 
   def assetBalance(addressId: AddressId, asset: IssuedAsset): Key[CurrentBalance] =
     Key(AssetBalance, addressId.toByteArray ++ asset.id.arr, readCurrentBalance, writeCurrentBalance)
@@ -108,8 +108,8 @@ object Keys {
 
   def changedAddresses(height: Height): Key[Seq[AddressId]] = Key(ChangedAddresses, h(height), readAddressIds, writeAddressIds)
 
-  def changedWavesBalances(height: Height): Key[Seq[AddressId]] =
-    Key(ChangedWavesBalances, h(height), readAddressIds, writeAddressIds)
+  def changedDccBalances(height: Height): Key[Seq[AddressId]] =
+    Key(ChangedDccBalances, h(height), readAddressIds, writeAddressIds)
 
   def changedBalances(height: Height, asset: IssuedAsset): Key[Seq[AddressId]] =
     Key(ChangedAssetBalances, h(height) ++ asset.id.arr, readAddressIds, writeAddressIds)

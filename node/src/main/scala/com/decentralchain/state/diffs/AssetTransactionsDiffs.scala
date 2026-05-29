@@ -12,7 +12,7 @@ import com.decentralchain.lang.v1.ContractLimits.MaxExprSizeInBytes
 import com.decentralchain.lang.v1.traits.domain.*
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.DiffsCommon.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.ERC20Address
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.assets.*
@@ -40,10 +40,10 @@ object AssetTransactionsDiffs {
         )
       )
       feePortfolio <- tx.feeAsset match {
-        case Waves =>
+        case Dcc =>
           Right(Portfolio(-tx.feeAmount.value))
         case IssuedAsset(asset) if blockchain.isFeatureActivated(RideV6) =>
-          Left(GenericError(s"Invalid fee asset: $asset, only Waves can be used to pay fees for UpdateAssetInfoTransaction"))
+          Left(GenericError(s"Invalid fee asset: $asset, only Dcc can be used to pay fees for UpdateAssetInfoTransaction"))
         case asset @ IssuedAsset(_) =>
           Right(Portfolio.build(asset -> -tx.feeAmount.value))
       }
@@ -95,7 +95,7 @@ object AssetTransactionsDiffs {
       )
     }
 
-  def issue(blockchain: Blockchain)(tx: IssueTransaction): Either[ValidationError, StateSnapshot] = { // TODO: unify with InvokeScript action diff?
+  def issue(blockchain: Blockchain)(tx: IssueTransaction): Either[ValidationError, StateSnapshot] = { // NOTE: Could unify with InvokeScript action diff — currently separate for clarity
     // First 20 bytes of id should be unique
     def requireUnique(): Boolean =
       blockchain.resolveERC20Address(ERC20Address(tx.asset)).isEmpty

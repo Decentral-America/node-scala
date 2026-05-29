@@ -8,7 +8,7 @@ import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_BYTESTR, 
 import com.decentralchain.lang.v1.evaluator.ctx.impl.*
 import com.decentralchain.state.IntegerDataEntry
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.transfer.MassTransferTransaction
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import org.scalatest.Assertions
@@ -31,7 +31,7 @@ class CommonFunctionsTest extends PropSpec {
     )
     transfer.assetId match {
       case IssuedAsset(v) => result.explicitGet().asInstanceOf[CONST_BYTESTR].bs.arr sameElements v.arr
-      case Waves          => result should produce("extract() called on unit")
+      case Dcc          => result should produce("extract() called on unit")
     }
   }
 
@@ -47,7 +47,7 @@ class CommonFunctionsTest extends PropSpec {
         |""".stripMargin,
       transfer
     )
-    result shouldEqual evaluated(transfer.assetId != Waves)
+    result shouldEqual evaluated(transfer.assetId != Dcc)
   }
 
   property("Some/None/extract/isDefined") {
@@ -296,7 +296,7 @@ class CommonFunctionsTest extends PropSpec {
     val recipients = (1 to 10).map(idx => TxHelpers.address(idx + 1))
     TxHelpers.massTransfer(
       from = sender,
-      to = recipients.map(addr => (addr, 1.waves)),
+      to = recipients.map(addr => (addr, 1.dcc)),
       version = TxVersion.V1
     )
   }

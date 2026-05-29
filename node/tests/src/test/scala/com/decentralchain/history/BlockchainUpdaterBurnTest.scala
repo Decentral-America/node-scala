@@ -13,7 +13,7 @@ import com.decentralchain.transaction.{Asset, GenesisTransaction, TxVersion}
 import org.scalacheck.Gen
 
 class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenPropertyCheck {
-  val Waves: Long = 100000000
+  val Dcc: Long = 100000000
 
   type Setup =
     (Long, GenesisTransaction, TransferTransaction, IssueTransaction, BurnTransaction, ReissueTransaction)
@@ -21,12 +21,12 @@ class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenProper
   val preconditions: Gen[Setup] = for {
     master                                                   <- accountGen
     ts                                                       <- timestampGen
-    transferAssetWavesFee                                    <- smallFeeGen
+    transferAssetDccFee                                    <- smallFeeGen
     alice                                                    <- accountGen
     (_, assetName, description, quantity, decimals, _, _, _) <- issueParamGen
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
     masterToAlice: TransferTransaction = TransferTransaction
-      .selfSigned(1.toByte, master, alice.toAddress, Asset.Waves, 3 * Waves, Asset.Waves, transferAssetWavesFee, ByteStr.empty, ts + 1)
+      .selfSigned(1.toByte, master, alice.toAddress, Asset.Dcc, 3 * Dcc, Asset.Dcc, transferAssetDccFee, ByteStr.empty, ts + 1)
       .explicitGet()
     issue: IssueTransaction = IssueTransaction
       .selfSigned(
@@ -38,13 +38,13 @@ class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenProper
         decimals,
         false,
         script = None,
-        Waves,
+        Dcc,
         ts + 100
       )
       .explicitGet()
-    burn: BurnTransaction = BurnTransaction.selfSigned(1.toByte, alice, issue.asset, quantity / 2, Waves, ts + 200).explicitGet()
+    burn: BurnTransaction = BurnTransaction.selfSigned(1.toByte, alice, issue.asset, quantity / 2, Dcc, ts + 200).explicitGet()
     reissue: ReissueTransaction = ReissueTransaction
-      .selfSigned(1.toByte, alice, issue.asset, burn.quantity.value, true, Waves, ts + 300)
+      .selfSigned(1.toByte, alice, issue.asset, burn.quantity.value, true, Dcc, ts + 300)
       .explicitGet()
   } yield (ts, genesis, masterToAlice, issue, burn, reissue)
 

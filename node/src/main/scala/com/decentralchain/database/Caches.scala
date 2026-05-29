@@ -14,7 +14,7 @@ import io.decentralchain.protobuf.block.PBBlocks
 import io.decentralchain.protobuf.toByteStr
 import com.decentralchain.settings.DBSettings
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.{Asset, CommitToGenerationTransaction, DiscardedBlocks, Transaction}
 import com.decentralchain.utils.ObservedLoadingCache
 import monix.reactive.Observer
@@ -103,14 +103,14 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
 
   def loadCacheData(addresses: Set[Address], orders: Set[ByteStr]): Unit = {
     addressIdCache.getAll(addresses.asJava)
-    balancesCache.getAll(addresses.map(_ -> Waves).asJava)
+    balancesCache.getAll(addresses.map(_ -> Dcc).asJava)
     leaseBalanceCache.getAll(addresses.asJava)
     volumeAndFeeCache.getAll(orders.asJava)
   }
 
-  override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] =
+  override def dccBalances(addresses: Seq[Address]): Map[Address, Long] =
     balancesCache
-      .getAll(addresses.map(_ -> Waves).asJava)
+      .getAll(addresses.map(_ -> Dcc).asJava)
       .asScala
       .view
       .map { case ((address, _), balance) =>
@@ -119,7 +119,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
       .toMap
   protected def loadBalance(req: (Address, Asset)): CurrentBalance
   protected def loadBalances(req: Seq[(Address, Asset)]): Map[(Address, Asset), CurrentBalance]
-  protected def loadWavesBalances(req: Seq[(Address, Asset)]): Map[(Address, Asset), CurrentBalance]
+  protected def loadDccBalances(req: Seq[(Address, Asset)]): Map[(Address, Asset), CurrentBalance]
 
   private val assetDescriptionCache: LoadingCache[IssuedAsset, Option[AssetDescription]] = cache(dbSettings.maxCacheSize, loadAssetDescription)
   protected def loadAssetDescription(asset: IssuedAsset): Option[AssetDescription]
@@ -287,7 +287,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
       voting      <- parentBlock.header.finalizationVoting
     } yield voting.conflict.size
 
-    val totalWavesAmount = current.meta.fold(settings.genesisSettings.initialBalance)(_.totalWavesAmount) +
+    val totalDccAmount = current.meta.fold(settings.genesisSettings.initialBalance)(_.totalDccAmount) +
       reward.getOrElse(0L) * this.blockRewardBoost(newHeight) -
       conflictEndorsersInPrevBlock.getOrElse(0) * CommitToGenerationTransaction.DepositInWavelets
 
@@ -302,7 +302,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
       reward.getOrElse(0),
       if (block.header.version >= Block.ProtoBlockVersion) ByteString.copyFrom(hitSource.arr) else ByteString.EMPTY,
       ByteString.copyFrom(newScore.toByteArray),
-      totalWavesAmount
+      totalDccAmount
     )
     current = CurrentBlockInfo(newHeight, Some(newMeta), block.transactionData)
     currentFinalizedHeight = Some(newFinalizedHeight)
@@ -417,7 +417,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
 
     val stateHash = new StateHashBuilder
     for (((address, asset), (amount, _)) <- updatedBalanceNodes) asset match {
-      case Waves              => stateHash.addWavesBalance(address, amount.balance)
+      case Dcc              => stateHash.addDccBalance(address, amount.balance)
       case asset: IssuedAsset => stateHash.addAssetBalance(address, asset, amount.balance)
     }
     for (((address, _), (entry, _)) <- updatedDataWithNodes) stateHash.addDataEntry(address, entry.entry)

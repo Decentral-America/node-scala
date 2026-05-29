@@ -594,7 +594,7 @@ final case class BlockAppended(
     id: ByteStr,
     height: Int,
     block: Block,
-    updatedWavesAmount: Long,
+    updatedDccAmount: Long,
     vrf: Option[ByteStr],
     activatedFeatures: Seq[Int],
     rewardShares: Seq[(Address, Long)],
@@ -621,10 +621,10 @@ object BlockAppended {
     val (blockStateUpdate, txsStateUpdates, txsMetadata, refAssets) =
       StateUpdate.container(blockchainBeforeWithReward, snapshot)
 
-    // updatedWavesAmount can change as a result of either genesis transactions or miner rewards
-    val wavesAmount = blockchainBeforeWithReward.wavesAmount(height).toLong
-    val updatedWavesAmount =
-      wavesAmount + reward.filter(_ => height > 0).getOrElse(0L) * blockchainBeforeWithReward.blockRewardBoost(Height(height + 1))
+    // updatedDccAmount can change as a result of either genesis transactions or miner rewards
+    val dccAmount = blockchainBeforeWithReward.dccAmount(height).toLong
+    val updatedDccAmount =
+      dccAmount + reward.filter(_ => height > 0).getOrElse(0L) * blockchainBeforeWithReward.blockRewardBoost(Height(height + 1))
     val activatedFeatures = blockchainBeforeWithReward.activatedFeatures.collect {
       case (id, activationHeight) if activationHeight == Height(height + 1) => id.toInt
     }.toSeq
@@ -636,7 +636,7 @@ object BlockAppended {
       block.id(),
       height + 1,
       block,
-      updatedWavesAmount,
+      updatedDccAmount,
       if (block.header.version >= Block.ProtoBlockVersion) Some(hitSource) else None,
       activatedFeatures,
       rewardShares,

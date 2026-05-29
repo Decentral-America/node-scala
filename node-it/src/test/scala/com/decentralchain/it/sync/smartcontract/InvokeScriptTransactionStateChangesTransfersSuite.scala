@@ -7,7 +7,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms.CONST_LONG
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
@@ -47,8 +47,8 @@ class InvokeScriptTransactionStateChangesTransfersSuite extends BaseTransactionS
       dApp.toAddress.toString,
       func = Some("sendToCaller"),
       args = List(CONST_LONG(transferAmount)),
-      payment = Seq(Payment(pamentAmount, Waves)),
-      fee = 1.waves,
+      payment = Seq(Payment(pamentAmount, Dcc)),
+      fee = 1.dcc,
       waitForTx = true
     )
     nodes.waitForHeightAriseAndTxPresent(invokeScriptTx._1.id)
@@ -72,8 +72,8 @@ class InvokeScriptTransactionStateChangesTransfersSuite extends BaseTransactionS
       dApp.toAddress.toString,
       func = Some("sendToCaller"),
       args = List(CONST_LONG(transferAmount)),
-      payment = Seq(Payment(pamentAmount, Waves)),
-      fee = 1.waves,
+      payment = Seq(Payment(pamentAmount, Dcc)),
+      fee = 1.dcc,
       waitForTx = true
     )
     nodes.waitForHeightAriseAndTxPresent(invokeScriptTx._1.id)
@@ -97,8 +97,8 @@ class InvokeScriptTransactionStateChangesTransfersSuite extends BaseTransactionS
       dApp.toAddress.toString,
       func = Some("sendToCaller"),
       args = List(CONST_LONG(transferAmount)),
-      payment = Seq(Payment(paymentAmount, Waves)),
-      fee = 1.waves,
+      payment = Seq(Payment(paymentAmount, Dcc)),
+      fee = 1.dcc,
       waitForTx = true
     )
     nodes.waitForHeightAriseAndTxPresent(invokeScriptTx._1.id)
@@ -122,8 +122,8 @@ class InvokeScriptTransactionStateChangesTransfersSuite extends BaseTransactionS
       dApp.toAddress.toString,
       func = Some("sendToCaller"),
       args = List(CONST_LONG(transferAmount)),
-      payment = Seq(Payment(paymentAmount, Waves)),
-      fee = 1.waves,
+      payment = Seq(Payment(paymentAmount, Dcc)),
+      fee = 1.dcc,
       waitForTx = true
     )
     nodes.waitForHeightAriseAndTxPresent(invokeScriptTx._1.id)

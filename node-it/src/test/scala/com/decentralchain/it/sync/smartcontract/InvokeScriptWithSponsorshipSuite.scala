@@ -30,9 +30,9 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
   private lazy val dAppAddress: String   = dApp.toAddress.toString
   private lazy val callerAddress: String = caller.toAddress.toString
 
-  test("_send waves to dApp and caller accounts") {
-    sender.transfer(sender.keyPair, dAppAddress, 5.waves, minFee, waitForTx = true).id
-    sender.transfer(sender.keyPair, callerAddress, 5.waves, minFee, waitForTx = true).id
+  test("_send dcc to dApp and caller accounts") {
+    sender.transfer(sender.keyPair, dAppAddress, 5.dcc, minFee, waitForTx = true).id
+    sender.transfer(sender.keyPair, callerAddress, 5.dcc, minFee, waitForTx = true).id
 
   }
 
@@ -157,7 +157,7 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
         fee = feeAmount - 1,
         feeAssetId = Some(dAppAsset)
       ),
-      s"does not exceed minimal value of 900000 WAVES or $feeAmount"
+      s"does not exceed minimal value of 900000 DCC or $feeAmount"
     )
 
     assertApiError(
@@ -197,7 +197,7 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
 
     sender.assetBalance(dAppAddress, dAppAsset).balance shouldBe halfQuantity + (feeAmount - 10) + smartFeeAmount
     sender.assetBalance(dAppAddress, callerAsset).balance shouldBe halfQuantity + paymentAmount
-    sender.accountBalances(dAppAddress)._1 shouldBe dAppInitBalance - 0.009.waves - 0.053.waves
+    sender.accountBalances(dAppAddress)._1 shouldBe dAppInitBalance - 0.009.dcc - 0.053.dcc
 
     sender.assetBalance(callerAddress, dAppAsset).balance shouldBe halfQuantity + (-feeAmount + 10) - smartFeeAmount
     sender.assetBalance(callerAddress, callerAsset).balance shouldBe halfQuantity - paymentAmount
@@ -209,7 +209,7 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
     val feeAmount     = 9
 
     val dAppAssetBalance = sender.assetBalance(dAppAddress, dAppAsset).balance
-    val dAppWavesBalance = sender.accountBalances(dAppAddress)._1
+    val dAppDccBalance = sender.accountBalances(dAppAddress)._1
 
     sender
       .invokeScript(
@@ -225,7 +225,7 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
       .id
 
     sender.assetBalance(dAppAddress, dAppAsset).balance shouldBe dAppAssetBalance
-    sender.accountBalances(dAppAddress)._1 shouldBe dAppWavesBalance - 0.009.waves
+    sender.accountBalances(dAppAddress)._1 shouldBe dAppDccBalance - 0.009.dcc
   }
 
 }

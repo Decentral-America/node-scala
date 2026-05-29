@@ -18,7 +18,7 @@ import com.decentralchain.lang.v1.compiler
 import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.compiler.{ExpressionCompiler, TestCompiler}
 import com.decentralchain.lang.v1.evaluator.EvaluatorV1
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.{FieldNames, WavesContext}
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.{FieldNames, DccContext}
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, GlobalValNames, PureContext}
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.traits.Environment
@@ -28,7 +28,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.diffs.ci.*
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.exchange.{Order, OrderType}
 import com.decentralchain.transaction.smart.BlockchainContext.In
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -56,10 +56,10 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
            | case t : TransferTransaction  =>
            |   ${provenPart(tx)}
            |   let amount = t.amount == ${tx.amount}
-           |   let feeAssetId = if (${tx.feeAssetId != Waves})
+           |   let feeAssetId = if (${tx.feeAssetId != Dcc})
            |      then extract(t.feeAssetId) == base58'${tx.feeAssetId.maybeBase58Repr.getOrElse("")}'
            |      else isDefined(t.feeAssetId) == false
-           |   let assetId = if (${tx.assetId != Waves})
+           |   let assetId = if (${tx.assetId != Dcc})
            |      then extract(t.assetId) == base58'${tx.assetId.maybeBase58Repr.getOrElse("")}'
            |      else isDefined(t.assetId) == false
            |   let recipient = match (t.recipient) {
@@ -265,7 +265,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("InvokeScriptTransaction binding") {
-    val tx = TxHelpers.invoke(TxHelpers.secondAddress, func = Some("test"), invoker = TxHelpers.defaultSigner, payments = Seq(Payment(1, Waves)))
+    val tx = TxHelpers.invoke(TxHelpers.secondAddress, func = Some("test"), invoker = TxHelpers.defaultSigner, payments = Seq(Payment(1, Dcc)))
     val checkArgsScript = if (tx.funcCallOpt.get.args.nonEmpty) {
       tx.funcCallOpt.get.args
         .collect {
@@ -297,12 +297,12 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
          |     else isDefined(t.payment) == false
          |
          |   let paymentAssetId = if(${tx.payments.nonEmpty})
-         |     then if (${tx.payments.headOption.exists(_.assetId != Waves)})
+         |     then if (${tx.payments.headOption.exists(_.assetId != Dcc)})
          |             then extract(t.payment).assetId == base58'${tx.payments.headOption.flatMap(_.assetId.maybeBase58Repr).getOrElse("")}'
          |             else isDefined(extract(t.payment).assetId) == false
          |     else isDefined(t.payment) == false
          |
-         |   let feeAssetId = if (${tx.feeAssetId != Waves})
+         |   let feeAssetId = if (${tx.feeAssetId != Dcc})
          |      then extract(t.feeAssetId) == base58'${tx.feeAssetId.maybeBase58Repr.getOrElse("")}'
          |      else isDefined(t.feeAssetId) == false
          |
@@ -323,7 +323,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
       dApp = TxHelpers.secondAddress,
       func = Some("test"),
       invoker = TxHelpers.defaultSigner,
-      payments = Seq(Payment(1, Waves), Payment(5, IssuedAsset(ByteStr.fill(32)(1))))
+      payments = Seq(Payment(1, Dcc), Payment(5, IssuedAsset(ByteStr.fill(32)(1))))
     )
     val paymentsStr = tx.payments
       .flatMap(_.assetId.maybeBase58Repr)
@@ -423,7 +423,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
       val invoke = TxHelpers.invoke(masterDApp.toAddress, func = Some("foo"), invoker = invoker)
       val issue  = TxHelpers.issue(masterDApp, script = Some(TestCompiler(V6).compileAsset("true")))
       val setAssetScript =
-        TxHelpers.setAssetScript(masterDApp, issue.asset, assetVerifier(invoke, masterDApp, serviceDApp, issue.asset), fee = 1.waves)
+        TxHelpers.setAssetScript(masterDApp, issue.asset, assetVerifier(invoke, masterDApp, serviceDApp, issue.asset), fee = 1.dcc)
 
       d.appendBlock(
         issue,
@@ -452,7 +452,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val fee     = ciFee(freeCall = true).sample.get
     val account = accountGen.sample.get
     val asset   = IssuedAsset(ByteStr.fromBytes(1, 2, 3))
-    val tx1     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, Waves, Random.nextLong()).explicitGet()
+    val tx1     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, Dcc, Random.nextLong()).explicitGet()
     val tx2     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, asset, Random.nextLong()).explicitGet()
 
     runScriptWithCustomContext[CONST_BOOLEAN](script(tx1), tx1, V6) shouldBe evaluated(true)
@@ -583,7 +583,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val script = s"""
                     |match tx {
                     | case t : MassTransferTransaction =>
-                    |    let assetId = if (${tx.assetId != Waves}) then extract(t.assetId) == base58'${tx.assetId.maybeBase58Repr
+                    |    let assetId = if (${tx.assetId != Dcc}) then extract(t.assetId) == base58'${tx.assetId.maybeBase58Repr
                      .getOrElse("")}'
                     |      else isDefined(t.assetId) == false
                     |     let transferCount = t.transferCount == ${tx.transfers.length}
@@ -625,13 +625,13 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
            |   let ${oType}BodyBytes = t.${oType}Order.bodyBytes == base58'${Base58.encode(ord.bodyBytes())}'
            |   ${Range(0, 8).map(letProof(Proofs(Seq(ord.signature)), s"t.${oType}Order")).mkString("\n")}
            |   let ${oType}Proofs =${assertProofs(s"t.${oType}Order")}
-           |   let ${oType}AssetPairAmount = if (${ord.assetPair.amountAsset != Waves}) then extract(t.${oType}Order.assetPair.amountAsset) == base58'${ord.assetPair.amountAsset.maybeBase58Repr
+           |   let ${oType}AssetPairAmount = if (${ord.assetPair.amountAsset != Dcc}) then extract(t.${oType}Order.assetPair.amountAsset) == base58'${ord.assetPair.amountAsset.maybeBase58Repr
             .getOrElse("")}'
            |   else isDefined(t.${oType}Order.assetPair.amountAsset) == false
-           |   let ${oType}AssetPairPrice = if (${ord.assetPair.priceAsset != Waves}) then extract(t.${oType}Order.assetPair.priceAsset) == base58'${ord.assetPair.priceAsset.maybeBase58Repr
+           |   let ${oType}AssetPairPrice = if (${ord.assetPair.priceAsset != Dcc}) then extract(t.${oType}Order.assetPair.priceAsset) == base58'${ord.assetPair.priceAsset.maybeBase58Repr
             .getOrElse("")}'
            |   else isDefined(t.${oType}Order.assetPair.priceAsset) == false
-           |   let ${oType}MatcherFeeAssetId = if (${ord.matcherFeeAssetId != Waves}) then extract(t.${oType}Order.matcherFeeAssetId) == base58'${ord.matcherFeeAssetId.maybeBase58Repr
+           |   let ${oType}MatcherFeeAssetId = if (${ord.matcherFeeAssetId != Dcc}) then extract(t.${oType}Order.matcherFeeAssetId) == base58'${ord.matcherFeeAssetId.maybeBase58Repr
             .getOrElse("")}'
            |   else isDefined(t.${oType}Order.matcherFeeAssetId) == false
        """.stripMargin
@@ -696,13 +696,13 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
          |   let matcherFee = t.matcherFee == ${order.matcherFee}
          |   let bodyBytes = t.bodyBytes == base64'${ByteStr(order.bodyBytes.apply()).base64}'
          |   ${Range(0, 8).map(letProof(order.proofs, "t")).mkString("\n")}
-         |   let assetPairAmount = if (${order.assetPair.amountAsset != Waves}) then extract(t.assetPair.amountAsset) == base58'${order.assetPair.amountAsset.maybeBase58Repr
+         |   let assetPairAmount = if (${order.assetPair.amountAsset != Dcc}) then extract(t.assetPair.amountAsset) == base58'${order.assetPair.amountAsset.maybeBase58Repr
           .getOrElse("")}'
          |   else isDefined(t.assetPair.amountAsset) == false
-         |   let assetPairPrice = if (${order.assetPair.priceAsset != Waves}) then extract(t.assetPair.priceAsset) == base58'${order.assetPair.priceAsset.maybeBase58Repr
+         |   let assetPairPrice = if (${order.assetPair.priceAsset != Dcc}) then extract(t.assetPair.priceAsset) == base58'${order.assetPair.priceAsset.maybeBase58Repr
           .getOrElse("")}'
          |   else isDefined(t.assetPair.priceAsset) == false
-         |   let matcherFeeAssetId = if (${order.matcherFeeAssetId != Waves}) then extract(t.matcherFeeAssetId) == base58'${order.matcherFeeAssetId.maybeBase58Repr
+         |   let matcherFeeAssetId = if (${order.matcherFeeAssetId != Dcc}) then extract(t.matcherFeeAssetId) == base58'${order.matcherFeeAssetId.maybeBase58Repr
           .getOrElse("")}'
          |   else isDefined(t.matcherFeeAssetId) == false
          |   id && sender && senderPublicKey && matcherPublicKey && timestamp && price && amount && expiration && matcherFee && bodyBytes && ${assertProofs(
@@ -819,11 +819,11 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
 
     val issue = TxHelpers.issue(issuer)
     val orderWithAttachment =
-      TxHelpers.order(OrderType.BUY, Waves, issue.asset, version = Order.V4, sender = buyer, matcher = matcher, attachment = Some(attachment))
+      TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, sender = buyer, matcher = matcher, attachment = Some(attachment))
     val exchange = () =>
       TxHelpers.exchangeFromOrders(
         orderWithAttachment,
-        TxHelpers.order(OrderType.SELL, Waves, issue.asset, version = Order.V4, sender = issuer, matcher = matcher),
+        TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer, matcher = matcher),
         matcher = matcher,
         version = TxVersion.V3
       )
@@ -891,7 +891,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val ctx =
       PureContext.build(V2, useNewPowPrecision = true).withEnvironment[Environment] |+|
         CryptoContext.build(Global, V2, fixEcrecover = true).withEnvironment[Environment] |+|
-        WavesContext.build(Global, DirectiveSet(V2, AssetType, Expression).explicitGet(), fixBigScriptField = true)
+        DccContext.build(Global, DirectiveSet(V2, AssetType, Expression).explicitGet(), fixBigScriptField = true)
 
     val environment = DCCEnvironment(
       chainId,
@@ -923,7 +923,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val ctx =
       PureContext.build(V2, useNewPowPrecision = true).withEnvironment[Environment] |+|
         CryptoContext.build(Global, V2, fixEcrecover = true).withEnvironment[Environment] |+|
-        WavesContext.build(Global, directives, fixBigScriptField = true)
+        DccContext.build(Global, directives, fixBigScriptField = true)
 
     val env = DCCEnvironment(
       chainId,

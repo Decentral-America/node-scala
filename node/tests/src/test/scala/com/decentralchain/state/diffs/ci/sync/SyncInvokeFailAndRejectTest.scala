@@ -11,7 +11,7 @@ import com.decentralchain.state.StringDataEntry
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -91,7 +91,7 @@ class SyncInvokeFailAndRejectTest extends PropSpec with WithDomain {
         val currentBlockReward  = (0.4 * invokeFee).toLong
         val balanceDiff         = reward + previousBlockReward + currentBlockReward - invokeFee
         val dbBalance           = d.rocksDBWriter.balance(defaultAddress)
-        Map((defaultAddress, Waves) -> (balanceDiff + dbBalance))
+        Map((defaultAddress, Dcc) -> (balanceDiff + dbBalance))
       }
     }
   }
@@ -117,7 +117,7 @@ class SyncInvokeFailAndRejectTest extends PropSpec with WithDomain {
          """.stripMargin
       )
       d.appendBlock(setScript(dApp1Signer, dApp1), setScript(dApp2Signer, dApp2))
-      d.appendBlockE(invoke(dApp1Address, invoker = invoker)) should produce(s"negative waves balance: ${invoker.toAddress}, old: 0, new: -500000")
+      d.appendBlockE(invoke(dApp1Address, invoker = invoker)) should produce(s"negative dcc balance: ${invoker.toAddress}, old: 0, new: -500000")
     }
   }
 }

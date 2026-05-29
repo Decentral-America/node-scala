@@ -27,7 +27,7 @@ case class ReissueTransaction(
     with Versioned.ToV3
     with ProvenTransaction
     with SigProofsSwitch
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V3 {
 

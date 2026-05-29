@@ -1,12 +1,12 @@
 syntax = "proto3";
-package waves.api;
+package dcc.api;
 option java_package = "com.decentralchain.database.protobuf";
 
-import "waves/block.proto";
-import "waves/transaction.proto";
-import "waves/amount.proto";
-import "waves/recipient.proto";
-import "waves/transaction_state_snapshot.proto";
+import "dcc/block.proto";
+import "dcc/transaction.proto";
+import "dcc/amount.proto";
+import "dcc/recipient.proto";
+import "dcc/transaction_state_snapshot.proto";
 
 message AssetDetails {
   bytes name = 1;
@@ -23,11 +23,11 @@ message BlockMeta {
   int32 height = 4;
   int32 size = 5;
   int32 transaction_count = 6;
-  int64 total_fee_in_waves = 7;
+  int64 total_fee_in_dcc = 7;
   int64 reward = 8;
   bytes vrf = 9;
   bytes total_score = 10;
-  int64 total_waves_amount = 11;
+  int64 total_dcc_amount = 11;
 }
 
 message TransactionMeta {
@@ -57,7 +57,7 @@ message EthereumTransactionMeta {
 message TransactionData {
   oneof transaction {
     bytes legacy_bytes = 1;
-    SignedTransaction waves_transaction = 2;
+    SignedTransaction dcc_transaction = 2;
         bytes ethereum_transaction = 5;
   }
   TransactionStatus status = 3;

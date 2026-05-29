@@ -7,7 +7,7 @@ import com.decentralchain.lang.script.ContractScript.ContractScriptImpl
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.Terms.{BLOCK, FUNCTION_CALL, LET}
 import com.decentralchain.state.diffs.FeeValidation.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{TransactionType, TxVersion}
 import com.decentralchain.transaction.smart.{InvokeExpressionTransaction, SetScriptTransaction}
 import org.scalacheck.Gen
@@ -46,7 +46,7 @@ package object ci {
         invoker,
         ExprScript(V5, expression, isFreeCall = true).explicitGet(),
         fee.getOrElse(ciFee(freeCall = true).sample.get),
-        Waves,
+        Dcc,
         setScript.timestamp
       )
       .explicitGet()

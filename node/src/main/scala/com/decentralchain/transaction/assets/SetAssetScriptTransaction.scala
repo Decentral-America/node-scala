@@ -26,7 +26,7 @@ case class SetAssetScriptTransaction(
 ) extends Transaction(TransactionType.SetAssetScript, Seq(asset))
     with Versioned.ToV2
     with ProvenTransaction
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V2 {
 

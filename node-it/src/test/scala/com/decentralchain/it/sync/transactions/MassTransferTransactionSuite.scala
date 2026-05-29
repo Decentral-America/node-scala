@@ -14,7 +14,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.util.TxHelpers
 import io.decentralchain.protobuf.transaction.{MassTransferTransactionData, PBRecipients, Recipient}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.{MaxTransferCount, Transfer}
 import com.decentralchain.transaction.transfer.TransferTransaction.MaxAttachmentSize
@@ -34,7 +34,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
 
   private def fakeSignature = ByteStr(Array.fill(64)(Random.nextInt().toByte))
 
-  test("asset mass transfer changes asset balances and sender's.waves balance is decreased by fee.") {
+  test("asset mass transfer changes asset balances and sender's.dcc balance is decreased by fee.") {
     for (v <- massTransferTxSupportedVersions) {
       val (balance1, eff1) = miner.accountBalances(firstAddress)
       val (balance2, eff2) = miner.accountBalances(secondAddress)
@@ -58,7 +58,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
     }
   }
 
-  test("waves mass transfer changes waves balances") {
+  test("dcc mass transfer changes dcc balances") {
     for (v <- massTransferTxSupportedVersions) {
       val (balance1, eff1) = miner.accountBalances(firstAddress)
       val (balance2, eff2) = miner.accountBalances(secondAddress)
@@ -79,7 +79,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
     }
   }
 
-  test("can not make mass transfer without having enough waves") {
+  test("can not make mass transfer without having enough dcc") {
     for (v <- massTransferTxSupportedVersions) {
       val (balance1, eff1) = miner.accountBalances(firstAddress)
       val (balance2, eff2) = miner.accountBalances(secondAddress)
@@ -148,7 +148,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
           tx <- MassTransferTransaction.selfSigned(
             1.toByte,
             sender.keyPair,
-            Waves,
+            Dcc,
             parsedTransfers,
             fee,
             timestamp,
@@ -313,7 +313,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
 
   test("reporting MassTransfer transactions") {
     for (v <- massTransferTxSupportedVersions) {
-      val transfers = List(Transfer(firstAddress, 5.waves), Transfer(secondAddress, 2.waves), Transfer(thirdAddress, 3.waves))
+      val transfers = List(Transfer(firstAddress, 5.dcc), Transfer(secondAddress, 2.dcc), Transfer(thirdAddress, 3.dcc))
       val txId      = sender.massTransfer(firstKeyPair, transfers, 300000, version = v).id
       nodes.waitForHeightAriseAndTxPresent(txId)
 
@@ -330,7 +330,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
         .head
       assert(txSender.as[MassTransferRequest].transfers.size == 3)
       assert((txSender \ "transferCount").as[Int] == 3)
-      assert((txSender \ "totalAmount").as[Long] == 10.waves)
+      assert((txSender \ "totalAmount").as[Long] == 10.dcc)
       val transfersAfterTrans = txSender.as[MassTransferRequest].transfers
       assert(transfers.equals(transfersAfterTrans))
 
@@ -348,7 +348,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
 
       assert(txRecipient.as[MassTransferRequest].transfers.size == 1)
       assert((txRecipient \ "transferCount").as[Int] == 3)
-      assert((txRecipient \ "totalAmount").as[Long] == 10.waves)
+      assert((txRecipient \ "totalAmount").as[Long] == 10.dcc)
       val transferToSecond = txRecipient.as[MassTransferRequest].transfers.head
       assert(transfers contains transferToSecond)
     }
@@ -361,7 +361,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
       createAliasTxs.foreach(sender.waitForTransaction(_))
 
       val transfers = aliases.map { alias =>
-        Transfer(Alias.create(alias).explicitGet().toString, 2.waves)
+        Transfer(Alias.create(alias).explicitGet().toString, 2.dcc)
       }
       val txId = sender.massTransfer(firstKeyPair, transfers, 300000, version = v).id
       nodes.waitForHeightAriseAndTxPresent(txId)

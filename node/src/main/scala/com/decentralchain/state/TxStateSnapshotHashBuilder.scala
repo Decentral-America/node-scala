@@ -11,7 +11,7 @@ import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.BlockDiffer.{CurrentBlockFeePart, maybeApplySponsorship}
 import com.decentralchain.state.diffs.TransactionDiffer
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.script.trace.TracedResult
 import com.decentralchain.transaction.{GenesisTransaction, Transaction}
 import org.bouncycastle.crypto.digests.Blake2bDigest
@@ -36,7 +36,7 @@ object TxStateSnapshotHashBuilder {
 
     snapshot.balances.foreach { case ((address, asset), balance) =>
       asset match {
-        case Waves              => changedKeys += address.bytes ++ Longs.toByteArray(balance)
+        case Dcc              => changedKeys += address.bytes ++ Longs.toByteArray(balance)
         case asset: IssuedAsset => changedKeys += address.bytes ++ asset.id.arr ++ Longs.toByteArray(balance)
       }
     }

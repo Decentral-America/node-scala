@@ -14,7 +14,7 @@ class BlockchainTriggersSpec extends PropSpec with WithDomain with OptionValues 
   private val richAccount = TxHelpers.signer(2000)
 
   property("proper events") {
-    withDomain(DomainPresets.TransactionStateSnapshot, Seq(AddrWithBalance(richAccount.toAddress, 10_000.waves))) { d =>
+    withDomain(DomainPresets.TransactionStateSnapshot, Seq(AddrWithBalance(richAccount.toAddress, 10_000.dcc))) { d =>
       val rollbackTo = d.appendBlock(TxHelpers.dataEntry(richAccount, IntegerDataEntry("foo_key", 1))).id()
       d.appendMicroBlock(TxHelpers.dataEntry(richAccount, IntegerDataEntry("foo_key", 2)))
 

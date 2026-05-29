@@ -3,7 +3,7 @@ package com.decentralchain.transaction.serialization.impl
 import java.nio.ByteBuffer
 import com.google.common.primitives.{Bytes, Longs}
 import com.decentralchain.serialization.ByteBufferOps
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.lease.LeaseTransaction
 import com.decentralchain.transaction.{Proofs, TxPositiveAmount, TxVersion}
 import play.api.libs.json.{JsObject, Json}
@@ -26,7 +26,7 @@ object LeaseTxSerializer {
 
     version match {
       case TxVersion.V1 => Bytes.concat(Array(tpe.id.toByte), baseBytes)
-      case TxVersion.V2 => Bytes.concat(Array(tpe.id.toByte, version), Waves.byteRepr, baseBytes)
+      case TxVersion.V2 => Bytes.concat(Array(tpe.id.toByte, version), Dcc.byteRepr, baseBytes)
       case _            => PBTransactionSerializer.bodyBytes(tx)
     }
   }
@@ -52,7 +52,7 @@ object LeaseTxSerializer {
     if (bytes(0) == 0) {
       require(bytes(1) == LeaseTransaction.typeId, "transaction type mismatch")
       val buf = ByteBuffer.wrap(bytes, 3, bytes.length - 3)
-      require(buf.getAsset == Waves, "Leasing assets is not supported yet")
+      require(buf.getAsset == Dcc, "Leasing assets is not supported yet")
       parseCommonPart(TxVersion.V2, buf).copy(proofs = buf.getProofs)
     } else {
       require(bytes(0) == LeaseTransaction.typeId, "transaction type mismatch")

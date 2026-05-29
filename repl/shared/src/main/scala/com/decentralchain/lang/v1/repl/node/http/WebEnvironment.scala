@@ -117,7 +117,7 @@ private[repl] case class WebEnvironment(settings: NodeConnectionSettings, client
       })
     } yield entity
 
-  override def accountWavesBalanceOf(
+  override def accountDccBalanceOf(
       recipient: Recipient
   ): Future[Either[String, Environment.BalanceDetails]] =
     for {

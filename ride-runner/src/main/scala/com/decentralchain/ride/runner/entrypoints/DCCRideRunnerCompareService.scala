@@ -54,7 +54,7 @@ object DCCRideRunnerCompareService extends ScorexLogging {
   def main(args: Array[String]): Unit = {
     val (globalConfig: Config, settings: RideRunnerGlobalSettings) =
       AppInitializer.init(checkDb = false, externalConfig = args.headOption.map(new File(_).getAbsoluteFile))
-    if (settings.rideCompareService.testRequests.isEmpty) throw new IllegalArgumentException("Specify waves.compare.test-requests in config")
+    if (settings.rideCompareService.testRequests.isEmpty) throw new IllegalArgumentException("Specify dcc.compare.test-requests in config")
 
     log.info("Starting...")
     val metrics = new RideRunnerStats(globalConfig)

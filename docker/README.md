@@ -9,7 +9,7 @@ docker run -d \
   --name dcc-node \
   -p 6869:6869 \
   -p 6868:6868 \
-  -e WAVES_NETWORK=MAINNET \
+  -e DCC_NETWORK=MAINNET \
   ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
 
@@ -35,11 +35,11 @@ docker run -d \
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WAVES_NETWORK` | `MAINNET` | Target network: `MAINNET`, `TESTNET`, or `STAGENET` |
-| `WAVES_HEAP_SIZE` | `2g` | JVM heap size passed to `-Xmx` |
-| `WAVES_LOG_LEVEL` | `DEBUG` | Log verbosity: `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE` |
-| `WAVES_WALLET_SEED` | — | Base58-encoded wallet seed (written to `wallet.dat` at startup) |
-| `WAVES_WALLET_PASSWORD` | — | Password for the wallet file |
+| `DCC_NETWORK` | `MAINNET` | Target network: `MAINNET`, `TESTNET`, or `STAGENET` |
+| `DCC_HEAP_SIZE` | `2g` | JVM heap size passed to `-Xmx` |
+| `DCC_LOG_LEVEL` | `DEBUG` | Log verbosity: `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE` |
+| `DCC_WALLET_SEED` | — | Base58-encoded wallet seed (written to `wallet.dat` at startup) |
+| `DCC_WALLET_PASSWORD` | — | Password for the wallet file |
 | `JAVA_OPTS` | — | Additional JVM options (e.g. `-Dlogback.configurationFile=...`) |
 
 ### Via mounted config file
@@ -52,7 +52,7 @@ docker run -d \
   -p 6869:6869 \
   -p 6868:6868 \
   -v /path/to/node.conf:/etc/decentralchain/node.conf \
-  -e WAVES_NETWORK=MAINNET \
+  -e DCC_NETWORK=MAINNET \
   ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
 
@@ -70,7 +70,7 @@ docker run -d \
   -p 6869:6869 \
   -p 6868:6868 \
   -v dcc-data:/var/lib/decentralchain \
-  -e WAVES_NETWORK=MAINNET \
+  -e DCC_NETWORK=MAINNET \
   ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
 
@@ -90,11 +90,11 @@ services:
       - "6869:6869"
       - "6868:6868"
     environment:
-      WAVES_NETWORK: MAINNET
-      WAVES_HEAP_SIZE: 4g
-      WAVES_LOG_LEVEL: INFO
-      WAVES_WALLET_SEED: "${DCC_WALLET_SEED}"
-      WAVES_WALLET_PASSWORD: "${DCC_WALLET_PASSWORD}"
+      DCC_NETWORK: MAINNET
+      DCC_HEAP_SIZE: 4g
+      DCC_LOG_LEVEL: INFO
+      DCC_WALLET_SEED: "${DCC_WALLET_SEED}"
+      DCC_WALLET_PASSWORD: "${DCC_WALLET_PASSWORD}"
     volumes:
       - dcc-data:/var/lib/decentralchain
     healthcheck:
@@ -146,9 +146,9 @@ docker build -t decentralchain/node-scala:local ./docker
 
 ## Security notes
 
-- The container runs as a non-root user (`waves`, UID 999) by default.
+- The container runs as a non-root user (`dcc`, UID 999) by default.
 - Wallet seeds are written to a temporary file with `chmod 600` and cleaned up on exit.
-- The `WAVES_WALLET_SEED` environment variable is not logged.
+- The `DCC_WALLET_SEED` environment variable is not logged.
 - The REST API is bound to `0.0.0.0` by default. In production, place it behind a reverse proxy and restrict public exposure.
 
 For the project security policy, see [SECURITY.md](../SECURITY.md).

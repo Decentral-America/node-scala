@@ -8,7 +8,7 @@ import com.decentralchain.crypto
 import com.decentralchain.metrics.Instrumented
 import com.decentralchain.test.*
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.transfer.*
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
@@ -25,9 +25,9 @@ class BlockSpecification extends PropSpec {
     assetId = IssuedAsset(ByteStr(assetBytes))
     sender                    <- accountGen
     recipient                 <- accountGen
-    paymentTransaction        <- wavesTransferGeneratorP(time, sender, recipient.toAddress)
-    transferTrancation        <- transferGeneratorP(1 + time, sender, recipient.toAddress, assetId, Waves)
-    anotherPaymentTransaction <- wavesTransferGeneratorP(2 + time, sender, recipient.toAddress)
+    paymentTransaction        <- dccTransferGeneratorP(time, sender, recipient.toAddress)
+    transferTrancation        <- transferGeneratorP(1 + time, sender, recipient.toAddress, assetId, Dcc)
+    anotherPaymentTransaction <- dccTransferGeneratorP(2 + time, sender, recipient.toAddress)
     transactionData = Seq(paymentTransaction, transferTrancation, anotherPaymentTransaction)
   } yield (baseTarget, reference, ByteStr(generationSignature), recipient, transactionData)
 
@@ -38,7 +38,7 @@ class BlockSpecification extends PropSpec {
       generationSignature                     <- byteArrayGen(Block.GenerationSignatureLength)
       sender                                  <- accountGen
       recipient                               <- accountGen
-      paymentTransaction: TransferTransaction <- wavesTransferGeneratorP(time, sender, recipient.toAddress)
+      paymentTransaction: TransferTransaction <- dccTransferGeneratorP(time, sender, recipient.toAddress)
     } yield Block
       .buildAndSign(
         3.toByte,

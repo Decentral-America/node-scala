@@ -50,7 +50,7 @@ class StateReaderEffectiveBalancePropertyTest extends PropSpec with WithDomain {
 
     val (leaser, genesis, xfer1, lease1, xfer2, lease2) = setup
     assertDiffAndState(Seq(block(Seq(genesis)), block(Seq(xfer1, lease1))), block(Seq(xfer2, lease2)), fs) { (_, state) =>
-      val portfolio       = state.wavesPortfolio(lease1.sender.toAddress)
+      val portfolio       = state.dccPortfolio(lease1.sender.toAddress)
       val expectedBalance = xfer1.amount.value + xfer2.amount.value - 2 * Fee
       portfolio.balance shouldBe expectedBalance
       state.generatingBalance(leaser.toAddress, state.lastBlockId) shouldBe 0
@@ -119,9 +119,9 @@ class StateReaderEffectiveBalancePropertyTest extends PropSpec with WithDomain {
   }
 
   property("correct balance snapshots") {
-    val transferTx   = transfer(to = signer(1).toAddress, amount = 3.waves, fee = 0.1.waves)
-    val leaseTx      = lease(recipient = signer(1).toAddress, amount = 2.waves, fee = 0.1.waves)
-    val startBalance = 7.waves
+    val transferTx   = transfer(to = signer(1).toAddress, amount = 3.dcc, fee = 0.1.dcc)
+    val leaseTx      = lease(recipient = signer(1).toAddress, amount = 2.dcc, fee = 0.1.dcc)
+    val startBalance = 7.dcc
 
     // 2 txs in 1 a non-genesis block
     val feeReward = (transferTx.fee.value + leaseTx.fee.value) * 2 / 5
@@ -132,7 +132,7 @@ class StateReaderEffectiveBalancePropertyTest extends PropSpec with WithDomain {
       d.blockchain.balanceSnapshots(defaultAddress, 1, None) shouldBe Seq(
         bs(
           height = Height(2),
-          regularBalance = startBalance + 6.waves + feeReward - feeCost - transferTx.amount.value,
+          regularBalance = startBalance + 6.dcc + feeReward - feeCost - transferTx.amount.value,
           leaseOut = leaseTx.amount.value
         ),
         bs(
@@ -144,19 +144,19 @@ class StateReaderEffectiveBalancePropertyTest extends PropSpec with WithDomain {
 
     // 1 tx in each of 2 non-genesis blocks, from = 0..1
     (0 to 1).foreach { from =>
-      withDomain(RideV6, Seq(AddrWithBalance(defaultAddress, 7.waves))) { d =>
+      withDomain(RideV6, Seq(AddrWithBalance(defaultAddress, 7.dcc))) { d =>
         d.appendBlock(transferTx)
         d.appendBlock(leaseTx)
         d.blockchain.balanceSnapshots(defaultAddress, from, None) shouldBe Seq(
           bs(
             height = Height(3),
-            regularBalance = startBalance + 12.waves + leaseTx.fee.value * 2 / 5 - leaseTx.fee.value - transferTx.amount.value,
+            regularBalance = startBalance + 12.dcc + leaseTx.fee.value * 2 / 5 - leaseTx.fee.value - transferTx.amount.value,
             // leaseIn = 0, transfer fee is fully compensated by reward ↑
             leaseOut = leaseTx.amount.value
           ),
           bs(
             height = Height(2),
-            regularBalance = startBalance + 6.waves + transferTx.fee.value * 2 / 5 - transferTx.fee.value - transferTx.amount.value
+            regularBalance = startBalance + 6.dcc + transferTx.fee.value * 2 / 5 - transferTx.fee.value - transferTx.amount.value
           ),
           bs(
             height = Height(1),

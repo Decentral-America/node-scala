@@ -11,7 +11,7 @@ import com.decentralchain.it.NodeConfigs.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.{BaseTransactionSuite, NodesFromDocker}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.TransferTransaction
 
 class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDocker {
@@ -30,9 +30,9 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
         2.toByte,
         nodeAIsMiner.keyPair,
         Address.fromString(nodeBIsNotMiner.address).explicitGet(),
-        Waves,
+        Dcc,
         transferAmount,
-        Waves,
+        Dcc,
         minFee,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -59,9 +59,9 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
         2.toByte,
         nodeAIsMiner.keyPair,
         Address.fromString(nodeBIsNotMiner.address).explicitGet(),
-        Waves,
+        Dcc,
         transferAmount,
-        Waves,
+        Dcc,
         minFee,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -87,9 +87,9 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
         2.toByte,
         nodeAIsMiner.keyPair,
         Address.fromString(nodeBIsNotMiner.address).explicitGet(),
-        Waves,
+        Dcc,
         transferAmount,
-        Waves,
+        Dcc,
         minFee,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -111,11 +111,11 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
 }
 object RebroadcastTransactionSuite {
   private val configWithRebroadcastAllowed =
-    parseString("waves.synchronization.utx-synchronizer.allow-tx-rebroadcasting = true")
+    parseString("dcc.synchronization.utx-synchronizer.allow-tx-rebroadcasting = true")
 
   private val configWithRebroadcastNotAllowed =
-    parseString("waves.synchronization.utx-synchronizer.allow-tx-rebroadcasting = false")
+    parseString("dcc.synchronization.utx-synchronizer.allow-tx-rebroadcasting = false")
 
   private def configWithMinimumPeers(n: Int) =
-    parseString(s"waves.rest-api.minimum-peers = $n")
+    parseString(s"dcc.rest-api.minimum-peers = $n")
 }

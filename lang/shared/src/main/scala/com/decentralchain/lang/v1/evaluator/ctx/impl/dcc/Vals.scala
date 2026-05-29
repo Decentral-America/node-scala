@@ -1,4 +1,4 @@
-package com.decentralchain.lang.v1.evaluator.ctx.impl.waves
+package com.decentralchain.lang.v1.evaluator.ctx.impl.dcc
 
 import cats.syntax.either.*
 import cats.syntax.functor.*
@@ -9,8 +9,8 @@ import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.compiler.Types.*
 import com.decentralchain.lang.v1.evaluator.ContextfulVal
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Bindings.{buildAssetInfo, ordType, orderObject, transactionObject}
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Types.*
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Bindings.{buildAssetInfo, ordType, orderObject, transactionObject}
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Types.*
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.lang.v1.traits.domain.{OrdType, Ord, Tx, PseudoTx, Recipient}
 import com.decentralchain.lang.v1.traits.domain.Tx.{BurnPseudoTx, InvokePseudoTx, ReissuePseudoTx, ScriptTransfer, SponsorFeePseudoTx}

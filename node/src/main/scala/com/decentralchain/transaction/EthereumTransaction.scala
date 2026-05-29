@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.compiler.Terms
 import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.Blockchain
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionLike
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType.TransactionType
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.BaseTxJson
@@ -48,7 +48,7 @@ final case class EthereumTransaction(
 
   override val id: Coeval[ByteStr] = Coeval.evalOnce(ByteStr(Hash.sha3(this.bytes())))
 
-  override def assetFee: (Asset, Long) = Asset.Waves -> underlying.getGasLimit.longValueExact()
+  override def assetFee: (Asset, Long) = Asset.Dcc -> underlying.getGasLimit.longValueExact()
 
   override val timestamp: TxTimestamp = underlying.getNonce.longValueExact()
 
@@ -96,7 +96,7 @@ final case class EthereumTransaction(
     override def assetFee: (Asset, TxTimestamp) = self.assetFee
     override def checkedAssets: Seq[IssuedAsset] = asset match {
       case i: IssuedAsset => Seq(i)
-      case Asset.Waves    => Nil
+      case Asset.Dcc    => Nil
     }
   }
 }
@@ -150,13 +150,13 @@ object EthereumTransaction {
     def tryResolveAsset(blockchain: Blockchain): Either[ValidationError, Asset] =
       tokenAddress
         .fold[Either[ValidationError, Asset]](
-          Right(Waves)
+          Right(Dcc)
         )(a => blockchain.resolveERC20Address(a).toRight(GenericError(s"Can't resolve ERC20 address $a")))
 
     def toTransferLike(tx: EthereumTransaction, blockchain: Blockchain): Either[ValidationError, TransferTransactionLike] =
       for {
         asset  <- tryResolveAsset(blockchain)
-        amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, asset.maybeBase58Repr.getOrElse("waves")))
+        amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, asset.maybeBase58Repr.getOrElse("dcc")))
       } yield tx.toTransferLike(amount, recipient, asset)
 
     def checkTransferDataSize(blockchain: Blockchain, data: String): Either[GenericError, Unit] =
@@ -173,7 +173,7 @@ object EthereumTransaction {
         .cond(tx.signatureData.getV.isEmpty || BigInt(1, tx.signatureData.getV) > 28, GenericError("Legacy transactions are not supported")),
       TxConstraints.fee(tx.underlying.getGasLimit.longValueExact()),
       TxConstraints
-        .positiveOrZeroAmount((BigInt(tx.underlying.getValue) / AmountMultiplier).bigInteger.longValueExact(), "waves"),
+        .positiveOrZeroAmount((BigInt(tx.underlying.getValue) / AmountMultiplier).bigInteger.longValueExact(), "dcc"),
       TxConstraints.cond(tx.underlying.getGasPrice == GasPrice, GenericError("Gas price must be 10 Gwei")),
       TxConstraints.cond(
         tx.underlying.getValue != BigInteger.ZERO || EthEncoding.cleanHexPrefix(tx.underlying.getData).nonEmpty,
@@ -183,7 +183,7 @@ object EthereumTransaction {
         .cond(tx.underlying.getData.isEmpty || BigInt(tx.underlying.getValue) == 0, GenericError("Transaction should have either data or value")),
       tx.payload match {
         case Transfer(tokenAddress, amount, _) =>
-          TxConstraints.positiveAmount(amount, tokenAddress.fold("waves")(erc20 => EthEncoding.toHexString(erc20.arr)))
+          TxConstraints.positiveAmount(amount, tokenAddress.fold("dcc")(erc20 => EthEncoding.toHexString(erc20.arr)))
         case Invocation(_, _) => TxConstraints.seq(tx)()
       }
     )
@@ -223,7 +223,7 @@ object EthereumTransaction {
     lazy val recipientAddress = Address(recipientBytes.arr, chainId)
 
     hexData match {
-      // Waves transfer
+      // Dcc transfer
       case "" =>
         val amount = BigInt(underlying.getValue) / AmountMultiplier
         Transfer(

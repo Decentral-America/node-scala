@@ -44,21 +44,21 @@ package object settings {
     val external = maybeUserConfig.fold(sysProps)(sysProps.withFallback)
 
     val cmdDefaults =
-      Try(external.getConfig("waves.defaults"))
+      Try(external.getConfig("dcc.defaults"))
         .getOrElse(ConfigFactory.empty())
-        .atPath("waves")
+        .atPath("dcc")
 
     val withApp = external.withFallback(cmdDefaults).withFallback(ConfigFactory.defaultApplication())
 
     val networkDefaults = {
-      val network = withApp.getString("waves.blockchain.type").toLowerCase
-      withApp.getConfig(s"waves.defaults.$network")
+      val network = withApp.getString("dcc.blockchain.type").toLowerCase
+      withApp.getConfig(s"dcc.defaults.$network")
     }
 
     external
       .withFallback(cmdDefaults)
-      .withFallback(networkDefaults.atKey("waves"))
-      .withFallback(ConfigFactory.parseString(s"waves.directory = ${defaultDirectory(withApp)}"))
+      .withFallback(networkDefaults.atKey("dcc"))
+      .withFallback(ConfigFactory.parseString(s"dcc.directory = ${defaultDirectory(withApp)}"))
       .withFallback(ConfigFactory.defaultApplication())
       .withFallback(ConfigFactory.defaultReference())
       .resolve()
@@ -81,15 +81,15 @@ package object settings {
     }
 
     def withNetwork(config: Config): String = {
-      val bc = config.getString("waves.blockchain.type")
+      val bc = config.getString("dcc.blockchain.type")
       val suffix =
         if (bc == "CUSTOM") {
-          val char = config.getString("waves.blockchain.custom.address-scheme-character").headOption.getOrElse(0.toChar)
+          val char = config.getString("dcc.blockchain.custom.address-scheme-character").headOption.getOrElse(0.toChar)
           s"custom-${Integer.toHexString(char)}"
         } else
           bc.toLowerCase
 
-      s"waves-$suffix"
+      s"dcc-$suffix"
     }
 
     val osName = sys.props.get("os.name").map(_.toLowerCase)

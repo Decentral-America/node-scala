@@ -9,7 +9,7 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -32,7 +32,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
     val newAddress   = sender.createKeyPair()
     val pkNewAddress = newAddress
 
-    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 10.waves, minFee, waitForTx = true)
+    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 10.dcc, minFee, waitForTx = true)
 
     val scriptSrc =
       s"""
@@ -53,7 +53,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
     assertBadRequestAndResponse(
       sender.signedBroadcast(
         TransferTransaction
-          .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Waves, 1.waves, Waves, smartMinFee, ByteStr.empty, System.currentTimeMillis())
+          .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Dcc, 1.dcc, Dcc, smartMinFee, ByteStr.empty, System.currentTimeMillis())
           .explicitGet()
           .json()
       ),
@@ -68,7 +68,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
           pkNewAddress.toAddress,
           IssuedAsset(ByteStr.decodeBase58(asset).get),
           100000000,
-          Waves,
+          Dcc,
           smartMinFee,
           ByteStr.empty,
           System.currentTimeMillis()
@@ -80,7 +80,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
 
     val transfer = sender.signedBroadcast(
       TransferTransaction
-        .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Waves, 1.waves, Waves, smartMinFee, ByteStr.empty, System.currentTimeMillis())
+        .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Dcc, 1.dcc, Dcc, smartMinFee, ByteStr.empty, System.currentTimeMillis())
         .explicitGet()
         .json()
     )
@@ -90,7 +90,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
       s"""
          |match tx {
          |  case _: SetScriptTransaction => true
-         |  case _ => assetBalance(tx.sender, base58'$asset') >= 900000000 && wavesBalance(tx.sender) >500000000
+         |  case _ => assetBalance(tx.sender, base58'$asset') >= 900000000 && dccBalance(tx.sender) >500000000
          |}
       """.stripMargin
 
@@ -108,7 +108,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
     assertBadRequestAndResponse(
       sender.signedBroadcast(
         TransferTransaction
-          .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Waves, 1.waves, Waves, smartMinFee, ByteStr.empty, System.currentTimeMillis())
+          .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Dcc, 1.dcc, Dcc, smartMinFee, ByteStr.empty, System.currentTimeMillis())
           .explicitGet()
           .json()
       ),
@@ -123,7 +123,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
           pkNewAddress.toAddress,
           IssuedAsset(ByteStr.decodeBase58(asset).get),
           800000000,
-          Waves,
+          Dcc,
           smartMinFee,
           ByteStr.empty,
           System.currentTimeMillis()
@@ -135,7 +135,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
 
     val transferAfterUpd = sender.signedBroadcast(
       TransferTransaction
-        .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Waves, 1.waves, Waves, smartMinFee, ByteStr.empty, System.currentTimeMillis())
+        .selfSigned(2.toByte, pkNewAddress, pkNewAddress.toAddress, Dcc, 1.dcc, Dcc, smartMinFee, ByteStr.empty, System.currentTimeMillis())
         .explicitGet()
         .json()
     )
@@ -164,7 +164,7 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
 
     val newAddress   = sender.createKeyPair()
     val pkNewAddress = newAddress
-    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 10.waves, minFee, waitForTx = true)
+    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 10.dcc, minFee, waitForTx = true)
 
     val scriptSet          = SetScriptTransaction.selfSigned(1.toByte, pkNewAddress, Some(compiledScript), setScriptFee, System.currentTimeMillis())
     val scriptSetBroadcast = sender.signedBroadcast(scriptSet.explicitGet().json())
@@ -174,9 +174,9 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
       2.toByte,
       pkNewAddress,
       pkNewAddress.toAddress,
-      Waves,
-      1.waves,
-      Waves,
+      Dcc,
+      1.dcc,
+      Dcc,
       smartMinFee,
       ByteStr.empty,
       System.currentTimeMillis()
@@ -209,12 +209,12 @@ class RideFuncSuite extends BaseTransactionSuite with CancelAfterFailure {
       ._1
 
     val newAddress = sender.createKeyPair()
-    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 10.waves, minFee, waitForTx = true)
+    sender.transfer(firstKeyPair, newAddress.toAddress.toString, 10.dcc, minFee, waitForTx = true)
 
     val setScript = sender.setScript(newAddress, Some(script.bytes().base64), setScriptFee)
     nodes.waitForHeightAriseAndTxPresent(setScript.id)
 
-    val transfer = sender.transfer(newAddress, newAddress.toAddress.toString, 1.waves, minFee + (2 * smartFee))
+    val transfer = sender.transfer(newAddress, newAddress.toAddress.toString, 1.dcc, minFee + (2 * smartFee))
     nodes.waitForHeightAriseAndTxPresent(transfer.id)
   }
 }

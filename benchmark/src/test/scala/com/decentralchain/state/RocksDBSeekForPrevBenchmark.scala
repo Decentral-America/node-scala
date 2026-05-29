@@ -55,12 +55,12 @@ object RocksDBSeekForPrevBenchmark {
 
   @State(Scope.Benchmark)
   class BaseSt {
-    private val wavesSettings: DCCSettings =
+    private val dccSettings: DCCSettings =
       DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
 
     val rdb: RDB = {
       val dir = Files.createTempDirectory("state-synthetic").toAbsolutePath.toString
-      RDB.open(wavesSettings.dbSettings.copy(directory = dir))
+      RDB.open(dccSettings.dbSettings.copy(directory = dir))
     }
 
     val addressId: AddressId = AddressId(1L)

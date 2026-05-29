@@ -22,7 +22,7 @@ import scala.concurrent.duration.*
 import scala.util.Try
 
 class BlockchainUpdates(private val context: Context) extends Extension with ScorexLogging with BlockchainUpdateTriggers {
-  private val settings = ConfigSource.fromConfig(context.settings.config).at("waves.blockchain-updates").loadOrThrow[BlockchainUpdatesSettings]
+  private val settings = ConfigSource.fromConfig(context.settings.config).at("dcc.blockchain-updates").loadOrThrow[BlockchainUpdatesSettings]
   private implicit val scheduler: SchedulerService = Schedulers.fixedPool(
     settings.workerThreads,
     "blockchain-updates",

@@ -7,7 +7,7 @@ import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{matcherFee, minFee, someAssetAmount}
 import com.decentralchain.test.*
 import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
@@ -33,7 +33,7 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
 
   test("exchange tx with orders v1,v2") {
     val exchAsset =
-      sender.broadcastIssue(buyer, Base64.encode("exchAsset".utf8Bytes), someAssetAmount, 8, reissuable = true, 1.waves, waitForTx = true)
+      sender.broadcastIssue(buyer, Base64.encode("exchAsset".utf8Bytes), someAssetAmount, 8, reissuable = true, 1.dcc, waitForTx = true)
     val exchAssetId        = PBTransactions.vanilla(exchAsset, unsafe = false).explicitGet().id().toString
     val price              = 500000L
     val amount             = 40000000L
@@ -44,22 +44,22 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
       val expirationTimestamp = ts + Order.MaxLiveTime / 2
       val buy                 = Order.buy(o1ver, buyer, matcher.publicKey, pair, amount, price, ts, expirationTimestamp, matcherFee).explicitGet()
       val sell                = Order.sell(o2ver, seller, matcher.publicKey, pair, amount, price, ts, expirationTimestamp, matcherFee).explicitGet()
-      val buyerWavesBalanceBefore  = sender.wavesBalance(buyerAddress).available
-      val sellerWavesBalanceBefore = sender.wavesBalance(sellerAddress).available
+      val buyerDccBalanceBefore  = sender.dccBalance(buyerAddress).available
+      val sellerDccBalanceBefore = sender.dccBalance(sellerAddress).available
       val buyerAssetBalanceBefore  = sender.assetsBalance(buyerAddress, Seq(exchAssetId)).getOrElse(exchAssetId, 0L)
       val sellerAssetBalanceBefore = sender.assetsBalance(sellerAddress, Seq(exchAssetId)).getOrElse(exchAssetId, 0L)
 
       sender.exchange(matcher, buy, sell, amount, price, matcherFee, matcherFee, matcherFee, ts, tver, waitForTx = true)
 
-      sender.wavesBalance(buyerAddress).available shouldBe buyerWavesBalanceBefore + amount - matcherFee
-      sender.wavesBalance(sellerAddress).available shouldBe sellerWavesBalanceBefore - amount - matcherFee
+      sender.dccBalance(buyerAddress).available shouldBe buyerDccBalanceBefore + amount - matcherFee
+      sender.dccBalance(sellerAddress).available shouldBe sellerDccBalanceBefore - amount - matcherFee
       sender.assetsBalance(buyerAddress, Seq(exchAssetId))(exchAssetId) shouldBe buyerAssetBalanceBefore - priceAssetSpending
       sender.assetsBalance(sellerAddress, Seq(exchAssetId))(exchAssetId) shouldBe sellerAssetBalanceBefore + priceAssetSpending
     }
   }
 
   test("exchange tx with orders v3") {
-    val feeAsset           = sender.broadcastIssue(buyer, "feeAsset", someAssetAmount, 8, reissuable = true, 1.waves, waitForTx = true)
+    val feeAsset           = sender.broadcastIssue(buyer, "feeAsset", someAssetAmount, 8, reissuable = true, 1.dcc, waitForTx = true)
     val feeAssetId         = PBTransactions.vanilla(feeAsset, unsafe = false).explicitGet().id()
     val price              = 500000L
     val amount             = 40000000L
@@ -75,16 +75,16 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
     )
 
     for (
-      (o1ver, o2ver, matcherFeeOrder1, matcherFeeOrder2, buyerWavesDelta, sellerWavesDelta, buyerAssetDelta, sellerAssetDelta) <- Seq(
-        (1: Byte, 3: Byte, Waves, IssuedAsset(feeAssetId), amount - matcherFee, -amount, -priceAssetSpending, priceAssetSpending - matcherFee),
-        (1: Byte, 3: Byte, Waves, Waves, amount - matcherFee, -amount - matcherFee, -priceAssetSpending, priceAssetSpending),
-        (2: Byte, 3: Byte, Waves, IssuedAsset(feeAssetId), amount - matcherFee, -amount, -priceAssetSpending, priceAssetSpending - matcherFee),
-        (3: Byte, 1: Byte, IssuedAsset(feeAssetId), Waves, amount, -amount - matcherFee, -priceAssetSpending - matcherFee, priceAssetSpending),
-        (2: Byte, 3: Byte, Waves, Waves, amount - matcherFee, -amount - matcherFee, -priceAssetSpending, priceAssetSpending),
-        (3: Byte, 2: Byte, IssuedAsset(feeAssetId), Waves, amount, -amount - matcherFee, -priceAssetSpending - matcherFee, priceAssetSpending)
+      (o1ver, o2ver, matcherFeeOrder1, matcherFeeOrder2, buyerDccDelta, sellerDccDelta, buyerAssetDelta, sellerAssetDelta) <- Seq(
+        (1: Byte, 3: Byte, Dcc, IssuedAsset(feeAssetId), amount - matcherFee, -amount, -priceAssetSpending, priceAssetSpending - matcherFee),
+        (1: Byte, 3: Byte, Dcc, Dcc, amount - matcherFee, -amount - matcherFee, -priceAssetSpending, priceAssetSpending),
+        (2: Byte, 3: Byte, Dcc, IssuedAsset(feeAssetId), amount - matcherFee, -amount, -priceAssetSpending, priceAssetSpending - matcherFee),
+        (3: Byte, 1: Byte, IssuedAsset(feeAssetId), Dcc, amount, -amount - matcherFee, -priceAssetSpending - matcherFee, priceAssetSpending),
+        (2: Byte, 3: Byte, Dcc, Dcc, amount - matcherFee, -amount - matcherFee, -priceAssetSpending, priceAssetSpending),
+        (3: Byte, 2: Byte, IssuedAsset(feeAssetId), Dcc, amount, -amount - matcherFee, -priceAssetSpending - matcherFee, priceAssetSpending)
       )
     ) {
-      if (matcherFeeOrder1 == Waves && matcherFeeOrder2 != Waves) {
+      if (matcherFeeOrder1 == Dcc && matcherFeeOrder2 != Dcc) {
         sender.broadcastTransfer(
           buyer,
           Recipient().withPublicKeyHash(sellerAddress),
@@ -95,8 +95,8 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         )
       }
 
-      val buyerWavesBalanceBefore  = sender.wavesBalance(buyerAddress).available
-      val sellerWavesBalanceBefore = sender.wavesBalance(sellerAddress).available
+      val buyerDccBalanceBefore  = sender.dccBalance(buyerAddress).available
+      val sellerDccBalanceBefore = sender.dccBalance(sellerAddress).available
       val buyerAssetBalanceBefore  = sender.assetsBalance(buyerAddress, Seq(feeAssetId.toString)).getOrElse(feeAssetId.toString, 0L)
       val sellerAssetBalanceBefore = sender.assetsBalance(sellerAddress, Seq(feeAssetId.toString)).getOrElse(feeAssetId.toString, 0L)
 
@@ -110,8 +110,8 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
 
       sender.exchange(matcher, sell, buy, amount, price, matcherFee, matcherFee, matcherFee, ts, 3, waitForTx = true)
 
-      sender.wavesBalance(buyerAddress).available shouldBe (buyerWavesBalanceBefore + buyerWavesDelta)
-      sender.wavesBalance(sellerAddress).available shouldBe (sellerWavesBalanceBefore + sellerWavesDelta)
+      sender.dccBalance(buyerAddress).available shouldBe (buyerDccBalanceBefore + buyerDccDelta)
+      sender.dccBalance(sellerAddress).available shouldBe (sellerDccBalanceBefore + sellerDccDelta)
       sender.assetsBalance(buyerAddress, Seq(feeAssetId.toString))(feeAssetId.toString) shouldBe (buyerAssetBalanceBefore + buyerAssetDelta)
       sender.assetsBalance(sellerAddress, Seq(feeAssetId.toString))(feeAssetId.toString) shouldBe (sellerAssetBalanceBefore + sellerAssetDelta)
     }
@@ -128,7 +128,7 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         decimals = 2,
         reissuable = true,
         script = None,
-        fee = 1.waves,
+        fee = 1.dcc,
         timestamp = System.currentTimeMillis()
       )
       .explicitGet()

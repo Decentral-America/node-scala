@@ -7,14 +7,14 @@ object SystemInformationReporter extends ScorexLogging {
     val resolved = config.resolve()
     val configForLogs = {
       val orig = Seq(
-        "waves",
+        "dcc",
         "metrics"
       ).foldLeft(ConfigFactory.empty()) { case (r, path) => r.withFallback(resolved.withOnlyPath(path)) }
 
       Seq(
-        "waves.custom.genesis",
-        "waves.wallet",
-        "waves.rest-api.api-key-hash",
+        "dcc.custom.genesis",
+        "dcc.wallet",
+        "dcc.rest-api.api-key-hash",
         "metrics.influx-db"
       ).foldLeft(orig)(_.withoutPath(_))
     }

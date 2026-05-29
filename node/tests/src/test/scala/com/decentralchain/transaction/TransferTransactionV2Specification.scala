@@ -5,7 +5,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.serialization.impl.TransferTxSerializer
 import com.decentralchain.transaction.transfer.*
 import play.api.libs.json.Json
@@ -60,9 +60,9 @@ class TransferTransactionV2Specification extends PropSpec {
         2.toByte,
         acc2.publicKey,
         acc2.toAddress,
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(1),
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(1),
         attachment,
         1,
@@ -73,9 +73,9 @@ class TransferTransactionV2Specification extends PropSpec {
         2.toByte,
         acc2.publicKey,
         acc2.toAddress,
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(1),
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(1),
         attachment,
         1,
@@ -124,9 +124,9 @@ class TransferTransactionV2Specification extends PropSpec {
       2.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
       Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet(),
-      Waves,
+      Dcc,
       TxPositiveAmount.unsafeFrom(100000000),
-      Waves,
+      Dcc,
       TxPositiveAmount.unsafeFrom(100000000),
       ByteStr.decodeBase58("4t2Xazb2SX").get,
       1526641218066L,

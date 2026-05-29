@@ -10,7 +10,7 @@ import com.decentralchain.state.Height
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.DeterministicFinality
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.assets.exchange.OrderType.{BUY, SELL}
@@ -86,8 +86,8 @@ class TransactionSnapshotsRouteSpec
       val issueTx              = issue(script = Some(TestCompiler(V8).compileExpression("true")))
       val asset                = IssuedAsset(issueTx.id())
       val aliasTx              = createAlias()
-      val order1               = order(BUY, asset, Waves, amount = 123, price = 40_000_000, fee = 777)
-      val order2               = order(SELL, asset, Waves, amount = 123, price = 40_000_000, fee = 888)
+      val order1               = order(BUY, asset, Dcc, amount = 123, price = 40_000_000, fee = 777)
+      val order2               = order(SELL, asset, Dcc, amount = 123, price = 40_000_000, fee = 888)
       val exchangeTx           = exchange(order1, order2, amount = 123, price = 40_000_000, buyMatcherFee = 777, sellMatcherFee = 888)
       val commitToGenerationTx = commitToGeneration(Height(3001), secondSigner)
       val allTxs               = Seq(setScriptTx, invokeTx, issueTx, aliasTx, removeScriptTx, exchangeTx, commitToGenerationTx)

@@ -42,7 +42,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
       fee    <- smallFeeGen
       amt    <- smallFeeGen
       genesis: GenesisTransaction  = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-      payment: TransferTransaction = createWavesTransfer(master, master.toAddress, amt, fee, ts).explicitGet()
+      payment: TransferTransaction = createDccTransfer(master, master.toAddress, amt, fee, ts).explicitGet()
     } yield (miner, genesis, payment, ts)
     scenario(preconditionsAndPayments, MicroblocksActivatedAt0DCCSettings) { case (domain, (miner, genesis, payment, ts)) =>
       val genBlock       = buildBlockOfTxs(randomSig, Seq(genesis))
@@ -70,7 +70,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
         amt    <- smallFeeGen
         genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
         microBlockTxs = (1 to txCount * microBlockCount)
-          .map(step => createWavesTransfer(master, master.toAddress, amt, fee, ts + step).explicitGet())
+          .map(step => createDccTransfer(master, master.toAddress, amt, fee, ts + step).explicitGet())
           .grouped(microBlockCount)
           .toSeq
       } yield (miner, genesis, microBlockTxs, ts)
@@ -93,7 +93,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
       to   <- Gen.oneOf(accs)
       fee  <- smallFeeGen
       amt  <- smallFeeGen
-    } yield createWavesTransfer(from, to.toAddress, amt, fee, ts).explicitGet()
+    } yield createDccTransfer(from, to.toAddress, amt, fee, ts).explicitGet()
 
   def randomPayments(accs: Seq[KeyPair], ts: Long, amt: Int): Gen[Seq[TransferTransaction]] =
     if (amt == 0)
@@ -104,7 +104,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
         t <- randomPayments(accs, ts + 1, amt - 1)
       } yield h +: t
 
-  val TOTAL_WAVES = ENOUGH_AMT
+  val TOTAL_DCC = ENOUGH_AMT
 
   def accsAndGenesis(): Gen[(Seq[KeyPair], KeyPair, Block, Int)] =
     for {
@@ -114,10 +114,10 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
       dave    <- accountGen
       miner   <- accountGen
       ts      <- positiveIntGen
-      genesis1: GenesisTransaction = GenesisTransaction.create(alice.toAddress, TOTAL_WAVES / 4, ts).explicitGet()
-      genesis2: GenesisTransaction = GenesisTransaction.create(bob.toAddress, TOTAL_WAVES / 4, ts + 1).explicitGet()
-      genesis3: GenesisTransaction = GenesisTransaction.create(charlie.toAddress, TOTAL_WAVES / 4, ts + 2).explicitGet()
-      genesis4: GenesisTransaction = GenesisTransaction.create(dave.toAddress, TOTAL_WAVES / 4, ts + 4).explicitGet()
+      genesis1: GenesisTransaction = GenesisTransaction.create(alice.toAddress, TOTAL_DCC / 4, ts).explicitGet()
+      genesis2: GenesisTransaction = GenesisTransaction.create(bob.toAddress, TOTAL_DCC / 4, ts + 1).explicitGet()
+      genesis3: GenesisTransaction = GenesisTransaction.create(charlie.toAddress, TOTAL_DCC / 4, ts + 2).explicitGet()
+      genesis4: GenesisTransaction = GenesisTransaction.create(dave.toAddress, TOTAL_DCC / 4, ts + 4).explicitGet()
     } yield (
       Seq(alice, bob, charlie, dave),
       miner,

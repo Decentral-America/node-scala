@@ -22,8 +22,8 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
   )
 
   test("issuer cannot change script on asset w/o initial script") {
-    val firstBalance    = sender.wavesBalance(firstAddress).available
-    val firstEffBalance = sender.wavesBalance(firstAddress).effective
+    val firstBalance    = sender.dccBalance(firstAddress).available
+    val firstEffBalance = sender.dccBalance(firstAddress).effective
 
     assertGrpcError(
       sender.setAssetScript(firstAcc, assetWOScript, Right(Some(script)), setAssetScriptFee),
@@ -36,8 +36,8 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
       Code.INVALID_ARGUMENT
     )
 
-    sender.wavesBalance(firstAddress).available shouldBe firstBalance
-    sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
+    sender.dccBalance(firstAddress).available shouldBe firstBalance
+    sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
   }
 
   test("non-issuer cannot change script") {
@@ -77,7 +77,7 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
     )
   }
 
-  test("sender's waves balance is decreased by fee") {
+  test("sender's dcc balance is decreased by fee") {
     val script2 = TestCompiler.DefaultVersion.compileAsset(
       s"""
          |match tx {
@@ -87,32 +87,32 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
          """.stripMargin
     )
 
-    val firstBalance    = sender.wavesBalance(firstAddress).available
-    val firstEffBalance = sender.wavesBalance(firstAddress).effective
+    val firstBalance    = sender.dccBalance(firstAddress).available
+    val firstEffBalance = sender.dccBalance(firstAddress).effective
 
     sender.setAssetScript(firstAcc, assetWScript, Right(Some(script2)), setAssetScriptFee, waitForTx = true)
     sender.assetInfo(assetWScript).script.flatMap(sd => PBTransactions.toVanillaScript(sd.scriptBytes)) should contain(script2)
 
-    sender.wavesBalance(firstAddress).available shouldBe firstBalance - setAssetScriptFee
-    sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance - setAssetScriptFee
+    sender.dccBalance(firstAddress).available shouldBe firstBalance - setAssetScriptFee
+    sender.dccBalance(firstAddress).effective shouldBe firstEffBalance - setAssetScriptFee
   }
 
-  test("not able set script without having enough waves") {
-    val firstBalance    = sender.wavesBalance(firstAddress).available
-    val firstEffBalance = sender.wavesBalance(firstAddress).effective
+  test("not able set script without having enough dcc") {
+    val firstBalance    = sender.dccBalance(firstAddress).available
+    val firstEffBalance = sender.dccBalance(firstAddress).effective
     assertGrpcError(
       sender.setAssetScript(firstAcc, assetWScript, Right(Some(script)), fee = firstBalance + 1),
       "Accounts balance errors",
       Code.INVALID_ARGUMENT
     )
 
-    sender.wavesBalance(firstAddress).available shouldBe firstBalance
-    sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
+    sender.dccBalance(firstAddress).available shouldBe firstBalance
+    sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
   }
 
   test("not able to broadcast invalid set script transaction") {
-    val firstBalance    = sender.wavesBalance(firstAddress).available
-    val firstEffBalance = sender.wavesBalance(firstAddress).effective
+    val firstBalance    = sender.dccBalance(firstAddress).available
+    val firstEffBalance = sender.dccBalance(firstAddress).effective
 
     assertGrpcError(
       sender.setAssetScript(firstAcc, assetWScript, Right(Some(script)), setAssetScriptFee, timestamp = System.currentTimeMillis() + 1.day.toMillis),
@@ -131,8 +131,8 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
     )
 
     sender.waitForHeight(sender.height + 1)
-    sender.wavesBalance(firstAddress).available shouldBe firstBalance
-    sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
+    sender.dccBalance(firstAddress).available shouldBe firstBalance
+    sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
   }
 
   test("try to make SetAssetScript tx on script that deprecates SetAssetScript") {
@@ -172,8 +172,8 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
       .id()
       .toString
 
-    val balance    = sender.wavesBalance(thirdAddress).available
-    val effBalance = sender.wavesBalance(thirdAddress).effective
+    val balance    = sender.dccBalance(thirdAddress).available
+    val effBalance = sender.dccBalance(thirdAddress).effective
 
     assertGrpcError(
       sender.setAssetScript(thirdAcc, assetV1, Right(Some(script)), setAssetScriptFee),
@@ -181,8 +181,8 @@ class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
       Code.INVALID_ARGUMENT
     )
 
-    sender.wavesBalance(thirdAddress).available shouldBe balance
-    sender.wavesBalance(thirdAddress).effective shouldBe effBalance
+    sender.dccBalance(thirdAddress).available shouldBe balance
+    sender.dccBalance(thirdAddress).effective shouldBe effBalance
 
   }
 

@@ -7,7 +7,7 @@ import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.issue
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.{TransactionType, TxHelpers}
@@ -16,7 +16,7 @@ class OverflowTest extends PropSpec with WithDomain {
   import DomainPresets.*
 
   private val transferFee     = FeeConstants(TransactionType.Transfer) * FeeUnit
-  private val massTransferFee = 0.002.waves
+  private val massTransferFee = 0.002.dcc
 
   private def numPairs(fee: Long) =
     Seq(
@@ -33,7 +33,7 @@ class OverflowTest extends PropSpec with WithDomain {
     numPairs(transferFee).foreach { case (recipientBalance, transferAmount) =>
       val balances = Seq(AddrWithBalance(sender.toAddress, Long.MaxValue), AddrWithBalance(recipient, recipientBalance))
       withDomain(RideV5, balances) { d =>
-        d.appendBlockE(TxHelpers.transfer(sender, recipient, transferAmount)) should produce("Waves balance sum overflow")
+        d.appendBlockE(TxHelpers.transfer(sender, recipient, transferAmount)) should produce("Dcc balance sum overflow")
       }
     }
   }
@@ -43,7 +43,7 @@ class OverflowTest extends PropSpec with WithDomain {
       val balances = Seq(AddrWithBalance(sender.toAddress, Long.MaxValue), AddrWithBalance(recipient, recipientBalance))
       withDomain(RideV5, balances) { d =>
         d.appendBlockE(TxHelpers.massTransfer(sender, Seq(recipient -> transferAmount), fee = massTransferFee)) should produce(
-          "Waves balance sum overflow"
+          "Dcc balance sum overflow"
         )
       }
     }
@@ -76,8 +76,8 @@ class OverflowTest extends PropSpec with WithDomain {
       val balances = Seq(AddrWithBalance(sender.toAddress, Long.MaxValue), AddrWithBalance(recipient, recipientBalance))
       withDomain(RideV5, balances) { d =>
         d.appendBlock(TxHelpers.setScript(recipientKp, dApp))
-        d.appendBlockE(TxHelpers.invoke(recipient, invoker = sender, payments = Seq(Payment(paymentAmount, Waves)))) should produce(
-          "Waves balance sum overflow"
+        d.appendBlockE(TxHelpers.invoke(recipient, invoker = sender, payments = Seq(Payment(paymentAmount, Dcc)))) should produce(
+          "Dcc balance sum overflow"
         )
       }
     }
@@ -98,7 +98,7 @@ class OverflowTest extends PropSpec with WithDomain {
       val balances = Seq(AddrWithBalance(sender.toAddress, invokerBalance), AddrWithBalance(recipient, Long.MaxValue))
       withDomain(RideV5, balances) { d =>
         d.appendBlock(TxHelpers.setScript(recipientKp, dApp(transferAmount)))
-        d.appendBlockE(TxHelpers.invoke(recipient, invoker = sender)) should produce("Waves balance sum overflow")
+        d.appendBlockE(TxHelpers.invoke(recipient, invoker = sender)) should produce("Dcc balance sum overflow")
       }
     }
   }

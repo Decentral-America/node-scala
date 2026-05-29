@@ -8,7 +8,7 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms.CONST_STRING
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
@@ -75,9 +75,9 @@ class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailur
   test("V4: can't invoke itself with payment") {
     for (
       payment <- List(
-        Seq(InvokeScriptTransaction.Payment(1, Waves)),
+        Seq(InvokeScriptTransaction.Payment(1, Dcc)),
         Seq(InvokeScriptTransaction.Payment(1, asset1)),
-        Seq(InvokeScriptTransaction.Payment(1, Waves), InvokeScriptTransaction.Payment(1, asset1))
+        Seq(InvokeScriptTransaction.Payment(1, Dcc), InvokeScriptTransaction.Payment(1, asset1))
       )
     ) {
       assertApiError(
@@ -110,7 +110,7 @@ class InvokeSelfPaymentSuite extends BaseTransactionSuite with CancelAfterFailur
     sender.invokeScript(
       dAppV3,
       dAppV3Address,
-      payment = Seq(InvokeScriptTransaction.Payment(1, Waves)),
+      payment = Seq(InvokeScriptTransaction.Payment(1, Dcc)),
       fee = smartMinFee + smartFee,
       waitForTx = true
     )

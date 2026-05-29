@@ -39,7 +39,7 @@ trait EthHelpers {
   implicit class TxHelpersEthExt(helpers: TxHelpers.type) {
     import com.decentralchain.transaction.utils.EthConverters.*
     def defaultEthSigner: Bip32ECKeyPair = helpers.defaultSigner.toEthKeyPair
-    def defaultEthAddress: Address       = helpers.defaultSigner.toEthWavesAddress
+    def defaultEthAddress: Address       = helpers.defaultSigner.toEthDccAddress
   }
 
   implicit class EthTransactionTestExt(tx: EthereumTransaction) {

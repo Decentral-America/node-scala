@@ -133,7 +133,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
                 aliceAccountData = RemoteData.Absence,
                 transaction = RemoteData.Absence,
                 assetInfo = RemoteData.Absence,
-                aliceWavesBalance = RemoteData.Cached(0L),
+                aliceDccBalance = RemoteData.Cached(0L),
                 bobAssetBalance = RemoteData.Cached(0L),
                 aliceLeaseBalance = RemoteData.Cached(LeaseBalance(0L, 0L))
               )
@@ -172,7 +172,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
                 aliceAccountData = RemoteData.Absence,
                 transaction = RemoteData.Absence,
                 assetInfo = RemoteData.Absence,
-                aliceWavesBalance = RemoteData.Cached(0L),
+                aliceDccBalance = RemoteData.Cached(0L),
                 bobAssetBalance = RemoteData.Cached(0L),
                 aliceLeaseBalance = RemoteData.Cached(LeaseBalance(0L, 0L))
               )
@@ -338,7 +338,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
       Seq(
         StateUpdate.BalanceUpdate(
           address = aliceAddr.toByteString,
-          amountAfter = Amount(toPBAssetId(Asset.Waves), 1L).some
+          amountAfter = Amount(toPBAssetId(Asset.Dcc), 1L).some
         ),
         StateUpdate.BalanceUpdate(
           address = bobAddr.toByteString,
@@ -366,12 +366,12 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
 
   private val pbTransactionIds = Seq(transactionId.toByteString)
   private val pbTransactions = Seq(
-    SignedTransaction.defaultInstance.withWavesTransaction(
+    SignedTransaction.defaultInstance.withDccTransaction(
       Transaction.defaultInstance
         .withCreateAlias(CreateAliasTransactionData.defaultInstance.withAlias("foo-alias"))
         .withSenderPublicKey(alice.publicKey.toByteString)
     ),
-    SignedTransaction.defaultInstance.withWavesTransaction(
+    SignedTransaction.defaultInstance.withDccTransaction(
       Transaction.defaultInstance
         .withSenderPublicKey(alice.publicKey.toByteString)
         .withSetScript(SetScriptTransactionData.defaultInstance)
@@ -498,7 +498,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
     heightKey                                                  -> 3,
     MemCacheKey.Alias(Alias.create("foo-alias").explicitGet()) -> 4,
     MemCacheKey.Asset(asset)                                   -> 5,
-    MemCacheKey.AccountBalance(aliceAddr, Asset.Waves)         -> 6,
+    MemCacheKey.AccountBalance(aliceAddr, Asset.Dcc)         -> 6,
     MemCacheKey.AccountBalance(bobAddr, asset)                 -> 7,
     MemCacheKey.AccountLeaseBalance(aliceAddr)                 -> 8,
     accountScriptKey                                           -> 9
@@ -561,7 +561,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
       aliceAccountData = RemoteData.Absence,
       transaction = RemoteData.Absence,
       assetInfo = RemoteData.Absence,
-      aliceWavesBalance = RemoteData.Cached(0L),
+      aliceDccBalance = RemoteData.Cached(0L),
       bobAssetBalance = RemoteData.Cached(0L),
       aliceLeaseBalance = RemoteData.Cached(LeaseBalance(0L, 0L)),
       aliceAccountScript = RemoteData.Absence
@@ -571,7 +571,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
       aliceAccountData = RemoteData.Cached(IntegerDataEntry("x", 1L)),
       transaction = RemoteData.Cached(Height(1)),
       assetInfo = RemoteData.Cached(WeighedAssetDescription(0, assetDescription)),
-      aliceWavesBalance = RemoteData.Cached(1L),
+      aliceDccBalance = RemoteData.Cached(1L),
       bobAssetBalance = RemoteData.Cached(2L),
       aliceLeaseBalance = RemoteData.Cached(LeaseBalance(4L, 3L)),
       aliceAccountScript = RemoteData.Cached(
@@ -591,7 +591,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
         aliceAccountData: RemoteData[DataEntry[?]] = RemoteData.Unknown,
         transaction: RemoteData[state.Height] = RemoteData.Unknown,
         assetInfo: RemoteData[WeighedAssetDescription] = RemoteData.Unknown,
-        aliceWavesBalance: RemoteData[Long] = RemoteData.Unknown,
+        aliceDccBalance: RemoteData[Long] = RemoteData.Unknown,
         bobAssetBalance: RemoteData[Long] = RemoteData.Unknown,
         aliceLeaseBalance: RemoteData[LeaseBalance] = RemoteData.Unknown,
         aliceAccountScript: RemoteData[WeighedAccountScriptInfo] = RemoteData.Unknown
@@ -608,8 +608,8 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
         get(MemCacheKey.Asset(asset)) shouldBe assetInfo
       }
 
-      withClue("waves balance") {
-        get(MemCacheKey.AccountBalance(aliceAddr, Asset.Waves)) shouldBe aliceWavesBalance
+      withClue("dcc balance") {
+        get(MemCacheKey.AccountBalance(aliceAddr, Asset.Dcc)) shouldBe aliceDccBalance
       }
 
       withClue("issued asset balance") {

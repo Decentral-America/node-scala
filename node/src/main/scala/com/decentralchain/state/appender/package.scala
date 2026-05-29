@@ -111,7 +111,7 @@ package object appender {
           )
           .map {
             case res @ Applied(discardedDiffs = discardedDiffs) =>
-              // TODO: move UTX cleanup from appender
+              // NOTE: UTX cleanup is done in appender — could be refactored to a dedicated service
               if (block.transactionData.nonEmpty) {
                 utx.removeAll(block.transactionData)
                 log.trace(

@@ -64,7 +64,7 @@ object CommonAccountsApi {
     }
 
     override def balanceDetails(address: Address): Either[String, BalanceDetails] = {
-      val portfolio = blockchain.wavesPortfolio(address)
+      val portfolio = blockchain.dccPortfolio(address)
       val isBanned  = blockchain.hasBannedEffectiveBalance(address)
       portfolio
         .effectiveBalance(isBanned)

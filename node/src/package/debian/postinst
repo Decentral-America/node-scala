@@ -1,7 +1,7 @@
 ${{header}}
 ${{loader-functions}}
 
-config_file=/etc/${{app_name}}/waves.conf
+config_file=/etc/${{app_name}}/dcc.conf
 
 if [ "$1" = configure ]; then
     # make sure the user exists
@@ -34,7 +34,7 @@ if [ "$1" = configure ]; then
 
     if [ ! -f "$config_file" ]; then
         echo Creating default config file ...
-        cp /usr/share/${{app_name}}/doc/waves.conf.sample "$config_file"
+        cp /usr/share/${{app_name}}/doc/dcc.conf.sample "$config_file"
         chmod 600 "$config_file"
         chown ${{app_name}}:${{app_name}} "$config_file"
     fi

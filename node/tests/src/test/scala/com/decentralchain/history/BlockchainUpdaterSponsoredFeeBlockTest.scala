@@ -8,7 +8,7 @@ import com.decentralchain.settings.{BlockchainSettings, DCCSettings}
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.{IssueTransaction, SponsorFeeTransaction}
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.{Asset, GenesisTransaction}
@@ -26,22 +26,22 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
   val sponsorPreconditions: Gen[Setup] = for {
 
     master                      <- accountGen
-    transferAssetWavesFee       <- smallFeeGen
+    transferAssetDccFee       <- smallFeeGen
     _                           <- accountGen
     alice                       <- accountGen
     bob                         <- accountGen
     (feeAsset, sponsorTx, _, _) <- sponsorFeeCancelSponsorFeeGen(alice)
-    wavesFee                    = Sponsorship.toWaves(sponsorTx.minSponsoredAssetFee.get.value, sponsorTx.minSponsoredAssetFee.get.value)
+    dccFee                    = Sponsorship.toDcc(sponsorTx.minSponsoredAssetFee.get.value, sponsorTx.minSponsoredAssetFee.get.value)
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
     masterToAlice: TransferTransaction = TransferTransaction
       .selfSigned(
         1.toByte,
         master,
         alice.toAddress,
-        Waves,
-        feeAsset.fee.value + sponsorTx.fee.value + transferAssetWavesFee + wavesFee,
-        Waves,
-        transferAssetWavesFee,
+        Dcc,
+        feeAsset.fee.value + sponsorTx.fee.value + transferAssetDccFee + dccFee,
+        Dcc,
+        transferAssetDccFee,
         ByteStr.empty,
         ts + 1
       )
@@ -53,8 +53,8 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
         bob.toAddress,
         Asset.fromCompatId(Some(feeAsset.id())),
         feeAsset.quantity.value / 2,
-        Waves,
-        transferAssetWavesFee,
+        Dcc,
+        transferAssetDccFee,
         ByteStr.empty,
         ts + 2
       )
@@ -102,7 +102,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
 
   val SponsoredActivatedAt0DCCSettings: DCCSettings = settings.copy(blockchainSettings = SponsoredFeeActivatedAt0BlockchainSettings)
 
-  property("not enough waves to sponsor sponsored tx") {
+  property("not enough dcc to sponsor sponsored tx") {
     scenario(sponsorPreconditions, SponsoredActivatedAt0DCCSettings) {
       case (d, (genesis, masterToAlice, feeAsset, sponsor, aliceToBob, bobToMaster, bobToMaster2)) =>
         d.appendBlock(genesis)
@@ -111,7 +111,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
         d.appendMicroBlock(feeAsset)
         d.appendMicroBlock(sponsor)
         d.appendBlock(aliceToBob, bobToMaster)
-        d.appendBlockE(bobToMaster2) should produce("negative waves balance" /*"unavailable funds"*/ )
+        d.appendBlockE(bobToMaster2) should produce("negative dcc balance" /*"unavailable funds"*/ )
     }
   }
 
@@ -121,7 +121,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
         val (block0, microBlocks) = chainBaseAndMicro(randomSig, genesis, Seq(Seq(masterToAlice, feeAsset, sponsor), Seq(aliceToBob, bobToMaster)))
 
         val block0TotalFee = block0.transactionData
-          .filter(_.feeAssetId == Waves)
+          .filter(_.feeAssetId == Dcc)
           .map(_.fee)
           .sum
 
@@ -134,12 +134,12 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
           domain.blockchainUpdater.processMicroBlock(microBlocks(0), None) should beRight
           domain.blockchainUpdater.processMicroBlock(microBlocks(1), None) should beRight
 
-          val microBlocksWavesFee = microBlocks
+          val microBlocksDccFee = microBlocks
             .flatMap(_.transactionData)
-            .map(tx => Sponsorship.calcWavesFeeAmount(tx, ai => domain.blockchainUpdater.assetDescription(ai).map(_.sponsorship)))
+            .map(tx => Sponsorship.calcDccFeeAmount(tx, ai => domain.blockchainUpdater.assetDescription(ai).map(_.sponsorship)))
             .sum
 
-          domain.blockchainUpdater.bestLiquidSnapshotAndFees.map(_._3) should contain(block0TotalFee + microBlocksWavesFee)
+          domain.blockchainUpdater.bestLiquidSnapshotAndFees.map(_._3) should contain(block0TotalFee + microBlocksDccFee)
         }
     }
   }

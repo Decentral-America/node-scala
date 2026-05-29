@@ -211,7 +211,7 @@ object KvPairs {
     AsBytes.byteArrayAsBytes.fixed(AssetIdLength).toByteStr.transform(Asset.IssuedAsset(_), _.id)
 
   implicit val assetAsBytes: AsBytes[Asset] =
-    AsBytes[Option[Asset.IssuedAsset]].transform(_.getOrElse(Asset.Waves), x => x.fold(none[Asset.IssuedAsset])(_.some))
+    AsBytes[Option[Asset.IssuedAsset]].transform(_.getOrElse(Asset.Dcc), x => x.fold(none[Asset.IssuedAsset])(_.some))
 
   implicit val leaseBalanceAsBytes: AsBytes[LeaseBalance] = AsBytes[(Long, Long)].transform(Function.tupled(LeaseBalance.apply), x => (x.in, x.out))
 
