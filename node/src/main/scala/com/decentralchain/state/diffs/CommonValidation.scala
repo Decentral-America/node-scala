@@ -14,7 +14,7 @@ import com.decentralchain.lang.script.{ContractScript, Script}
 import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.invoke.InvokeDiffsCommon
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
@@ -39,31 +39,31 @@ object CommonValidation {
       ): Either[ValidationError, T] = {
         val amountPortfolio = assetId match {
           case aid @ IssuedAsset(_) => Portfolio.build(aid -> -amount)
-          case Waves                => Portfolio(-amount)
+          case Dcc                => Portfolio(-amount)
         }
         val feePortfolio = feeAssetId match {
           case aid @ IssuedAsset(_) => Portfolio.build(aid -> -feeAmount)
-          case Waves                => Portfolio(-feeAmount)
+          case Dcc                => Portfolio(-feeAmount)
         }
 
         val checkedTx = for {
           _ <- assetId match {
             case IssuedAsset(id) => InvokeDiffsCommon.checkAsset(blockchain, id)
-            case Waves           => Right(())
+            case Dcc           => Right(())
           }
           spendings <- amountPortfolio.combine(feePortfolio)
-          oldWavesBalance = blockchain.balance(sender, Waves)
+          oldDccBalance = blockchain.balance(sender, Dcc)
 
-          newWavesBalance     <- safeSum(oldWavesBalance, spendings.balance, "Spendings")
-          feeUncheckedBalance <- safeSum(oldWavesBalance, amountPortfolio.balance, "Transfer amount")
+          newDccBalance     <- safeSum(oldDccBalance, spendings.balance, "Spendings")
+          feeUncheckedBalance <- safeSum(oldDccBalance, amountPortfolio.balance, "Transfer amount")
 
           overdraftFilter = allowFeeOverdraft && feeUncheckedBalance >= 0
           _ <- Either.cond(
-            overdraftFilter || newWavesBalance >= 0,
+            overdraftFilter || newDccBalance >= 0,
             (),
             "Attempt to transfer unavailable funds: Transaction application leads to " +
-              s"negative waves balance to (at least) temporary negative state, current balance equals $oldWavesBalance, " +
-              s"spends equals ${spendings.balance}, result is $newWavesBalance"
+              s"negative dcc balance to (at least) temporary negative state, current balance equals $oldDccBalance, " +
+              s"spends equals ${spendings.balance}, result is $newDccBalance"
           )
           _ <- spendings.assets
             .collectFirst {
@@ -80,16 +80,16 @@ object CommonValidation {
       }
 
       tx match {
-        case ptx: PaymentTransaction if blockchain.balance(ptx.sender.toAddress, Waves) < (ptx.amount.value + ptx.fee.value) =>
+        case ptx: PaymentTransaction if blockchain.balance(ptx.sender.toAddress, Dcc) < (ptx.amount.value + ptx.fee.value) =>
           Left(
             GenericError(
               "Attempt to pay unavailable funds: balance " +
-                s"${blockchain.balance(ptx.sender.toAddress, Waves)} is less than ${ptx.amount.value + ptx.fee.value}"
+                s"${blockchain.balance(ptx.sender.toAddress, Dcc)} is less than ${ptx.amount.value + ptx.fee.value}"
             )
           )
         case ttx: TransferTransaction => checkTransfer(ttx.sender.toAddress, ttx.assetId, ttx.amount.value, ttx.feeAssetId, ttx.fee.value)
         case mtx: MassTransferTransaction =>
-          checkTransfer(mtx.sender.toAddress, mtx.assetId, mtx.transfers.map(_.amount.value).sum, Waves, mtx.fee.value)
+          checkTransfer(mtx.sender.toAddress, mtx.assetId, mtx.transfers.map(_.amount.value).sum, Dcc, mtx.fee.value)
         case citx: InvokeScriptTransaction =>
           val foldPayments: Iterable[Payment] => Iterable[Payment] =
             if (blockchain.useCorrectPaymentCheck)

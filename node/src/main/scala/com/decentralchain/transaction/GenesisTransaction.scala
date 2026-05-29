@@ -5,7 +5,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.serialization.impl.GenesisTxSerializer
 import com.decentralchain.transaction.validation.{TxConstraints, TxValidator}
 import monix.eval.Coeval
@@ -15,7 +15,7 @@ import scala.util.Try
 
 case class GenesisTransaction(recipient: Address, amount: TxNonNegativeAmount, timestamp: TxTimestamp, signature: ByteStr, chainId: Byte)
     extends Transaction(TransactionType.Genesis) {
-  override val assetFee: (Asset, Long) = (Waves, 0)
+  override val assetFee: (Asset, Long) = (Dcc, 0)
   override val id: Coeval[ByteStr]     = Coeval.evalOnce(signature)
 
   val bodyBytes: Coeval[Array[Byte]]      = Coeval.evalOnce(GenesisTxSerializer.toBytes(this))
@@ -47,7 +47,7 @@ object GenesisTransaction extends TransactionParser {
     val signature = ByteStr(GenesisTransaction.generateSignature(recipient, amount, timestamp))
 
     for {
-      amount <- TxNonNegativeAmount(amount)(TxValidationError.NegativeAmount(amount, "waves"))
+      amount <- TxNonNegativeAmount(amount)(TxValidationError.NegativeAmount(amount, "dcc"))
       tx     <- GenesisTransaction(recipient, amount, timestamp, signature, recipient.chainId).validatedEither
     } yield tx
   }

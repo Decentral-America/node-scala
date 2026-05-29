@@ -17,7 +17,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.state.diffs.smart.predef.{assertProvenPart, provenPart}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.{IssueTransaction, SetAssetScriptTransaction}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -119,15 +119,15 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
     val emptyScript = Some(ExprScript(V4, Terms.TRUE).explicitGet())
     val issues =
       (1 to paymentCount).map(_ =>
-        IssueTransaction.selfSigned(2.toByte, dApp, "Asset", "", ENOUGH_AMT, 8, true, emptyScript, 1.waves, ts).explicitGet()
+        IssueTransaction.selfSigned(2.toByte, dApp, "Asset", "", ENOUGH_AMT, 8, true, emptyScript, 1.dcc, ts).explicitGet()
       )
     val assets = issues.map(i => IssuedAsset(i.id()))
     val setAssetScripts = assets.map { asset =>
       val resultScript = assetScript(dummyEthInvoke, dApp.toAddress, assets, asset, assetScriptVersion)
-      SetAssetScriptTransaction.selfSigned(1.toByte, dApp, asset, Some(resultScript), 1.waves, ts).explicitGet()
+      SetAssetScriptTransaction.selfSigned(1.toByte, dApp, asset, Some(resultScript), 1.dcc, ts).explicitGet()
     }
     val assetTransfers =
-      assets.map(a => TransferTransaction.selfSigned(2.toByte, dApp, invoker, a, ENOUGH_AMT, Waves, fee, ByteStr.empty, ts).explicitGet())
+      assets.map(a => TransferTransaction.selfSigned(2.toByte, dApp, invoker, a, ENOUGH_AMT, Dcc, fee, ByteStr.empty, ts).explicitGet())
 
     val dAppScript  = makeDAppScript(assets, dApp2.toAddress, dAppVersion, syncCall)
     val dAppScript2 = makeDAppScript2(if (dAppVersion >= V5) dAppVersion else V5, dApp2, dApp, invoker, invokerPk)
@@ -162,8 +162,8 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
         d.liquidSnapshot.balances((dApp, asset)) shouldBe d.rocksDBWriter.balance(dApp, asset) + paymentAmount
         d.liquidSnapshot.balances((ethSender, asset)) shouldBe d.rocksDBWriter.balance(ethSender, asset) - paymentAmount
       }
-      d.liquidSnapshot.balances.get((dApp, Waves)) shouldBe None
-      d.liquidSnapshot.balances((ethSender, Waves)) shouldBe d.rocksDBWriter.balance(ethSender) - ethInvoke.underlying.getGasPrice.longValue()
+      d.liquidSnapshot.balances.get((dApp, Dcc)) shouldBe None
+      d.liquidSnapshot.balances((ethSender, Dcc)) shouldBe d.rocksDBWriter.balance(ethSender) - ethInvoke.underlying.getGasPrice.longValue()
 
       inside(d.liquidSnapshot.scriptResults.toSeq) { case Seq((_, call1)) =>
         if (syncCall)

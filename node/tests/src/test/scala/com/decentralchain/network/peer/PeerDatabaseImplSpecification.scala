@@ -18,24 +18,24 @@ class PeerDatabaseImplSpecification extends FreeSpec {
   val address2 = new InetSocketAddress(host2, 2)
 
   private val config1 = ConfigFactory
-    .parseString("""waves.network {
+    .parseString("""dcc.network {
                    |  file = null
                    |  known-peers = []
                    |  peers-data-residence-time: 2s
                    |}""".stripMargin)
     .withFallback(ConfigFactory.load())
     .resolve()
-  private val settings1 = ConfigSource.fromConfig(config1).at("waves.network").loadOrThrow[NetworkSettings]
+  private val settings1 = ConfigSource.fromConfig(config1).at("dcc.network").loadOrThrow[NetworkSettings]
 
   private val config2 = ConfigFactory
-    .parseString("""waves.network {
+    .parseString("""dcc.network {
                    |  file = null
                    |  known-peers = []
                    |  peers-data-residence-time = 10s
                    |}""".stripMargin)
     .withFallback(ConfigFactory.load())
     .resolve()
-  private val settings2 = ConfigSource.fromConfig(config2).at("waves.network").loadOrThrow[NetworkSettings]
+  private val settings2 = ConfigSource.fromConfig(config2).at("dcc.network").loadOrThrow[NetworkSettings]
 
   private var ts                 = 0L
   private def sleepLong(): Unit  = { ts += 2200.millis.toNanos }
@@ -128,7 +128,7 @@ class PeerDatabaseImplSpecification extends FreeSpec {
 
     "should not add nodes to the blacklist if blacklisting is disabled" in {
       val config = ConfigFactory
-        .parseString(s"""waves.network {
+        .parseString(s"""dcc.network {
                         |  file = null
                         |  known-peers = []
                         |  peers-data-residence-time = 100s
@@ -136,7 +136,7 @@ class PeerDatabaseImplSpecification extends FreeSpec {
                         |}""".stripMargin)
         .withFallback(ConfigFactory.load())
         .resolve()
-      val settings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+      val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
       val database = new PeerDatabaseImpl(settings)
       database.blacklist(address1.getAddress, "I don't like it")
 

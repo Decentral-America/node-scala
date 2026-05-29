@@ -24,7 +24,7 @@ final case class CommitToGenerationTransaction(
 ) extends Transaction(TransactionType.CommitToGeneration)
     with ProvenTransaction
     with Versioned.ConstV1
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V1 {
   override val bodyBytes: Coeval[Array[Byte]] = Coeval.evalOnce(PBTransactionSerializer.bodyBytes(this))
@@ -58,20 +58,20 @@ object CommitToGenerationTransaction {
       endorserPublicKey: BlsPublicKey,
       generationPeriodStart: Height,
       timestamp: TxTimestamp,
-      feeInWaves: Long,
+      feeInDcc: Long,
       commitmentSignature: BlsSignature,
       proofs: Proofs,
       chainId: Byte
   ): Either[ValidationError, CommitToGenerationTransaction] =
     for {
-      feeInWaves <- TxPositiveAmount(feeInWaves)(TxValidationError.InsufficientFee)
+      feeInDcc <- TxPositiveAmount(feeInDcc)(TxValidationError.InsufficientFee)
       tx <- CommitToGenerationTransaction(
         version,
         sender,
         endorserPublicKey,
         generationPeriodStart,
         timestamp,
-        feeInWaves,
+        feeInDcc,
         commitmentSignature,
         proofs,
         chainId
@@ -84,10 +84,10 @@ object CommitToGenerationTransaction {
       endorserPublicKey: BlsPublicKey,
       generationPeriodStart: Height,
       timestamp: TxTimestamp,
-      feeInWaves: Long,
+      feeInDcc: Long,
       commitmentSignature: BlsSignature,
       chainId: Byte = AddressScheme.current.chainId
   ): Either[ValidationError, CommitToGenerationTransaction] =
-    create(version, sender.publicKey, endorserPublicKey, generationPeriodStart, timestamp, feeInWaves, commitmentSignature, Proofs.empty, chainId)
+    create(version, sender.publicKey, endorserPublicKey, generationPeriodStart, timestamp, feeInDcc, commitmentSignature, Proofs.empty, chainId)
       .map(signed(_, sender.privateKey))
 }

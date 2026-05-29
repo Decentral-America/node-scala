@@ -39,7 +39,7 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
       contractAddress,
       func = Some("write"),
       args = List(CONST_LONG(data)),
-      fee = 0.005.waves
+      fee = 0.005.dcc
     )
 
     val js = invokeTx._2
@@ -112,7 +112,7 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
     val invokeTx = sender.invokeScript(
       caller,
       contractAddress,
-      func = Some("writeAndSendWaves"),
+      func = Some("writeAndSendDcc"),
       args = List(CONST_LONG(7), CONST_STRING(callerAddress).explicitGet(), CONST_LONG(10)),
       fee = 25,
       feeAssetId = Some(assetSponsoredByRecipient),
@@ -152,7 +152,7 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
     val tx = nodes.head.transfer(
       caller,
       recipientAddress,
-      1.waves,
+      1.dcc,
       waitForTx = true
     )
 
@@ -205,14 +205,14 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
       ._1
       .bytes()
       .base64
-    sender.setScript(contract, Some(script), setScriptFee + 0.4.waves, waitForTx = true)
+    sender.setScript(contract, Some(script), setScriptFee + 0.4.dcc, waitForTx = true)
 
     val invokeTx1 = sender.invokeScript(
       caller,
       contractAddress,
       func = Some("order1"),
       args = List.empty,
-      fee = 10.waves,
+      fee = 10.dcc,
       waitForTx = true
     )
 
@@ -241,7 +241,7 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
       contractAddress,
       func = Some("order2"),
       args = List.empty,
-      fee = 10.waves,
+      fee = 10.dcc,
       waitForTx = true
     )
 
@@ -282,17 +282,17 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
     simpleAsset = sender.issue(contract, "simple", "", 9000, 0).id
     assetSponsoredByDApp = sender.issue(contract, "DApp asset", "", 9000, 0).id
     assetSponsoredByRecipient = sender.issue(recipient, "Recipient asset", "", 9000, 0, waitForTx = true).id
-    sender.massTransfer(contract, List(Transfer(callerAddress, 3000), Transfer(recipientAddress, 3000)), 0.01.waves, assetId = Some(simpleAsset))
+    sender.massTransfer(contract, List(Transfer(callerAddress, 3000), Transfer(recipientAddress, 3000)), 0.01.dcc, assetId = Some(simpleAsset))
     sender.massTransfer(
       contract,
       List(Transfer(callerAddress, 3000), Transfer(recipientAddress, 3000)),
-      0.01.waves,
+      0.01.dcc,
       assetId = Some(assetSponsoredByDApp)
     )
     sender.massTransfer(
       recipient,
       List(Transfer(callerAddress, 3000), Transfer(contractAddress, 3000)),
-      0.01.waves,
+      0.01.dcc,
       assetId = Some(assetSponsoredByRecipient)
     )
     sender.sponsorAsset(contract, assetSponsoredByDApp, 1, fee = sponsorReducedFee + smartFee)
@@ -316,7 +316,7 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
           |}
           |
           |@Callable(i)
-          |func writeAndSendWaves(value: Int, recipient: String, amount: Int) = {
+          |func writeAndSendDcc(value: Int, recipient: String, amount: Int) = {
           |    ScriptResult(
           |        WriteSet([DataEntry("result", value)]),
           |        TransferSet([ScriptTransfer(Address(recipient.fromBase58String()), amount, unit)])

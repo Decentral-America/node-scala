@@ -11,7 +11,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.utils.addressTransactions
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.{NG, RideV3, DCCSettingsOps}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.lease.LeaseTransaction
@@ -61,17 +61,17 @@ class CreateAliasTransactionDiffTest extends PropSpec with WithDomain {
     } yield (genesis, aliasTx, sameAliasTx, sameAliasOtherSenderTx, anotherAliasTx)
   }
 
-  property("can create and resolve aliases preserving waves invariant") {
+  property("can create and resolve aliases preserving dcc invariant") {
     preconditionsAndAliasCreations.foreach { case (gen, aliasTx, _, _, anotherAliasTx) =>
       withDomain(RideV3) { d =>
         d.appendBlock(gen)
         d.appendBlock(aliasTx)
         d.appendBlock(anotherAliasTx)
         d.liquidSnapshot.balances.collect {
-          case ((`defaultAddress`, Waves), balance) =>
+          case ((`defaultAddress`, Dcc), balance) =>
             val carryFee = (anotherAliasTx.fee.value - aliasTx.fee.value) / 5 * 3
             balance - d.rocksDBWriter.balance(defaultAddress) + carryFee
-          case ((address, Waves), balance) =>
+          case ((address, Dcc), balance) =>
             balance - d.rocksDBWriter.balance(address)
         }.sum shouldBe 0
         val senderAcc = anotherAliasTx.sender.toAddress
@@ -146,7 +146,7 @@ class CreateAliasTransactionDiffTest extends PropSpec with WithDomain {
     preconditionsTransferLease.foreach { case (genesis, issue1, issue2, aliasTx, _, lease) =>
       assertDiffEi(Seq(TestBlock.create(genesis :+ issue1 :+ issue2 :+ aliasTx)), TestBlock.create(Seq(lease))) { blockDiffEi =>
         if (lease.sender.toAddress != aliasTx.sender.toAddress) {
-          blockDiffEi.explicitGet().balances.get((aliasTx.sender.toAddress, Waves)) shouldBe None
+          blockDiffEi.explicitGet().balances.get((aliasTx.sender.toAddress, Dcc)) shouldBe None
           blockDiffEi.explicitGet().leaseBalances(aliasTx.sender.toAddress) shouldBe LeaseBalance(lease.amount.value, 0)
         } else {
           blockDiffEi should produce("Cannot lease to self")

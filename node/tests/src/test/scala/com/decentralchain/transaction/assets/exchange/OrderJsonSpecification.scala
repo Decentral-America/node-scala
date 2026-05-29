@@ -5,7 +5,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.exchange.OrderJson.*
 import com.decentralchain.transaction.smart.Verifier
 import com.decentralchain.transaction.Proofs
@@ -267,8 +267,8 @@ class OrderJsonSpecification extends PropSpec with JsonMatchers with EthHelpers 
           case e: JsError =>
             fail("Error: " + JsError.toJson(e).toString())
           case JsSuccess(o, _) =>
-            o.assetPair.amountAsset shouldBe Waves
-            o.assetPair.priceAsset shouldBe Waves
+            o.assetPair.amountAsset shouldBe Dcc
+            o.assetPair.priceAsset shouldBe Dcc
         }
       }
     }

@@ -12,7 +12,7 @@ object EthConverters {
       case pkkp: PKKeyPair  => Bip32ECKeyPair.create(pkkp.privateKey.arr, Array.emptyByteArray)
     }
     def toEthAddress: String       = toEthKeyPair.toEthAddress
-    def toEthWavesAddress: Address = toEthKeyPair.toWavesAddress
+    def toEthDccAddress: Address = toEthKeyPair.toDccAddress
   }
 
   implicit class EthereumAddressExt(private val address: Address) extends AnyVal {
@@ -20,7 +20,7 @@ object EthConverters {
   }
 
   implicit class EthereumECKeyPairExt(private val kp: ECKeyPair) extends AnyVal {
-    def toWavesAddress: Address = Address(EthEncoding.toBytes(toEthAddress))
+    def toDccAddress: Address = Address(EthEncoding.toBytes(toEthAddress))
     def toEthAddress: String    = Keys.getAddress(kp)
   }
 

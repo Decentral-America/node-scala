@@ -141,7 +141,7 @@ class RewardApiRouteSpec extends RouteSpec("/blockchain") with WithDomain {
     s"""
        |{
        |  "height" : 1,
-       |  "totalWavesAmount" : ${d.blockchain.settings.genesisSettings.initialBalance + d.blockchain.settings.rewardsSettings.initial},
+       |  "totalDccAmount" : ${d.blockchain.settings.genesisSettings.initialBalance + d.blockchain.settings.rewardsSettings.initial},
        |  "currentReward" : ${d.blockchain.settings.rewardsSettings.initial},
        |  "minIncrement" : ${d.blockchain.settings.rewardsSettings.minIncrement},
        |  "term" : ${d.blockchain.settings.rewardsSettings.term},
@@ -192,7 +192,7 @@ class RewardApiRouteSpec extends RouteSpec("/blockchain") with WithDomain {
         )
       )
 
-    withDomain(settings, Seq(AddrWithBalance(miner.toAddress, 100_000.waves))) { d =>
+    withDomain(settings, Seq(AddrWithBalance(miner.toAddress, 100_000.dcc))) { d =>
       val route = new RewardApiRoute(d.blockchain).route
 
       def checkRewardAndShares(height: Int, expectedReward: Long)(implicit
@@ -213,24 +213,24 @@ class RewardApiRouteSpec extends RouteSpec("/blockchain") with WithDomain {
       (1 to 3).foreach(_ => d.appendKeyBlock(miner))
       d.blockchain.height shouldBe 4
       (1 to 3).foreach { h =>
-        checkRewardAndShares(h + 1, 6.waves)
+        checkRewardAndShares(h + 1, 6.dcc)
       }
 
       // reward boost activation
       (1 to 5).foreach(_ => d.appendKeyBlock(miner))
       (1 to 5).foreach { h =>
-        checkRewardAndShares(h + 4, 60.waves)
+        checkRewardAndShares(h + 4, 60.dcc)
       }
 
       // cease XTN buyback
       (1 to 5).foreach(_ => d.appendKeyBlock(miner))
       (1 to 5).foreach { h =>
-        checkRewardAndShares(h + 9, 60.waves)
+        checkRewardAndShares(h + 9, 60.dcc)
       }
 
       d.appendKeyBlock(miner)
       d.blockchain.height shouldBe 15
-      checkRewardAndShares(15, 6.waves)
+      checkRewardAndShares(15, 6.dcc)
     }
   }
 }

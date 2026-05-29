@@ -8,7 +8,7 @@ import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.directives.{DirectiveDictionary, DirectiveSet}
 import com.decentralchain.lang.v1.compiler.{ExpressionCompiler, *}
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.Expressions.EXPR
 import com.decentralchain.lang.v1.parser.Parser
@@ -18,7 +18,7 @@ import com.decentralchain.lang.{Global, utils}
 import com.decentralchain.state.diffs.smart.predef.{chainId, scriptWithAllV1Functions}
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.DCCEnvironment
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{DataTransaction, Proofs, TxPositiveAmount}
@@ -42,7 +42,7 @@ class FunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
         Seq(
           PureContext.build(version, useNewPowPrecision = true).withEnvironment[Environment],
           CryptoContext.build(Global, version, fixEcrecover = true).withEnvironment[Environment],
-          WavesContext.build(
+          DccContext.build(
             Global,
             DirectiveSet(version, Account, Expression).explicitGet(),
             fixBigScriptField = true
@@ -73,9 +73,9 @@ class FunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
       2.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
       recipient,
-      Waves,
+      Dcc,
       TxPositiveAmount.unsafeFrom(100000000),
-      Waves,
+      Dcc,
       TxPositiveAmount.unsafeFrom(100000000),
       ByteStr.decodeBase58("4t2Xazb2SX").get,
       1526641218066L,

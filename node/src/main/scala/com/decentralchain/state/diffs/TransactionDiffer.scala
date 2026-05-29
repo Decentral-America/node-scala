@@ -17,7 +17,7 @@ import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.invoke.InvokeScriptTransactionDiff
 import com.decentralchain.state.{Blockchain, InvokeScriptResult, NewTransactionInfo, Portfolio, Sponsorship, StateSnapshot}
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order}
@@ -254,7 +254,7 @@ object TransactionDiffer {
   private def validateOrder(blockchain: Blockchain, order: Order, matcherFee: Long): Either[ValidationError, Unit] =
     for {
       _ <- order.matcherFeeAssetId match {
-        case Waves => Right(())
+        case Dcc => Right(())
         case asset @ IssuedAsset(_) =>
           blockchain
             .assetDescription(asset)
@@ -283,7 +283,7 @@ object TransactionDiffer {
                     )
                     .leftMap(GenericError(_))
                 )
-            case Waves =>
+            case Dcc =>
               Portfolio
                 .combine(
                   Map[Address, Portfolio](tx.senderAddress -> Portfolio(-amt)),
@@ -350,21 +350,21 @@ object TransactionDiffer {
       case e: EthereumTransaction => Map[Address, Portfolio](e.senderAddress() -> Portfolio(-e.fee)).asRight
       case ptx: ProvenTransaction =>
         ptx.assetFee match {
-          case (Waves, fee) => Map[Address, Portfolio](ptx.sender.toAddress -> Portfolio(-fee)).asRight
+          case (Dcc, fee) => Map[Address, Portfolio](ptx.sender.toAddress -> Portfolio(-fee)).asRight
           case (asset @ IssuedAsset(_), fee) =>
             for {
               assetInfo <- blockchain
                 .assetDescription(asset)
                 .toRight(GenericError(s"Asset $asset does not exist, cannot be used to pay fees"))
-              wavesFee <- Either.cond(
+              dccFee <- Either.cond(
                 assetInfo.sponsorship > 0,
-                Sponsorship.toWaves(fee, assetInfo.sponsorship),
+                Sponsorship.toDcc(fee, assetInfo.sponsorship),
                 GenericError(s"Asset $asset is not sponsored, cannot be used to pay fees")
               )
               portfolios <- Portfolio
                 .combine(
                   Map(ptx.sender.toAddress       -> Portfolio.build(asset, -fee)),
-                  Map(assetInfo.issuer.toAddress -> Portfolio.build(-wavesFee, asset, fee))
+                  Map(assetInfo.issuer.toAddress -> Portfolio.build(-dccFee, asset, fee))
                 )
                 .leftMap(GenericError(_))
             } yield portfolios

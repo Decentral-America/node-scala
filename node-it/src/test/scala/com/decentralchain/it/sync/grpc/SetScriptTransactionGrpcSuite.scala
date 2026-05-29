@@ -60,7 +60,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       scriptInfo.scriptText shouldBe script.expr.toString
       scriptInfo.complexity shouldBe scriptComplexity
 
-      sender.getTransaction(setScriptTxId).getWavesTransaction.getSetScript.script shouldBe PBTransactions.toPBScript(Some(script))
+      sender.getTransaction(setScriptTxId).getDccTransaction.getSetScript.script shouldBe PBTransactions.toPBScript(Some(script))
     }
   }
 
@@ -78,8 +78,8 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
   test("able to broadcast tx if that is allowed by account-script") {
     for (v <- setScrTxSupportedVersions) {
       val (contract, contractAddr) = if (v < 2) (firstAcc, firstAddress) else (secondAcc, secondAddress)
-      val firstBalance             = sender.wavesBalance(contractAddr).available
-      val thirdBalance             = sender.wavesBalance(thirdAddress).available
+      val firstBalance             = sender.dccBalance(contractAddr).available
+      val thirdBalance             = sender.dccBalance(thirdAddress).available
       val transferFee              = minFee + smartFee
 
       val unsignedTransfer = PBTransaction(
@@ -102,7 +102,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
             .sign(
               secondAcc.privateKey,
               PBTransactions
-                .vanilla(SignedTransaction(SignedTransaction.Transaction.WavesTransaction(unsignedTransfer)), unsafe = false)
+                .vanilla(SignedTransaction(SignedTransaction.Transaction.DccTransaction(unsignedTransfer)), unsafe = false)
                 .explicitGet()
                 .bodyBytes()
             )
@@ -114,7 +114,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
             .sign(
               thirdAcc.privateKey,
               PBTransactions
-                .vanilla(SignedTransaction(SignedTransaction.Transaction.WavesTransaction(unsignedTransfer)), unsafe = false)
+                .vanilla(SignedTransaction(SignedTransaction.Transaction.DccTransaction(unsignedTransfer)), unsafe = false)
                 .explicitGet()
                 .bodyBytes()
             )
@@ -122,8 +122,8 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         )
 
       sender.broadcast(unsignedTransfer, Seq(sig1, sig2), waitForTx = true)
-      sender.wavesBalance(contractAddr).available shouldBe firstBalance - transferAmount - transferFee
-      sender.wavesBalance(thirdAddress).available shouldBe thirdBalance + transferAmount
+      sender.dccBalance(contractAddr).available shouldBe firstBalance - transferAmount - transferFee
+      sender.dccBalance(thirdAddress).available shouldBe thirdBalance + transferAmount
     }
   }
 
@@ -144,7 +144,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
             .sign(
               secondAcc.privateKey,
               PBTransactions
-                .vanilla(SignedTransaction(SignedTransaction.Transaction.WavesTransaction(unsignedSetScript)), unsafe = false)
+                .vanilla(SignedTransaction(SignedTransaction.Transaction.DccTransaction(unsignedSetScript)), unsafe = false)
                 .explicitGet()
                 .bodyBytes()
             )
@@ -156,7 +156,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
             .sign(
               thirdAcc.privateKey,
               PBTransactions
-                .vanilla(SignedTransaction(SignedTransaction.Transaction.WavesTransaction(unsignedSetScript)), unsafe = false)
+                .vanilla(SignedTransaction(SignedTransaction.Transaction.DccTransaction(unsignedSetScript)), unsafe = false)
                 .explicitGet()
                 .bodyBytes()
             )
@@ -170,13 +170,13 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       scriptInfo.scriptText shouldBe ""
       scriptInfo.complexity shouldBe 0L
 
-      val contractBalance = sender.wavesBalance(contractAddr).available
-      val thirdBalance    = sender.wavesBalance(thirdAddress).available
+      val contractBalance = sender.dccBalance(contractAddr).available
+      val thirdBalance    = sender.dccBalance(thirdAddress).available
 
       sender.broadcastTransfer(contract, Recipient().withPublicKeyHash(thirdAddress), transferAmount, minFee, waitForTx = true)
 
-      sender.wavesBalance(contractAddr).available shouldBe contractBalance - transferAmount - minFee
-      sender.wavesBalance(thirdAddress).available shouldBe thirdBalance + transferAmount
+      sender.dccBalance(contractAddr).available shouldBe contractBalance - transferAmount - minFee
+      sender.dccBalance(thirdAddress).available shouldBe thirdBalance + transferAmount
     }
   }
 
@@ -186,10 +186,10 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       val script                   = ScriptCompiler.compile(s"true", ScriptEstimatorV2).explicitGet()._1
       sender.setScript(contract, Right(Some(script)), setScriptFee, waitForTx = true)
 
-      val contractBalance    = sender.wavesBalance(contractAddr).available
-      val contractEffBalance = sender.wavesBalance(contractAddr).effective
-      val thirdBalance       = sender.wavesBalance(thirdAddress).available
-      val thirdEffBalance    = sender.wavesBalance(thirdAddress).effective
+      val contractBalance    = sender.dccBalance(contractAddr).available
+      val contractEffBalance = sender.dccBalance(contractAddr).effective
+      val thirdBalance       = sender.dccBalance(thirdAddress).available
+      val thirdEffBalance    = sender.dccBalance(thirdAddress).effective
 
       assertGrpcError(
         sender
@@ -198,10 +198,10 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         Code.INVALID_ARGUMENT
       )
 
-      sender.wavesBalance(contractAddr).available shouldBe contractBalance
-      sender.wavesBalance(contractAddr).effective shouldBe contractEffBalance
-      sender.wavesBalance(thirdAddress).available shouldBe thirdBalance
-      sender.wavesBalance(thirdAddress).effective shouldBe thirdEffBalance
+      sender.dccBalance(contractAddr).available shouldBe contractBalance
+      sender.dccBalance(contractAddr).effective shouldBe contractEffBalance
+      sender.dccBalance(thirdAddress).available shouldBe thirdBalance
+      sender.dccBalance(thirdAddress).effective shouldBe thirdEffBalance
     }
   }
 }

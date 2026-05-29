@@ -89,9 +89,9 @@ class TrackedDAppEnvironment(underlying: DAppEnvironment, tracker: DAppEnvironme
     underlying.accountBalanceOf(addressOrAlias, assetId)
   }
 
-  override def accountWavesBalanceOf(addressOrAlias: Recipient): Id[Either[String, Environment.BalanceDetails]] = {
-    withResolvedAlias(addressOrAlias).foreach(tracker.accountWavesBalanceOf)
-    underlying.accountWavesBalanceOf(addressOrAlias)
+  override def accountDccBalanceOf(addressOrAlias: Recipient): Id[Either[String, Environment.BalanceDetails]] = {
+    withResolvedAlias(addressOrAlias).foreach(tracker.accountDccBalanceOf)
+    underlying.accountDccBalanceOf(addressOrAlias)
   }
 
   override def accountScript(addressOrAlias: Recipient): Id[Option[Script]] = {
@@ -107,7 +107,7 @@ class TrackedDAppEnvironment(underlying: DAppEnvironment, tracker: DAppEnvironme
       availableComplexity: Int,
       reentrant: Boolean
   ): Coeval[(Either[ValidationError, (Terms.EVALUATED, Log[Id])], Int)] = {
-    toWavesAddress(dApp).foreach(tracker.callScript)
+    toDccAddress(dApp).foreach(tracker.callScript)
     underlying.callScript(dApp, func, args, payments, availableComplexity, reentrant)
   }
 
@@ -120,11 +120,11 @@ class TrackedDAppEnvironment(underlying: DAppEnvironment, tracker: DAppEnvironme
 
   // Utilities
   private def withResolvedAlias(addressOrAlias: Recipient): Option[Address] = addressOrAlias match {
-    case addressOrAlias: Recipient.Address => toWavesAddress(addressOrAlias)
+    case addressOrAlias: Recipient.Address => toDccAddress(addressOrAlias)
     case Recipient.Alias(name)             => resolveAlias(name).flatMap(x => Address.fromBytes(x.bytes.arr, Some(chainId))).toOption
   }
 
-  private def toWavesAddress(addr: Recipient.Address): Option[Address] =
+  private def toDccAddress(addr: Recipient.Address): Option[Address] =
     com.decentralchain.account.Address.fromBytes(addr.bytes.arr, Some(chainId)).toOption
 
   // Functions those don't need Blockchain

@@ -200,14 +200,14 @@ case class GenesisSettings(
     averageBlockDelay: FiniteDuration
 ) derives ConfigReader
 
-object GenesisSettings { // TODO: Move to network-defaults.conf
+object GenesisSettings { // NOTE: Could move to network-defaults.conf
   val MAINNET: GenesisSettings = GenesisSettings(
     1460678400000L,
     1465742577614L,
-    Constants.UnitsInWave * Constants.TotalWaves,
+    Constants.UnitsInWave * Constants.TotalDcc,
     ByteStr.decodeBase58("FSH8eAAzZNqnG8xgTZtz5xuLqXySsXgAjmFEC25hXMbEufiGjqWPnGCZFt6gLiVLJny16ipxRNAkkzjjhqTjBE2").toOption,
     List(
-      GenesisTransactionSettings("3PAWwWa6GbwcJaFzwqXQN5KQm7H96Y7SHTQ", Constants.UnitsInWave * Constants.TotalWaves - 5 * Constants.UnitsInWave),
+      GenesisTransactionSettings("3PAWwWa6GbwcJaFzwqXQN5KQm7H96Y7SHTQ", Constants.UnitsInWave * Constants.TotalDcc - 5 * Constants.UnitsInWave),
       GenesisTransactionSettings("3P8JdJGYc7vaLu4UXUZc1iRLdzrkGtdCyJM", Constants.UnitsInWave),
       GenesisTransactionSettings("3PAGPDPqnGkyhcihyjMHe9v36Y4hkAh9yDy", Constants.UnitsInWave),
       GenesisTransactionSettings("3P9o3ZYwtHkaU1KxsKkFjJqJKS3dLHLC9oF", Constants.UnitsInWave),
@@ -221,16 +221,16 @@ object GenesisSettings { // TODO: Move to network-defaults.conf
   val TESTNET: GenesisSettings = GenesisSettings(
     1460678400000L,
     1478000000000L,
-    Constants.UnitsInWave * Constants.TotalWaves,
+    Constants.UnitsInWave * Constants.TotalDcc,
     ByteStr.decodeBase58("5uqnLK3Z9eiot6FyYBfwUnbyid3abicQbAZjz38GQ1Q8XigQMxTK4C1zNkqS1SVw7FqSidbZKxWAKLVoEsp4nNqa").toOption,
     List(
-      GenesisTransactionSettings("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8", (Constants.UnitsInWave * Constants.TotalWaves * 0.04).toLong),
-      GenesisTransactionSettings("3NBVqYXrapgJP9atQccdBPAgJPwHDKkh6A8", (Constants.UnitsInWave * Constants.TotalWaves * 0.02).toLong),
-      GenesisTransactionSettings("3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh", (Constants.UnitsInWave * Constants.TotalWaves * 0.02).toLong),
-      GenesisTransactionSettings("3NCBMxgdghg4tUhEEffSXy11L6hUi6fcBpd", (Constants.UnitsInWave * Constants.TotalWaves * 0.02).toLong),
+      GenesisTransactionSettings("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8", (Constants.UnitsInWave * Constants.TotalDcc * 0.04).toLong),
+      GenesisTransactionSettings("3NBVqYXrapgJP9atQccdBPAgJPwHDKkh6A8", (Constants.UnitsInWave * Constants.TotalDcc * 0.02).toLong),
+      GenesisTransactionSettings("3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh", (Constants.UnitsInWave * Constants.TotalDcc * 0.02).toLong),
+      GenesisTransactionSettings("3NCBMxgdghg4tUhEEffSXy11L6hUi6fcBpd", (Constants.UnitsInWave * Constants.TotalDcc * 0.02).toLong),
       GenesisTransactionSettings(
         "3N18z4B8kyyQ96PhN5eyhCAbg4j49CgwZJx",
-        (Constants.UnitsInWave * Constants.TotalWaves - Constants.UnitsInWave * Constants.TotalWaves * 0.1).toLong
+        (Constants.UnitsInWave * Constants.TotalDcc - Constants.UnitsInWave * Constants.TotalDcc * 0.1).toLong
       )
     ),
     153722867L,
@@ -240,10 +240,10 @@ object GenesisSettings { // TODO: Move to network-defaults.conf
   val STAGENET: GenesisSettings = GenesisSettings(
     1561705836768L,
     1561705836768L,
-    Constants.UnitsInWave * Constants.TotalWaves,
+    Constants.UnitsInWave * Constants.TotalDcc,
     ByteStr.decodeBase58("2EaaguFPgrJ1bbMAFrPw2bi6i7kqjgvxsFj8YGqrKR7hT54ZvwmzZ3LHMm4qR7i7QB5cacp8XdkLMJyvjFkt8VgN").toOption,
     List(
-      GenesisTransactionSettings("3Mi63XiwniEj6mTC557pxdRDddtpj7fZMMw", Constants.UnitsInWave * Constants.TotalWaves)
+      GenesisTransactionSettings("3Mi63XiwniEj6mTC557pxdRDddtpj7fZMMw", Constants.UnitsInWave * Constants.TotalDcc)
     ),
     5000,
     1.minute
@@ -265,7 +265,7 @@ private[settings] object BlockchainType {
 
 object BlockchainSettings {
   def fromRootConfig(config: Config): BlockchainSettings =
-    ConfigSource.fromConfig(config).at("waves.blockchain").loadOrThrow[BlockchainSettings]
+    ConfigSource.fromConfig(config).at("dcc.blockchain").loadOrThrow[BlockchainSettings]
 
   given ConfigReader[BlockchainSettings] = ConfigReader.fromCursor(cur =>
     for {

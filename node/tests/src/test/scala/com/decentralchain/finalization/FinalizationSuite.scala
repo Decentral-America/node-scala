@@ -276,8 +276,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
             TxHelpers.transfer(
               node1Acc,
               node2Acc.toAddress,
-              amount = d.blockchain.balance(node1Acc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-              fee = 1.waves
+              amount = d.blockchain.balance(node1Acc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+              fee = 1.dcc
             )
           ),
           generator = node1Acc,
@@ -309,7 +309,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
   "finalized with less votes after conflict endorsement" in withDomain(
     defaultSettings,
-    Seq(node0Acc, node1Acc, node2Acc, node3Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.waves))
+    Seq(node0Acc, node1Acc, node2Acc, node3Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.dcc))
   ) { d =>
     val genesisBlockId = d.blockchain.lastBlockId.value
     d.appendBlock()
@@ -374,8 +374,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
           TxHelpers.transfer(
             node0Acc,                                                                            // Endorser
             to = node3Acc.toAddress,                                                             // Not endorser
-            amount = d.blockchain.wavesPortfolio(node0Acc.toAddress).spendableBalance - 1.waves, // All waves
-            fee = 1.waves
+            amount = d.blockchain.dccPortfolio(node0Acc.toAddress).spendableBalance - 1.dcc, // All dcc
+            fee = 1.dcc
           )
         ),
         generator = node1Acc,
@@ -396,8 +396,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
     "reaching finalization" - {
       "miner" in withDomain(
         defaultSettings,
-        AddrWithBalance(node3Acc.toAddress, 6000.waves) +:
-          Seq(node0Acc, node1Acc, node2Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.waves))
+        AddrWithBalance(node3Acc.toAddress, 6000.dcc) +:
+          Seq(node0Acc, node1Acc, node2Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.dcc))
       ) { d =>
         // This is block #2
         // Generating balance of node1Acc increased on 2 + 50 (generationBalanceDepthFrom50To1000AfterHeight) = 52
@@ -405,8 +405,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
           TxHelpers.transfer(
             node3Acc,                                                                            // Not endorser
             to = node1Acc.toAddress,                                                             // Miner
-            amount = d.blockchain.wavesPortfolio(node3Acc.toAddress).spendableBalance - 1.waves, // Enough for finalization
-            fee = 1.waves
+            amount = d.blockchain.dccPortfolio(node3Acc.toAddress).spendableBalance - 1.dcc, // Enough for finalization
+            fee = 1.dcc
           )
         )
 
@@ -434,9 +434,9 @@ class FinalizationSuite extends BaseFinalizationSpec {
       "voter" in {
         withDomain(
           defaultSettings,
-          AddrWithBalance(node3Acc.toAddress, 6000.waves) +:
-            AddrWithBalance(node2Acc.toAddress, 4000.waves) +:
-            Seq(node0Acc, node1Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.waves))
+          AddrWithBalance(node3Acc.toAddress, 6000.dcc) +:
+            AddrWithBalance(node2Acc.toAddress, 4000.dcc) +:
+            Seq(node0Acc, node1Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.dcc))
         ) { d =>
           val genesisBlockId = d.blockchain.lastBlockId.value
 
@@ -446,8 +446,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
             TxHelpers.transfer(
               node3Acc,                                                                            // Not endorser
               to = node0Acc.toAddress,                                                             // Endorser
-              amount = d.blockchain.wavesPortfolio(node3Acc.toAddress).spendableBalance - 1.waves, // Enough for finalization
-              fee = 1.waves
+              amount = d.blockchain.dccPortfolio(node3Acc.toAddress).spendableBalance - 1.dcc, // Enough for finalization
+              fee = 1.dcc
             )
           )
 
@@ -487,8 +487,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     "not reaching finalization" in withDomain(
       defaultSettings,
-      AddrWithBalance(node3Acc.toAddress, 6000.waves) +:
-        Seq(node0Acc, node1Acc, node2Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.waves))
+      AddrWithBalance(node3Acc.toAddress, 6000.dcc) +:
+        Seq(node0Acc, node1Acc, node2Acc).map(kp => AddrWithBalance(kp.toAddress, 2000.dcc))
     ) { d =>
       val genesisBlockId = d.blockchain.lastBlockId.value
 
@@ -498,8 +498,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
         TxHelpers.transfer(
           node3Acc,                // Not endorser
           to = node2Acc.toAddress, // Not voting
-          amount = d.blockchain.wavesPortfolio(node3Acc.toAddress).spendableBalance - 1.waves,
-          fee = 1.waves
+          amount = d.blockchain.dccPortfolio(node3Acc.toAddress).spendableBalance - 1.dcc,
+          fee = 1.dcc
         )
       )
 

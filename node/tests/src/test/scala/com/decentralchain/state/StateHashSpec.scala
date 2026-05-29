@@ -31,8 +31,8 @@ class StateHashSpec extends FreeSpec {
       .explicitGet()
       ._1
     val dataEntry    = StringDataEntry("test", "test")
-    val wavesAccount = TxHelpers.defaultSigner
-    val blsAccount   = BlsKeyPair(wavesAccount.privateKey)
+    val dccAccount = TxHelpers.defaultSigner
+    val blsAccount   = BlsKeyPair(dccAccount.privateKey)
 
     stateHash.addLeaseBalance(address, 10000L, 10000L)
     stateHash.addAccountScript(address, Some(testScript))
@@ -45,8 +45,8 @@ class StateHashSpec extends FreeSpec {
     stateHash.addSponsorship(assetId, 1000)
     stateHash.addAssetBalance(address, assetId, 2000)
     stateHash.addAssetBalance(address1, assetId, 2000)
-    stateHash.addWavesBalance(address, 1000)
-    stateHash.addNextCommittedGenerator(wavesAccount.publicKey, blsAccount.publicKey)
+    stateHash.addDccBalance(address, 1000)
+    stateHash.addNextCommittedGenerator(dccAccount.publicKey, blsAccount.publicKey)
     stateHash.addCommittedGeneratorBalances(Seq(3000))
     val result = stateHash.result()
 
@@ -74,8 +74,8 @@ class StateHashSpec extends FreeSpec {
         )
       }
 
-      "waves balance" in {
-        sect(WavesBalance) shouldBe hash(
+      "dcc balance" in {
+        sect(DccBalance) shouldBe hash(
           address.bytes,
           Longs.toByteArray(1000)
         )
@@ -130,7 +130,7 @@ class StateHashSpec extends FreeSpec {
 
       "next generator" in {
         sect(NextCommittedGenerators) shouldBe hash(
-          wavesAccount.publicKey.arr,
+          dccAccount.publicKey.arr,
           blsAccount.publicKey.byteStr.arr
         )
       }
@@ -145,7 +145,7 @@ class StateHashSpec extends FreeSpec {
     "total" in {
       val allHashes = StateHash.sections(true).map(id => result.hashes(id))
       allHashes shouldBe Seq(
-        WavesBalance,
+        DccBalance,
         AssetBalance,
         DataEntry,
         AccountScript,
@@ -160,7 +160,7 @@ class StateHashSpec extends FreeSpec {
 
       val testPrevHash = sect(SectionId.Alias)
       result.createStateHash(testPrevHash, true).totalHash shouldBe hash((testPrevHash.arr +: allHashes.map(_.arr))*)
-      result.copy(hashes = result.hashes - SectionId.WavesBalance).createStateHash(ByteStr.empty, true).totalHash shouldBe hash(
+      result.copy(hashes = result.hashes - SectionId.DccBalance).createStateHash(ByteStr.empty, true).totalHash shouldBe hash(
         (StateHashBuilder.EmptySectionHash.arr +: allHashes.tail.map(_.arr))*
       )
     }

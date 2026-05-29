@@ -80,7 +80,7 @@ class InvokeScriptComplexitySpec extends FreeSpec with WithDomain with NTPTime {
     val dApp0KP = TxHelpers.signer(1)
     val dApp1KP = TxHelpers.signer(2)
 
-    val balances = Seq(invoker, dApp0KP, dApp1KP).map(acc => AddrWithBalance(acc.toAddress, 10000.waves))
+    val balances = Seq(invoker, dApp0KP, dApp1KP).map(acc => AddrWithBalance(acc.toAddress, 10000.dcc))
 
     withDomain(settings, balances) { d =>
       val utx = d.utxPool

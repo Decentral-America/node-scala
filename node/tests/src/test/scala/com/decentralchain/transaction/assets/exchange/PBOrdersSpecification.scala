@@ -8,20 +8,20 @@ import com.decentralchain.common.utils.EitherExt2.*
 import io.decentralchain.protobuf.order.AssetPair as PBAssetPair
 import io.decentralchain.protobuf.transaction.{PBAmounts, PBOrder, PBOrders}
 import com.decentralchain.test.FlatSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.Verifier
 
 class PBOrdersSpecification extends FlatSpec {
   private val protoOrder = PBOrder(
     AddressScheme.current.chainId.toInt,
     ByteString.copyFrom(TestValues.keyPair.publicKey.arr),
-    Some(PBAssetPair(PBAmounts.toPBAssetId(TestValues.asset), PBAmounts.toPBAssetId(Waves))),
+    Some(PBAssetPair(PBAmounts.toPBAssetId(TestValues.asset), PBAmounts.toPBAssetId(Dcc))),
     PBOrder.Side.SELL,
     amount = 1000,
     price = 1000,
     timestamp = 1000,
     expiration = 10000,
-    matcherFee = Some(PBAmounts.fromAssetAndAmount(Waves, 300000L)),
+    matcherFee = Some(PBAmounts.fromAssetAndAmount(Dcc, 300000L)),
     version = 1,
     proofs = Nil,
     sender = PBOrder.Sender.SenderPublicKey(ByteString.copyFrom(TestValues.keyPair.publicKey.arr))

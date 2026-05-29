@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.assets.{IssueTransaction, SetAssetScriptTransaction}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
@@ -30,7 +30,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
         2,
         reissuable = false,
         script,
-        1.waves,
+        1.dcc,
         ntpTime.getTimestamp()
       )
       .explicitGet()
@@ -40,8 +40,8 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
       orderType: OrderType,
       matcher: PublicKey,
       assetPair: AssetPair,
-      fee: Long = 0.003.waves,
-      feeAsset: Asset = Waves
+      fee: Long = 0.003.dcc,
+      feeAsset: Asset = Dcc
   ) =
     Order
       .selfSigned(
@@ -51,7 +51,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
         assetPair,
         orderType,
         100,
-        5.waves,
+        5.dcc,
         ntpTime.getTimestamp(),
         ntpTime.getTimestamp() + 200000,
         fee,
@@ -69,7 +69,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
     sender,
     matcher,
     Seq(g1, g2, issuedAsset),
-    AssetPair(IssuedAsset(issuedAsset.id()), Waves)
+    AssetPair(IssuedAsset(issuedAsset.id()), Dcc)
   )
 
   property("blockchain functions are available for order branch when verifying exchange transaction") {
@@ -100,7 +100,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
                   .explicitGet()
                   ._1
               ),
-              0.001.waves,
+              0.001.dcc,
               ntpTime.getTimestamp()
             )
             .explicitGet()
@@ -114,10 +114,10 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
               mkOrder(sender, OrderType.BUY, matcher.publicKey, assetPair),
               mkOrder(sender, OrderType.SELL, matcher.publicKey, assetPair),
               100,
-              5.waves,
-              0.003.waves,
-              0.003.waves,
-              0.003.waves,
+              5.dcc,
+              0.003.dcc,
+              0.003.dcc,
+              0.003.dcc,
               ntpTime.getTimestamp()
             )
             .explicitGet()
@@ -142,10 +142,10 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
         mkOrder(sender, OrderType.BUY, matcher.publicKey, assetPair, 100, buyFeeAssetId),
         mkOrder(sender, OrderType.SELL, matcher.publicKey, assetPair, 100, sellFeeAssetId),
         100,
-        5.waves,
+        5.dcc,
         100,
         100,
-        0.003.waves,
+        0.003.dcc,
         ntpTime.getTimestamp()
       )
       .explicitGet(),
@@ -156,7 +156,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
   property("matcher fee asset script is executed during exchange transaction validation") {
     forAll(sharedParamGen2) { case (sender, genesisTxs, exchangeTx, buyFeeAsset, sellFeeAsset) =>
       def setAssetScript(assetId: IssuedAsset, script: Option[Script]): SetAssetScriptTransaction =
-        SetAssetScriptTransaction.selfSigned(1.toByte, sender, assetId, script, 0.001.waves, ntpTime.getTimestamp()).explicitGet()
+        SetAssetScriptTransaction.selfSigned(1.toByte, sender, assetId, script, 0.001.dcc, ntpTime.getTimestamp()).explicitGet()
 
       withDomain(
         domainSettingsWithPreactivatedFeatures(

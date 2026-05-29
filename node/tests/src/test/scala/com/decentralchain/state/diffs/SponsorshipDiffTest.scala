@@ -119,19 +119,19 @@ class SponsorshipDiffTest extends PropSpec with WithState {
       )
 
       val fee            = 3000 * sponsor.minSponsoredAssetFee.get.value
-      val wavesOverspend = TxHelpers.transfer(master, recipient.toAddress, 1000000, feeAsset = issue.asset, fee = fee, version = TxVersion.V1)
+      val dccOverspend = TxHelpers.transfer(master, recipient.toAddress, 1000000, feeAsset = issue.asset, fee = fee, version = TxVersion.V1)
 
-      (genesis, issue, sponsor, assetOverspend, insufficientFee, wavesOverspend)
+      (genesis, issue, sponsor, assetOverspend, insufficientFee, dccOverspend)
     }
 
-    val (genesis, issue, sponsor, assetOverspend, insufficientFee, wavesOverspend) = setup
+    val (genesis, issue, sponsor, assetOverspend, insufficientFee, dccOverspend) = setup
     val setupBlocks                                                                = Seq(block(Seq(genesis, issue, sponsor)))
     assertDiffEi(setupBlocks, block(Seq(assetOverspend)), s) { blockDiffEi =>
       blockDiffEi should produce("unavailable funds")
     }
     assertDiffEi(setupBlocks, block(Seq(insufficientFee)), s) { blockDiffEi =>
       val minFee = Sponsorship
-        .fromWaves(
+        .fromDcc(
           FeeValidation.FeeConstants(insufficientFee.tpe) * FeeValidation.FeeUnit,
           sponsor.minSponsoredAssetFee.get.value
         )
@@ -142,15 +142,15 @@ class SponsorshipDiffTest extends PropSpec with WithState {
 
       blockDiffEi should produce(expectedError)
     }
-    assertDiffEi(setupBlocks, block(Seq(wavesOverspend)), s) { blockDiffEi =>
-      if (wavesOverspend.fee.value > issue.quantity.value)
+    assertDiffEi(setupBlocks, block(Seq(dccOverspend)), s) { blockDiffEi =>
+      if (dccOverspend.fee.value > issue.quantity.value)
         blockDiffEi should produce("unavailable funds")
       else
-        blockDiffEi should produce("negative waves balance")
+        blockDiffEi should produce("negative dcc balance")
     }
   }
 
-  property("not enough waves to pay fee after leasing") {
+  property("not enough dcc to pay fee after leasing") {
     val s = settings(0)
     val setup = {
       val master = TxHelpers.signer(1)
@@ -246,7 +246,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
     }
   }
 
-  property(s"sponsor has no WAVES but receives them just in time before $BlockV5 activation") {
+  property(s"sponsor has no DCC but receives them just in time before $BlockV5 activation") {
     val s = settings(0)
     val setup = {
       val master    = TxHelpers.signer(1)
@@ -256,16 +256,16 @@ class SponsorshipDiffTest extends PropSpec with WithState {
       val issue             = TxHelpers.issue(master, amount = 100, decimals = 2, reissuable = false, fee = 100000000, version = TxVersion.V1)
       val sponsor           = TxHelpers.sponsor(issue.asset, Some(100), master, fee = 100000000)
       val assetTransfer     = TxHelpers.transfer(master, recipient.toAddress, issue.quantity.value, issue.asset, fee = 100000, version = TxVersion.V1)
-      val wavesTransfer     = TxHelpers.transfer(master, recipient.toAddress, 99800000, fee = 100000, version = TxVersion.V1)
-      val backWavesTransfer = TxHelpers.transfer(recipient, master.toAddress, 100000, feeAsset = issue.asset, fee = 100, version = TxVersion.V1)
+      val dccTransfer     = TxHelpers.transfer(master, recipient.toAddress, 99800000, fee = 100000, version = TxVersion.V1)
+      val backDccTransfer = TxHelpers.transfer(recipient, master.toAddress, 100000, feeAsset = issue.asset, fee = 100, version = TxVersion.V1)
 
-      (genesis, issue, sponsor, assetTransfer, wavesTransfer, backWavesTransfer)
+      (genesis, issue, sponsor, assetTransfer, dccTransfer, backDccTransfer)
     }
 
-    val (genesis, issue, sponsor, assetTransfer, wavesTransfer, backWavesTransfer) = setup
+    val (genesis, issue, sponsor, assetTransfer, dccTransfer, backDccTransfer) = setup
     assertDiffAndState(
-      Seq(block(Seq(genesis, issue, sponsor, assetTransfer, wavesTransfer))),
-      block(Seq(backWavesTransfer)),
+      Seq(block(Seq(genesis, issue, sponsor, assetTransfer, dccTransfer))),
+      block(Seq(backDccTransfer)),
       s.copy(preActivatedFeatures = s.preActivatedFeatures + (BlockV5.id -> Int.MaxValue))
     ) { case (_, state) =>
       state.balance(genesis.recipient) shouldBe 0
@@ -273,11 +273,11 @@ class SponsorshipDiffTest extends PropSpec with WithState {
     }
 
     assertDiffEi(
-      Seq(block(Seq(genesis, issue, sponsor, assetTransfer, wavesTransfer))),
-      block(Seq(backWavesTransfer)),
+      Seq(block(Seq(genesis, issue, sponsor, assetTransfer, dccTransfer))),
+      block(Seq(backDccTransfer)),
       s
     ) { ei =>
-      ei should produce("negative waves balance")
+      ei should produce("negative dcc balance")
     }
   }
 }

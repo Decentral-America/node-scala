@@ -51,7 +51,7 @@ package object api {
           "sponsorBalance",
           "totalAmount",
           "totalFee",
-          "totalWavesAmount",
+          "totalDccAmount",
           "value"
         )
         jsv match {

@@ -57,7 +57,7 @@ class DebugApiRouteSpec
 
   private val richAccount = TxHelpers.signer(905)
 
-  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50_000.waves))
+  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50_000.dcc))
 
   val block: Block = TestBlock.create(Nil).block
   val testStateHash: StateHash = {
@@ -105,13 +105,13 @@ class DebugApiRouteSpec
     val acc1 = TxHelpers.signer(1001)
     val acc2 = TxHelpers.signer(1002)
 
-    val initBalance = 10.waves
+    val initBalance = 10.dcc
 
     "works" in {
-      val tx1 = TxHelpers.transfer(acc2, acc1.toAddress, 1.waves)
-      val tx2 = TxHelpers.transfer(acc1, acc2.toAddress, 3.waves)
-      val tx3 = TxHelpers.transfer(acc2, acc1.toAddress, 4.waves)
-      val tx4 = TxHelpers.transfer(acc1, acc2.toAddress, 5.waves)
+      val tx1 = TxHelpers.transfer(acc2, acc1.toAddress, 1.dcc)
+      val tx2 = TxHelpers.transfer(acc1, acc2.toAddress, 3.dcc)
+      val tx3 = TxHelpers.transfer(acc2, acc1.toAddress, 4.dcc)
+      val tx4 = TxHelpers.transfer(acc1, acc2.toAddress, 5.dcc)
 
       domain.appendBlock(
         TxHelpers.massTransfer(
@@ -120,7 +120,7 @@ class DebugApiRouteSpec
             acc1.toAddress -> initBalance,
             acc2.toAddress -> initBalance
           ),
-          fee = 0.002.waves
+          fee = 0.002.dcc
         )
       )
       val initialHeight = domain.blockchain.height
@@ -175,7 +175,7 @@ class DebugApiRouteSpec
 
         val expectedResponse = Json.obj(
           "stateHash"         -> field("stateHash"),
-          "wavesBalanceHash"  -> field("wavesBalanceHash"),
+          "dccBalanceHash"  -> field("dccBalanceHash"),
           "assetBalanceHash"  -> field("assetBalanceHash"),
           "dataEntryHash"     -> field("dataEntryHash"),
           "accountScriptHash" -> field("accountScriptHash"),
@@ -209,9 +209,9 @@ class DebugApiRouteSpec
       Post(routePath("/validate"), HttpEntity(ContentTypes.`application/json`, tx.json().toString()))
 
     "takes the priority pool into account" in {
-      domain.appendBlock(TxHelpers.transfer(to = TxHelpers.secondAddress, amount = 1.waves + TestValues.fee))
+      domain.appendBlock(TxHelpers.transfer(to = TxHelpers.secondAddress, amount = 1.dcc + TestValues.fee))
 
-      val tx = TxHelpers.transfer(TxHelpers.secondSigner, TestValues.address, 1.waves)
+      val tx = TxHelpers.transfer(TxHelpers.secondSigner, TestValues.address, 1.dcc)
       validatePost(tx) ~> ApiKeyHeader ~> route ~> check {
         val json = responseAs[JsValue]
         (json \ "valid").as[Boolean] shouldBe true
@@ -220,7 +220,7 @@ class DebugApiRouteSpec
     }
 
     "valid tx" in {
-      val tx = TxHelpers.transfer(TxHelpers.defaultSigner, TestValues.address, 1.waves)
+      val tx = TxHelpers.transfer(TxHelpers.defaultSigner, TestValues.address, 1.dcc)
       validatePost(tx) ~> ApiKeyHeader ~> route ~> check {
         val json = responseAs[JsValue]
         (json \ "valid").as[Boolean] shouldBe true
@@ -254,11 +254,11 @@ class DebugApiRouteSpec
       domain.appendBlock(
         TxHelpers.massTransfer(
           richAccount,
-          Seq(o1sender.toAddress -> 1.waves, o2sender.toAddress -> 1.waves, assetIssuer.toAddress -> 3.waves),
-          fee = 0.003.waves
+          Seq(o1sender.toAddress -> 1.dcc, o2sender.toAddress -> 1.dcc, assetIssuer.toAddress -> 3.dcc),
+          fee = 0.003.dcc
         ),
         issue,
-        TxHelpers.massTransfer(assetIssuer, Seq(o1sender.toAddress -> 50, o2sender.toAddress -> 50), issue.asset, fee = 0.006.waves),
+        TxHelpers.massTransfer(assetIssuer, Seq(o1sender.toAddress -> 50, o2sender.toAddress -> 50), issue.asset, fee = 0.006.dcc),
         TxHelpers.setAssetScript(assetIssuer, issue.asset, TestCompiler(V5).compileExpression("if true then throw(\"error\") else false"))
       )
 
@@ -285,8 +285,8 @@ class DebugApiRouteSpec
                                                                     |""".stripMargin)
       val issue = TxHelpers.issue(dapp, script = Some(TestCompiler(V4).compileExpression("true")))
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, dapp.toAddress, 10.waves),
-        TxHelpers.transfer(richAccount, invoker.toAddress, 10.waves),
+        TxHelpers.transfer(richAccount, dapp.toAddress, 10.dcc),
+        TxHelpers.transfer(richAccount, invoker.toAddress, 10.dcc),
         issue,
         TxHelpers.transfer(dapp, invoker.toAddress, 1, issue.asset),
         TxHelpers.setScript(
@@ -1565,8 +1565,8 @@ class DebugApiRouteSpec
       domain.appendBlock(
         TxHelpers.massTransfer(
           richAccount,
-          Seq(dAppPk.toAddress -> 20.waves, aliasOwner.toAddress -> 10.waves, caller.toAddress -> 5.waves),
-          fee = 0.003.waves
+          Seq(dAppPk.toAddress -> 20.dcc, aliasOwner.toAddress -> 10.dcc, caller.toAddress -> 5.dcc),
+          fee = 0.003.dcc
         ),
         originalLease,
         TxHelpers.createAlias("some_alias", aliasOwner),
@@ -2026,10 +2026,10 @@ class DebugApiRouteSpec
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            dApp1Kp.toAddress -> 20.waves,
-            dApp2Kp.toAddress -> 20.waves
+            dApp1Kp.toAddress -> 20.dcc,
+            dApp2Kp.toAddress -> 20.dcc
           ),
-          fee = 0.002.waves
+          fee = 0.002.dcc
         ),
         leaseTx,
         setScript(dApp1Kp, dApp1),
@@ -2649,8 +2649,8 @@ class DebugApiRouteSpec
            |""".stripMargin
       )
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, dAppPk.toAddress, 10.waves),
-        TxHelpers.transfer(richAccount, caller.toAddress, 10.waves),
+        TxHelpers.transfer(richAccount, dAppPk.toAddress, 10.dcc),
+        TxHelpers.transfer(richAccount, caller.toAddress, 10.dcc),
         TxHelpers.setScript(dAppPk, dAppScript),
         TxHelpers.setScript(caller, TestCompiler(V5).compileExpression("true"))
       )
@@ -3035,7 +3035,7 @@ class DebugApiRouteSpec
       val assetOwner = TxHelpers.signer(1060)
       val issue      = TxHelpers.issue(assetOwner, script = Some(TestCompiler(V5).compileAsset("false")))
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, assetOwner.toAddress, 5.waves),
+        TxHelpers.transfer(richAccount, assetOwner.toAddress, 5.dcc),
         issue
       )
 
@@ -3068,11 +3068,11 @@ class DebugApiRouteSpec
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            acc1.toAddress -> 2.waves,
-            acc2.toAddress -> 2.waves,
-            acc3.toAddress -> 2.waves
+            acc1.toAddress -> 2.dcc,
+            acc2.toAddress -> 2.dcc,
+            acc3.toAddress -> 2.dcc
           ),
-          fee = 0.003.waves
+          fee = 0.003.dcc
         ),
         TxHelpers.setScript(
           acc2,
@@ -3088,20 +3088,20 @@ class DebugApiRouteSpec
         )
       )
 
-      val tx = TxHelpers.transfer(acc1, TxHelpers.secondSigner.toAddress, 1.waves, fee = transferFee, version = TxVersion.V2)
+      val tx = TxHelpers.transfer(acc1, TxHelpers.secondSigner.toAddress, 1.dcc, fee = transferFee, version = TxVersion.V2)
       validatePost(tx) ~> ApiKeyHeader ~> route ~> check {
         val json = responseAs[JsValue]
         (json \ "valid").as[Boolean] shouldBe true
       }
 
-      val tx2 = TxHelpers.transfer(acc2, TestValues.address, 1.waves, fee = transferFee, version = TxVersion.V2)
+      val tx2 = TxHelpers.transfer(acc2, TestValues.address, 1.dcc, fee = transferFee, version = TxVersion.V2)
       validatePost(tx2) ~> ApiKeyHeader ~> route ~> check {
         val json = responseAs[JsValue]
         (json \ "valid").as[Boolean] shouldBe false
         (json \ "error").as[String] should include("Requires 400000 extra fee")
       }
 
-      val tx3 = TxHelpers.transfer(acc3, TestValues.address, 1.waves, fee = transferFee, version = TxVersion.V2)
+      val tx3 = TxHelpers.transfer(acc3, TestValues.address, 1.dcc, fee = transferFee, version = TxVersion.V2)
       validatePost(tx3) ~> ApiKeyHeader ~> route ~> check {
         val json = responseAs[JsValue]
         (json \ "valid").as[Boolean] shouldBe true
@@ -3118,7 +3118,7 @@ class DebugApiRouteSpec
          """.stripMargin
       )
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, sender.toAddress, 2.waves),
+        TxHelpers.transfer(richAccount, sender.toAddress, 2.dcc),
         issue
       )
       val invokeExpression = TxHelpers.invokeExpression(expression, sender)

@@ -78,96 +78,96 @@ class InvokeScriptTransactionRideV5Suite extends BaseTransactionSuite with Cance
     sender.massTransfer(
       callerPK,
       List(
-        Transfer(dAppV3, 10.waves),
-        Transfer(dAppV4, 10.waves),
-        Transfer(dAppV5, 10.waves)
+        Transfer(dAppV3, 10.dcc),
+        Transfer(dAppV4, 10.dcc),
+        Transfer(dAppV5, 10.dcc)
       ),
-      1.waves,
+      1.dcc,
       waitForTx = true
     )
 
-    sender.createAlias(dAppV3PK, dAppAliasV3, fee = 1.waves)
-    sender.createAlias(dAppV4PK, dAppAliasV4, fee = 1.waves)
-    sender.createAlias(dAppV5PK, dAppAliasV5, fee = 1.waves)
+    sender.createAlias(dAppV3PK, dAppAliasV3, fee = 1.dcc)
+    sender.createAlias(dAppV4PK, dAppAliasV4, fee = 1.dcc)
+    sender.createAlias(dAppV5PK, dAppAliasV5, fee = 1.dcc)
 
     sender.setScript(dAppV3PK, Some(scriptV3.compiled), setScriptFee + 100)
     sender.setScript(dAppV4PK, Some(scriptV4.compiled), setScriptFee + 10)
     sender.setScript(dAppV5PK, Some(scriptV5.compiled), setScriptFee, waitForTx = true)
   }
 
-  // TODO enable in SC-695
+  // NOTE: Disabled pending SC-695 (Waves-era ticket)
   ignore("Can't invoke Ride V5 DApp via InvokeScriptTx V1") {
     assertApiError(
       sender.invokeScript(callerPK, dAppV5, version = TxVersion.V1)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
 
     assertApiError(
       sender.invokeScript(callerPK, alias(dAppAliasV5), version = TxVersion.V1)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
   }
 
-  // TODO enable in SC-695
+  // NOTE: Disabled pending SC-695 (Waves-era ticket)
   ignore("Can't invoke Ride V5 DApp via InvokeScriptTx V2") {
     assertApiError(
       sender.invokeScript(callerPK, dAppV5, version = TxVersion.V2)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
 
     assertApiError(
       sender.invokeScript(callerPK, alias(dAppAliasV5), version = TxVersion.V2)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
   }
 
-  // TODO enable in SC-695
+  // NOTE: Disabled pending SC-695 (Waves-era ticket)
   ignore("Can invoke Ride V5 DApp via InvokeScriptTx V3") {
     sender.invokeScript(callerPK, dAppV5, version = TxVersion.V3, waitForTx = true)
     sender.invokeScript(callerPK, alias(dAppAliasV5), version = TxVersion.V3, waitForTx = true)
   }
 
-  // TODO enable in SC-695
+  // NOTE: Disabled pending SC-695 (Waves-era ticket)
   ignore("Can't invoke Ride V3 DApp via InvokeScriptTx V3 if extraFeePerStep is specified") {
-    // TODO add extraFeePerStep
+    // NOTE: extraFeePerStep calculation to be added in future
     assertApiError(
       sender.invokeScript(callerPK, dAppV3, version = TxVersion.V3)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
 
     assertApiError(
       sender.invokeScript(callerPK, alias(dAppAliasV3), version = TxVersion.V3)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
   }
 
-  // TODO enable in SC-695
+  // NOTE: Disabled pending SC-695 (Waves-era ticket)
   ignore("Can't invoke Ride V4 DApp via InvokeScriptTx V3 if extraFeePerStep is specified") {
-    // TODO add extraFeePerStep
+    // NOTE: extraFeePerStep calculation to be added in future
     assertApiError(
       sender.invokeScript(callerPK, dAppV4, version = TxVersion.V3)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
 
     assertApiError(
       sender.invokeScript(callerPK, alias(dAppAliasV4), version = TxVersion.V3)
     ) { error =>
       error.statusCode shouldBe 400
-      error.message shouldBe "State check failed" // TODO detailed message
+      error.message shouldBe "State check failed" // NOTE: Detailed error message to be implemented in future
     }
   }
 

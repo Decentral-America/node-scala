@@ -27,7 +27,7 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
       .Builder(Default, 1, Seq.empty)
       .overrideBase(_.quorum(0))
       .overrideBase(_.preactivatedFeatures((BlockchainFeatures.BlockV5.id, activationHeight)))
-      .overrideBase(_.raw(s"waves.blockchain.custom.functionality.min-asset-info-update-interval = $updateInterval"))
+      .overrideBase(_.raw(s"dcc.blockchain.custom.functionality.min-asset-info-update-interval = $updateInterval"))
       .buildNonConflicting()
 
   private def senderAcc             = firstKeyPair
@@ -135,12 +135,12 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
   }
 
   test("able to broadcast tx of new version after activation") {
-    val senderWavesBalance    = sender.balanceDetails(senderAcc.toAddress.toString)
-    val recipientWavesBalance = sender.balanceDetails(recipientAcc.toAddress.toString)
+    val senderDccBalance    = sender.balanceDetails(senderAcc.toAddress.toString)
+    val recipientDccBalance = sender.balanceDetails(recipientAcc.toAddress.toString)
     sender.transfer(senderAcc, recipientAcc.toAddress.toString, transferAmount, version = TxVersion.V3, waitForTx = true)
 
-    sender.balanceDetails(senderAcc.toAddress.toString).available shouldBe senderWavesBalance.available - transferAmount - minFee
-    sender.balanceDetails(recipientAcc.toAddress.toString).available shouldBe recipientWavesBalance.available + transferAmount
+    sender.balanceDetails(senderAcc.toAddress.toString).available shouldBe senderDccBalance.available - transferAmount - minFee
+    sender.balanceDetails(recipientAcc.toAddress.toString).available shouldBe recipientDccBalance.available + transferAmount
   }
 
   test("able to broadcast ExchangeTransaction with reversed buy/sell orders") {

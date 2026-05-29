@@ -11,7 +11,7 @@ import java.net.{InetAddress, InetSocketAddress}
 
 class BlacklistSpecification extends FeatureSpec with GivenWhenThen {
   private val config = ConfigFactory
-    .parseString("""waves.network {
+    .parseString("""dcc.network {
                    |  known-peers = []
                    |  file = null
                    |  black-list-residence-time: 1s
@@ -19,7 +19,7 @@ class BlacklistSpecification extends FeatureSpec with GivenWhenThen {
     .withFallback(ConfigFactory.load())
     .resolve()
 
-  private val networkSettings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+  private val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
   private var timestamp       = 0L
 
   info("As a Peer")

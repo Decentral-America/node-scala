@@ -27,7 +27,7 @@ import com.decentralchain.state.{
   StateSnapshot,
   TransactionId
 }
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxPositiveAmount
 import com.decentralchain.transaction.TxValidationError.GenericError
 
@@ -166,7 +166,7 @@ object DiffsCommon {
         GenericError(s"Lease with id=$leaseId is already in the state")
       )
       leaseBalance    = blockchain.leaseBalance(senderAddress)
-      senderBalance   = blockchain.balance(senderAddress, Waves)
+      senderBalance   = blockchain.balance(senderAddress, Dcc)
       requiredBalance = if (blockchain.isFeatureActivated(BlockchainFeatures.SynchronousCalls)) amount.value + fee else amount.value
       _ <- Either.cond(
         senderBalance - leaseBalance.out >= requiredBalance,

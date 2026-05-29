@@ -53,7 +53,7 @@ object InvokeScriptTransaction extends TransactionParser {
   override def parseBytes(bytes: Array[Byte]): Try[InvokeScriptTransaction] =
     InvokeScriptTxSerializer.parseBytes(bytes)
 
-  case class Payment(amount: Long, assetId: Asset = Asset.Waves)
+  case class Payment(amount: Long, assetId: Asset = Asset.Dcc)
   object Payment {
     implicit val jsonFormat: Format[Payment] = Json.configured[Json.WithDefaultValues].format
   }

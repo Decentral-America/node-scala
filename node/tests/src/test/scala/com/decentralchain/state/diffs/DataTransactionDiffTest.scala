@@ -9,7 +9,7 @@ import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.RideV3
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers}
 
 class DataTransactionDiffTest extends PropSpec with WithDomain {
@@ -49,7 +49,7 @@ class DataTransactionDiffTest extends PropSpec with WithDomain {
     withDomain(RideV3) { d =>
       d.appendBlock(genesisTx)
       d.appendBlock(txs(0))
-      d.liquidSnapshot.balances((sender, Waves)) shouldBe (ENOUGH_AMT - txs(0).fee.value)
+      d.liquidSnapshot.balances((sender, Dcc)) shouldBe (ENOUGH_AMT - txs(0).fee.value)
       d.liquidSnapshot.accountData(sender)(item1.key) shouldBe item1
       val carryFee = -txs(0).fee.value * 3 / 5
       assertBalanceInvariant(d.liquidSnapshot, d.rocksDBWriter, carryFee)
@@ -59,7 +59,7 @@ class DataTransactionDiffTest extends PropSpec with WithDomain {
     withDomain(RideV3) { d =>
       d.appendBlock(genesisTx)
       d.appendBlock(txs(0), txs(1))
-      d.liquidSnapshot.balances((sender, Waves)) shouldBe (ENOUGH_AMT - txs.take(2).map(_.fee.value).sum)
+      d.liquidSnapshot.balances((sender, Dcc)) shouldBe (ENOUGH_AMT - txs.take(2).map(_.fee.value).sum)
       d.liquidSnapshot.accountData(sender)(item1.key) shouldBe item1
       d.liquidSnapshot.accountData(sender)(item2.key) shouldBe item2
       val carryFee = -(txs(0).fee.value + txs(1).fee.value) * 3 / 5
@@ -70,7 +70,7 @@ class DataTransactionDiffTest extends PropSpec with WithDomain {
     withDomain(RideV3) { d =>
       d.appendBlock(genesisTx)
       d.appendBlock(txs(0), txs(1), txs(2))
-      d.liquidSnapshot.balances((sender, Waves)) shouldBe (ENOUGH_AMT - txs.map(_.fee.value).sum)
+      d.liquidSnapshot.balances((sender, Dcc)) shouldBe (ENOUGH_AMT - txs.map(_.fee.value).sum)
       d.liquidSnapshot.accountData(sender)(item1.key) shouldBe item3
       d.liquidSnapshot.accountData(sender)(item2.key) shouldBe item2
       val carryFee = -(txs(0).fee.value + txs(1).fee.value + txs(2).fee.value) * 3 / 5
@@ -88,7 +88,7 @@ class DataTransactionDiffTest extends PropSpec with WithDomain {
 
     val (genesis, dataTx) = setup
     assertDiffEi(Seq(block(Seq(genesis))), block(Seq(dataTx)), fs) { blockDiffEi =>
-      blockDiffEi should produce("negative waves balance")
+      blockDiffEi should produce("negative dcc balance")
     }
   }
 

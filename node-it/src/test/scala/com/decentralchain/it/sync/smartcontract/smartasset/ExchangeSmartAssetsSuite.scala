@@ -6,11 +6,11 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
-import com.decentralchain.it.sync.smartcontract.{cryptoContextScript, pureContextScript, wavesContextScript, *}
+import com.decentralchain.it.sync.smartcontract.{cryptoContextScript, pureContextScript, dccContextScript, *}
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.DataTransaction
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
@@ -62,7 +62,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
       .issue(firstKeyPair, "SmartAsset", "TestCoin", someAssetAmount, 0, reissuable = false, issueFee, 2, s, waitForTx = true)
       .id
 
-    val smartPair = AssetPair(IssuedAsset(ByteStr.decodeBase58(sAsset).get), Waves)
+    val smartPair = AssetPair(IssuedAsset(ByteStr.decodeBase58(sAsset).get), Dcc)
 
     for (
       (contr1, contr2, mcontr) <- Seq(
@@ -148,12 +148,12 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
       waitForTx = true
     )
 
-    withClue("check fee for smart accounts and smart AssetPair - extx.fee == 0.015.waves") {
+    withClue("check fee for smart accounts and smart AssetPair - extx.fee == 0.015.dcc") {
       setContracts((sc1, acc0), (sc1, acc1), (sc1, acc2))
 
       assertBadRequestAndMessage(
         sender.signedBroadcast(exchangeTx(smartAssetPair, smartMatcherFee + smartFee, smartMatcherFee + smartFee, ntpTime, 2, 2, acc1, acc0, acc2)),
-        "does not exceed minimal value of 1500000 WAVES"
+        "does not exceed minimal value of 1500000 DCC"
       )
 
       sender.signedBroadcast(
@@ -166,7 +166,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
     withClue("try to use incorrect assetPair") {
       val incorrectSmartAssetPair = AssetPair(
         amountAsset = IssuedAsset(ByteStr.decodeBase58(assetA).get),
-        priceAsset = Waves
+        priceAsset = Dcc
       )
 
       assertApiError(
@@ -181,7 +181,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
     val script1 = Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + cryptoContextScript(false), estimator).explicitGet()._1.bytes().base64)
     val script2 = Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + pureContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
     val script3 =
-      Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + wavesContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
+      Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + dccContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
 
     List(script1, script2, script3)
       .map { i =>
@@ -189,7 +189,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
           .issue(firstKeyPair, "assetA", "TestCoin", someAssetAmount, 0, reissuable = false, issueFee, 2, i, waitForTx = true)
           .id
 
-        val smartPair = AssetPair(IssuedAsset(ByteStr.decodeBase58(asset).get), Waves)
+        val smartPair = AssetPair(IssuedAsset(ByteStr.decodeBase58(asset).get), Dcc)
 
         sender.signedBroadcast(exchangeTx(smartPair, smartMatcherFee, smartMatcherFee, ntpTime, 2, 3, acc1, acc0, acc2), waitForTx = true)
       }

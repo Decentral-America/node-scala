@@ -9,7 +9,7 @@ import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import io.decentralchain.protobuf.block.PBBlocks
 import com.decentralchain.state.StringDataEntry
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
@@ -30,7 +30,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[Transaction] =
       for {
         timestamp <- timestamp
-      } yield TransferTransaction.selfSigned(1.toByte, from, to, Waves, amount, Waves, FeeAmount, ByteStr.empty, timestamp).explicitGet()
+      } yield TransferTransaction.selfSigned(1.toByte, from, to, Dcc, amount, Dcc, FeeAmount, ByteStr.empty, timestamp).explicitGet()
 
     def transferV2(
         from: KeyPair,
@@ -40,7 +40,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[Transaction] =
       for {
         timestamp <- timestamp
-      } yield TransferTransaction.selfSigned(2.toByte, from, to, Waves, amount, Waves, FeeAmount, ByteStr.empty, timestamp).explicitGet()
+      } yield TransferTransaction.selfSigned(2.toByte, from, to, Dcc, amount, Dcc, FeeAmount, ByteStr.empty, timestamp).explicitGet()
 
     def transferAsset(
         asset: IssuedAsset,
@@ -51,7 +51,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[Transaction] =
       for {
         timestamp <- timestamp
-      } yield TransferTransaction.selfSigned(1.toByte, from, to, asset, amount, Waves, FeeAmount, ByteStr.empty, timestamp).explicitGet()
+      } yield TransferTransaction.selfSigned(1.toByte, from, to, asset, amount, Dcc, FeeAmount, ByteStr.empty, timestamp).explicitGet()
 
     def lease(
         from: KeyPair,
@@ -105,7 +105,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[InvokeScriptTransaction] =
       for {
         timestamp <- timestamp
-      } yield Signed.invokeScript(1.toByte, from, dapp, Some(call), payments, FeeAmount * 2, Waves, timestamp)
+      } yield Signed.invokeScript(1.toByte, from, dapp, Some(call), payments, FeeAmount * 2, Dcc, timestamp)
   }
 
   object UnsafeBlocks {

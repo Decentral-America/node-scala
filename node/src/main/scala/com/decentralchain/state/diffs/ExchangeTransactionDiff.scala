@@ -7,7 +7,7 @@ import com.decentralchain.crypto.EthereumKeyLength
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{GenericError, OrderValidationError}
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.assets.exchange.OrderAuthentication.Eip712Signature
@@ -146,7 +146,7 @@ object ExchangeTransactionDiff {
       Seq(
         getOrderFeePortfolio(tx.buyOrder, tx.buyMatcherFee),
         getOrderFeePortfolio(tx.sellOrder, tx.sellMatcherFee),
-        Portfolio.waves(-tx.fee.value)
+        Portfolio.dcc(-tx.fee.value)
       ).foldM(Portfolio())(_.combine(_))
 
     lazy val feeDiffE =
@@ -243,7 +243,7 @@ object ExchangeTransactionDiff {
       if (order.orderType == OrderType.SELL) matchAmount
       else {
         val spend = (BigDecimal(matchAmount) * matchPrice * BigDecimal(10).pow(priceDecimals - amountDecimals - 8)).toBigInt
-        if (order.getSpendAssetId == Waves && !(spend + order.matcherFee.value).isValidLong) {
+        if (order.getSpendAssetId == Dcc && !(spend + order.matcherFee.value).isValidLong) {
           throw new ArithmeticException("BigInteger out of long range")
         } else spend.bigInteger.longValueExact()
       }
@@ -263,7 +263,7 @@ object ExchangeTransactionDiff {
       }
     }.toEither.left.map(x => GenericError(x.getMessage))
 
-  /** Calculates fee portfolio from the order (taking into account that in OrderV3 fee can be paid in asset != Waves)
+  /** Calculates fee portfolio from the order (taking into account that in OrderV3 fee can be paid in asset != Dcc)
     */
   private[diffs] def getOrderFeePortfolio(order: Order, fee: Long): Portfolio =
     Portfolio.build(order.matcherFeeAssetId, fee)

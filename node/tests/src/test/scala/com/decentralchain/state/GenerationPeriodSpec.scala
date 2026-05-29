@@ -3,7 +3,7 @@ package com.decentralchain.state
 import cats.syntax.option.*
 import com.decentralchain.test.*
 
-// TODO: additional tests with activation=0
+// NOTE: Consider adding test cases for feature activation at height 0
 class GenerationPeriodSpec extends FreeSpec {
   private val defaultActivation             = 7
   private val defaultGenerationPeriodLength = 3

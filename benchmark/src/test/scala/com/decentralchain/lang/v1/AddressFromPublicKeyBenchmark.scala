@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 10, time = 1)
 class AddressFromPublicKeyBenchmark {
   @Benchmark
-  def addressFromPublicKeyWaves(s: PkSt, bh: Blackhole): Unit = bh.consume(eval(s.ctx, s.exprWaves, V6))
+  def addressFromPublicKeyDcc(s: PkSt, bh: Blackhole): Unit = bh.consume(eval(s.ctx, s.exprDcc, V6))
 
   @Benchmark
   def addressFromPublicKeyEth(s: PkSt, bh: Blackhole): Unit = bh.consume(eval(s.ctx, s.exprEth, V6))
@@ -30,7 +30,7 @@ class PkSt {
   val ds  = DirectiveSet(V6, Account, Expression).fold(null, identity)
   val ctx = lazyContexts((ds, true, true, true)).value().evaluationContext(EnvironmentFunctionsBenchmark.environment)
 
-  val wavesPk   = ByteStr(curve25519.generateKeypair._2)
-  val exprWaves = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'$wavesPk')").expr
-  val exprEth   = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'${PublicKey(wavesPk.arr ++ wavesPk.arr)}')").expr
+  val dccPk   = ByteStr(curve25519.generateKeypair._2)
+  val exprDcc = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'$dccPk')").expr
+  val exprEth   = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'${PublicKey(dccPk.arr ++ dccPk.arr)}')").expr
 }

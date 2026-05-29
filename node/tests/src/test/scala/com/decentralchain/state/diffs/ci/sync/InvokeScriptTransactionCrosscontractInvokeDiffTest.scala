@@ -18,7 +18,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
 import com.decentralchain.transaction.{DataTransaction, GenesisTransaction, TxVersion}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.SetScriptTransaction
@@ -115,8 +115,8 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         dataTxSecond2 = DataTransaction.selfSigned(1.toByte, secondAcc, Seq(dataEntry2), fee, ts + 6).explicitGet()
 
         fc       = Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)
-        payments = List(Payment(10L, Waves))
-        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee, Waves, ts + 10)
+        payments = List(Payment(10L, Dcc))
+        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee, Dcc, ts + 10)
       } yield (Seq(gTx1, gTx2, gTx3, ssTxMain, ssTxSecond, dataTxSecond, dataTxSecond2), invokeTx, secondAcc.toAddress)
 
     forAll(scenario) { case (genesisTxs, invokeTx, secondDApp) =>
@@ -193,8 +193,8 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         dataTxMain2 = DataTransaction.selfSigned(1.toByte, mainAcc, Seq(dataEntry2), fee, ts + 6).explicitGet()
 
         fc       = Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)
-        payments = List(Payment(10L, Waves))
-        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee, Waves, ts + 10)
+        payments = List(Payment(10L, Dcc))
+        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee, Dcc, ts + 10)
       } yield (Seq(gTx1, gTx2, ssTxMain, dataTxMain, dataTxMain2), invokeTx, mainAcc.toAddress)
 
     forAll(scenario) { case (genesisTxs, invokeTx, mainDApp) =>
@@ -361,8 +361,8 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         ssTxThird    = SetScriptTransaction.selfSigned(1.toByte, thirdAcc, scriptThird, fee, ts + 5).explicitGet()
 
         fc       = Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)
-        payments = List(Payment(10L, Waves))
-        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee * 100, Waves, ts + 10)
+        payments = List(Payment(10L, Dcc))
+        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee * 100, Dcc, ts + 10)
       } yield (
         Seq(gTx1, gTx2, gTx3, gTx4, ssTxMain, ssTxSecond, ssTxThird, paymentIssue, transferIssue),
         invokeTx,

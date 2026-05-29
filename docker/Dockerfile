@@ -13,9 +13,9 @@ ARG CORRETTO_ARM64_SHA256=e03899f5cc33de706b5059a62107b5a3262dd2816d4295d998f0fb
 # See https://github.com/facebook/rocksdb/issues/13893 before bumping ROCKSDB_VERSION.
 ARG ROCKSDB_LINUX64_SHA1=1fb1d6519cd2a7ff61478f766fa985baa890c7b9
 
-ENV WAVES_LOG_LEVEL=INFO
-ENV WAVES_HEAP_SIZE=2g
-ENV WAVES_NETWORK=mainnet
+ENV DCC_LOG_LEVEL=INFO
+ENV DCC_HEAP_SIZE=2g
+ENV DCC_NETWORK=mainnet
 
 SHELL ["/bin/bash", "-c"]
 
@@ -23,10 +23,10 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 
 # Node files
-ENV WVDATA=/var/lib/waves
-ENV WVLOG=/var/log/waves
-ENV WAVES_INSTALL_PATH=/usr/share/waves
-ENV WAVES_CONFIG=/etc/waves/waves.conf
+ENV WVDATA=/var/lib/dcc
+ENV WVLOG=/var/log/dcc
+ENV DCC_INSTALL_PATH=/usr/share/dcc
+ENV DCC_CONFIG=/etc/dcc/dcc.conf
 
 RUN set -euo pipefail && \
     if [ "$TARGETARCH" = "amd64" ]; then \
@@ -40,37 +40,37 @@ RUN set -euo pipefail && \
     fi && \
     export CORRETTO_JAR="AmazonCorrettoCryptoProvider-${CORRETTO_VERSION}-${CORRETTO_ARCH}.jar" && \
     export ROCKSDB_JAR="rocksdbjni-${ROCKSDB_VERSION}-linux64.jar" && \
-    mkdir -p "${WAVES_INSTALL_PATH}/lib" && \
+    mkdir -p "${DCC_INSTALL_PATH}/lib" && \
     wget -q "https://repo1.maven.org/maven2/software/amazon/cryptools/AmazonCorrettoCryptoProvider/${CORRETTO_VERSION}/${CORRETTO_JAR}" \
-         -O "${WAVES_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" && \
-    echo "${CORRETTO_SHA256}  ${WAVES_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" | sha256sum -c - && \
+         -O "${DCC_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" && \
+    echo "${CORRETTO_SHA256}  ${DCC_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" | sha256sum -c - && \
     wget -q "https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/${ROCKSDB_VERSION}/${ROCKSDB_JAR}" \
-         -O "${WAVES_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" && \
-    echo "${ROCKSDB_LINUX64_SHA1}  ${WAVES_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c -
+         -O "${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" && \
+    echo "${ROCKSDB_LINUX64_SHA1}  ${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c -
 
 # Setup node
-COPY entrypoint.sh $WAVES_INSTALL_PATH/bin/entrypoint.sh
+COPY entrypoint.sh $DCC_INSTALL_PATH/bin/entrypoint.sh
 RUN mkdir -p $WVDATA $WVLOG; \
     # Create user
-    groupadd -r waves --gid=999; \
-    useradd --no-log-init -r -g waves --uid=999 --home-dir=$WVDATA --shell=/bin/bash waves
+    groupadd -r dcc --gid=999; \
+    useradd --no-log-init -r -g dcc --uid=999 --home-dir=$WVDATA --shell=/bin/bash dcc
 
 RUN --mount=type=bind,source=target,target=/tmp/ \
     # Unpack tgz packages
-    tar zxf /tmp/waves.tgz -C $WAVES_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
-    tar zxf /tmp/dcc-grpc-server.tgz -C $WAVES_INSTALL_PATH --strip-components=1 && \
+    tar zxf /tmp/dcc.tgz -C $DCC_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
+    tar zxf /tmp/dcc-grpc-server.tgz -C $DCC_INSTALL_PATH --strip-components=1 && \
     # Set permissions
-    chown -R waves:waves $WVDATA $WVLOG $WAVES_INSTALL_PATH && chmod 755 $WVDATA $WVLOG;
+    chown -R dcc:dcc $WVDATA $WVLOG $DCC_INSTALL_PATH && chmod 755 $WVDATA $WVLOG;
 
 # Only expose REST API and mainnet P2P by default; override in docker-compose for other networks
 EXPOSE 6869 6868
 VOLUME $WVDATA
 VOLUME $WVLOG
-VOLUME $WAVES_INSTALL_PATH/lib/plugins
+VOLUME $DCC_INSTALL_PATH/lib/plugins
 WORKDIR $WVDATA
 
 HEALTHCHECK CMD wget -q -O /dev/null http://localhost:6869/node/status || exit 1
 
 STOPSIGNAL SIGINT
-USER waves
-ENTRYPOINT ["/usr/share/waves/bin/entrypoint.sh"]
+USER dcc
+ENTRYPOINT ["/usr/share/dcc/bin/entrypoint.sh"]

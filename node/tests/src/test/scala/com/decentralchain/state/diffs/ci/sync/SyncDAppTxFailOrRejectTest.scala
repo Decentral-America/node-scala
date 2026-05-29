@@ -23,7 +23,7 @@ class SyncDAppTxFailOrRejectTest extends PropSpec with WithDomain {
   val dApp4: KeyPair   = TxHelpers.signer(5)
 
   val balances: Seq[AddrWithBalance] =
-    Seq(invoker, dApp1, dApp2, dApp3, dApp4).map(acc => AddrWithBalance(acc.toAddress, 10.waves))
+    Seq(invoker, dApp1, dApp2, dApp3, dApp4).map(acc => AddrWithBalance(acc.toAddress, 10.dcc))
 
   val settings: DCCSettings = DomainPresets.RideV5
     .configure(_.copy(enforceTransferValidationAfter = 0))

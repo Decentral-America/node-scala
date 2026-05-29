@@ -19,9 +19,9 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
     val cooper = TxHelpers.signer(4)
 
     val fee                      = 400000
-    val masterTransferAmount     = 1000.waves
-    val aliceLeaseToBobAmount    = 500.waves
-    val masterLeaseToAliceAmount = 750.waves
+    val masterTransferAmount     = 1000.dcc
+    val aliceLeaseToBobAmount    = 500.dcc
+    val masterLeaseToAliceAmount = 750.dcc
 
     val genesis                = TxHelpers.genesis(master.toAddress)
     val masterTransfersToAlice = TxHelpers.transfer(master, alice.toAddress, masterTransferAmount, fee = fee, version = TxVersion.V1)
@@ -68,7 +68,7 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
   property("commit to generation") {
     val settings = DomainPresets.DeterministicFinality.blockchainSettings.functionalitySettings.copy(generationPeriodLength = 3)
 
-    val notBlockedAmount = 100_000.waves
+    val notBlockedAmount = 100_000.dcc
     val initBalance      = notBlockedAmount + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
 
     assertDiffEiTraced(
@@ -83,7 +83,7 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
   property("cannot transfer more than own-generationDeposit") {
     val settings = DomainPresets.DeterministicFinality.blockchainSettings.functionalitySettings.copy(generationPeriodLength = 3)
 
-    val notBlockedAmount = 100_000.waves
+    val notBlockedAmount = 100_000.dcc
     val initBalance =
       notBlockedAmount + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee + TestValues.fee // for transfer
 

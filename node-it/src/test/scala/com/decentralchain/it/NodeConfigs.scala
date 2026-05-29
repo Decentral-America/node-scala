@@ -63,19 +63,19 @@ object NodeConfigs {
 
   object Templates {
     def raw(x: String): String = x
-    def quorum(n: Int): String = s"waves.miner.quorum = $n"
+    def quorum(n: Int): String = s"dcc.miner.quorum = $n"
     def preactivatedFeatures(f: (Int, Height)*): String = {
       s"""
-         |waves.blockchain.custom.functionality.pre-activated-features {
+         |dcc.blockchain.custom.functionality.pre-activated-features {
          ${f.map { case (id, height) => s"|  $id = $height" }.mkString("\n")}
          |}""".stripMargin
     }
     def minAssetInfoUpdateInterval(blocks: Int): String =
-      s"waves.blockchain.custom.functionality.min-asset-info-update-interval = $blocks"
+      s"dcc.blockchain.custom.functionality.min-asset-info-update-interval = $blocks"
 
-    val nonMiner: String = "waves.miner.enable = no"
+    val nonMiner: String = "dcc.miner.enable = no"
 
-    val lightNode: String = "waves.enable-light-mode = true"
+    val lightNode: String = "dcc.enable-light-mode = true"
   }
 
 }

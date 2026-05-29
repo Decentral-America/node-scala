@@ -63,7 +63,7 @@ class SyncDAppDoubleIssueTest extends PropSpec with WithDomain {
 
       val preparingTxs = Seq(setScript1, setScript2)
 
-      val invokeFee = 200500000.waves
+      val invokeFee = 200500000.dcc
       val invoke    = TxHelpers.invoke(dApp1.toAddress, func = None, invoker = invoker, fee = invokeFee)
 
       withDomain(domainSettingsWithFS(settings), balances) { d =>

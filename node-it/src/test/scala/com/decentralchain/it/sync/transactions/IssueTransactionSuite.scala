@@ -13,7 +13,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json.{JsNull, JsString, JsValue, Json}
 
 class IssueTransactionSuite extends BaseTransactionSuite with TableDrivenPropertyChecks {
-  test("asset issue changes issuer's asset balance; issuer's waves balance is decreased by fee") {
+  test("asset issue changes issuer's asset balance; issuer's dcc balance is decreased by fee") {
     for (v <- issueTxSupportedVersions) {
       val assetName        = "myasset"
       val assetDescription = "my asset description"
@@ -90,7 +90,7 @@ class IssueTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
       val assetName        = "myasset"
       val assetDescription = "my asset description"
       val eff1             = miner.accountBalances(firstAddress)._2
-      val bigAssetFee      = eff1 + 1.waves
+      val bigAssetFee      = eff1 + 1.dcc
 
       assertApiError(sender.issue(firstKeyPair, assetName, assetDescription, someAssetAmount, 2, reissuable = false, bigAssetFee, version = v)) {
         error =>

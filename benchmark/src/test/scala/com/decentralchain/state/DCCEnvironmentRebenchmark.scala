@@ -37,7 +37,7 @@ class DCCEnvironmentRebenchmark {
   }
 
   @Benchmark
-  def wavesBalanceOf(bh: Blackhole, st: St): Unit = {
+  def dccBalanceOf(bh: Blackhole, st: St): Unit = {
     val useUnexisting = Random.nextBoolean()
     if (useUnexisting) {
       bh.consume(st.environment.accountBalanceOf(Recipient.Address(ByteStr.fromBytes(1, 2, 3)), None))

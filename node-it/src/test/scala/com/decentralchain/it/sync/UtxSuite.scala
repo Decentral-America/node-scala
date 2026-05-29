@@ -10,7 +10,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{AsyncHttpApi, TransactionInfo}
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
 import com.decentralchain.transaction.{TxVersion, utils}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -26,7 +26,7 @@ class UtxSuite extends BaseFunSuite {
     val account = UtxSuite.createAccount
 
     val transferToAccount = TransferTransaction
-      .selfSigned(1.toByte, miner.keyPair, account.toAddress, Waves, AMOUNT, Waves, ENOUGH_FEE, ByteStr.empty, System.currentTimeMillis())
+      .selfSigned(1.toByte, miner.keyPair, account.toAddress, Dcc, AMOUNT, Dcc, ENOUGH_FEE, ByteStr.empty, System.currentTimeMillis())
       .explicitGet()
 
     miner.signedBroadcast(transferToAccount.json())
@@ -38,9 +38,9 @@ class UtxSuite extends BaseFunSuite {
         1.toByte,
         account,
         miner.keyPair.toAddress,
-        Waves,
+        Dcc,
         AMOUNT - ENOUGH_FEE,
-        Waves,
+        Dcc,
         ENOUGH_FEE,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -52,9 +52,9 @@ class UtxSuite extends BaseFunSuite {
         1.toByte,
         account,
         notMiner.keyPair.toAddress,
-        Waves,
+        Dcc,
         AMOUNT - ENOUGH_FEE,
-        Waves,
+        Dcc,
         ENOUGH_FEE,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -88,9 +88,9 @@ class UtxSuite extends BaseFunSuite {
           TxVersion.V1,
           miner.keyPair,
           whitelistedAccount.toAddress,
-          Waves,
+          Dcc,
           5 * minTransferFee + 5 + (1 to 5).sum,
-          Waves,
+          Dcc,
           minTransferFee,
           ByteStr.empty,
           time
@@ -102,9 +102,9 @@ class UtxSuite extends BaseFunSuite {
           TxVersion.V1,
           miner.keyPair,
           whitelistedDAppAccount.toAddress,
-          Waves,
+          Dcc,
           minSetScriptFee,
-          Waves,
+          Dcc,
           minTransferFee,
           ByteStr.empty,
           time
@@ -115,9 +115,9 @@ class UtxSuite extends BaseFunSuite {
         TxVersion.V1,
         miner.keyPair,
         invokeAccount.toAddress,
-        Waves,
+        Dcc,
         5 * minInvokeFee + (1 to 5).sum,
-        Waves,
+        Dcc,
         minTransferFee,
         ByteStr.empty,
         time
@@ -143,18 +143,18 @@ class UtxSuite extends BaseFunSuite {
 
     val txs = (1 to 10).map { _ =>
       TransferTransaction
-        .selfSigned(TxVersion.V1, miner.keyPair, UtxSuite.createAccount.toAddress, Waves, 1L, Waves, higherFee, ByteStr.empty, time)
+        .selfSigned(TxVersion.V1, miner.keyPair, UtxSuite.createAccount.toAddress, Dcc, 1L, Dcc, higherFee, ByteStr.empty, time)
         .explicitGet()
     }
 
     val whitelistedTxs = {
       val bySender = (1 to 5).map { i =>
         TransferTransaction
-          .selfSigned(TxVersion.V1, whitelistedAccount, UtxSuite.createAccount.toAddress, Waves, 1L, Waves, minTransferFee + i, ByteStr.empty, time)
+          .selfSigned(TxVersion.V1, whitelistedAccount, UtxSuite.createAccount.toAddress, Dcc, 1L, Dcc, minTransferFee + i, ByteStr.empty, time)
           .explicitGet()
       }
       val byDApp = (1 to 5).map { i =>
-        utils.Signed.invokeScript(TxVersion.V1, invokeAccount, whitelistedDAppAccount.toAddress, None, Seq.empty, minInvokeFee + i, Waves, time)
+        utils.Signed.invokeScript(TxVersion.V1, invokeAccount, whitelistedDAppAccount.toAddress, None, Seq.empty, minInvokeFee + i, Dcc, time)
       }
       bySender ++ byDApp
     }
@@ -203,7 +203,7 @@ object UtxSuite {
 
   private def minerConfigPredef(whitelist: Seq[String]) =
     s"""
-       |waves {
+       |dcc {
        |  synchronization.synchronization-timeout = 10s
        |  utx {
        |    max-size = 5000
@@ -219,7 +219,7 @@ object UtxSuite {
 
   private def notMinerConfigPredef(whitelist: Seq[String]) =
     s"""
-       |waves {
+       |dcc {
        |  synchronization.synchronization-timeout = 10s
        |  utx {
        |    max-size = 5000

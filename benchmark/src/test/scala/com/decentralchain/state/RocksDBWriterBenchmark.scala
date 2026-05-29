@@ -73,22 +73,22 @@ object RocksDBWriterBenchmark {
   @State(Scope.Benchmark)
   class BaseSt {
     protected val benchSettings: Settings = Settings.fromConfig(ConfigFactory.load())
-    private val wavesSettings: DCCSettings = {
+    private val dccSettings: DCCSettings = {
       val config = loadConfig(ConfigFactory.parseFile(new File(benchSettings.networkConfigFile)))
       DCCSettings.fromRootConfig(config)
     }
 
     AddressScheme.current = new AddressScheme {
-      override val chainId: Byte = wavesSettings.blockchainSettings.addressSchemeCharacter.toByte
+      override val chainId: Byte = dccSettings.blockchainSettings.addressSchemeCharacter.toByte
     }
 
     private val rawDB: RDB = {
-      val dir = new File(wavesSettings.dbSettings.directory)
-      if (!dir.isDirectory) throw new IllegalArgumentException(s"Can't find directory at '${wavesSettings.dbSettings.directory}'")
-      RDB.open(wavesSettings.dbSettings)
+      val dir = new File(dccSettings.dbSettings.directory)
+      if (!dir.isDirectory) throw new IllegalArgumentException(s"Can't find directory at '${dccSettings.dbSettings.directory}'")
+      RDB.open(dccSettings.dbSettings)
     }
 
-    val db = RocksDBWriter(rawDB, wavesSettings.blockchainSettings, wavesSettings.dbSettings, wavesSettings.enableLightMode)
+    val db = RocksDBWriter(rawDB, dccSettings.blockchainSettings, dccSettings.dbSettings, dccSettings.enableLightMode)
 
     def loadBlockInfoAt(height: Height): Option[(BlockMeta, Seq[(TxMeta, Transaction)])] =
       loadBlockMetaAt(height).map { meta =>
@@ -97,7 +97,7 @@ object RocksDBWriterBenchmark {
 
     def loadBlockMetaAt(height: Height): Option[BlockMeta] = rawDB.db.get(Keys.blockMetaAt(height)).flatMap(BlockMeta.fromPb)
 
-    val cba = CommonBlocksApi(wavesSettings.synchronizationSettings.maxRollback, db, loadBlockMetaAt, loadBlockInfoAt)
+    val cba = CommonBlocksApi(dccSettings.synchronizationSettings.maxRollback, db, loadBlockMetaAt, loadBlockInfoAt)
 
     def blockById(id: ByteStr): Option[(BlockMeta, Seq[(TxMeta, Transaction)])] = cba.block(id)
 

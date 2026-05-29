@@ -6,7 +6,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.*
 
 class SyncInvokeActionsTest extends PropSpec with WithDomain {
@@ -69,10 +69,10 @@ class SyncInvokeActionsTest extends PropSpec with WithDomain {
       )
       d.appendBlock(setScript(dApp1Signer, dApp1), setScript(dApp2Signer, dApp2))
       d.appendAndAssertSucceed(invoke(dApp1Address, fee = invokeFee(issues = 1)))
-      d.liquidSnapshot.balances.get((dApp1Address, Waves)) shouldBe empty
-      d.liquidSnapshot.balances.get((dApp2Address, Waves)) shouldBe empty
+      d.liquidSnapshot.balances.get((dApp1Address, Dcc)) shouldBe empty
+      d.liquidSnapshot.balances.get((dApp2Address, Dcc)) shouldBe empty
       d.liquidSnapshot.balances.collect {
-        case ((address, asset), amount) if address == defaultAddress && asset != Waves => amount
+        case ((address, asset), amount) if address == defaultAddress && asset != Dcc => amount
       }.head shouldBe 1000
     }
   }

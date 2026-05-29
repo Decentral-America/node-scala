@@ -12,7 +12,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.TransferSending.Req
 import com.decentralchain.it.api.AsyncHttpApi.*
 import com.decentralchain.it.api.Transaction
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.utils.ScorexLogging
 import org.scalatest.Suite
@@ -112,9 +112,9 @@ trait TransferSending extends ScorexLogging {
               version = 2.toByte,
               sender = KeyPair(Base58.decode(x.senderSeed)),
               recipient = AddressOrAlias.fromString(x.targetAddress).explicitGet(),
-              asset = Waves,
+              asset = Dcc,
               amount = x.amount,
-              feeAsset = Waves,
+              feeAsset = Dcc,
               fee = x.fee,
               attachment =
                 if (includeAttachment)

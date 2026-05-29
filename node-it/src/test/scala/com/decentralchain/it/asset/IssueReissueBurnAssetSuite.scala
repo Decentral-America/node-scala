@@ -26,8 +26,8 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
       .overrideBase(_.quorum(0))
       .withDefault(1)
       .buildNonConflicting()
-  private val initialWavesBalance = 100.waves
-  private val setScriptPrice      = 0.01.waves
+  private val initialDccBalance = 100.dcc
+  private val setScriptPrice      = 0.01.dcc
   private val accountCounter      = AtomicInt(1000)
 
   private val CallableMethod    = "@Callable"
@@ -50,7 +50,7 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
         val tx  = issue(acc, method, data, fee)
 
         validateIssuedAssets(acc, tx, data, method = method)
-        sender.balanceDetails(acc.toAddress.toString).regular shouldBe (initialWavesBalance - setScriptPrice - fee)
+        sender.balanceDetails(acc.toAddress.toString).regular shouldBe (initialDccBalance - setScriptPrice - fee)
       }
 
     for (data <- Seq(simpleNonreissuableAsset, simpleReissuableAsset)) s"${data.assetType} asset could be partially burned" in {
@@ -323,7 +323,7 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
       .explicitGet()
       ._1
 
-    miner.transfer(sender.keyPair, address.toAddress.toString, initialWavesBalance, setScriptFee * 2, waitForTx = true)
+    miner.transfer(sender.keyPair, address.toAddress.toString, initialDccBalance, setScriptFee * 2, waitForTx = true)
 
     nodes.waitForHeightAriseAndTxPresent(
       miner
@@ -520,7 +520,7 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
   }
 
   def invocationCost(aCount: Int, isSmartAcc: Boolean = true, sPCount: Int = 0, sAinActions: Int = 0): Long = {
-    0.005.waves + (if (isSmartAcc) 0.004.waves else 0L) + 0.004.waves * sPCount + 0.004.waves * sAinActions + 1.waves * aCount
+    0.005.dcc + (if (isSmartAcc) 0.004.dcc else 0L) + 0.004.dcc * sPCount + 0.004.dcc * sAinActions + 1.dcc * aCount
   }
 
   def script(asset: Asset, function: String = ""): String = {

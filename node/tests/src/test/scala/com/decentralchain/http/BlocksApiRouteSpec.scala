@@ -17,7 +17,7 @@ import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain, GeneratorIndex, Height}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.{Order, OrderType}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.utils.{SharedSchedulerMixin, SystemTime}
@@ -422,8 +422,8 @@ class BlocksApiRouteSpec
       val issue      = TxHelpers.issue(issuer)
       val exchange =
         TxHelpers.exchangeFromOrders(
-          TxHelpers.order(OrderType.BUY, Waves, issue.asset, version = Order.V4, attachment = Some(attachment)),
-          TxHelpers.order(OrderType.SELL, Waves, issue.asset, version = Order.V4, sender = issuer),
+          TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(attachment)),
+          TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer),
           version = TxVersion.V3
         )
 
@@ -471,7 +471,7 @@ class BlocksApiRouteSpec
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString), xtnBuybackRewardPeriod = 1),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(
@@ -594,7 +594,7 @@ class BlocksApiRouteSpec
         )
       )
 
-    withDomain(settings, Seq(AddrWithBalance(miner.toAddress, 100_000.waves))) { d =>
+    withDomain(settings, Seq(AddrWithBalance(miner.toAddress, 100_000.dcc))) { d =>
       val route = new BlocksApiRoute(d.settings.restAPISettings, d.blocksApi, SystemTime, new RouteTimeout(60.seconds)(using sharedScheduler)).route
 
       def checkRewardAndShares(height: Int, expectedReward: Long, expectedMinerShare: Long, expectedDaoShare: Long, expectedXtnShare: Option[Long])(
@@ -626,24 +626,24 @@ class BlocksApiRouteSpec
       (1 to 3).foreach(_ => d.appendKeyBlock(miner))
       d.blockchain.height shouldBe 4
       (1 to 3).foreach { h =>
-        checkRewardAndShares(h + 1, 6.waves, 2.waves, 2.waves, Some(2.waves))
+        checkRewardAndShares(h + 1, 6.dcc, 2.dcc, 2.dcc, Some(2.dcc))
       }
 
       // reward boost activation
       (1 to 5).foreach(_ => d.appendKeyBlock(miner))
       (1 to 5).foreach { h =>
-        checkRewardAndShares(h + 4, 60.waves, 20.waves, 20.waves, Some(20.waves))
+        checkRewardAndShares(h + 4, 60.dcc, 20.dcc, 20.dcc, Some(20.dcc))
       }
 
       // cease XTN buyback
       (1 to 5).foreach(_ => d.appendKeyBlock(miner))
       (1 to 5).foreach { h =>
-        checkRewardAndShares(h + 9, 60.waves, 40.waves, 20.waves, None)
+        checkRewardAndShares(h + 9, 60.dcc, 40.dcc, 20.dcc, None)
       }
 
       d.appendKeyBlock(miner)
       d.blockchain.height shouldBe 15
-      checkRewardAndShares(15, 6.waves, 4.waves, 2.waves, None)
+      checkRewardAndShares(15, 6.dcc, 4.dcc, 2.dcc, None)
     }
   }
 }

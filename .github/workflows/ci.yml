@@ -66,7 +66,7 @@ jobs:
             ${{ runner.os }}-sbt-
       - name: Run unit tests with coverage
         # node-tests excluded pending DCC-143: 3 pre-existing failures from
-        # Waves blockchain settings that require updating for DCC chain config.
+        # Dcc blockchain settings that require updating for DCC chain config.
         # All other suites must pass cleanly.
         run: |
           sbt --batch coverage \
@@ -128,7 +128,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dcc-fat-jar
-          path: node/target/waves-all-*.jar
+          path: node/target/dcc-all-*.jar
 
   docker:
     name: Docker (${{ matrix.network }})

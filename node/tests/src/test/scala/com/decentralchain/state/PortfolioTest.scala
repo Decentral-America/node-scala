@@ -47,8 +47,8 @@ class PortfolioTest extends FunSuite {
     p.balance shouldBe 0
   }
 
-  test("prevents overflow of Waves") {
-    Portfolio(Long.MaxValue - 1L).combine(Portfolio(Long.MaxValue - 2L)) shouldBe Left("Waves balance sum overflow")
+  test("prevents overflow of Dcc") {
+    Portfolio(Long.MaxValue - 1L).combine(Portfolio(Long.MaxValue - 2L)) shouldBe Left("Dcc balance sum overflow")
   }
 
   test("prevents overflow of assets") {

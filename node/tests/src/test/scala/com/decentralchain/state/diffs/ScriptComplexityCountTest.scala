@@ -57,8 +57,8 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
     val tr1           = transfer(master, acc.toAddress, 10000000000L)
     val tr2           = transfer(master, acc.toAddress, additionalAmount, issueScr.asset)
     val massTransfers = Seq(acc.toAddress -> 1L)
-    val mt1           = massTransfer(master, massTransfers, version = TxVersion.V1, fee = 1.waves)
-    val mt2           = massTransfer(master, massTransfers, issueScr.asset, fee = 1.waves)
+    val mt1           = massTransfer(master, massTransfers, version = TxVersion.V1, fee = 1.dcc)
+    val mt2           = massTransfer(master, massTransfers, issueScr.asset, fee = 1.dcc)
     val l             = lease(master, acc.toAddress, 1)
     val lc            = leaseCancel(l.id(), master)
     val o1 = order(
@@ -81,7 +81,7 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
       sender = acc,
       matcher = master
     )
-    val exchange = exchangeFromOrders(o1, o2, master, version = TxVersion.V2, fee = 1.waves)
+    val exchange = exchangeFromOrders(o1, o2, master, version = TxVersion.V2, fee = 1.dcc)
     val o1a = order(
       OrderType.BUY,
       issueScr.asset,
@@ -102,7 +102,7 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
       sender = acc,
       matcher = acc
     )
-    val exchangea    = exchangeFromOrders(o1a, o2a, acc, version = TxVersion.V2, fee = 1.waves)
+    val exchangea    = exchangeFromOrders(o1a, o2a, acc, version = TxVersion.V2, fee = 1.dcc)
     val setContractB = setScript(acc, script)
     val issueScrB    = issue(acc, issueAmount + additionalAmount, script = Some(script))
     val o1b = order(
@@ -125,7 +125,7 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
       sender = acc,
       matcher = master
     )
-    val exchangeB = exchangeFromOrders(o1b, o2b, master, version = TxVersion.V2, fee = 1.waves)
+    val exchangeB = exchangeFromOrders(o1b, o2b, master, version = TxVersion.V2, fee = 1.dcc)
 
     val txs = Seq[Transaction](
       setContract,

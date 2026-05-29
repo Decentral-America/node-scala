@@ -24,7 +24,7 @@ import com.decentralchain.state.diffs.TransactionDiffer.TransactionValidationErr
 import com.decentralchain.state.diffs.smart.smartEnabledFS
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.assets.*
@@ -43,13 +43,13 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
 
     val issue   = TxHelpers.issue(master, 100, reissuable = isReissuable, version = TxVersion.V1)
     val asset   = IssuedAsset(issue.id())
-    val reissue = TxHelpers.reissue(asset, master, 50, version = TxVersion.V1, fee = 1.waves)
+    val reissue = TxHelpers.reissue(asset, master, 50, version = TxVersion.V1, fee = 1.dcc)
     val burn    = TxHelpers.burn(asset, 10, master, version = TxVersion.V1)
 
     ((genesis, issue), (reissue, burn))
   }
 
-  property("Issue+Reissue+Burn do not break waves invariant and updates state") {
+  property("Issue+Reissue+Burn do not break dcc invariant and updates state") {
     val ((gen, issue), (reissue, burn)) = issueReissueBurnTxs(isReissuable = true)
     withDomain(RideV3) { d =>
       d.appendBlock(gen)
@@ -58,9 +58,9 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
       val assetQuantityDiff = reissue.quantity.value - burn.quantity.value
       d.liquidSnapshot.balances.toSeq
         .map {
-          case ((`defaultAddress`, Waves), amount) =>
+          case ((`defaultAddress`, Dcc), amount) =>
             val carryFee = (-issue.fee.value + reissue.fee.value + burn.fee.value) / 5 * 3
-            Waves -> (amount - d.rocksDBWriter.balance(defaultAddress, Waves) + carryFee)
+            Dcc -> (amount - d.rocksDBWriter.balance(defaultAddress, Dcc) + carryFee)
           case ((address, asset), amount) =>
             asset -> (amount - d.rocksDBWriter.balance(address, asset))
         }
@@ -117,18 +117,18 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
       val issue         = TxHelpers.issue(issuer, ENOUGH_AMT, version = TxVersion.V1)
       val asset         = IssuedAsset(issue.id())
       val assetTransfer = TxHelpers.transfer(issuer, burner.toAddress, 1, asset, version = TxVersion.V1)
-      val wavesTransfer = TxHelpers.transfer(issuer, burner.toAddress, version = TxVersion.V1)
-      val burn          = TxHelpers.burn(asset, assetTransfer.amount.value, burner, fee = wavesTransfer.amount.value, version = TxVersion.V1)
+      val dccTransfer = TxHelpers.transfer(issuer, burner.toAddress, version = TxVersion.V1)
+      val burn          = TxHelpers.burn(asset, assetTransfer.amount.value, burner, fee = dccTransfer.amount.value, version = TxVersion.V1)
 
-      (genesis, issue, assetTransfer, wavesTransfer, burn)
+      (genesis, issue, assetTransfer, dccTransfer, burn)
     }
 
     val fs =
       TestFunctionalitySettings.Enabled
         .copy(preActivatedFeatures = Map(BlockchainFeatures.SmartAccounts.id -> 0, BlockchainFeatures.BurnAnyTokens.id -> 0))
 
-    val (genesis, issue, assetTransfer, wavesTransfer, burn) = setup
-    assertDiffAndState(Seq(TestBlock.create(Seq(genesis, issue, assetTransfer, wavesTransfer))), TestBlock.create(Seq(burn)), fs) {
+    val (genesis, issue, assetTransfer, dccTransfer, burn) = setup
+    assertDiffAndState(Seq(TestBlock.create(Seq(genesis, issue, assetTransfer, dccTransfer))), TestBlock.create(Seq(burn)), fs) {
       case (_, newState) =>
         newState.balance(burn.sender.toAddress, burn.asset) shouldEqual 0
     }
@@ -509,7 +509,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
           decimals = 0,
           reissuable = true,
           script = script,
-          fee = 1.waves,
+          fee = 1.dcc,
           timestamp = ts
         )
         .explicitGet()
@@ -519,9 +519,9 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
 
       val successfulIssue = issue(Some(TestCompiler(V5).compileAsset("true")))
       val setAssetScriptWithInvoke = TxHelpers
-        .setAssetScript(issuer, successfulIssue.asset, getScriptWithSyncCall("invoke"), 1.waves, version = TxVersion.V2)
+        .setAssetScript(issuer, successfulIssue.asset, getScriptWithSyncCall("invoke"), 1.dcc, version = TxVersion.V2)
       val setAssetScriptWithReentrantInvoke = TxHelpers
-        .setAssetScript(issuer, successfulIssue.asset, getScriptWithSyncCall("reentrantInvoke"), 1.waves, version = TxVersion.V2)
+        .setAssetScript(issuer, successfulIssue.asset, getScriptWithSyncCall("reentrantInvoke"), 1.dcc, version = TxVersion.V2)
 
       d.appendBlock(genesis)
       d.appendBlockE(issue(Some(getScriptWithSyncCall("invoke")))) should produce("function 'Native(1020)' not found")
@@ -532,7 +532,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
     }
   }
 
-  property("only Waves can be used to pay fees for UpdateAssetInfoTransaction after RideV6 activation") {
+  property("only Dcc can be used to pay fees for UpdateAssetInfoTransaction after RideV6 activation") {
     val sponsoredIssuer = TxHelpers.signer(1)
     val updatedIssuer   = TxHelpers.signer(2)
 
@@ -551,14 +551,14 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
         TxHelpers.updateAssetInfo(
           assetId = updatedIssue.assetId,
           sender = updatedIssuer,
-          fee = Sponsorship.fromWaves(TestValues.fee, sponsor.minSponsoredAssetFee.get.value),
+          fee = Sponsorship.fromDcc(TestValues.fee, sponsor.minSponsoredAssetFee.get.value),
           feeAsset = sponsorIssue.asset
         )
 
       d.appendBlock(sponsorIssue, updatedIssue, sponsor, transfer)
       d.appendAndAssertSucceed(updateAssetInfo())
       d.appendBlock()
-      d.appendBlockE(updateAssetInfo()) should produceRejectOrFailedDiff("only Waves can be used to pay fees for UpdateAssetInfoTransaction")
+      d.appendBlockE(updateAssetInfo()) should produceRejectOrFailedDiff("only Dcc can be used to pay fees for UpdateAssetInfoTransaction")
       d.appendAndAssertSucceed(TxHelpers.updateAssetInfo(updatedIssue.assetId, sender = updatedIssuer))
     }
   }

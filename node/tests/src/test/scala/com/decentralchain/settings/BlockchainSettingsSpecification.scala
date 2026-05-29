@@ -10,9 +10,9 @@ class BlockchainSettingsSpecification extends FlatSpec {
   "BlockchainSettings" should "read custom values" in {
     val config = loadConfig(
       ConfigFactory.parseString(
-        """waves {
-          |  directory = "/waves"
-          |  data-directory = "/waves/data"
+        """dcc {
+          |  directory = "/dcc"
+          |  data-directory = "/dcc/data"
           |  blockchain {
           |    type = CUSTOM
           |    custom {
@@ -87,9 +87,9 @@ class BlockchainSettingsSpecification extends FlatSpec {
   it should "read testnet settings" in {
     val config = loadConfig(
       ConfigFactory.parseString(
-        """waves {
-          |  directory = "/waves"
-          |  data-directory = "/waves/data"
+        """dcc {
+          |  directory = "/dcc"
+          |  data-directory = "/dcc/data"
           |  blockchain {
           |    type = TESTNET
           |  }
@@ -129,9 +129,9 @@ class BlockchainSettingsSpecification extends FlatSpec {
   it should "read mainnet settings" in {
     val config = loadConfig(
       ConfigFactory.parseString(
-        """waves {
-          |  directory = "/waves"
-          |  data-directory = "/waves/data"
+        """dcc {
+          |  directory = "/dcc"
+          |  data-directory = "/dcc/data"
           |  blockchain {
           |    type = MAINNET
           |  }

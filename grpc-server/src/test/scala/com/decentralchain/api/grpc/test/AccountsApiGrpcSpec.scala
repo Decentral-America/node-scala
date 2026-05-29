@@ -15,7 +15,7 @@ import io.decentralchain.protobuf.Amount
 import io.decentralchain.protobuf.transaction.{DataEntry, Recipient}
 import com.decentralchain.state.{Height, BlockRewardCalculator, EmptyDataEntry, IntegerDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.utils.{DiffMatchers, Schedulers}
 import org.scalatest.{Assertion, BeforeAndAfterAll}
@@ -37,22 +37,22 @@ class AccountsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatch
     val grpcApi = getGrpcApi(d)
 
     val assetTransferAmount   = 123
-    val wavesTransferAmount   = 456 + TestValues.fee
+    val dccTransferAmount   = 456 + TestValues.fee
     val reverseTransferAmount = 1
 
     val issue     = TxHelpers.issue(sender)
     val transfer1 = TxHelpers.transfer(sender, recipient.toAddress, assetTransferAmount, issue.asset)
-    val transfer2 = TxHelpers.transfer(sender, recipient.toAddress, wavesTransferAmount, Waves)
-    val transfer3 = TxHelpers.transfer(recipient, sender.toAddress, reverseTransferAmount, Waves)
+    val transfer2 = TxHelpers.transfer(sender, recipient.toAddress, dccTransferAmount, Dcc)
+    val transfer3 = TxHelpers.transfer(recipient, sender.toAddress, reverseTransferAmount, Dcc)
 
     d.appendBlock(issue)
     d.appendBlock(transfer1, transfer2, transfer3)
 
     d.liquidAndSolidAssert { () =>
-      val expectedWavesBalance = wavesTransferAmount - TestValues.fee - reverseTransferAmount
+      val expectedDccBalance = dccTransferAmount - TestValues.fee - reverseTransferAmount
       val expectedResult = List(
         BalanceResponse.of(
-          BalanceResponse.Balance.Waves(BalanceResponse.WavesBalances(expectedWavesBalance, 0, expectedWavesBalance, expectedWavesBalance))
+          BalanceResponse.Balance.Dcc(BalanceResponse.DccBalances(expectedDccBalance, 0, expectedDccBalance, expectedDccBalance))
         ),
         BalanceResponse.of(BalanceResponse.Balance.Asset(Amount(ByteString.copyFrom(issue.asset.id.arr), assetTransferAmount)))
       )
@@ -176,7 +176,7 @@ class AccountsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatch
     ): Assertion = {
       val expectedResult = List(
         BalanceResponse.of(
-          BalanceResponse.Balance.Waves(BalanceResponse.WavesBalances(expectedRegular, expectedGenerating, expectedRegular, expectedEffective))
+          BalanceResponse.Balance.Dcc(BalanceResponse.DccBalances(expectedRegular, expectedGenerating, expectedRegular, expectedEffective))
         )
       )
 
@@ -198,8 +198,8 @@ class AccountsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatch
 
       val challengingMiner = d.wallet.generateNewAccount().get
 
-      val initChallengingBalance = 1000.waves
-      val initChallengedBalance  = 2000.waves
+      val initChallengingBalance = 1000.dcc
+      val initChallengedBalance  = 2000.dcc
 
       d.appendBlock(
         TxHelpers.transfer(sender, challengingMiner.toAddress, initChallengingBalance),

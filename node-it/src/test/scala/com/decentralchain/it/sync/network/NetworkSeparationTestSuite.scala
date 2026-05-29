@@ -72,7 +72,7 @@ class NetworkSeparationTestSuite extends BaseFreeSpec, WaitForHeight2, ScorexLog
 object NetworkSeparationTestSuite {
   import com.decentralchain.it.NodeConfigs.*
   private val woFeatureConfig = ConfigFactory.parseString(s"""
-                                                             |waves {
+                                                             |dcc {
                                                              |  synchronization.synchronization-timeout = 10s
                                                              |  blockchain.custom.functionality {
                                                              |    pre-activated-features = {
@@ -84,7 +84,7 @@ object NetworkSeparationTestSuite {
                                                              |}""".stripMargin)
 
   private val withFeatureConfig = ConfigFactory.parseString(s"""
-                                                               |waves {
+                                                               |dcc {
                                                                |  synchronization.synchronization-timeout = 10s
                                                                |  blockchain.custom.functionality {
                                                                |    pre-activated-features = {

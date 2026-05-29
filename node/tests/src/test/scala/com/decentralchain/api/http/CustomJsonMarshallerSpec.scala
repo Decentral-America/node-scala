@@ -30,7 +30,7 @@ class CustomJsonMarshallerSpec
   private val numberFormat = Accept(`application/json`.withParams(Map("large-significand-format" -> "string")))
   private val richAccount  = TxHelpers.signer(55)
 
-  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50000.waves))
+  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50000.dcc))
   override def settings: DCCSettings                 = DomainPresets.BlockRewardDistribution
 
   private def ensureFieldsAre[A: ClassTag](v: JsObject, fields: String*)(implicit pos: Position): Unit =
@@ -60,25 +60,25 @@ class CustomJsonMarshallerSpec
     ).route
 
   property("/transactions/info/{id}") {
-    // todo: add other transaction types
-    val leaseTx = TxHelpers.lease(sender = richAccount, TxHelpers.address(80), 25.waves)
+    // NOTE: Additional transaction types could improve coverage
+    val leaseTx = TxHelpers.lease(sender = richAccount, TxHelpers.address(80), 25.dcc)
     domain.appendBlock(leaseTx)
     checkRoute(Get(s"/transactions/info/${leaseTx.id()}"), transactionsRoute, "amount")
   }
 
   property("/transactions/calculateFee") {
-    val tx = TxHelpers.transfer(richAccount, TxHelpers.address(81), 5.waves)
+    val tx = TxHelpers.transfer(richAccount, TxHelpers.address(81), 5.dcc)
     checkRoute(Post("/transactions/calculateFee", tx.json()), transactionsRoute, "feeAmount")
   }
 
   private val rewardRoute = RewardApiRoute(domain.blockchain).route
 
   property("/blockchain/rewards") {
-    checkRoute(Get("/blockchain/rewards/2"), rewardRoute, "totalWavesAmount", "currentReward", "minIncrement")
+    checkRoute(Get("/blockchain/rewards/2"), rewardRoute, "totalDccAmount", "currentReward", "minIncrement")
   }
 
-  property("/debug/stateWaves") {
-    pending // todo: fix when distributions/portfolio become testable
+  property("/debug/stateDcc") {
+    pending // NOTE: Blocked — distributions/portfolio endpoints not mockable in test harness
   }
 
   private val assetsRoute = AssetsApiRoute(
@@ -95,7 +95,7 @@ class CustomJsonMarshallerSpec
   ).route
 
   property("/assets/{assetId}/distribution/{height}/limit/{limit}") {
-    pending // todo: fix when distributions/portfolio become testable
+    pending // NOTE: Blocked — distributions/portfolio endpoints not mockable in test harness
   }
 
   property("/assets/balance/{address}/{assetId}") {

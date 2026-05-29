@@ -45,10 +45,10 @@ docker run -d \
   -p 6868:6868 \
   -p 6869:6869 \
   -v dcc-data:/var/lib/decentralchain \
-  -e WAVES_NETWORK=MAINNET \
-  -e WAVES_HEAP_SIZE=4g \
-  -e WAVES_WALLET_SEED="$DCC_WALLET_SEED" \
-  -e WAVES_WALLET_PASSWORD="$DCC_WALLET_PASSWORD" \
+  -e DCC_NETWORK=MAINNET \
+  -e DCC_HEAP_SIZE=4g \
+  -e DCC_WALLET_SEED="$DCC_WALLET_SEED" \
+  -e DCC_WALLET_PASSWORD="$DCC_WALLET_PASSWORD" \
   ghcr.io/decentral-america/node-scala:mainnet-latest
 ```
 
@@ -71,7 +71,7 @@ See [docker/README.md](docker/README.md) for a complete Compose example.
 ```sh
 java -Xmx4g \
   -Djava.net.preferIPv4Stack=true \
-  -jar node/target/waves-all-<version>.jar \
+  -jar node/target/dcc-all-<version>.jar \
   node/decentralchain-mainnet.conf
 ```
 
@@ -124,7 +124,7 @@ curl -s -X POST http://localhost:6869/addresses
 curl -s "http://localhost:6869/addresses/balance/<address>"
 ```
 
-**Never share your wallet seed.** The `WAVES_WALLET_SEED` env var is not logged, but treat any system that has ever held it as potentially compromised if it is exposed.
+**Never share your wallet seed.** The `DCC_WALLET_SEED` env var is not logged, but treat any system that has ever held it as potentially compromised if it is exposed.
 
 ---
 
@@ -141,7 +141,7 @@ docker logs --tail 200 dcc-node
 docker logs dcc-node > /tmp/dcc-node-$(date +%Y%m%d).log 2>&1
 ```
 
-Log levels (set via `WAVES_LOG_LEVEL`): `OFF` `ERROR` `WARN` `INFO` `DEBUG` `TRACE`
+Log levels (set via `DCC_LOG_LEVEL`): `OFF` `ERROR` `WARN` `INFO` `DEBUG` `TRACE`
 
 Use `INFO` in production. `DEBUG` is useful for diagnosing sync or peer issues but generates significant volume.
 
@@ -175,8 +175,8 @@ Use `INFO` in production. `DEBUG` is useful for diagnosing sync or peer issues b
      -p 6869:6869 \
      -v dcc-data:/var/lib/decentralchain \
      --env-file .env \
-     -e WAVES_NETWORK=MAINNET \
-     -e WAVES_HEAP_SIZE=4g \
+     -e DCC_NETWORK=MAINNET \
+     -e DCC_HEAP_SIZE=4g \
      ghcr.io/decentral-america/node-scala:mainnet-latest
    ```
 
@@ -217,7 +217,7 @@ If the upgraded node fails to start or produces errors after upgrade:
      -p 6869:6869 \
      -v dcc-data:/var/lib/decentralchain \
      --env-file .env \
-     -e WAVES_NETWORK=MAINNET \
+     -e DCC_NETWORK=MAINNET \
      ghcr.io/decentral-america/node-scala:sha-<previous-commit>
    ```
 
@@ -265,7 +265,7 @@ Before declaring a node production-ready:
 - [ ] Wallet contains at least one address with expected balance
 - [ ] Firewall allows inbound 6868/tcp from P2P peers
 - [ ] Firewall restricts 6869/tcp to internal network or reverse proxy only
-- [ ] `WAVES_WALLET_SEED` is not in shell history or container inspect output
+- [ ] `DCC_WALLET_SEED` is not in shell history or container inspect output
 - [ ] Volume persistence confirmed: restart node, verify height continues from same point
 - [ ] Log level set to `INFO` or `WARN` (not `DEBUG`/`TRACE`) in production
 

@@ -14,7 +14,7 @@ import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.state.diffs.produceRejectOrFailedDiff
 import com.decentralchain.state.{IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.TxValidationError.FailedTransactionError
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -64,7 +64,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val gTx2 = TxHelpers.genesis(invokerAddress)
 
     val ssTx     = TxHelpers.setScript(dApp, script)
-    val payments = List(Payment(10, Waves))
+    val payments = List(Payment(10, Dcc))
     val invoke   = TxHelpers.invoke(dAppAddress, Some("foo"), Nil, payments)
 
     assertDiffAndState(Seq(TestBlock.create(Seq(gTx1, gTx2, ssTx))), TestBlock.create(Seq(invoke), Block.ProtoBlockVersion), fsWithV5) {
@@ -105,7 +105,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val gTx2 = TxHelpers.genesis(invokerAddress)
 
     val ssTx     = TxHelpers.setScript(dApp, script)
-    val payments = List(Payment(10, Waves))
+    val payments = List(Payment(10, Dcc))
     val invoke   = TxHelpers.invoke(dAppAddress, Some("foo"), Nil, payments)
 
     assertDiffAndState(Seq(TestBlock.create(Seq(gTx1, gTx2, ssTx))), TestBlock.create(Seq(invoke), Block.ProtoBlockVersion), fsWithV5) {
@@ -142,16 +142,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
         s"""
            | @Callable(i)
            | func foo() = {
-           |  let b1 = wavesBalance(this)
-           |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+           |  let b1 = dccBalance(this)
+           |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
            |  if b1 == b1 && ob1 == ob1
            |  then
            |    let r = invoke(Alias("alias"), "bar", [this.bytes], [AttachedPayment(unit, 17)])
            |    if r == 17
            |    then
            |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-           |     let b2 = wavesBalance(this)
-           |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+           |     let b2 = dccBalance(this)
+           |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
            |     let ab = assetBalance(this, getBinaryValue(Address(base58'$thirdAddress'), "asset"))
            |     if data == 1
            |     then
@@ -183,7 +183,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val aliasTx    = TxHelpers.createAlias("alias", thirdAcc)
     val ssTx       = TxHelpers.setScript(dApp, script1)
     val ssTx1      = TxHelpers.setScript(thirdAcc, script)
-    val payments   = List(Payment(10L, Waves))
+    val payments   = List(Payment(10L, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), Nil, payments, fee = TestValues.invokeFee(issues = 1))
     val genesisTxs = Seq(gTx1, gTx2, gTx3, aliasTx, ssTx1, ssTx)
 
@@ -221,16 +221,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
       s"""
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1 && i.caller == i.originCaller && i.callerPublicKey == i.originCallerPublicKey
          |  then
          |    let r = invoke(Alias("alias"), "bar", [this.bytes, i.caller.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     let ab = assetBalance(this, getBinaryValue(Address(base58'$thirdAddress'), "asset"))
          |     if data == 1
          |     then
@@ -262,7 +262,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val aliasTx    = TxHelpers.createAlias("alias", thirdAcc)
     val ssTx       = TxHelpers.setScript(dApp, script1)
     val ssTx1      = TxHelpers.setScript(thirdAcc, script)
-    val payments   = List(Payment(10L, Waves))
+    val payments   = List(Payment(10L, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments, fee = TestValues.invokeFee(issues = 1))
     val genesisTxs = Seq(gTx1, gTx2, gTx3, aliasTx, ssTx1, ssTx)
 
@@ -300,16 +300,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
       s"""
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Alias("alias"), "bar", [this.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     let ab = assetBalance(this, getBinaryValue(Address(base58'$thirdAddress'), "asset"))
          |     if data == 1
          |     then
@@ -337,7 +337,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val aliasTx    = TxHelpers.createAlias("alias", thirdAcc)
     val ssTx       = TxHelpers.setScript(dApp, script1)
     val ssTx1      = TxHelpers.setScript(thirdAcc, script)
-    val payments   = List(Payment(10L, Waves))
+    val payments   = List(Payment(10L, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments, fee = TestValues.invokeFee(2))
     val genesisTxs = Seq(gTx1, gTx2, gTx3, aliasTx, ssTx1, ssTx)
     assertDiffAndState(Seq(TestBlock.create(genesisTxs)), TestBlock.create(Seq(invoke), Block.ProtoBlockVersion), fsWithV5) { case (snapshot, bc) =>
@@ -367,16 +367,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
       s"""
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Alias("alias"), "bar", [this.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     let ab = assetBalance(this, getBinaryValue(Address(base58'$thirdAddress'), "asset"))
          |     if data == 1
          |     then
@@ -405,7 +405,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val ssTx    = TxHelpers.setScript(dApp, script1)
     val ssTx1   = TxHelpers.setScript(thirdAcc, script)
 
-    val payments   = List(Payment(10L, Waves))
+    val payments   = List(Payment(10L, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments, fee = TestValues.invokeFee(issues = 1))
     val genesisTxs = Seq(gTx1, gTx2, gTx3, aliasTx, ssTx1, ssTx)
 
@@ -429,16 +429,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
       s"""
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     if data == 1
          |     then
          |      if ob1.regular+14 == ob2.regular && b1.regular == b2.regular+14
@@ -446,8 +446,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |       let r1 = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(unit, 18)])
          |       if r1 == r1
          |       then
-         |        let b3 = wavesBalance(this)
-         |        let ob3 = wavesBalance(Address(base58'$thirdAddress'))
+         |        let b3 = dccBalance(this)
+         |        let ob3 = dccBalance(Address(base58'$thirdAddress'))
          |        if ob2.regular+15 == ob3.regular && b2.regular == b3.regular+15
          |        then
          |         [
@@ -476,7 +476,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val ssTx  = TxHelpers.setScript(dApp, script1)
     val ssTx1 = TxHelpers.setScript(thirdAcc, script)
 
-    val payments = List(Payment(10, Waves))
+    val payments = List(Payment(10, Dcc))
     val invoke   = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments, fee = TestValues.invokeFee(3))
 
     val genesisTxs = Seq(gTx1, gTx2, gTx3, ssTx1, ssTx)
@@ -510,16 +510,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     if data == 1
          |     then
          |      if ob1.regular + 14 == ob2.regular && b1.regular == b2.regular + 14
@@ -546,7 +546,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val ssTx  = TxHelpers.setScript(dApp, script1)
     val ssTx1 = TxHelpers.setScript(thirdAcc, script)
 
-    val payments   = List(Payment(10, Waves))
+    val payments   = List(Payment(10, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), Nil, payments = payments)
     val genesisTxs = Seq(gTx1, gTx2, gTx3, ssTx1, ssTx)
 
@@ -575,16 +575,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     if data == 1
          |     then
          |      if ob1.regular + 14 == ob2.regular && b1.regular == b2.regular + 14
@@ -611,7 +611,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val ssTx  = TxHelpers.setScript(dApp, script1)
     val ssTx1 = TxHelpers.setScript(thirdAcc, script)
 
-    val payments = List(Payment(10, Waves))
+    val payments = List(Payment(10, Dcc))
     val invoke   = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
 
     val genesisTxs = Seq(gTx1, gTx2, gTx3, ssTx1, ssTx)
@@ -638,7 +638,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
 
     val ssTx = TxHelpers.setScript(dApp, recursiveContract)
 
-    val payments = List(Payment(10, Waves))
+    val payments = List(Payment(10, Dcc))
     val invoke   = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
 
     assertDiffEi(Seq(TestBlock.create(Seq(gTx1, gTx2, ssTx))), TestBlock.create(Seq(invoke), Block.ProtoBlockVersion), fsWithV5) { ei =>
@@ -674,16 +674,16 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(unit, 17)])
          |    if r == 17
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     let ab = assetBalance(this, base58'$asset')
          |     if data == 1
          |     then
@@ -712,7 +712,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
 
     val ssTx       = TxHelpers.setScript(dApp, contract1(iTx.id()))
     val ssTx1      = TxHelpers.setScript(thirdAcc, contract(iTx.id()))
-    val payments   = List(Payment(10, Waves))
+    val payments   = List(Payment(10, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
     val genesisTxs = Seq(gTx1, gTx2, gTx3, ssTx1, ssTx, iTx)
 
@@ -750,8 +750,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(unit, 17)])
@@ -759,8 +759,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
          |     let tdata = getIntegerValue(this, "key")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     if data == 1 && tdata == 0
          |     then
          |      if ob1.regular+16 == ob2.regular && b1.regular == b2.regular+16
@@ -790,7 +790,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
 
     val ssTx       = TxHelpers.setScript(dApp, script1)
     val ssTx1      = TxHelpers.setScript(thirdAcc, script(iTx.id()))
-    val payments   = List(Payment(10, Waves))
+    val payments   = List(Payment(10, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
     val genesisTxs = Seq(gTx1, gTx2, gTx3, ssTx1, ssTx, iTx)
 
@@ -832,8 +832,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], [AttachedPayment(base58'$asset', 1)])
@@ -841,8 +841,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
          |     let tdata = getIntegerValue(this, "key")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     if data == 1 && tdata == 0
          |     then
          |      if ob1.regular+16 == ob2.regular && b1.regular == b2.regular+16
@@ -870,7 +870,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
 
     val ssTx       = TxHelpers.setScript(dApp, contract1(iTx.id()))
     val ssTx1      = TxHelpers.setScript(thirdAcc, contract)
-    val payments   = List(Payment(10, Waves))
+    val payments   = List(Payment(10, Dcc))
     val invoke     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
     val genesisTxs = Seq(gTx1, gTx2, gTx3, ssTx1, ssTx, iTx)
 
@@ -903,8 +903,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$thirdAddress'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$thirdAddress'))
          |  if b1 == b1 && ob1 == ob1
          |  then
          |    let r = invoke(Address(base58'$thirdAddress'), "bar", [this.bytes], i.payments)
@@ -912,8 +912,8 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
          |    then
          |     let data = getIntegerValue(Address(base58'$thirdAddress'), "bar")
          |     let tdata = getIntegerValue(this, "key")
-         |     let b2 = wavesBalance(this)
-         |     let ob2 = wavesBalance(Address(base58'$thirdAddress'))
+         |     let b2 = dccBalance(this)
+         |     let ob2 = dccBalance(Address(base58'$thirdAddress'))
          |     if data == 1 && tdata == 0
          |     then
          |      if ob1.regular+16 == ob2.regular && b1.regular == b2.regular+16
@@ -979,14 +979,14 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
                       | {-# CONTENT_TYPE EXPRESSION #-}
                       |
                       | let paymentAsset = this.issuer.getBinaryValue("paymentAsset")
-                      | let startWavesBalance = this.issuer.getIntegerValue("startWavesBalance")
+                      | let startDccBalance = this.issuer.getIntegerValue("startDccBalance")
                       | let startInvokerBalance = this.issuer.getIntegerValue("startInvokerBalance")
-                      | let resultInvokerBalance = wavesBalance(Address(base58'${invokerAddress.toString}')).regular
-                      | let issuerBalance = wavesBalance(this.issuer)
+                      | let resultInvokerBalance = dccBalance(Address(base58'${invokerAddress.toString}')).regular
+                      | let issuerBalance = dccBalance(this.issuer)
                       |
                       | assetBalance(this.issuer, this.id) == $startBalance                                     &&
                       | assetBalance(this.issuer, paymentAsset) == $startBalance - $paymentFromClientDAppAmount &&
-                      | issuerBalance.regular == startWavesBalance                                              &&
+                      | issuerBalance.regular == startDccBalance                                              &&
                       | resultInvokerBalance == startInvokerBalance - $fee
                     """.stripMargin
       ScriptCompiler.compile(script, ScriptEstimatorV3.latest).explicitGet()._1
@@ -995,13 +995,13 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val serviceDApp = TestCompiler(V5).compileContract(
       s"""
          | @Callable(i)
-         | func bar(startInvokerBalance: Int, startWavesBalance: Int, startPaymentAssetBalance: Int, paymentAsset: ByteVector) = {
-         |   let resultInvokerBalance = wavesBalance(Address(base58'${invokerAddress.toString}')).regular
+         | func bar(startInvokerBalance: Int, startDccBalance: Int, startPaymentAssetBalance: Int, paymentAsset: ByteVector) = {
+         |   let resultInvokerBalance = dccBalance(Address(base58'${invokerAddress.toString}')).regular
          |   let paymentAssetBalance = assetBalance(i.caller, paymentAsset)
          |
          |   if (
          |     startInvokerBalance == resultInvokerBalance         &&
-         |     startWavesBalance == wavesBalance(i.caller).regular &&
+         |     startDccBalance == dccBalance(i.caller).regular &&
          |     startPaymentAssetBalance == paymentAssetBalance + i.payments[0].amount
          |   )
          |     then
@@ -1017,29 +1017,29 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
         s"""
            | @Callable(i)
            | func foo() = {
-           |  strict startInvokerBalance = wavesBalance(Address(base58'${invokerAddress.toString}')).regular
-           |  strict startWavesBalance = wavesBalance(this).regular
+           |  strict startInvokerBalance = dccBalance(Address(base58'${invokerAddress.toString}')).regular
+           |  strict startDccBalance = dccBalance(this).regular
            |  strict startPaymentAssetBalance = assetBalance(this, base58'$paymentAsset')
            |
            |  strict r = invoke(
            |    Address(base58'$serviceDAppAddress'),
            |    "bar",
-           |    [startInvokerBalance, startWavesBalance, startPaymentAssetBalance, base58'$paymentAsset'],
+           |    [startInvokerBalance, startDccBalance, startPaymentAssetBalance, base58'$paymentAsset'],
            |    [AttachedPayment(base58'$paymentAsset', $paymentFromClientDAppAmount)]
            |  )
            |
-           |  strict resultWavesBalance = wavesBalance(this).regular
+           |  strict resultDccBalance = dccBalance(this).regular
            |  strict resultPaymentAssetBalance = assetBalance(this, base58'$paymentAsset')
            |
            |  if (
-           |    startWavesBalance == resultWavesBalance &&
+           |    startDccBalance == resultDccBalance &&
            |    resultPaymentAssetBalance == startPaymentAssetBalance - $paymentFromClientDAppAmount
            |  )
            |  then
            |   [
            |     BinaryEntry("paymentAsset", base58'$paymentAsset'),
            |     IntegerEntry("startInvokerBalance", startInvokerBalance),
-           |     IntegerEntry("startWavesBalance", startWavesBalance),
+           |     IntegerEntry("startDccBalance", startDccBalance),
            |     IntegerEntry("startPaymentAssetBalance", startPaymentAssetBalance),
            |     ScriptTransfer(Address(base58'$serviceDAppAddress'), $transferAmount, base58'$transferAsset'),
            |     IntegerEntry("key", 1)
@@ -1060,7 +1060,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val clientDAppScript = clientDApp(thirdAcc.toAddress, transferIssue.id(), paymentIssue.id())
     val setClientDApp    = TxHelpers.setScript(dApp, clientDAppScript)
     val setServiceDApp   = TxHelpers.setScript(thirdAcc, serviceDApp)
-    val payments         = List(Payment(paymentFromInvokerAmount, Waves))
+    val payments         = List(Payment(paymentFromInvokerAmount, Dcc))
     val invoke           = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments, fee = fee)
 
     val genesisTxs = Seq(gTx1, gTx2, gTx3, setServiceDApp, setClientDApp, paymentIssue, transferIssue)
@@ -1133,7 +1133,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val dataEntry2    = StringDataEntry(invokeEntry3Key, "deleted entry")
     val dataTxSecond2 = TxHelpers.data(thirdAcc, Seq(dataEntry2))
 
-    val payments     = List(Payment(10L, Waves))
+    val payments     = List(Payment(10L, Dcc))
     val invokeTx     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
     val preparingTxs = Seq(gTx1, gTx2, gTx3, ssTxMain, ssTxSecond, dataTxSecond, dataTxSecond2)
 
@@ -1195,7 +1195,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val dataEntry2  = StringDataEntry(invokeEntry3Key, "deleted entry")
     val dataTxMain2 = TxHelpers.data(dApp, Seq(dataEntry2))
 
-    val payments     = List(Payment(10L, Waves))
+    val payments     = List(Payment(10L, Dcc))
     val invokeTx     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
     val preparingTxs = Seq(gTx1, gTx2, ssTxMain, dataTxMain, dataTxMain2)
 
@@ -1300,7 +1300,7 @@ class SyncInvokeDiffTest extends PropSpec with WithDomain with DBCacheSettings w
     val ssTxSecond = TxHelpers.setScript(fourthAcc, contractSecond(transferIssue.id()))
     val ssTxThird  = TxHelpers.setScript(thirdAcc, contractThird)
 
-    val payments     = List(Payment(10L, Waves))
+    val payments     = List(Payment(10L, Dcc))
     val invokeTx     = TxHelpers.invoke(dAppAddress, Some("foo"), payments = payments)
     val preparingTxs = Seq(gTx1, gTx2, gTx3, gTx4, ssTxMain, ssTxSecond, ssTxThird, paymentIssue, transferIssue)
 

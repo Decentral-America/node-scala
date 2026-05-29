@@ -54,7 +54,7 @@ object ExtensionPackaging extends AutoPlugin {
       nodePackageName := (LocalProject("node") / Linux / packageName).value,
       debianPackageDependencies +=
         s"${(LocalProject("node") / Debian / packageName).value} (= ${(LocalProject("node") / version).value})",
-      // To write files to Waves NODE directory
+      // To write files to Dcc NODE directory
       linuxPackageMappings := getUniversalFolderMappings(
         nodePackageName.value,
         defaultLinuxInstallLocation.value,
@@ -72,7 +72,7 @@ object ExtensionPackaging extends AutoPlugin {
       Debian / normalizedName := s"${name.value}${network.value.packageSuffix}",
       Debian / packageName := s"${name.value}${network.value.packageSuffix}",
       libraryDependencies ++= Dependencies.logDeps,
-      run / javaOptions ++= extensionClasses.value.zipWithIndex.map { case (extension, index) => s"-Dwaves.extensions.$index=$extension" }
+      run / javaOptions ++= extensionClasses.value.zipWithIndex.map { case (extension, index) => s"-Ddcc.extensions.$index=$extension" }
     )
 
   // A copy of com.typesafe.sbt.packager.linux.LinuxPlugin.getUniversalFolderMappings

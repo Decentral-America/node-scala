@@ -49,7 +49,7 @@ class DefaultDAppEnvironmentTracker[TagT](allTags: CacheKeyTags[TagT], tag: TagT
 
   override def blockInfoByHeight(height: Int): Unit = {
     // log.trace(s"[$tag] blockInfoByHeight($height)")
-    // HACK: we don't know, what is used in the script: blockInfoByHeight or lastBlock.
+    // NOTE: Script usage is unknown at this point — both blockInfoByHeight and lastBlock may be used
     // So we will force update the scripts those use one (or both) of these functions.
     // If this will be an issue, consider two different cases for H (height),
     // where H < currHeight - 100 or H >= currHeight - 100.
@@ -75,9 +75,9 @@ class DefaultDAppEnvironmentTracker[TagT](allTags: CacheKeyTags[TagT], tag: TagT
     allTags.addDependent(MemCacheKey.AccountBalance(address, asset), tag)
   }
 
-  override def accountWavesBalanceOf(address: Address): Unit = {
-    // log.trace(s"[$tag] accountWavesBalanceOf($address)")
-    allTags.addDependent(MemCacheKey.AccountBalance(address, Asset.Waves), tag)
+  override def accountDccBalanceOf(address: Address): Unit = {
+    // log.trace(s"[$tag] accountDccBalanceOf($address)")
+    allTags.addDependent(MemCacheKey.AccountBalance(address, Asset.Dcc), tag)
     allTags.addDependent(MemCacheKey.AccountLeaseBalance(address), tag)
   }
 

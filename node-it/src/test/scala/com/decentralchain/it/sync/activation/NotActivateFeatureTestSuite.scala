@@ -19,7 +19,7 @@ class NotActivateFeatureTestSuite extends BaseFreeSpec with ActivationStatusRequ
     NodeConfigs.newBuilder
       .overrideBase(
         _.raw(
-          s"""waves {
+          s"""dcc {
              |  blockchain {
              |    custom {
              |      functionality {

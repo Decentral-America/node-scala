@@ -8,7 +8,7 @@ import com.decentralchain.lang.directives.DirectiveSet
 import com.decentralchain.lang.directives.values.{ContentType, ScriptType, StdLibVersion}
 import com.decentralchain.lang.v1.CTX
 import com.decentralchain.lang.v1.evaluator.ctx.EvaluationContext
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.state.*
@@ -61,7 +61,7 @@ object BlockchainContext {
           { _ =>
             PureContext.build(ds.stdLibVersion, useNewPowPrecision).withEnvironment[Environment] |+|
               CryptoContext.build(Global, ds.stdLibVersion, fixEcrecover).withEnvironment[Environment] |+|
-              WavesContext.build(Global, ds, fixBigScriptField)
+              DccContext.build(Global, ds, fixBigScriptField)
           }
         )
       )

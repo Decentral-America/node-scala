@@ -31,7 +31,7 @@ trait SupportedBlockchain extends Blockchain with ScorexLogging {
   // Ride: blockInfoByHeight
   //  override def blockReward(height: Int): Option[Long] = kill("blockReward")
 
-  // Ride: wavesBalance, height, lastBlock
+  // Ride: dccBalance, height, lastBlock
   // override def height: Int = sharedBlockchain.heightUntagged
 
   // override def activatedFeatures: Map[Short, Int]
@@ -42,17 +42,17 @@ trait SupportedBlockchain extends Blockchain with ScorexLogging {
   // Ride (indirectly): asset script validation
   override def assetScript(id: Asset.IssuedAsset): Option[AssetScriptInfo] = assetDescription(id).flatMap(_.script)
 
-  // Ride: get*Value (data), get* (data), isDataStorageUntouched, balance, scriptHash, wavesBalance
+  // Ride: get*Value (data), get* (data), isDataStorageUntouched, balance, scriptHash, dccBalance
   // override def resolveAlias(a: Alias): Either[ValidationError, Address]
 
-  // Ride: wavesBalance
+  // Ride: dccBalance
   // override def leaseBalance(address: Address): LeaseBalance
 
-  // Ride: assetBalance, wavesBalance
+  // Ride: assetBalance, dccBalance
   // override def balance(address: Address, mayBeAssetId: Asset): Long
 
-  // Retrieves Waves balance snapshot in the [from, to] range (inclusive)
-  // Ride: wavesBalance (specifies to=None), "to" always None and means "to the end"
+  // Retrieves Dcc balance snapshot in the [from, to] range (inclusive)
+  // Ride: dccBalance (specifies to=None), "to" always None and means "to the end"
   // override def balanceSnapshots(address: Address, from: Int, to: Option[BlockId]): Seq[BalanceSnapshot]
 
   // Ride: transactionHeightById
@@ -63,7 +63,7 @@ trait SupportedBlockchain extends Blockchain with ScorexLogging {
   override def transferById(id: ByteStr): Option[(Int, TransferTransactionLike)] = kill("transferById")
 
   // Ride: transactionById
-  // We don't support his, because 1) there is no demand 2) it works only for V1 and V2 scripts, see versionSpecificFuncs in WavesContext
+  // We don't support his, because 1) there is no demand 2) it works only for V1 and V2 scripts, see versionSpecificFuncs in DccContext
   override def transactionInfo(id: BlockId): Option[(TxMeta, Transaction)] = kill("transactionInfo")
 
   override def score: BigInt = kill("score")
@@ -83,7 +83,7 @@ trait SupportedBlockchain extends Blockchain with ScorexLogging {
 
   override def blockRewardVotes(height: Int): Seq[Long] = kill("blockRewardVotes")
 
-  override def wavesAmount(height: Int): BigInt = kill("wavesAmount")
+  override def dccAmount(height: Int): BigInt = kill("dccAmount")
 
   override def balanceAtHeight(address: Address, height: Int, assetId: Asset): Option[(Int, Long)] = kill("balanceAtHeight")
 

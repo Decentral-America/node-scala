@@ -19,7 +19,7 @@ import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain, GenesisBlockHeight, Height}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.{RideV6, DCCSettingsOps, BlockRewardDistribution as BlockRewardDistributionSettings}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers}
 import org.scalacheck.Gen
@@ -78,7 +78,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         ntpTime.getTimestamp(),
         Seq(
           GenesisTransaction
-            .create(sourceAddress.toAddress, (Constants.TotalWaves - 60000) * Constants.UnitsInWave, ntpTime.getTimestamp())
+            .create(sourceAddress.toAddress, (Constants.TotalDcc - 60000) * Constants.UnitsInWave, ntpTime.getTimestamp())
             .explicitGet(),
           GenesisTransaction.create(issuer.toAddress, 40000 * Constants.UnitsInWave, ntpTime.getTimestamp()).explicitGet(),
           GenesisTransaction.create(miner1.toAddress, InitialMinerBalance, ntpTime.getTimestamp()).explicitGet(),
@@ -237,9 +237,9 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           1.toByte,
           issuer,
           sourceAddress.toAddress,
-          Waves,
+          Dcc,
           10 * Constants.UnitsInWave,
-          Waves,
+          Dcc,
           OneTotalFee,
           ByteStr.empty,
           ntpTime.getTimestamp()
@@ -250,9 +250,9 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           1.toByte,
           issuer,
           sourceAddress.toAddress,
-          Waves,
+          Dcc,
           10 * Constants.UnitsInWave,
-          Waves,
+          Dcc,
           OneTotalFee,
           ByteStr.empty,
           ntpTime.getTimestamp()
@@ -287,19 +287,19 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
         d.rocksDBWriter.height shouldBe BlockRewardActivationHeight - 1
         d.rocksDBWriter.balance(miner1.toAddress) shouldBe InitialMinerBalance + OneFee
-        d.rdb.db.get(Keys.blockMetaAt(Height(BlockRewardActivationHeight - 1))).map(_.totalFeeInWaves) shouldBe OneTotalFee.some
+        d.rdb.db.get(Keys.blockMetaAt(Height(BlockRewardActivationHeight - 1))).map(_.totalFeeInDcc) shouldBe OneTotalFee.some
         d.rocksDBWriter.carryFee(None) shouldBe OneCarryFee
 
         d.blockchainUpdater.processBlock(b3) should beRight
         d.blockchainUpdater.balance(miner2.toAddress) shouldBe InitialMinerBalance + InitialReward + OneCarryFee
-        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInWaves) shouldBe 0L.some
+        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInDcc) shouldBe 0L.some
         d.blockchainUpdater.carryFee(None) shouldBe 0L
 
         m3s.foreach(mb => d.blockchainUpdater.processMicroBlock(mb, None) should beRight)
 
         d.blockchainUpdater.height shouldBe BlockRewardActivationHeight
         d.blockchainUpdater.balance(miner2.toAddress) shouldBe InitialMinerBalance + InitialReward + OneFee + OneCarryFee
-        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInWaves) shouldBe OneTotalFee.some
+        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInDcc) shouldBe OneTotalFee.some
         d.blockchainUpdater.carryFee(None) shouldBe OneCarryFee
       }
     }
@@ -311,9 +311,9 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           1.toByte,
           issuer,
           sourceAddress.toAddress,
-          Waves,
+          Dcc,
           10 * Constants.UnitsInWave,
-          Waves,
+          Dcc,
           OneTotalFee,
           ByteStr.empty,
           ntpTime.getTimestamp()
@@ -339,14 +339,14 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
         d.blockchainUpdater.height shouldBe BlockRewardActivationHeight
         d.blockchainUpdater.balance(miner.toAddress) shouldBe InitialMinerBalance + InitialReward + OneFee
-        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInWaves) shouldBe OneTotalFee.some
+        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInDcc) shouldBe OneTotalFee.some
         d.blockchainUpdater.carryFee(None) shouldBe OneCarryFee
 
         d.blockchainUpdater.processBlock(b2a) should beRight
         d.blockchainUpdater.processBlock(b2b) should beRight
 
         d.blockchainUpdater.balance(miner.toAddress) shouldBe InitialMinerBalance + InitialReward + OneFee + InitialReward + OneCarryFee
-        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInWaves) shouldBe 0L.some
+        d.blockchainUpdater.liquidBlockMeta.map(_.totalFeeInDcc) shouldBe 0L.some
         d.blockchainUpdater.carryFee(None) shouldBe 0L
       }
     }
@@ -369,31 +369,31 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
     "when all blocks without fees" in forAll(blockWithoutFeesScenario) { case (miner1, miner2, b1s, b2, b3s, b4) =>
       withDomain(rewardSettings) { d =>
-        val initialWavesAmount = BigInt(Constants.TotalWaves) * BigInt(Constants.UnitsInWave)
+        val initialDccAmount = BigInt(Constants.TotalDcc) * BigInt(Constants.UnitsInWave)
         val term               = rewardSettings.blockchainSettings.rewardsSettings.term
         val minIncrement       = rewardSettings.blockchainSettings.rewardsSettings.minIncrement
         b1s.foreach(b => d.blockchainUpdater.processBlock(b) should beRight)
         d.blockchainUpdater.height shouldBe BlockRewardActivationHeight - 1
-        d.blockchainUpdater.wavesAmount(BlockRewardActivationHeight - 1) shouldBe initialWavesAmount
+        d.blockchainUpdater.dccAmount(BlockRewardActivationHeight - 1) shouldBe initialDccAmount
         d.blockchainUpdater.balance(miner1.toAddress) shouldBe InitialMinerBalance
         d.blockchainUpdater.balance(miner2.toAddress) shouldBe InitialMinerBalance
         d.blockchainUpdater.processBlock(b2) should beRight
         d.blockchainUpdater.height shouldBe BlockRewardActivationHeight
-        d.blockchainUpdater.wavesAmount(BlockRewardActivationHeight) shouldBe initialWavesAmount + InitialReward
+        d.blockchainUpdater.dccAmount(BlockRewardActivationHeight) shouldBe initialDccAmount + InitialReward
         d.blockchainUpdater.balance(miner1.toAddress) shouldBe InitialMinerBalance + InitialReward
         d.blockchainUpdater.balance(miner2.toAddress) shouldBe InitialMinerBalance
         b3s.zipWithIndex.foreach { case (b, i) =>
           d.blockchainUpdater.processBlock(b) should beRight
           d.blockchainUpdater.height shouldBe BlockRewardActivationHeight + i + 1
-          d.blockchainUpdater.wavesAmount(BlockRewardActivationHeight + i + 1) shouldBe initialWavesAmount + BigInt(InitialReward * (i + 2))
+          d.blockchainUpdater.dccAmount(BlockRewardActivationHeight + i + 1) shouldBe initialDccAmount + BigInt(InitialReward * (i + 2))
           d.blockchainUpdater.balance(miner1.toAddress) shouldBe InitialMinerBalance + ((i + 1) / 2) * InitialReward + InitialReward
           d.blockchainUpdater.balance(miner2.toAddress) shouldBe InitialMinerBalance + (i / 2 + 1) * InitialReward
         }
         d.blockchainUpdater.processBlock(b4) should beRight
         d.blockchainUpdater.height shouldBe BlockRewardActivationHeight + term
-        d.blockchainUpdater.wavesAmount(
+        d.blockchainUpdater.dccAmount(
           BlockRewardActivationHeight + term
-        ) shouldBe initialWavesAmount + term * InitialReward + InitialReward + minIncrement
+        ) shouldBe initialDccAmount + term * InitialReward + InitialReward + minIncrement
         d.blockchainUpdater.balance(miner1.toAddress) shouldBe InitialMinerBalance + InitialReward * 5 + InitialReward + minIncrement
         d.blockchainUpdater.balance(miner2.toAddress) shouldBe InitialMinerBalance + InitialReward * 5
       }
@@ -713,8 +713,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     }
   }
 
-  s"NODE-815. XTN buyback and dao addresses should get 2 WAVES when full block reward >= 6 WAVES after ${BlockchainFeatures.CappedReward} activation" in {
-    Seq(6.waves, 7.waves).foreach { fullBlockReward =>
+  s"NODE-815. XTN buyback and dao addresses should get 2 DCC when full block reward >= 6 DCC after ${BlockchainFeatures.CappedReward} activation" in {
+    Seq(6.dcc, 7.dcc).foreach { fullBlockReward =>
       cappedRewardFeatureTestCase(
         fullBlockReward,
         Some(_ => BlockRewardCalculator.MaxAddressReward),
@@ -723,8 +723,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     }
   }
 
-  s"NODE-816. XTN buyback and dao addresses should get max((R - 2)/2, 0) WAVES when full block reward < 6 WAVES after ${BlockchainFeatures.CappedReward} activation" in {
-    Seq(1.waves, 2.waves, 3.waves).foreach { fullBlockReward =>
+  s"NODE-816. XTN buyback and dao addresses should get max((R - 2)/2, 0) DCC when full block reward < 6 DCC after ${BlockchainFeatures.CappedReward} activation" in {
+    Seq(1.dcc, 2.dcc, 3.dcc).foreach { fullBlockReward =>
       cappedRewardFeatureTestCase(
         fullBlockReward,
         Some(r => Math.max((r - BlockRewardCalculator.GuaranteedMinerReward) / 2, 0)),
@@ -733,8 +733,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     }
   }
 
-  s"NODE-817. Single XTN buyback or dao address should get 2 WAVES when full block reward >= 6 WAVES after ${BlockchainFeatures.CappedReward} activation" in {
-    Seq(6.waves, 7.waves).foreach { fullBlockReward =>
+  s"NODE-817. Single XTN buyback or dao address should get 2 DCC when full block reward >= 6 DCC after ${BlockchainFeatures.CappedReward} activation" in {
+    Seq(6.dcc, 7.dcc).foreach { fullBlockReward =>
       // only daoAddress defined
       cappedRewardFeatureTestCase(
         fullBlockReward,
@@ -751,8 +751,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     }
   }
 
-  s"NODE-818. Single XTN buyback or dao address should get max((R - 2)/2, 0) WAVES when full block reward < 6 WAVES after ${BlockchainFeatures.CappedReward} activation" in {
-    Seq(1.waves, 2.waves, 3.waves).foreach { fullBlockReward =>
+  s"NODE-818. Single XTN buyback or dao address should get max((R - 2)/2, 0) DCC when full block reward < 6 DCC after ${BlockchainFeatures.CappedReward} activation" in {
+    Seq(1.dcc, 2.dcc, 3.dcc).foreach { fullBlockReward =>
       // only daoAddress defined
       cappedRewardFeatureTestCase(
         fullBlockReward,
@@ -770,13 +770,13 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   }
 
   s"NODE-820. Miner should get full block reward when daoAddress and xtnBuybackAddress are not defined after ${BlockchainFeatures.CappedReward} activation" in {
-    Seq(1.waves, 2.waves, 3.waves, 6.waves, 7.waves).foreach { fullBlockReward =>
+    Seq(1.dcc, 2.dcc, 3.dcc, 6.dcc, 7.dcc).foreach { fullBlockReward =>
       cappedRewardFeatureTestCase(fullBlockReward, None, None)
     }
   }
 
   s"NODE-821. Miner should get full block reward after ${BlockchainFeatures.CappedReward} activation if ${BlockchainFeatures.BlockRewardDistribution} is not activated" in {
-    Seq(1.waves, 2.waves, 3.waves, 6.waves, 7.waves).foreach { fullBlockReward =>
+    Seq(1.dcc, 2.dcc, 3.dcc, 6.dcc, 7.dcc).foreach { fullBlockReward =>
       // both addresses defined
       cappedRewardFeatureTestCase(fullBlockReward, Some(_ => 0L), Some(_ => 0L), blockRewardDistributionActivated = false)
 
@@ -835,8 +835,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     }
   }
 
-  s"NODE-825, NODE-828, NODE-841. XTN buyback reward should be cancelled when ${BlockchainFeatures.CeaseXtnBuyback} activated after xtnBuybackRewardPeriod blocks starting from ${BlockchainFeatures.BlockRewardDistribution} activation height (full reward >= 6 WAVES)" in {
-    Seq(6.waves, 7.waves).foreach { fullBlockReward =>
+  s"NODE-825, NODE-828, NODE-841. XTN buyback reward should be cancelled when ${BlockchainFeatures.CeaseXtnBuyback} activated after xtnBuybackRewardPeriod blocks starting from ${BlockchainFeatures.BlockRewardDistribution} activation height (full reward >= 6 DCC)" in {
+    Seq(6.dcc, 7.dcc).foreach { fullBlockReward =>
       // daoAddress is defined
       ceaseXtnBuybackFeatureTestCase(
         fullBlockReward,
@@ -853,8 +853,8 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     }
   }
 
-  s"NODE-826, NODE-828, NODE-841. XTN buyback reward should be cancelled when ${BlockchainFeatures.CeaseXtnBuyback} activated after xtnBuybackRewardPeriod blocks starting from ${BlockchainFeatures.BlockRewardDistribution} activation height (full reward < 6 WAVES)" in {
-    Seq(1.waves, 2.waves, 3.waves).foreach { fullBlockReward =>
+  s"NODE-826, NODE-828, NODE-841. XTN buyback reward should be cancelled when ${BlockchainFeatures.CeaseXtnBuyback} activated after xtnBuybackRewardPeriod blocks starting from ${BlockchainFeatures.BlockRewardDistribution} activation height (full reward < 6 DCC)" in {
+    Seq(1.dcc, 2.dcc, 3.dcc).foreach { fullBlockReward =>
       // daoAddress is defined
       ceaseXtnBuybackFeatureTestCase(
         fullBlockReward,
@@ -872,13 +872,13 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   }
 
   s"NODE-829. Miner should get full block reward if daoAddress and xtnBuybackAddress are not defined after ${BlockchainFeatures.CeaseXtnBuyback} activation" in {
-    Seq(1.waves, 2.waves, 3.waves, 6.waves, 7.waves).foreach { fullBlockReward =>
+    Seq(1.dcc, 2.dcc, 3.dcc, 6.dcc, 7.dcc).foreach { fullBlockReward =>
       ceaseXtnBuybackFeatureTestCase(fullBlockReward, None, None)
     }
   }
 
   s"NODE-830. Block reward distribution should not change after ${BlockchainFeatures.CeaseXtnBuyback} activation if ${BlockchainFeatures.CappedReward}/${BlockchainFeatures.CappedReward} and ${BlockchainFeatures.BlockRewardDistribution} not activated" in {
-    Seq(1.waves, 2.waves, 3.waves, 6.waves, 7.waves).foreach { fullBlockReward =>
+    Seq(1.dcc, 2.dcc, 3.dcc, 6.dcc, 7.dcc).foreach { fullBlockReward =>
       // both addresses defined
       ceaseXtnBuybackFeatureTestCase(fullBlockReward, Some(r => r / 3), Some(r => r / 3), cappedRewardActivated = false)
 
@@ -920,7 +920,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString)),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(
@@ -978,7 +978,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString)),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(
@@ -1031,7 +1031,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString)),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(
@@ -1092,7 +1092,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString)),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(
@@ -1146,7 +1146,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString), xtnBuybackRewardPeriod = 3),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(
@@ -1336,7 +1336,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     )
 
   private val blockMiner          = TxHelpers.signer(10001)
-  private val initialMinerBalance = 100_000.waves
+  private val initialMinerBalance = 100_000.dcc
 
   private def assertBalances(blockchain: Blockchain, expectedBalances: (Address, Long)*)(implicit pos: Position): Unit =
     expectedBalances.foreach { case (address, balance) =>
@@ -1347,9 +1347,9 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
   "Boost block reward:" - {
     "block reward is" - {
-      "increased after feature activation" in boostBlockRewardActivationScenario(0.5.waves, 2.waves)
-      "decreased after feature activation" in boostBlockRewardActivationScenario(-0.5.waves, 3.5.waves / 2)
-      "unchanged after feature activation" in boostBlockRewardActivationScenario(0, 2.waves)
+      "increased after feature activation" in boostBlockRewardActivationScenario(0.5.dcc, 2.dcc)
+      "decreased after feature activation" in boostBlockRewardActivationScenario(-0.5.dcc, 3.5.dcc / 2)
+      "unchanged after feature activation" in boostBlockRewardActivationScenario(0, 2.dcc)
     }
   }
 
@@ -1359,30 +1359,30 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   ): Unit = withDomain(
     settingsWithRewardBoost.copy(blockchainSettings =
       settingsWithRewardBoost.blockchainSettings.copy(
-        rewardsSettings = RewardsSettings(10, 10, 6.waves, 0.5.waves, 4)
+        rewardsSettings = RewardsSettings(10, 10, 6.dcc, 0.5.dcc, 4)
       )
     ),
     Seq(AddrWithBalance(blockMiner.toAddress, initialMinerBalance))
   ) { d =>
-    val minerRewardAfterChange = 2.waves + rewardDelta.max(0)
+    val minerRewardAfterChange = 2.dcc + rewardDelta.max(0)
 
     (1 to 3).foreach(_ => d.appendKeyBlock(blockMiner))
     // height 4: before activation
     d.blockchain.height shouldBe 4
     assertBalances(
       d.blockchain,
-      blockMiner.toAddress -> (initialMinerBalance + 2.waves * 3),
-      daoAddress           -> 2.waves * 3,
-      xtnBuybackAddress    -> 2.waves * 3
+      blockMiner.toAddress -> (initialMinerBalance + 2.dcc * 3),
+      daoAddress           -> 2.dcc * 3,
+      xtnBuybackAddress    -> 2.dcc * 3
     )
 
     d.appendKeyBlock(blockMiner)
     // height 5: activation height
-    val rewardAtActivationHeight = 2.waves * 3 + 2.waves * 10
+    val rewardAtActivationHeight = 2.dcc * 3 + 2.dcc * 10
     d.blockchain.height shouldBe 5
     assertBalances(
       d.blockchain,
-      blockMiner.toAddress -> (initialMinerBalance + 2.waves * (3 + 10)),
+      blockMiner.toAddress -> (initialMinerBalance + 2.dcc * (3 + 10)),
       daoAddress           -> rewardAtActivationHeight,
       xtnBuybackAddress    -> rewardAtActivationHeight
     )
@@ -1390,24 +1390,24 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     d.appendKeyBlock(blockMiner)
     // height 7: start voting
     (1 to 3).foreach(_ =>
-      d.appendBlock(d.createBlock(Block.RewardBlockVersion, Seq.empty, generator = blockMiner, rewardVote = 6.waves + rewardDelta))
+      d.appendBlock(d.createBlock(Block.RewardBlockVersion, Seq.empty, generator = blockMiner, rewardVote = 6.dcc + rewardDelta))
     )
     d.blockchain.height shouldBe 9
-    val rewardBeforeIncrease = rewardAtActivationHeight + 4 * 2.waves * 10
+    val rewardBeforeIncrease = rewardAtActivationHeight + 4 * 2.dcc * 10
     assertBalances(
       d.blockchain,
-      blockMiner.toAddress -> (initialMinerBalance + 2.waves * (3 + 10 * 5)),
+      blockMiner.toAddress -> (initialMinerBalance + 2.dcc * (3 + 10 * 5)),
       daoAddress           -> rewardBeforeIncrease,
       xtnBuybackAddress    -> rewardBeforeIncrease
     )
 
-    // height 10: new base reward value = 65 waves
-    d.appendBlock(d.createBlock(Block.RewardBlockVersion, Seq.empty, generator = blockMiner, rewardVote = 7.waves))
+    // height 10: new base reward value = 65 dcc
+    d.appendBlock(d.createBlock(Block.RewardBlockVersion, Seq.empty, generator = blockMiner, rewardVote = 7.dcc))
     d.blockchain.height shouldBe 10
     val rewardAfterIncrease = rewardBeforeIncrease + addressShareAfterChange * 10
     assertBalances(
       d.blockchain,
-      blockMiner.toAddress -> (initialMinerBalance + 2.waves * (3 + 10 * 5) + minerRewardAfterChange * 10),
+      blockMiner.toAddress -> (initialMinerBalance + 2.dcc * (3 + 10 * 5) + minerRewardAfterChange * 10),
       daoAddress           -> rewardAfterIncrease,
       xtnBuybackAddress    -> rewardAfterIncrease
     )
@@ -1418,7 +1418,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     val rewardBeforeDeactivation = rewardAfterIncrease + 4 * addressShareAfterChange * 10
     assertBalances(
       d.blockchain,
-      blockMiner.toAddress -> (initialMinerBalance + 2.waves * (3 + 10 * 5) + minerRewardAfterChange * 10 * 5),
+      blockMiner.toAddress -> (initialMinerBalance + 2.dcc * (3 + 10 * 5) + minerRewardAfterChange * 10 * 5),
       daoAddress           -> rewardBeforeDeactivation,
       xtnBuybackAddress    -> rewardBeforeDeactivation
     )
@@ -1429,18 +1429,18 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     val rewardAfterDeactivation = rewardBeforeDeactivation + addressShareAfterChange
     assertBalances(
       d.blockchain,
-      blockMiner.toAddress -> (initialMinerBalance + 2.waves * (3 + 10 * 5) + minerRewardAfterChange * (10 * 5 + 1)),
+      blockMiner.toAddress -> (initialMinerBalance + 2.dcc * (3 + 10 * 5) + minerRewardAfterChange * (10 * 5 + 1)),
       daoAddress           -> rewardAfterDeactivation,
       xtnBuybackAddress    -> rewardAfterDeactivation
     )
 
-    d.blockchain.wavesAmount(15) shouldBe
+    d.blockchain.dccAmount(15) shouldBe
       BigInt(
-        100_000_000.waves +                  // 1: genesis
-          3 * 6.waves +                      // 2..4: before boost activation
-          5 * 60.waves +                     // 5..9: boosted reward before change
-          5 * (6.waves + rewardDelta) * 10 + // 10..14: boosted reward after change
-          6.waves + rewardDelta
+        100_000_000.dcc +                  // 1: genesis
+          3 * 6.dcc +                      // 2..4: before boost activation
+          5 * 60.dcc +                     // 5..9: boosted reward before change
+          5 * (6.dcc + rewardDelta) * 10 + // 10..14: boosted reward after change
+          6.dcc + rewardDelta
       ) // 15: non-boosted after change
   }
 }

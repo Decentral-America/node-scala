@@ -13,7 +13,7 @@ import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
 class SponsorFeeActionSuite extends BaseFreeSpec {
-  private val initialWavesBalance = 100.waves
+  private val initialDccBalance = 100.dcc
 
   private var sponsoredAssetId: String  = ""
   private var globalDAppAddress: String = ""
@@ -101,17 +101,17 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
       miner.assetBalance(aliceAddress, sponsoredAssetId).balance shouldBe 0
       miner.assetBalance(bobAddress, sponsoredAssetId).balance shouldBe assetTransferAmount
 
-      val dAppWavesOutgo = smartMinFee + Sponsorship.toWaves(assetFee, minSponsoredAssetFee)
+      val dAppDccOutgo = smartMinFee + Sponsorship.toDcc(assetFee, minSponsoredAssetFee)
       val blockReward    = miner.lastBlock().reward.get
 
       val lastCheckHeight = miner.height + 1
       miner.waitForHeight(lastCheckHeight)
 
       miner.assetBalance(globalDAppAddress, sponsoredAssetId).balance shouldBe startDAppSponsorAssetBalance - assetTransferAmount
-      miner.balanceAtHeight(globalDAppAddress, lastCheckHeight) shouldBe startDAppBalance - dAppWavesOutgo
+      miner.balanceAtHeight(globalDAppAddress, lastCheckHeight) shouldBe startDAppBalance - dAppDccOutgo
 
       miner.balanceAtHeight(miner.address, lastCheckHeight) shouldBe
-        startMinerBalance + dAppWavesOutgo + blockReward * (lastCheckHeight - firstCheckHeight)
+        startMinerBalance + dAppDccOutgo + blockReward * (lastCheckHeight - firstCheckHeight)
     }
 
     "Cancel sponsorship" in {
@@ -289,7 +289,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
   "Restrictions" - {
     "SponsorFee is available for assets issued via transaction" in {
       val dApp = miner.createKeyPair()
-      miner.transfer(sender.keyPair, dApp.toAddress.toString, initialWavesBalance, minFee, waitForTx = true)
+      miner.transfer(sender.keyPair, dApp.toAddress.toString, initialDccBalance, minFee, waitForTx = true)
       val assetId = miner.issue(dApp, waitForTx = true).id
 
       createDApp(
@@ -313,7 +313,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
     "Negative fee is not available" in {
       val dApp        = miner.createKeyPair()
       val dAppAddress = dApp.toAddress.toString
-      miner.transfer(sender.keyPair, dAppAddress, initialWavesBalance, minFee, waitForTx = true)
+      miner.transfer(sender.keyPair, dAppAddress, initialDccBalance, minFee, waitForTx = true)
       val assetId = miner.issue(dApp, waitForTx = true).id
 
       createDApp(
@@ -338,7 +338,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
 
     "SponsorFee is available only for assets issuing from current address" in {
       val issuer = miner.createKeyPair()
-      miner.transfer(sender.keyPair, issuer.toAddress.toString, initialWavesBalance, minFee, waitForTx = true)
+      miner.transfer(sender.keyPair, issuer.toAddress.toString, initialDccBalance, minFee, waitForTx = true)
       val assetId = miner.issue(issuer, waitForTx = true).id
 
       val dApp = createDApp(
@@ -363,7 +363,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
     "SponsorFee is not available for scripted assets" in {
       val dApp        = miner.createKeyPair()
       val dAppAddress = dApp.toAddress.toString
-      miner.transfer(sender.keyPair, dAppAddress, initialWavesBalance, minFee, waitForTx = true)
+      miner.transfer(sender.keyPair, dAppAddress, initialDccBalance, minFee, waitForTx = true)
 
       val script  = ScriptCompiler.compile("true", ScriptEstimatorV2).explicitGet()._1.bytes().base64
       val assetId = miner.issue(dApp, script = Some(script), waitForTx = true).id
@@ -463,7 +463,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
       .explicitGet()
       ._1
 
-    miner.transfer(sender.keyPair, address.toAddress.toString, initialWavesBalance, minFee, waitForTx = true)
+    miner.transfer(sender.keyPair, address.toAddress.toString, initialDccBalance, minFee, waitForTx = true)
 
     nodes.waitForTransaction(
       miner

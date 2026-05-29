@@ -19,7 +19,7 @@ import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{BinaryDataEntry, EmptyDataEntry, Height, InvokeScriptResult, StringDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, setScript, transfer}
 import com.decentralchain.transaction.TxValidationError.ScriptExecutionError
 import com.decentralchain.transaction.assets.exchange.{Order, OrderType}
@@ -63,8 +63,8 @@ class TransactionsRouteSpec
   )
 
   override def genesisBalances: Seq[AddrWithBalance] = Seq(
-    AddrWithBalance(richAddress, 1_000_000.waves),
-    AddrWithBalance(defaultAddress, 1_000_000.waves)
+    AddrWithBalance(richAddress, 1_000_000.dcc),
+    AddrWithBalance(defaultAddress, 1_000_000.dcc)
   )
 
   private val transactionsApiRoute = new TransactionsApiRoute(
@@ -98,7 +98,7 @@ class TransactionsRouteSpec
                                                                     |""".stripMargin)
 
   routePath("/calculateFee") - {
-    "waves" in {
+    "dcc" in {
       val transferTx = Json.obj(
         "type"            -> 4,
         "version"         -> 1,
@@ -120,7 +120,7 @@ class TransactionsRouteSpec
       val issue  = TxHelpers.issue(issuer)
 
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, issuer.toAddress, 20.waves),
+        TxHelpers.transfer(richAccount, issuer.toAddress, 20.dcc),
         issue,
         TxHelpers.sponsor(issue.asset, Some(5L), issuer)
       )
@@ -146,11 +146,11 @@ class TransactionsRouteSpec
     val sender    = TxHelpers.signer(20)
     val recipient = TxHelpers.signer(21)
 
-    val lease       = TxHelpers.lease(sender, recipient.toAddress, 5.waves)
+    val lease       = TxHelpers.lease(sender, recipient.toAddress, 5.dcc)
     val leaseCancel = TxHelpers.leaseCancel(lease.id(), sender)
 
     domain.appendBlock(
-      TxHelpers.transfer(richAccount, sender.toAddress, 6.waves),
+      TxHelpers.transfer(richAccount, sender.toAddress, 6.dcc),
       lease
     )
 
@@ -164,7 +164,7 @@ class TransactionsRouteSpec
                   |  "id" : "${leaseCancel.id()}",
                   |  "sender" : "${sender.toAddress}",
                   |  "senderPublicKey" : "${sender.publicKey}",
-                  |  "fee" : ${0.001.waves},
+                  |  "fee" : ${0.001.dcc},
                   |  "feeAssetId" : null,
                   |  "timestamp" : ${leaseCancel.timestamp},
                   |  "proofs" : [ "${leaseCancel.signature}" ],
@@ -177,7 +177,7 @@ class TransactionsRouteSpec
                   |    "originTransactionId" : "${lease.id()}",
                   |    "sender" : "${sender.toAddress}",
                   |    "recipient" : "${recipient.toAddress}",
-                  |    "amount" : ${5.waves},
+                  |    "amount" : ${5.dcc},
                   |    "height" : $height,
                   |    "status" : "$status",
                   |    "cancelHeight" : ${cancelHeight.getOrElse("null")},
@@ -224,10 +224,10 @@ class TransactionsRouteSpec
       TxHelpers.massTransfer(
         richAccount,
         Seq(
-          dapp.toAddress    -> 1.waves,
-          invoker.toAddress -> 1.waves
+          dapp.toAddress    -> 1.dcc,
+          invoker.toAddress -> 1.dcc
         ),
-        fee = 0.002.waves
+        fee = 0.002.dcc
       ),
       TxHelpers.setScript(
         dapp,
@@ -247,7 +247,7 @@ class TransactionsRouteSpec
     val expectedStateChanges = Json.toJsObject(
       InvokeScriptResult(
         Seq(StringDataEntry("key3", "some string"), BinaryDataEntry("key4", ByteStr.decodeBase58("encoded").get), EmptyDataEntry("key5")),
-        Seq(InvokeScriptResult.Payment(invoker.toAddress, Asset.Waves, 100))
+        Seq(InvokeScriptResult.Payment(invoker.toAddress, Asset.Dcc, 100))
       )
     )
 
@@ -288,10 +288,10 @@ class TransactionsRouteSpec
       TxHelpers.massTransfer(
         richAccount,
         Seq(
-          dapp.toAddress   -> 50.waves,
-          caller.toAddress -> 1.waves
+          dapp.toAddress   -> 50.dcc,
+          caller.toAddress -> 1.dcc
         ),
-        fee = 0.002.waves
+        fee = 0.002.dcc
       ),
       originalLease,
       TxHelpers.setScript(
@@ -348,7 +348,7 @@ class TransactionsRouteSpec
          |    "originTransactionId" : "${originalLease.id()}",
          |    "sender" : "${dapp.toAddress}",
          |    "recipient" : "$leaseRecipient",
-         |    "amount" : ${20.waves},
+         |    "amount" : ${20.dcc},
          |    "height" : $originalHeight,
          |    "status" : "canceled",
          |    "cancelHeight" : ${originalHeight + 1},
@@ -426,7 +426,7 @@ class TransactionsRouteSpec
     }
 
     "large-significand-format" in {
-      val tx = TxHelpers.transfer(richAccount, TxHelpers.address(930), 10.waves)
+      val tx = TxHelpers.transfer(richAccount, TxHelpers.address(930), 10.dcc)
       domain.appendBlock(tx)
       Get(routePath(s"/address/$richAddress/limit/1")) ~> Accept(CustomJson.jsonWithNumbersAsStrings) ~> route ~> check {
         val result = responseAs[JsArray] \ 0 \ 0
@@ -445,7 +445,7 @@ class TransactionsRouteSpec
       val dApp      = TestCompiler(V8).compileContract("@Callable(i)\nfunc f() = []")
       val ethInvoke = EthTxGenerator.generateEthInvoke(richAccount.toEthKeyPair, richAddress, "f", Nil, Nil)
       domain.appendAndAssertSucceed(
-        transfer(richAccount, richAccount.toEthWavesAddress),
+        transfer(richAccount, richAccount.toEthDccAddress),
         setScript(richAccount, dApp),
         ethInvoke
       )
@@ -505,9 +505,9 @@ class TransactionsRouteSpec
       val ethAccount        = TxHelpers.signer(240).toEthKeyPair
       val transferRecipient = TxHelpers.address(241)
 
-      val ethTransfer = EthTxGenerator.generateEthTransfer(ethAccount, transferRecipient, 5.waves, Asset.Waves)
+      val ethTransfer = EthTxGenerator.generateEthTransfer(ethAccount, transferRecipient, 5.dcc, Asset.Dcc)
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, ethAccount.toWavesAddress, 20.waves),
+        TxHelpers.transfer(richAccount, ethAccount.toDccAddress, 20.dcc),
         ethTransfer
       )
 
@@ -521,7 +521,7 @@ class TransactionsRouteSpec
                                                  |  "version" : 1,
                                                  |  "chainId" : 84,
                                                  |  "bytes" : "${EthEncoding.toHexString(ethTransfer.bytes())}",
-                                                 |  "sender" : "${ethAccount.toWavesAddress}",
+                                                 |  "sender" : "${ethAccount.toDccAddress}",
                                                  |  "senderPublicKey" : "${ethTransfer.sender}",
                                                  |  "height" : ${domain.blockchain.height},
                                                  |  "spentComplexity": 0,
@@ -530,7 +530,7 @@ class TransactionsRouteSpec
                                                  |    "type" : "transfer",
                                                  |    "recipient" : "$transferRecipient",
                                                  |    "asset" : null,
-                                                 |    "amount" : ${5.waves}
+                                                 |    "amount" : ${5.dcc}
                                                  |  }
                                                  |}""".stripMargin)
       }
@@ -546,10 +546,10 @@ class TransactionsRouteSpec
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            dapp.toAddress        -> 1.waves,
-            caller.toWavesAddress -> 1.waves
+            dapp.toAddress        -> 1.dcc,
+            caller.toDccAddress -> 1.dcc
           ),
-          fee = 0.002.waves
+          fee = 0.002.dcc
         ),
         TxHelpers.setScript(
           dapp,
@@ -570,7 +570,7 @@ class TransactionsRouteSpec
                                                  |  "version" : 1,
                                                  |  "chainId" : 84,
                                                  |  "bytes" : "${EthEncoding.toHexString(transaction.bytes())}",
-                                                 |  "sender" : "${caller.toWavesAddress}",
+                                                 |  "sender" : "${caller.toDccAddress}",
                                                  |  "senderPublicKey" : "${transaction.sender}",
                                                  |  "height" : ${domain.blockchain.height},
                                                  |  "spentComplexity": 1,
@@ -606,10 +606,10 @@ class TransactionsRouteSpec
       val lessor         = TxHelpers.signer(250)
       val leaseRecipient = TxHelpers.address(251)
 
-      val lease = TxHelpers.lease(lessor, leaseRecipient, 22.waves)
+      val lease = TxHelpers.lease(lessor, leaseRecipient, 22.dcc)
 
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, lessor.toAddress, 25.waves),
+        TxHelpers.transfer(richAccount, lessor.toAddress, 25.dcc),
         lease
       )
 
@@ -641,7 +641,7 @@ class TransactionsRouteSpec
                                     |    "originTransactionId" : "${lease.id()}",
                                     |    "sender" : "${lessor.toAddress}",
                                     |    "recipient" : "$leaseRecipient",
-                                    |    "amount" : ${22.waves},
+                                    |    "amount" : ${22.dcc},
                                     |    "height" : $leaseHeight,
                                     |    "status" : "canceled",
                                     |    "cancelHeight" : $cancelHeight,
@@ -671,8 +671,8 @@ class TransactionsRouteSpec
       domain.appendBlock(
         TxHelpers.massTransfer(
           richAccount,
-          Seq(dapp.toAddress -> 5.waves, caller.toAddress -> 5.waves),
-          fee = 0.002.waves
+          Seq(dapp.toAddress -> 5.dcc, caller.toAddress -> 5.dcc),
+          fee = 0.002.dcc
         ),
         TxHelpers.setScript(dapp, TestCompiler(V5).compileContract("""@Callable(i) func default() = []"""))
       )
@@ -740,7 +740,7 @@ class TransactionsRouteSpec
       val tx2    = TxHelpers.invoke(dapp.toAddress, Some("testCall"), Seq(CONST_BOOLEAN(false)), invoker = caller)
 
       domain.appendBlock(
-        TxHelpers.massTransfer(richAccount, Seq(dapp.toAddress -> 5.waves, caller.toAddress -> 1.waves), fee = 0.002.waves),
+        TxHelpers.massTransfer(richAccount, Seq(dapp.toAddress -> 5.dcc, caller.toAddress -> 1.dcc), fee = 0.002.dcc),
         TxHelpers.setScript(
           dapp,
           failableContract
@@ -775,7 +775,7 @@ class TransactionsRouteSpec
   routePath("/unconfirmed") - {
     "returns the list of unconfirmed transactions" in {
       domain.utxPool.removeAll(domain.utxPool.all)
-      val txs = Seq.tabulate(20)(a => TxHelpers.transfer(richAccount, amount = (a + 1).waves))
+      val txs = Seq.tabulate(20)(a => TxHelpers.transfer(richAccount, amount = (a + 1).dcc))
       txs.foreach(t => domain.utxPool.putIfNew(t))
       Get(routePath("/unconfirmed")) ~> route ~> check {
         val txIds = responseAs[Seq[JsValue]].map(v => (v \ "id").as[String])
@@ -787,7 +787,7 @@ class TransactionsRouteSpec
     routePath("/unconfirmed/size") - {
       "returns the size of unconfirmed transactions" in {
         domain.utxPool.removeAll(domain.utxPool.all)
-        val txs = Seq.tabulate(20)(a => TxHelpers.transfer(richAccount, amount = (a + 1).waves))
+        val txs = Seq.tabulate(20)(a => TxHelpers.transfer(richAccount, amount = (a + 1).dcc))
         txs.foreach(t => domain.utxPool.putIfNew(t))
         Get(routePath("/unconfirmed/size")) ~> route ~> check {
           status shouldEqual StatusCodes.OK
@@ -808,7 +808,7 @@ class TransactionsRouteSpec
       }
 
       "working properly otherwise" in {
-        val tx = TxHelpers.transfer(richAccount, defaultAddress, 20.waves)
+        val tx = TxHelpers.transfer(richAccount, defaultAddress, 20.dcc)
         domain.utxPool.putIfNew(tx)
         Get(routePath(s"/unconfirmed/info/${tx.id().toString}")) ~> route ~> check {
           status shouldEqual StatusCodes.OK
@@ -894,7 +894,7 @@ class TransactionsRouteSpec
         None,
         Seq.empty,
         500000L,
-        Asset.Waves,
+        Asset.Dcc,
         testTime.getTimestamp()
       )
       f(sender, ist)
@@ -902,9 +902,9 @@ class TransactionsRouteSpec
 
     "shows trace when trace is enabled" in {
       val sender = TxHelpers.signer(1201)
-      val ist    = TxHelpers.transfer(sender, defaultAddress, 1.waves)
+      val ist    = TxHelpers.transfer(sender, defaultAddress, 1.dcc)
       domain.appendBlock(
-        TxHelpers.transfer(richAccount, sender.toAddress, 2.waves),
+        TxHelpers.transfer(richAccount, sender.toAddress, 2.dcc),
         TxHelpers.setScript(sender, TestCompiler(V7).compileExpression("throw(\"error\")"))
       )
       Post(routePath("/broadcast?trace=true"), ist.json()) ~> route ~> check {
@@ -942,16 +942,16 @@ class TransactionsRouteSpec
       val aliasOwner = TxHelpers.signer(1031)
       val recipient  = TxHelpers.address(1032)
 
-      val lease = TxHelpers.lease(sender, recipient, 50.waves)
+      val lease = TxHelpers.lease(sender, recipient, 50.dcc)
 
       domain.appendBlock(
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            sender.toAddress     -> 100.waves,
-            aliasOwner.toAddress -> 1.waves
+            sender.toAddress     -> 100.dcc,
+            aliasOwner.toAddress -> 1.dcc
           ),
-          fee = 0.002.waves
+          fee = 0.002.dcc
         ),
         TxHelpers.createAlias("test_alias", aliasOwner),
         TxHelpers.setScript(
@@ -962,8 +962,8 @@ class TransactionsRouteSpec
                                               |
                                               |@Callable(i)
                                               |func default() = {
-                                              |  let leaseToAddress = Lease(Address(base58'${recipient}'), ${10.waves})
-                                              |  let leaseToAlias = Lease(Alias("test_alias"), ${20.waves})
+                                              |  let leaseToAddress = Lease(Address(base58'${recipient}'), ${10.dcc})
+                                              |  let leaseToAlias = Lease(Alias("test_alias"), ${20.dcc})
                                               |  strict leaseId = leaseToAddress.calculateLeaseId()
                                               |
                                               |  [
@@ -978,7 +978,7 @@ class TransactionsRouteSpec
       )
 
       val invoke = Signed
-        .invokeScript(2.toByte, sender, sender.toAddress, None, Seq.empty, 0.005.waves, Asset.Waves, ntpTime.getTimestamp())
+        .invokeScript(2.toByte, sender, sender.toAddress, None, Seq.empty, 0.005.dcc, Asset.Dcc, ntpTime.getTimestamp())
 
       Post(routePath("/broadcast?trace=true"), invoke.json()) ~> route ~> check {
         val dappTrace = (responseAs[JsObject] \ "trace").as[Seq[JsObject]].find(jsObject => (jsObject \ "type").as[String] == "dApp").get
@@ -1107,7 +1107,7 @@ class TransactionsRouteSpec
       val tx2 = TxHelpers.invoke(dapp.toAddress, Some("testCall"), Seq(CONST_BOOLEAN(false)), invoker = caller)
 
       domain.appendBlock(
-        TxHelpers.massTransfer(richAccount, Seq(dapp.toAddress -> 10.waves, caller.toAddress -> 10.waves), fee = 0.002.waves),
+        TxHelpers.massTransfer(richAccount, Seq(dapp.toAddress -> 10.dcc, caller.toAddress -> 10.dcc), fee = 0.002.dcc),
         TxHelpers.setScript(dapp, failableContract),
         tx1,
         tx2
@@ -1182,7 +1182,7 @@ class TransactionsRouteSpec
       val sender = TxHelpers.signer(1090)
 
       val transferTx = TxHelpers.transfer(from = sender)
-      domain.appendBlock(TxHelpers.transfer(richAccount, sender.toAddress, 100.waves), transferTx)
+      domain.appendBlock(TxHelpers.transfer(richAccount, sender.toAddress, 100.dcc), transferTx)
 
       val maxLimitIds      = Seq.fill(transactionsApiRoute.settings.transactionsByAddressLimit)(transferTx.id().toString)
       val moreThanLimitIds = transferTx.id().toString +: maxLimitIds
@@ -1222,13 +1222,13 @@ class TransactionsRouteSpec
     val issue      = TxHelpers.issue(issuer)
     val exchange =
       TxHelpers.exchangeFromOrders(
-        TxHelpers.order(OrderType.BUY, Waves, issue.asset, version = Order.V4, attachment = Some(attachment)),
-        TxHelpers.order(OrderType.SELL, Waves, issue.asset, version = Order.V4, sender = issuer),
+        TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(attachment)),
+        TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer),
         version = TxVersion.V3
       )
 
     domain.appendBlock(
-      TxHelpers.massTransfer(richAccount, Seq(sender.toAddress -> 10.waves, issuer.toAddress -> 10.waves), fee = 0.002.waves),
+      TxHelpers.massTransfer(richAccount, Seq(sender.toAddress -> 10.dcc, issuer.toAddress -> 10.dcc), fee = 0.002.dcc),
       issue,
       exchange
     )

@@ -15,8 +15,8 @@ class BlockchainUpdaterInMemoryDiffTest extends PropSpec with DomainScenarioDriv
     recipient <- accountGen
     ts        <- positiveIntGen
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-    payment: TransferTransaction  <- wavesTransferGeneratorP(ts, master, recipient.toAddress)
-    payment2: TransferTransaction <- wavesTransferGeneratorP(ts, master, recipient.toAddress)
+    payment: TransferTransaction  <- dccTransferGeneratorP(ts, master, recipient.toAddress)
+    payment2: TransferTransaction <- dccTransferGeneratorP(ts, master, recipient.toAddress)
   } yield (genesis, payment, payment2)
 
   property("compaction with liquid block doesn't make liquid block affect state once") {

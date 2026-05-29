@@ -53,13 +53,13 @@ class Ride4DAppsActivationTestSuite extends BaseTransactionSuite with CancelAfte
     .bytes()
     .base64
 
-  test("send waves to accounts") {
+  test("send dcc to accounts") {
     sender
       .transfer(
         sender.keyPair,
         recipient = smartAcc.toAddress.toString,
         assetId = None,
-        amount = 5.waves,
+        amount = 5.dcc,
         fee = minFee,
         waitForTx = true
       )
@@ -70,7 +70,7 @@ class Ride4DAppsActivationTestSuite extends BaseTransactionSuite with CancelAfte
         sender.keyPair,
         recipient = callerAcc.toAddress.toString,
         assetId = None,
-        amount = 5.waves,
+        amount = 5.dcc,
         fee = minFee,
         waitForTx = true
       )
@@ -189,7 +189,7 @@ object Ride4DAppsActivationTestSuite {
     .map(
       ConfigFactory
         .parseString(
-          s"""waves.blockchain.custom.functionality {
+          s"""dcc.blockchain.custom.functionality {
              |  pre-activated-features.11 = ${activationHeight - 1}
              |}""".stripMargin
         )

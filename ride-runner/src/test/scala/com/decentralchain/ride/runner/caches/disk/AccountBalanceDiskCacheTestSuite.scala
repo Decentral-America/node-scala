@@ -13,7 +13,7 @@ class AccountBalanceDiskCacheTestSuite extends DiskTestSuite {
   private val defaultCacheValue: RemoteData[Long]  = RemoteData.Cached(0L) // Equal to RemoteData.Absence for this case
 
   "AccountBalanceDiskCache" - {
-    "with Waves" - tests(Asset.Waves)
+    "with Dcc" - tests(Asset.Dcc)
     "with IssuedAsset" - tests(Asset.IssuedAsset(ByteStr(Array.fill[Byte](AssetIdLength)(0))))
   }
 

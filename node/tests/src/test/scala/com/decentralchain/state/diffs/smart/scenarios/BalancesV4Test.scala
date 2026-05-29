@@ -13,7 +13,7 @@ import com.decentralchain.lang.directives.values.{Asset as AssetType, *}
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.{ExpressionCompiler, TestCompiler}
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.*
 import com.decentralchain.lang.v1.traits.Environment
@@ -73,7 +73,7 @@ class BalancesV4Test extends PropSpec with WithState {
          |
          | @Callable(i)
          | func bar() = {
-         |  let balance = wavesBalance(Alias("$a"))
+         |  let balance = dccBalance(Alias("$a"))
          |   [
          |     IntegerEntry("available", balance.available),
          |     IntegerEntry("regular", balance.regular),
@@ -85,7 +85,7 @@ class BalancesV4Test extends PropSpec with WithState {
     TestCompiler(V4).compileContract(script)
   }
 
-  property("Waves balance details") {
+  property("Dcc balance details") {
     val (genesis, b, acc1, dapp, ci) = preconditionsAndTransfer
     assertDiffAndState(
       Seq(TestBlock.create(genesis)) ++
@@ -118,7 +118,7 @@ class BalancesV4Test extends PropSpec with WithState {
         val directives = DirectiveSet(V4, AssetType, Expression).explicitGet()
         PureContext.build(V4, useNewPowPrecision = true).withEnvironment[Environment] |+|
           CryptoContext.build(Global, V4, fixEcrecover = true).withEnvironment[Environment] |+|
-          WavesContext.build(Global, directives, fixBigScriptField = true)
+          DccContext.build(Global, directives, fixBigScriptField = true)
       }
 
       val script =
@@ -173,14 +173,14 @@ class BalancesV4Test extends PropSpec with WithState {
     }
   }
 
-  property("Waves balance change while processing script result") {
+  property("Dcc balance change while processing script result") {
     val w = ENOUGH_AMT - SetScriptFee - SetAssetScriptFee
     def assetScript(acc: ByteStr): Script = {
       val ctx = {
         val directives = DirectiveSet(V4, AssetType, Expression).explicitGet()
         PureContext.build(V4, useNewPowPrecision = true).withEnvironment[Environment] |+|
           CryptoContext.build(Global, V4, fixEcrecover = true).withEnvironment[Environment] |+|
-          WavesContext.build(Global, directives, fixBigScriptField = true)
+          DccContext.build(Global, directives, fixBigScriptField = true)
       }
 
       val script =
@@ -189,7 +189,7 @@ class BalancesV4Test extends PropSpec with WithState {
            | {-# CONTENT_TYPE EXPRESSION #-}
            | {-# SCRIPT_TYPE ASSET #-}
            |
-           | wavesBalance(Address(base58'$acc')).regular == $w
+           | dccBalance(Address(base58'$acc')).regular == $w
         """.stripMargin
       val parsedScript = Parser.parseExpr(script).get.value
       ExprScript(V4, ExpressionCompiler(ctx.compilerContext, V4, parsedScript).explicitGet()._1)
@@ -229,7 +229,7 @@ class BalancesV4Test extends PropSpec with WithState {
       val error = d.scriptResults(invoke.id()).error
       error.get.code shouldBe 3
       error.get.text should include("Transaction is not allowed by script of the asset")
-      s.wavesPortfolio(acc1.toAddress).balance shouldBe w
+      s.dccPortfolio(acc1.toAddress).balance shouldBe w
     }
   }
 

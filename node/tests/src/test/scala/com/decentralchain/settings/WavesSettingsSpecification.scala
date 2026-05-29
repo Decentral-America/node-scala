@@ -20,10 +20,10 @@ class DCCSettingsSpecification extends FlatSpec {
       val settings = config(configName)
 
       val expected = ConfigFactory
-        .parseString(s"waves.directory = ${com.decentralchain.settings.defaultDirectory(settings.config)}")
+        .parseString(s"dcc.directory = ${com.decentralchain.settings.defaultDirectory(settings.config)}")
         .withFallback(ConfigFactory.load())
         .resolve()
-        .getString("waves.directory")
+        .getString("dcc.directory")
 
       settings.directory should be(expected)
       settings.networkSettings should not be null
@@ -42,7 +42,7 @@ class DCCSettingsSpecification extends FlatSpec {
   testConfig("stagenet")()
 
   "DCCSettings" should "resolve folders correctly" in {
-    val config = loadConfig(ConfigFactory.parseString(s"""waves {
+    val config = loadConfig(ConfigFactory.parseString(s"""dcc {
                                                          |  directory = "/xxx"
                                                          |  data-directory = "/xxx/data"
                                                          |  ntp-server = "example.com"

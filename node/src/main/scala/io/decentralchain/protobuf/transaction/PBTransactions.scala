@@ -17,7 +17,7 @@ import io.decentralchain.protobuf.utils.PBImplicitConversions.*
 import com.decentralchain.serialization.Deser
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, EmptyDataEntry, Height, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.transaction as vt
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{GenericError, NegativeAmount}
 import com.decentralchain.transaction.assets.UpdateAssetInfoTransaction
 import com.decentralchain.transaction.serialization.impl.PBTransactionSerializer
@@ -45,7 +45,7 @@ object PBTransactions {
 
   def createGenesis(chainId: Byte, timestamp: Long, signature: ByteStr, data: GenesisTransactionData): SignedTransaction =
     new SignedTransaction(
-      SignedTransaction.Transaction.WavesTransaction(Transaction(chainId, timestamp = timestamp, data = Data.Genesis(data))),
+      SignedTransaction.Transaction.DccTransaction(Transaction(chainId, timestamp = timestamp, data = Data.Genesis(data))),
       Seq(ByteString.copyFrom(signature.arr))
     )
 
@@ -53,7 +53,7 @@ object PBTransactions {
       sender: com.decentralchain.account.PublicKey,
       chainId: Byte = 0,
       fee: Long = 0L,
-      feeAssetId: VanillaAssetId = Waves,
+      feeAssetId: VanillaAssetId = Dcc,
       timestamp: Long = 0L,
       version: Int = 0,
       proofsArray: Seq[com.decentralchain.common.state.ByteStr] = Nil,
@@ -61,7 +61,7 @@ object PBTransactions {
   ): SignedTransaction =
     new SignedTransaction(
       SignedTransaction.Transaction
-        .WavesTransaction(Transaction(chainId, sender.toByteString, Some((feeAssetId, fee): Amount), timestamp, version, data)),
+        .DccTransaction(Transaction(chainId, sender.toByteString, Some((feeAssetId, fee): Amount), timestamp, version, data)),
       proofsArray.map(bs => ByteString.copyFrom(bs.arr))
     )
 
@@ -77,7 +77,7 @@ object PBTransactions {
     signedTx.transaction match {
       case SignedTransaction.Transaction.Empty                      => Left(GenericError("Transaction must be specified"))
       case SignedTransaction.Transaction.EthereumTransaction(value) => EthereumTransaction(value.toByteArray)
-      case SignedTransaction.Transaction.WavesTransaction(parsedTx) =>
+      case SignedTransaction.Transaction.DccTransaction(parsedTx) =>
         val (feeAsset, feeAmount) = PBAmounts.toAssetAndAmount(parsedTx.fee.getOrElse(Amount.defaultInstance))
         for {
           tx <-
@@ -640,7 +640,7 @@ object PBTransactions {
 
       case vt.PaymentTransaction(sender, recipient, amount, fee, timestamp, signature, chainId) =>
         val data = PaymentTransactionData(PBRecipients.create(recipient).getPublicKeyHash, amount.value)
-        PBTransactions.create(sender, chainId, fee.value, Waves, timestamp, 1, Seq(signature), Data.Payment(data))
+        PBTransactions.create(sender, chainId, fee.value, Dcc, timestamp, 1, Seq(signature), Data.Payment(data))
 
       case tx: vt.transfer.TransferTransaction =>
         import tx.*
@@ -737,7 +737,7 @@ object PBTransactions {
             commitmentSignature.byteStr.toByteString
           )
         )
-        PBTransactions.create(sender, chainId, fee.value, Waves, timestamp, tx.version, proofs.proofs, data)
+        PBTransactions.create(sender, chainId, fee.value, Dcc, timestamp, tx.version, proofs.proofs, data)
 
       case et: EthereumTransaction =>
         PBSignedTransaction(PBSignedTransaction.Transaction.EthereumTransaction(ByteString.copyFrom(et.bytes())))

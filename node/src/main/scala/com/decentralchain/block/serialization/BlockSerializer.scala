@@ -11,7 +11,7 @@ import io.decentralchain.protobuf.block.PBBlocks
 import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.ByteBufferOps
 import com.decentralchain.state.{GeneratorIndex, Height}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Transaction
 import play.api.libs.json.{JsArray, JsNumber, JsObject, Json}
 
@@ -245,7 +245,7 @@ object BlockSerializer {
   )
 
   def transactionField(transactions: Seq[Transaction]): JsObject = Json.obj(
-    "fee"          -> transactions.map(_.assetFee).collect { case (Waves, feeAmt) => feeAmt }.sum,
+    "fee"          -> transactions.map(_.assetFee).collect { case (Dcc, feeAmt) => feeAmt }.sum,
     "transactions" -> JsArray(transactions.map(_.json()))
   )
 

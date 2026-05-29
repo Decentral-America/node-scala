@@ -6,7 +6,7 @@ import com.decentralchain.lang.directives.values.V6
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxVersion.*
 import com.decentralchain.transaction.assets.exchange.OrderType.*
@@ -30,8 +30,8 @@ class TransactionVersionValidationTest extends PropSpec with WithDomain {
 
   private val asset  = IssuedAsset(issueTx1.id())
   private val asset2 = IssuedAsset(issueTx2.id())
-  private def order1 = order(BUY, asset, Waves, price = 123456789, version = V1)
-  private def order2 = order(SELL, asset, Waves, price = 123456789, version = V1)
+  private def order1 = order(BUY, asset, Dcc, price = 123456789, version = V1)
+  private def order2 = order(SELL, asset, Dcc, price = 123456789, version = V1)
 
   private def txsByMaxVersion: Seq[(TxVersion, TxVersion => Transaction)] =
     Seq(

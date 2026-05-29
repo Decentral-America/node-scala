@@ -10,7 +10,7 @@ import com.decentralchain.lang.script.ContractScript.ContractScriptImpl
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.script.{ContractScript, Script}
 import com.decentralchain.lang.v1.CTX
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.Parser.LibrariesOffset
 import com.decentralchain.lang.v1.parser.Parser.LibrariesOffset.NoLibraries
@@ -25,10 +25,10 @@ class TestCompiler(version: StdLibVersion) {
 
   private lazy val compilerContext =
     (baseCompilerContext |+|
-      WavesContext.build(Global, DirectiveSet(version, Account, DAppType).explicitGet(), fixBigScriptField = true)).compilerContext
+      DccContext.build(Global, DirectiveSet(version, Account, DAppType).explicitGet(), fixBigScriptField = true)).compilerContext
 
   private lazy val expressionContext: CTX[Environment] =
-    WavesContext.build(Global, DirectiveSet(version, Account, Expression).explicitGet(), fixBigScriptField = true)
+    DccContext.build(Global, DirectiveSet(version, Account, Expression).explicitGet(), fixBigScriptField = true)
 
   private lazy val expressionCompilerContext =
     (baseCompilerContext |+|
@@ -36,7 +36,7 @@ class TestCompiler(version: StdLibVersion) {
 
   private lazy val assetCompilerContext =
     (baseCompilerContext |+|
-      WavesContext.build(Global, DirectiveSet(version, Asset, Expression).explicitGet(), fixBigScriptField = true)).compilerContext
+      DccContext.build(Global, DirectiveSet(version, Asset, Expression).explicitGet(), fixBigScriptField = true)).compilerContext
 
   def compile(
       script: String,

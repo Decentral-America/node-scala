@@ -92,21 +92,21 @@ class MinerAccountScriptRestrictionsTest extends PropSpec with WithDomain {
 
   private def withMiner(d: Domain)(f: (MinerImpl, Appender, Scheduler) => Unit): Unit = {
     val defaultSettings = DCCSettings.default()
-    val wavesSettings   = defaultSettings.copy(minerSettings = defaultSettings.minerSettings.copy(quorum = 0))
+    val dccSettings   = defaultSettings.copy(minerSettings = defaultSettings.minerSettings.copy(quorum = 0))
 
     val utx = new UtxPoolImpl(
       time,
       d.blockchainUpdater,
-      wavesSettings.utxSettings,
-      wavesSettings.maxTxErrorLogSize,
-      isMiningEnabled = wavesSettings.minerSettings.enable
+      dccSettings.utxSettings,
+      dccSettings.maxTxErrorLogSize,
+      isMiningEnabled = dccSettings.minerSettings.enable
     )
     val appenderScheduler = Scheduler.singleThread("appender")
 
     val miner = new MinerImpl(
       new DefaultChannelGroup(GlobalEventExecutor.INSTANCE),
       d.blockchainUpdater,
-      wavesSettings,
+      dccSettings,
       time,
       utx,
       BlockEndorser.Disabled,
@@ -140,7 +140,7 @@ class MinerAccountScriptRestrictionsTest extends PropSpec with WithDomain {
   }
 
   private def setScript(script: Script): SetScriptTransaction =
-    SetScriptTransaction.selfSigned(TxVersion.V2, minerAcc, Some(script), 0.01.waves, ts).explicitGet()
+    SetScriptTransaction.selfSigned(TxVersion.V2, minerAcc, Some(script), 0.01.dcc, ts).explicitGet()
 
   private def verifierScriptStr: String =
     s"""

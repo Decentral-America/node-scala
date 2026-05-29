@@ -43,15 +43,15 @@ class SetScriptTransactionRideTest extends PropSpec with WithDomain {
       AddrWithBalance.enoughBalances(secondSigner)
     ) { d =>
       d.appendBlock(setScript(defaultSigner, dAppVerifier), setScript(secondSigner, exprVerifier))
-      d.appendBlockE(setScript(defaultSigner, dApp, 1.waves, TxVersion.V2)) should produce(
+      d.appendBlockE(setScript(defaultSigner, dApp, 1.dcc, TxVersion.V2)) should produce(
         "value() called on unit value while accessing field 'script'"
       )
-      d.appendBlockE(setScript(secondSigner, dApp, 1.waves, TxVersion.V2)) should produce(
+      d.appendBlockE(setScript(secondSigner, dApp, 1.dcc, TxVersion.V2)) should produce(
         "value() called on unit value while accessing field 'script'"
       )
       d.appendBlock()
-      d.appendAndAssertSucceed(setScript(defaultSigner, dApp, 1.waves, TxVersion.V2))
-      d.appendAndAssertSucceed(setScript(secondSigner, dApp, 1.waves, TxVersion.V2))
+      d.appendAndAssertSucceed(setScript(defaultSigner, dApp, 1.dcc, TxVersion.V2))
+      d.appendAndAssertSucceed(setScript(secondSigner, dApp, 1.dcc, TxVersion.V2))
     }
   }
 }

@@ -11,7 +11,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.{NTPTime, NodeConfigs}
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.{TxExchangeAmount, TxExchangePrice, TxVersion}
@@ -28,7 +28,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
       decimals = 2,
       reissuable = true,
       script = None,
-      fee = 1.waves,
+      fee = 1.dcc,
       timestamp = System.currentTimeMillis()
     )
     .explicitGet()
@@ -172,7 +172,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
         decimals = 8,
         reissuable = true,
         script = None,
-        fee = 1.waves,
+        fee = 1.dcc,
         timestamp = System.currentTimeMillis()
       )
       .explicitGet()
@@ -187,12 +187,12 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
 
     for (
       (o1ver, o2ver, matcherFeeOrder1, matcherFeeOrder2) <- Seq(
-        (1: Byte, 3: Byte, Waves, IssuedAsset(assetId)),
-        (1: Byte, 3: Byte, Waves, Waves),
-        (2: Byte, 3: Byte, Waves, IssuedAsset(assetId)),
-        (3: Byte, 1: Byte, IssuedAsset(assetId), Waves),
-        (2: Byte, 3: Byte, Waves, Waves),
-        (3: Byte, 2: Byte, IssuedAsset(assetId), Waves)
+        (1: Byte, 3: Byte, Dcc, IssuedAsset(assetId)),
+        (1: Byte, 3: Byte, Dcc, Dcc),
+        (2: Byte, 3: Byte, Dcc, IssuedAsset(assetId)),
+        (3: Byte, 1: Byte, IssuedAsset(assetId), Dcc),
+        (2: Byte, 3: Byte, Dcc, Dcc),
+        (3: Byte, 2: Byte, IssuedAsset(assetId), Dcc)
       )
     ) {
 
@@ -201,7 +201,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
       val expirationTimestamp      = ts + Order.MaxLiveTime / 2
       var assetBalanceBefore: Long = 0L
 
-      if (matcherFeeOrder1 == Waves && matcherFeeOrder2 != Waves) {
+      if (matcherFeeOrder1 == Dcc && matcherFeeOrder2 != Dcc) {
         assetBalanceBefore = sender.assetBalance(secondKeyPair.toAddress.toString, assetId.toString).balance
         sender.transfer(buyer, seller.toAddress.toString, 100000, minFee, Some(assetId.toString), waitForTx = true)
       }
@@ -239,7 +239,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
 
       nodes.waitForHeightAriseAndTxPresent(tx.id().toString)
 
-      if (matcherFeeOrder1 == Waves && matcherFeeOrder2 != Waves) {
+      if (matcherFeeOrder1 == Dcc && matcherFeeOrder2 != Dcc) {
         sender.assetBalance(secondAddress, assetId.toString).balance shouldBe assetBalanceBefore
       }
     }
@@ -247,7 +247,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
 
   test("exchange tx with orders v4 can use price that is impossible for orders v3/v2/v1") {
 
-    sender.transfer(sender.keyPair, firstAddress, 1000.waves, waitForTx = true)
+    sender.transfer(sender.keyPair, firstAddress, 1000.dcc, waitForTx = true)
 
     val seller        = acc1
     val buyer         = acc0
@@ -263,7 +263,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
         decimals = 0,
         reissuable = false,
         script = None,
-        fee = 0.001.waves,
+        fee = 0.001.dcc,
         waitForTx = true
       )
       .id
@@ -277,7 +277,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
         decimals = 6,
         reissuable = false,
         script = None,
-        fee = 1.waves,
+        fee = 1.dcc,
         waitForTx = true
       )
       .id
@@ -286,41 +286,41 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
     val ts                  = ntpTime.correctedTime()
     val expirationTimestamp = ts + Order.MaxLiveTime / 2
     val amount              = 1
-    val nftWavesPrice       = 1000 * math.pow(10, 8).toLong
+    val nftDccPrice       = 1000 * math.pow(10, 8).toLong
     val nftForAssetPrice    = 1 * math.pow(10, 8).toLong
 
-    val nftWavesPair      = AssetPair.createAssetPair(nftAsset, "DCC").get
+    val nftDccPair      = AssetPair.createAssetPair(nftAsset, "DCC").get
     val nftOtherAssetPair = AssetPair.createAssetPair(nftAsset, dec6AssetId).get
 
-    val sellNftForWaves =
+    val sellNftForDcc =
       Order
         .sell(
           4.toByte,
           seller,
           matcher.publicKey,
-          nftWavesPair,
+          nftDccPair,
           amount,
-          nftWavesPrice,
+          nftDccPrice,
           ts,
           expirationTimestamp,
           matcherFee,
-          Waves,
+          Dcc,
           OrderPriceMode.Default
         )
         .explicitGet()
-    val buyNftForWaves =
+    val buyNftForDcc =
       Order
         .buy(
           4.toByte,
           buyer,
           matcher.publicKey,
-          nftWavesPair,
+          nftDccPair,
           amount,
-          nftWavesPrice,
+          nftDccPrice,
           ts,
           expirationTimestamp,
           matcherFee,
-          Waves,
+          Dcc,
           OrderPriceMode.Default
         )
         .explicitGet()
@@ -337,7 +337,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
           ts,
           expirationTimestamp,
           matcherFee,
-          Waves,
+          Dcc,
           OrderPriceMode.Default
         )
         .explicitGet()
@@ -353,7 +353,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
           ts,
           expirationTimestamp,
           matcherFee,
-          Waves,
+          Dcc,
           OrderPriceMode.Default
         )
         .explicitGet()
@@ -368,12 +368,12 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
         .signed(
           3.toByte,
           matcher = matcher.privateKey,
-          order1 = buyNftForWaves,
-          order2 = sellNftForWaves,
+          order1 = buyNftForDcc,
+          order2 = sellNftForDcc,
           amount = amount,
-          price = nftWavesPrice,
-          buyMatcherFee = (BigInt(matcherFee) * amount / sellNftForWaves.amount.value).toLong,
-          sellMatcherFee = (BigInt(matcherFee) * amount / sellNftForWaves.amount.value).toLong,
+          price = nftDccPrice,
+          buyMatcherFee = (BigInt(matcherFee) * amount / sellNftForDcc.amount.value).toLong,
+          sellMatcherFee = (BigInt(matcherFee) * amount / sellNftForDcc.amount.value).toLong,
           fee = matcherFee,
           timestamp = ntpTime.correctedTime()
         )
@@ -383,8 +383,8 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
 
     sender.nftList(sellerAddress, limit = 1) shouldBe empty
     sender.nftList(buyerAddress, 1).head.assetId shouldBe nftAsset
-    sender.balanceDetails(sellerAddress).regular shouldBe sellerBalance + nftWavesPrice - matcherFee
-    sender.balanceDetails(buyerAddress).regular shouldBe buyerBalance - nftWavesPrice - matcherFee
+    sender.balanceDetails(sellerAddress).regular shouldBe sellerBalance + nftDccPrice - matcherFee
+    sender.balanceDetails(buyerAddress).regular shouldBe buyerBalance - nftDccPrice - matcherFee
 
     val sellerBalanceAfterFirstExchange = sender.balanceDetails(sellerAddress).regular
     val buyerBalanceAfgerFirstExchange  = sender.balanceDetails(buyerAddress).regular

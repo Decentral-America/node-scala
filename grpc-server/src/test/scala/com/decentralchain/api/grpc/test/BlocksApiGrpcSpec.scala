@@ -18,7 +18,7 @@ import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.utils.{DiffMatchers, Schedulers, byteStrOrdering}
@@ -111,8 +111,8 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
       val issue      = TxHelpers.issue(issuer)
       val exchange =
         TxHelpers.exchangeFromOrders(
-          TxHelpers.order(OrderType.BUY, Waves, issue.asset, version = Order.V4, attachment = Some(attachment)),
-          TxHelpers.order(OrderType.SELL, Waves, issue.asset, version = Order.V4, sender = issuer),
+          TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(attachment)),
+          TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer),
           version = TxVersion.V3
         )
 
@@ -263,7 +263,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
@@ -317,7 +317,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
@@ -388,7 +388,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
         settings.blockchainSettings.copy(
           functionalitySettings = settings.blockchainSettings.functionalitySettings
             .copy(daoAddress = Some(daoAddress.toString), xtnBuybackAddress = Some(xtnBuybackAddress.toString), xtnBuybackRewardPeriod = 1),
-          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.waves)
+          rewardsSettings = settings.blockchainSettings.rewardsSettings.copy(initial = BlockRewardCalculator.FullRewardInit + 1.dcc)
         )
       )
       .setFeaturesHeight(

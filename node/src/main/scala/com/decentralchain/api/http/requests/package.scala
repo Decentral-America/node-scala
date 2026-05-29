@@ -4,7 +4,7 @@ import cats.Applicative
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.{DigestLength, SignatureLength}
 import com.decentralchain.lang.ValidationError
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{GenericError, Validation}
 import com.decentralchain.transaction.{Asset, AssetIdStringLength, Proofs, TxValidationError, TxVersion}
 import com.decentralchain.utils.base58Length
@@ -38,7 +38,7 @@ package object requests {
     parseBase58ToOption(v.filter(_.nonEmpty), err, AssetIdStringLength)
       .map {
         case Some(str) => IssuedAsset(str)
-        case None      => Waves
+        case None      => Dcc
       }
 
   def toProofs(maybeSignature: Option[ByteStr], maybeProofs: Option[Proofs]): Validation[Proofs] =

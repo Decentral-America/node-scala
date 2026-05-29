@@ -39,7 +39,7 @@ class SyncDAppLimits extends PropSpec with WithDomain with OptionValues with Eit
            | }
            | """.stripMargin
       ),
-      fee = 1.waves
+      fee = 1.dcc
     )
 
     property(s"$title - positive") {
@@ -93,7 +93,7 @@ class SyncDAppLimits extends PropSpec with WithDomain with OptionValues with Eit
                | }
                | """.stripMargin
           ),
-          fee = 1.waves
+          fee = 1.dcc
         )
       )
 
@@ -129,7 +129,7 @@ class SyncDAppLimits extends PropSpec with WithDomain with OptionValues with Eit
                | }
                | """.stripMargin
           ),
-          fee = 1.waves
+          fee = 1.dcc
         )
       )
 

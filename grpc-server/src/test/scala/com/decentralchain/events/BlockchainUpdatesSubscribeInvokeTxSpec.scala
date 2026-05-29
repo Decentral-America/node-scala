@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
 import com.decentralchain.events.fixtures.PrepareInvokeTestData.*
-import com.decentralchain.events.fixtures.WavesTxChecks.*
+import com.decentralchain.events.fixtures.DccTxChecks.*
 import io.decentralchain.events.protobuf.BlockchainUpdated as PBBlockchainUpdated
 import io.decentralchain.events.protobuf.BlockchainUpdated.Append
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, CONST_LONG, CONST_STRING, EXPR}
@@ -14,7 +14,7 @@ import io.decentralchain.protobuf.transaction.PBAmounts.toVanillaAssetId
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.{FreeSpec, NumericExt}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.smart.SetScriptTransaction
@@ -26,8 +26,8 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
   val sender: SeedKeyPair            = TxHelpers.signer(3)
   val senderAddress: Address         = sender.toAddress
   val dAppAddress: Address           = dAppAccount.toAddress
-  val dAppBalanceBefore: Long        = 10.waves
-  val senderWavesBalanceBefore: Long = 8.waves
+  val dAppBalanceBefore: Long        = 10.dcc
+  val senderDccBalanceBefore: Long = 8.dcc
 
   "BU-31. Invoke have to return correct data for subscribe" in {
     for (libVersion <- 5 to 6) {
@@ -40,9 +40,9 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
       val invoke                          = TxHelpers.invoke(dAppAddress, Some("setData"), args, Seq.empty, sender, fee = 100500000L)
       val dAppInvokeIssueBalance: Long    = issueData.apply("amount").toString.toLong - scriptTransferIssueAssetNum
       val dAppBalanceBeforeInvoke: Long   = dAppBalanceBefore - issue.fee.value - setScript.fee.value
-      val dAppWavesBalanceAfterTx: Long   = dAppBalanceBeforeInvoke - scriptTransferUnitNum
+      val dAppDccBalanceAfterTx: Long   = dAppBalanceBeforeInvoke - scriptTransferUnitNum
       val dAppAssetBalanceAfterTx: Long   = issue.quantity.value - burnNum - scriptTransferAssetNum + reissueNum
-      val senderWavesBalanceAfterTx: Long = senderWavesBalanceBefore - invoke.fee.value + scriptTransferUnitNum
+      val senderDccBalanceAfterTx: Long = senderDccBalanceBefore - invoke.fee.value + scriptTransferUnitNum
       val dataEntry: Seq[DataEntry[?]] = Seq[DataEntry[?]](
         EmptyDataEntry("int"),
         BinaryDataEntry("byte", asset.id),
@@ -61,7 +61,7 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
         settings = currentSettings,
         balances = Seq(
           AddrWithBalance(dAppAddress, dAppBalanceBefore),
-          AddrWithBalance(senderAddress, senderWavesBalanceBefore)
+          AddrWithBalance(senderAddress, senderDccBalanceBefore)
         )
       ) { d =>
         d.appendBlock(setScript)
@@ -82,7 +82,7 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
           arguments.head.value.binaryValue.get.toByteArray,
           arguments.apply(1).value.binaryValue.get.toByteArray
         )
-        val minerBalanceBeforeInvoke = 3 * 6.waves + setScript.fee.value + issue.fee.value * 2 / 5
+        val minerBalanceBeforeInvoke = 3 * 6.dcc + setScript.fee.value + issue.fee.value * 2 / 5
         val minerBalanceAfterInvoke  = minerBalanceBeforeInvoke + invoke.fee.value * 2 / 5
         checkInvokeTransaction(append.transactionIds.head, append.transactionAt(0), invoke, dAppAddress.publicKeyHash)
         checkInvokeBaseTransactionMetadata(transactionMetadata, invoke)
@@ -91,7 +91,7 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
         checkInvokeScriptResultIssues(result.issues.head, issueData)
         checkInvokeScriptResultTransfers(result.transfers.head, senderAddress, scriptTransferAssetNum, asset)
         checkInvokeScriptResultTransfers(result.transfers.apply(1), senderAddress, scriptTransferIssueAssetNum, invokeIssueAsset)
-        checkInvokeScriptResultTransfers(result.transfers.apply(2), senderAddress, scriptTransferUnitNum, Waves)
+        checkInvokeScriptResultTransfers(result.transfers.apply(2), senderAddress, scriptTransferUnitNum, Dcc)
         checkInvokeScriptResultReissue(result.reissues.head, asset, reissueNum, reissuable = true)
         checkInvokeScriptResultBurn(result.burns.head, asset, burnNum)
         checkInvokeScriptResultSponsorFee(result.sponsorFees.head, asset, sponsorFeeAssetNum)
@@ -101,13 +101,13 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
         checkBalances(
           append.transactionStateUpdates.head.balances,
           Map(
-            (senderAddress, Waves)            -> (senderWavesBalanceBefore, senderWavesBalanceAfterTx),
+            (senderAddress, Dcc)            -> (senderDccBalanceBefore, senderDccBalanceAfterTx),
             (senderAddress, asset)            -> (0, scriptTransferAssetNum),
             (senderAddress, invokeIssueAsset) -> (0, scriptTransferIssueAssetNum),
-            (dAppAddress, Waves)              -> (dAppBalanceBeforeInvoke, dAppWavesBalanceAfterTx),
+            (dAppAddress, Dcc)              -> (dAppBalanceBeforeInvoke, dAppDccBalanceAfterTx),
             (dAppAddress, invokeIssueAsset)   -> (0, dAppInvokeIssueBalance),
             (dAppAddress, asset)              -> (issue.quantity.value, dAppAssetBalanceAfterTx),
-            (defaultAddress, Waves)           -> (minerBalanceBeforeInvoke, minerBalanceAfterInvoke)
+            (defaultAddress, Dcc)           -> (minerBalanceBeforeInvoke, minerBalanceAfterInvoke)
           )
         )
         checkDataEntriesStateUpdate(dataEntries, dataEntry, dAppAddress.bytes)
@@ -155,26 +155,26 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
       )
     val actualData                 = Seq(("bar", scriptTransferUnitNum * 2))
     val invoke                     = TxHelpers.invoke(dAppAddress, Some("foo"), args, Seq.empty, invokerDappAccount, fee = 100500000L)
-    val invokerDappBalance: Long   = 4.waves
-    val secondAddressBalance: Long = 8.waves
-    val assetDappBalance: Long     = 12.waves
+    val invokerDappBalance: Long   = 4.dcc
+    val secondAddressBalance: Long = 8.dcc
+    val assetDappBalance: Long     = 12.dcc
 
     "BU-77. doubles nested i.caller. Invoke have to return correct data for subscribe" in {
       for (libVersion <- 5 to 6) {
-        val scriptTransferWavesSum             = scriptTransferUnitNum * 2
+        val scriptTransferDccSum             = scriptTransferUnitNum * 2
         val mainDAppTx                         = setScript(dAppAccount, script(mainDAppScript(libVersion)))
         val nestedDAppTx                       = setScript(secondSigner, script(nestedDAppScript("i.caller", libVersion)))
         val doubleNestedDAppTx                 = setScript(assetDappAccount, script(doubleNestedDAppScript("i.caller", libVersion)))
-        val expectDataEntries                  = Seq[DataEntry[?]](IntegerDataEntry(bar, scriptTransferWavesSum))
-        val secondAddressWavesBalanceBefore    = secondAddressBalance - nestedDAppTx.fee.value
-        val secondAddressWavesBalanceAfter     = secondAddressWavesBalanceBefore + scriptTransferUnitNum
-        val assetDappAddressWavesBalanceBefore = assetDappBalance - issue.fee.value - massTx.fee.value - doubleNestedDAppTx.fee.value
-        val assetDappAddressWavesBalanceAfter  = assetDappAddressWavesBalanceBefore - scriptTransferUnitNum
-        val invokerDappAddressWavesBalance     = invokerDappBalance - invoke.fee.value
+        val expectDataEntries                  = Seq[DataEntry[?]](IntegerDataEntry(bar, scriptTransferDccSum))
+        val secondAddressDccBalanceBefore    = secondAddressBalance - nestedDAppTx.fee.value
+        val secondAddressDccBalanceAfter     = secondAddressDccBalanceBefore + scriptTransferUnitNum
+        val assetDappAddressDccBalanceBefore = assetDappBalance - issue.fee.value - massTx.fee.value - doubleNestedDAppTx.fee.value
+        val assetDappAddressDccBalanceAfter  = assetDappAddressDccBalanceBefore - scriptTransferUnitNum
+        val invokerDappAddressDccBalance     = invokerDappBalance - invoke.fee.value
         val secondAddressAssetBalance          = assetTransferAmount - scriptTransferAssetNum + paymentNum
         val dAppAddressAssetBalance            = assetTransferAmount + scriptTransferAssetNum - paymentNum
         val txsBeforeInvoke                    = Seq(issue, massTx, mainDAppTx, nestedDAppTx, doubleNestedDAppTx)
-        val minerBalanceBeforeInvoke           = 2 * 6.waves + txsBeforeInvoke.map(_.fee.value).sum * 2 / 5
+        val minerBalanceBeforeInvoke           = 2 * 6.dcc + txsBeforeInvoke.map(_.fee.value).sum * 2 / 5
         val minerBalanceAfterInvoke            = minerBalanceBeforeInvoke + invoke.fee.value * 2 / 5
 
         withAddedBlocksAndSubscribe(mainDAppTx, nestedDAppTx, doubleNestedDAppTx) { updates =>
@@ -183,12 +183,12 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
           checkBalances(
             updates(2).getAppend.transactionStateUpdates.head.balances,
             Map(
-              (secondAddress, Waves)      -> (secondAddressWavesBalanceBefore, secondAddressWavesBalanceAfter),
+              (secondAddress, Dcc)      -> (secondAddressDccBalanceBefore, secondAddressDccBalanceAfter),
               (secondAddress, asset)      -> (assetTransferAmount, secondAddressAssetBalance),
               (dAppAddress, asset)        -> (assetTransferAmount, dAppAddressAssetBalance),
-              (assetDappAddress, Waves)   -> (assetDappAddressWavesBalanceBefore, assetDappAddressWavesBalanceAfter),
-              (invokerDappAddress, Waves) -> (invokerDappBalance, invokerDappAddressWavesBalance),
-              (defaultAddress, Waves)     -> (minerBalanceBeforeInvoke, minerBalanceAfterInvoke)
+              (assetDappAddress, Dcc)   -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
+              (invokerDappAddress, Dcc) -> (invokerDappBalance, invokerDappAddressDccBalance),
+              (defaultAddress, Dcc)     -> (minerBalanceBeforeInvoke, minerBalanceAfterInvoke)
             )
           )
           checkDataEntriesStateUpdate(actualDataEntries, expectDataEntries, dAppAddress.bytes)
@@ -202,14 +202,14 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
         val nestedDAppTx                       = setScript(secondSigner, script(nestedDAppScript("i.originCaller", libVersion)))
         val doubleNestedDAppTx                 = setScript(assetDappAccount, script(doubleNestedDAppScript("i.originCaller", libVersion)))
         val expectDataEntries                  = Seq[DataEntry[?]](IntegerDataEntry(bar, scriptTransferUnitNum * 2))
-        val assetDappAddressWavesBalanceBefore = assetDappBalance - issue.fee.value - massTx.fee.value - doubleNestedDAppTx.fee.value
-        val assetDappAddressWavesBalanceAfter  = assetDappAddressWavesBalanceBefore - scriptTransferUnitNum
-        val invokerDappAddressWavesBalance     = invokerDappBalance - invoke.fee.value + scriptTransferUnitNum
+        val assetDappAddressDccBalanceBefore = assetDappBalance - issue.fee.value - massTx.fee.value - doubleNestedDAppTx.fee.value
+        val assetDappAddressDccBalanceAfter  = assetDappAddressDccBalanceBefore - scriptTransferUnitNum
+        val invokerDappAddressDccBalance     = invokerDappBalance - invoke.fee.value + scriptTransferUnitNum
         val invokerDappAddressAssetBalance     = assetTransferAmount + scriptTransferAssetNum
         val secondAddressAssetBalance          = assetTransferAmount - scriptTransferAssetNum + paymentNum
         val dAppAddressAssetBalance            = assetTransferAmount - paymentNum
         val txsBeforeInvoke                    = Seq(issue, massTx, mainDAppTx, nestedDAppTx, doubleNestedDAppTx)
-        val minerBalanceBeforeInvoke           = 2 * 6.waves + txsBeforeInvoke.map(_.fee.value).sum * 2 / 5
+        val minerBalanceBeforeInvoke           = 2 * 6.dcc + txsBeforeInvoke.map(_.fee.value).sum * 2 / 5
         val minerBalanceAfterInvoke            = minerBalanceBeforeInvoke + invoke.fee.value * 2 / 5
 
         withAddedBlocksAndSubscribe(mainDAppTx, nestedDAppTx, doubleNestedDAppTx) { updates =>
@@ -221,9 +221,9 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
               (invokerDappAddress, asset) -> (assetTransferAmount, invokerDappAddressAssetBalance),
               (secondAddress, asset)      -> (assetTransferAmount, secondAddressAssetBalance),
               (dAppAddress, asset)        -> (assetTransferAmount, dAppAddressAssetBalance),
-              (assetDappAddress, Waves)   -> (assetDappAddressWavesBalanceBefore, assetDappAddressWavesBalanceAfter),
-              (invokerDappAddress, Waves) -> (invokerDappBalance, invokerDappAddressWavesBalance),
-              (defaultAddress, Waves)     -> (minerBalanceBeforeInvoke, minerBalanceAfterInvoke)
+              (assetDappAddress, Dcc)   -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
+              (invokerDappAddress, Dcc) -> (invokerDappBalance, invokerDappAddressDccBalance),
+              (defaultAddress, Dcc)     -> (minerBalanceBeforeInvoke, minerBalanceAfterInvoke)
             )
           )
           checkDataEntriesStateUpdate(actualDataEntries, expectDataEntries, dAppAddress.bytes)
@@ -285,7 +285,7 @@ class BlockchainUpdatesSubscribeInvokeTxSpec extends FreeSpec with WithBUDomain 
         invokesStateChangeInvoke.stateChanges.get.transfers.head,
         doubleNestedTransferAddress,
         scriptTransferUnitNum,
-        Waves
+        Dcc
       )
     }
   }

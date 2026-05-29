@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
 import com.decentralchain.state.diffs.{ENOUGH_AMT, produceRejectOrFailedDiff}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.{Asset, Transaction, TxHelpers}
 
@@ -95,7 +95,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
     }
   }
 
-  property("payments in sync call should change sender/recipient waves balance") {
+  property("payments in sync call should change sender/recipient dcc balance") {
     val invoker       = TxHelpers.signer(1)
     val senderDApp    = TxHelpers.signer(2)
     val recipientDApp = TxHelpers.signer(3)
@@ -122,8 +122,8 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
     val masterDApp  = TxHelpers.signer(2)
     val serviceDApp = TxHelpers.signer(3)
 
-    withDomain(RideV5, AddrWithBalance.enoughBalances(invoker, serviceDApp) :+ AddrWithBalance(masterDApp.toAddress, 1.waves)) { d =>
-      val paymentAmount = 10.waves
+    withDomain(RideV5, AddrWithBalance.enoughBalances(invoker, serviceDApp) :+ AddrWithBalance(masterDApp.toAddress, 1.dcc)) { d =>
+      val paymentAmount = 10.dcc
 
       val setMasterScript  = TxHelpers.setScript(masterDApp, invokerDAppScript(serviceDApp.toAddress, amount = paymentAmount))
       val setServiceScript = TxHelpers.setScript(serviceDApp, simpleDAppScript())
@@ -133,7 +133,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
 
       d.balance(masterDApp.toAddress) < paymentAmount shouldBe true
 
-      d.appendBlockE(invoke) should produce(s"${masterDApp.toAddress} -> negative waves balance")
+      d.appendBlockE(invoke) should produce(s"${masterDApp.toAddress} -> negative dcc balance")
     }
   }
 
@@ -146,7 +146,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
       val dApp1   = TxHelpers.signer(1)
       val dApp2   = TxHelpers.signer(2)
 
-      val balances = AddrWithBalance.enoughBalances(invoker, dApp2) :+ AddrWithBalance(dApp1.toAddress, 0.01.waves)
+      val balances = AddrWithBalance.enoughBalances(invoker, dApp2) :+ AddrWithBalance(dApp1.toAddress, 0.01.dcc)
 
       val setScript1 = TxHelpers.setScript(dApp1, invokerDAppScript(dApp2.toAddress, bigComplexityDApp1, amount = 100))
       val setScript2 = TxHelpers.setScript(dApp2, transferDAppScript(100, bigComplexityDApp2))
@@ -159,7 +159,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
         d.appendBlock(preparingTxs*)
 
         if (!bigComplexityDApp1 && !bigComplexityDApp2) {
-          d.appendAndCatchError(invoke).toString should include("negative waves balance")
+          d.appendAndCatchError(invoke).toString should include("negative dcc balance")
         } else {
           d.appendAndAssertFailed(invoke)
         }
@@ -172,8 +172,8 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
     val masterDApp  = TxHelpers.signer(2)
     val serviceDApp = TxHelpers.signer(3)
 
-    withDomain(RideV5, AddrWithBalance.enoughBalances(invoker, serviceDApp) :+ AddrWithBalance(masterDApp.toAddress, 1.waves)) { d =>
-      val paymentAmount = 10.waves
+    withDomain(RideV5, AddrWithBalance.enoughBalances(invoker, serviceDApp) :+ AddrWithBalance(masterDApp.toAddress, 1.dcc)) { d =>
+      val paymentAmount = 10.dcc
 
       val setMasterScript  = TxHelpers.setScript(masterDApp, invokerDAppScript(serviceDApp.toAddress, amount = paymentAmount))
       val setServiceScript = TxHelpers.setScript(serviceDApp, simpleDAppScript())
@@ -187,7 +187,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
       balanceDetails.leaseIn shouldBe paymentAmount
       balanceDetails.available < paymentAmount shouldBe true
 
-      d.appendBlockE(invoke) should produce(s"${masterDApp.toAddress} -> negative waves balance")
+      d.appendBlockE(invoke) should produce(s"${masterDApp.toAddress} -> negative dcc balance")
     }
   }
 
@@ -197,7 +197,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
     val serviceDApp = TxHelpers.signer(3)
 
     withDomain(RideV5.configure(_.copy(blockVersion3AfterHeight = 100)), AddrWithBalance.enoughBalances(invoker, serviceDApp, masterDApp)) { d =>
-      val paymentAmount = 10.waves
+      val paymentAmount = 10.dcc
       val leaseAmount   = ENOUGH_AMT - paymentAmount
 
       val setMasterScript  = TxHelpers.setScript(masterDApp, invokerDAppScript(serviceDApp.toAddress, amount = paymentAmount))
@@ -222,7 +222,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
     val serviceDApp = TxHelpers.signer(3)
 
     withDomain(RideV5.configure(_.copy(blockVersion3AfterHeight = 2)), AddrWithBalance.enoughBalances(invoker, serviceDApp, masterDApp)) { d =>
-      val paymentAmount = 10.waves
+      val paymentAmount = 10.dcc
       val leaseAmount   = ENOUGH_AMT - paymentAmount
 
       val setMasterScript  = TxHelpers.setScript(masterDApp, invokerDAppScript(serviceDApp.toAddress, amount = paymentAmount))
@@ -256,7 +256,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
 
       Long.MaxValue - d.balance(serviceDApp.toAddress) < paymentAmount
 
-      d.appendBlockE(invoke) should produce(s"Waves balance sum overflow")
+      d.appendBlockE(invoke) should produce(s"Dcc balance sum overflow")
     }
   }
 
@@ -325,7 +325,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
   private def sigVerify(c: Boolean) =
     s""" strict c = ${if (c) (1 to 5).map(_ => "sigVerify(base58'', base58'', base58'')").mkString(" || ") else "true"} """
 
-  private def invokerDAppScript(dApp: Address, bigComplexity: Boolean = false, asset: Asset = Waves, amount: Long = 1.waves): Script =
+  private def invokerDAppScript(dApp: Address, bigComplexity: Boolean = false, asset: Asset = Dcc, amount: Long = 1.dcc): Script =
     TestCompiler(V5).compileContract(
       s"""
          | @Callable(i)
@@ -425,7 +425,7 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
     val balances = AddrWithBalance.enoughBalances(invoker, dApp1, dApp2)
 
     val issue = TxHelpers.issue(dApp2, 100)
-    val asset = if (customAsset) IssuedAsset(issue.id()) else Waves
+    val asset = if (customAsset) IssuedAsset(issue.id()) else Dcc
     val setScript = Seq(
       TxHelpers.setScript(dApp1, invokerDAppScript(dApp2.toAddress, bigComplexityDApp1, asset, -1)),
       TxHelpers.setScript(dApp2, simpleDAppScript(bigComplexityDApp2))

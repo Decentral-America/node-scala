@@ -16,7 +16,7 @@ import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.*
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.script.ScriptRunner
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{Asset, ERC20Address, Transaction}
@@ -38,7 +38,7 @@ class MatcherBlockchainTest extends PropSpec, WithDomain {
       override def featureVotes(height: Height): Map[Short, Int]                                            = ???
       override def blockReward(height: Int): Option[Long]                                                   = ???
       override def blockRewardVotes(height: Int): Seq[Long]                                                 = ???
-      override def wavesAmount(height: Int): BigInt                                                         = ???
+      override def dccAmount(height: Int): BigInt                                                         = ???
       override def transferById(id: ByteStr): Option[(Int, TransferTransaction)]                            = ???
       override def transactionInfo(id: ByteStr): Option[(TxMeta, Transaction)]                              = ???
       override def transactionInfos(ids: Seq[BlockId]): Seq[Option[(TxMeta, Transaction)]]                  = ???
@@ -60,7 +60,7 @@ class MatcherBlockchainTest extends PropSpec, WithDomain {
       override def leaseBalances(addresses: Seq[Address]): Map[Address, LeaseBalance]                       = ???
       override def balance(address: Address, mayBeAssetId: Asset): Long                                     = ???
       override def balances(req: Seq[(Address, Asset)]): Map[(Address, Asset), Long]                        = ???
-      override def wavesBalances(addresses: Seq[Address]): Map[Address, Long]                               = ???
+      override def dccBalances(addresses: Seq[Address]): Map[Address, Long]                               = ???
       override def effectiveBalanceBanHeights(address: Address): Seq[Int]                                   = ???
       override def resolveERC20Address(address: ERC20Address): Option[Asset.IssuedAsset]                    = ???
       override def lastStateHash(refId: Option[ByteStr]): BlockId                                           = ???
@@ -68,7 +68,7 @@ class MatcherBlockchainTest extends PropSpec, WithDomain {
       override def conflictGenerators(at: GenerationPeriod): ConflictGenerators                             = ???
     }
 
-    val tx = TransferTransaction.selfSigned(1.toByte, accountGen.sample.get, accountGen.sample.get.toAddress, Waves, 1, Waves, 1, ByteStr.empty, 0)
+    val tx = TransferTransaction.selfSigned(1.toByte, accountGen.sample.get, accountGen.sample.get.toAddress, Dcc, 1, Dcc, 1, ByteStr.empty, 0)
     val scripts =
       Seq(
         TestCompiler(V5).compileExpression("true"),

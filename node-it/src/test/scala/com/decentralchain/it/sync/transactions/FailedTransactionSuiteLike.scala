@@ -36,7 +36,7 @@ trait FailedTransactionSuiteLike[T] extends ScorexLogging { matchers: Matchers =
   def sendTxsAndThenPriorityTx[S](t: Int => T, pt: () => T)(
       checker: (Seq[T], T) => Seq[S]
   ): Seq[S] = {
-    val maxTxsInMicroBlock = sender.config.getInt("waves.miner.max-transactions-in-micro-block")
+    val maxTxsInMicroBlock = sender.config.getInt("dcc.miner.max-transactions-in-micro-block")
     val txs                = (1 to maxTxsInMicroBlock * 2).map(i => t(i))
     val priorityTx         = pt()
     waitForEmptyUtx()
@@ -327,14 +327,14 @@ object FailedTransactionSuiteLike {
   }
 
   val configForMinMicroblockAge: Config = ConfigFactory.parseString(s"""
-                                                                       |waves.miner.min-micro-block-age = 7
-                                                                       |waves.miner.max-transactions-in-micro-block = 1
+                                                                       |dcc.miner.min-micro-block-age = 7
+                                                                       |dcc.miner.max-transactions-in-micro-block = 1
                                                                        |""".stripMargin)
 
   val Configs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.quorum(0))
-      .overrideBase(_.raw(s"waves.miner.max-transactions-in-micro-block = 50"))
+      .overrideBase(_.raw(s"dcc.miner.max-transactions-in-micro-block = 50"))
       .withDefault(1)
       .withSpecial(_.nonMiner)
       .buildNonConflicting()

@@ -8,7 +8,7 @@ import com.decentralchain.it.sync.{setScriptFee, smartFee, smartMinFee}
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
@@ -43,7 +43,7 @@ class InvokeScriptPayAndTransferSameAssetSuite extends BaseTransactionSuite with
     rejAssetId = sender.issue(caller, "Reject", "r", assetQuantity, 0, script = smartScript, waitForTx = true).id
   }
 
-  test("_set script to dApp account and transfer out all waves") {
+  test("_set script to dApp account and transfer out all dcc") {
     val dAppBalance = sender.accountBalances(dAppAddress)._1
     sender.transfer(dApp, callerAddress, dAppBalance - smartMinFee - setScriptFee, smartMinFee, waitForTx = true).id
 
@@ -60,7 +60,7 @@ class InvokeScriptPayAndTransferSameAssetSuite extends BaseTransactionSuite with
            |  if (isDefined(i.payment)) then
            |    let pay = extract(i.payment)
            |    TransferSet([ScriptTransfer(receiver, 1, pay.assetId)])
-           |  else throw("need payment in WAVES or any Asset")
+           |  else throw("need payment in DCC or any Asset")
            |}
         """.stripMargin,
         estimator
@@ -122,7 +122,7 @@ class InvokeScriptPayAndTransferSameAssetSuite extends BaseTransactionSuite with
     )
   }
 
-  test("dApp can transfer payed Waves if its own balance is 0") {
+  test("dApp can transfer payed Dcc if its own balance is 0") {
     dAppInitBalance = sender.accountBalances(dAppAddress)._1
     callerInitBalance = sender.accountBalances(callerAddress)._1
     receiverInitBalance = sender.accountBalances(receiverAddress)._1
@@ -139,7 +139,7 @@ class InvokeScriptPayAndTransferSameAssetSuite extends BaseTransactionSuite with
 
   def issued(assetId: String): Asset = IssuedAsset(ByteStr.decodeBase58(assetId).get)
 
-  def invoke(func: String, amount: Long, asset: Asset = Waves, fee: Long = 500000): String = {
+  def invoke(func: String, amount: Long, asset: Asset = Dcc, fee: Long = 500000): String = {
     sender
       .invokeScript(
         caller,

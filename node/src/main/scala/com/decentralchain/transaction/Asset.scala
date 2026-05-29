@@ -28,12 +28,9 @@ object Asset {
       }
   }
 
-  case object Waves extends Asset
+  case object Dcc extends Asset
 
-  /** Migration alias: DCC-branded code should use `Dcc` instead of `Waves`. */
-  val Dcc: Waves.type = Waves
-
-  val WavesName = "DCC"
+  val DccName = "DCC"
 
   implicit val assetReads: Reads[IssuedAsset] = Reads {
     case JsString(str) => IssuedAsset.fromString(str, JsSuccess(_), JsError(_))
@@ -45,7 +42,7 @@ object Asset {
 
   implicit val assetIdReads: Reads[Asset] = assetReads(false)
   implicit val assetIdWrites: Writes[Asset] = Writes {
-    case Waves           => JsNull
+    case Dcc           => JsNull
     case IssuedAsset(id) => JsString(id.toString)
   }
 
@@ -58,39 +55,39 @@ object Asset {
     ConfigReader[String].emap(s => AssetPair.extractAssetId(s).fold(ex => Left(CannotConvert(s, "Asset", ex.getMessage)), Right(_)))
 
   def fromString(maybeStr: Option[String]): Asset = {
-    maybeStr.map(x => IssuedAsset(ByteStr.decodeBase58(x).get)).getOrElse(Waves)
+    maybeStr.map(x => IssuedAsset(ByteStr.decodeBase58(x).get)).getOrElse(Dcc)
   }
 
   def fromCompatId(maybeBStr: Option[ByteStr]): Asset = {
-    maybeBStr.fold[Asset](Waves)(IssuedAsset(_))
+    maybeBStr.fold[Asset](Dcc)(IssuedAsset(_))
   }
 
   implicit class AssetIdOps(private val ai: Asset) extends AnyVal {
     def byteRepr: Array[Byte] = ai match {
-      case Waves           => Array(0: Byte)
+      case Dcc           => Array(0: Byte)
       case IssuedAsset(id) => (1: Byte) +: id.arr
     }
 
     def compatId: Option[ByteStr] = ai match {
-      case Waves           => None
+      case Dcc           => None
       case IssuedAsset(id) => Some(id)
     }
 
     def maybeBase58Repr: Option[String] = ai match {
-      case Waves           => None
+      case Dcc           => None
       case IssuedAsset(id) => Some(id.toString)
     }
 
-    def fold[A](onWaves: => A)(onAsset: IssuedAsset => A): A = ai match {
-      case Waves                  => onWaves
+    def fold[A](onDcc: => A)(onAsset: IssuedAsset => A): A = ai match {
+      case Dcc                  => onDcc
       case asset @ IssuedAsset(_) => onAsset(asset)
     }
   }
 
-  def assetReads(allowWavesStr: Boolean): Reads[Asset] = Reads {
+  def assetReads(allowDccStr: Boolean): Reads[Asset] = Reads {
     case json: JsString =>
-      if (json.value.isEmpty || (allowWavesStr && json.value == WavesName)) JsSuccess(Waves) else assetReads.reads(json)
-    case JsNull => JsSuccess(Waves)
+      if (json.value.isEmpty || (allowDccStr && json.value == DccName)) JsSuccess(Dcc) else assetReads.reads(json)
+    case JsNull => JsSuccess(Dcc)
     case _      => JsError("Expected base58-encoded assetId or null")
   }
 }

@@ -71,7 +71,7 @@ object EthTxGenerator {
       fee: Long = FeeConstants(Transfer) * FeeUnit,
       withRedundantBytes: Boolean = false
   ): EthereumTransaction = asset match {
-    case Asset.Waves =>
+    case Asset.Dcc =>
       signRawTransaction(keyPair, recipient.chainId)(
         RawTransaction.createTransaction(
           BigInt(System.currentTimeMillis()).bigInteger,
@@ -121,11 +121,11 @@ object EthTxGenerator {
       val tuples = payments.toVector.map { p =>
         val assetId = p.assetId match {
           case Asset.IssuedAsset(id) => id
-          case Asset.Waves           => EthABIConverter.WavesByteRepr
+          case Asset.Dcc           => EthABIConverter.DccByteRepr
         }
         Arg.Struct(Arg.Bytes(assetId, "bytes32"), Arg.Integer(p.amount))
       }
-      Arg.List(Arg.Struct(Arg.Bytes(EthABIConverter.WavesByteRepr, "bytes32"), Arg.Integer(0)), tuples)
+      Arg.List(Arg.Struct(Arg.Bytes(EthABIConverter.DccByteRepr, "bytes32"), Arg.Integer(0)), tuples)
     }
 
     val fullArgs = args :+ paymentsArg

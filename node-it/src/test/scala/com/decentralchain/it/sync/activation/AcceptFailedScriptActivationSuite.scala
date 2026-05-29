@@ -342,7 +342,7 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
 
   test("accept invalid by order asset scripts ExchangeTransaction to utx and save it as failed after activation height") {
     sender.setAssetScript(asset, dAppKP, priorityFee, assetScript(true), waitForTx = true)
-    sender.transfer(sender.keyPair, dApp, 100.waves, waitForTx = true)
+    sender.transfer(sender.keyPair, dApp, 100.dcc, waitForTx = true)
     val tradeAsset =
       sender
         .issue(dAppKP, "TradeAsset", quantity = someAssetAmount, decimals = 8: Byte, script = assetScript(true), fee = priorityFee, waitForTx = true)
@@ -469,7 +469,7 @@ object AcceptFailedScriptActivationSuite {
 
   private val estimator = ScriptEstimatorV3.latest
 
-  private val priorityFee  = 5.waves
+  private val priorityFee  = 5.dcc
   private val minInvokeFee = invokeFee + smartFee // invoke fee + transfer action fee
 
   private def assetScript(result: Boolean): Option[String] =
@@ -495,7 +495,7 @@ object AcceptFailedScriptActivationSuite {
           (BlockchainFeatures.BlockV5.id, Height(if (activate) 0 else 9999))
         )
       )
-      .overrideBase(_.raw(s"waves.blockchain.custom.functionality.min-asset-info-update-interval = $UpdateInterval"))
-      .overrideBase(_.raw(s"waves.miner.max-transactions-in-micro-block = $MaxTxsInMicroBlock"))
+      .overrideBase(_.raw(s"dcc.blockchain.custom.functionality.min-asset-info-update-interval = $UpdateInterval"))
+      .overrideBase(_.raw(s"dcc.miner.max-transactions-in-micro-block = $MaxTxsInMicroBlock"))
       .buildNonConflicting()
 }

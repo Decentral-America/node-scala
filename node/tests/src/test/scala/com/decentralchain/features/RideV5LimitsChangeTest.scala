@@ -19,7 +19,7 @@ class RideV5LimitsChangeTest extends FlatSpec with WithDomain {
     val contractSigner  = TxHelpers.secondSigner
     val contractAddress = contractSigner.toAddress
 
-    withDomain(DomainPresets.RideV4, Seq(AddrWithBalance(TxHelpers.defaultAddress), AddrWithBalance(contractAddress, 10.waves))) { d =>
+    withDomain(DomainPresets.RideV4, Seq(AddrWithBalance(TxHelpers.defaultAddress), AddrWithBalance(contractAddress, 10.dcc))) { d =>
       val setScript = TxHelpers.setScript(contractSigner, contract)
       d.appendBlock(setScript)
 
@@ -46,7 +46,7 @@ class RideV5LimitsChangeTest extends FlatSpec with WithDomain {
     val contractSigner  = TxHelpers.secondSigner
     val contractAddress = contractSigner.toAddress
 
-    withDomain(DomainPresets.RideV5, Seq(AddrWithBalance(TxHelpers.defaultAddress), AddrWithBalance(contractAddress, 10.waves))) { d =>
+    withDomain(DomainPresets.RideV5, Seq(AddrWithBalance(TxHelpers.defaultAddress), AddrWithBalance(contractAddress, 10.dcc))) { d =>
       val setScript = TxHelpers.setScript(contractSigner, contract)
       d.appendBlock(setScript)
 

@@ -24,7 +24,7 @@ case class SetScriptTransaction(
 ) extends Transaction(TransactionType.SetScript)
     with ProvenTransaction
     with Versioned.ToV2
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V2 {
 

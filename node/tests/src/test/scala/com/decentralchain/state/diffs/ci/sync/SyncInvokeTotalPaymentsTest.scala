@@ -7,7 +7,7 @@ import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -70,7 +70,7 @@ class SyncInvokeTotalPaymentsTest extends PropSpec with WithDomain {
     ): Unit =
       withDomain(settings, AddrWithBalance.enoughBalances((1 to 101).map(signer)*)) { d =>
         d.appendBlock(setScripts(syncCalls, syncPayments)*)
-        val payments = Seq.fill(txPayments)(Payment(1, Waves))
+        val payments = Seq.fill(txPayments)(Payment(1, Dcc))
         val tx       = invoke(signer(1).toAddress, payments = payments)
         if (error)
           if (fail) {

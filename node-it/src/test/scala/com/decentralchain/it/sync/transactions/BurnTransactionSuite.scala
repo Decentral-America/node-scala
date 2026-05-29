@@ -17,7 +17,7 @@ class BurnTransactionSuite extends BaseTransactionSuite {
 
   private val decimals: Byte = 2
 
-  test("burning assets changes issuer's asset balance; issuer's waves balance is decreased by fee") {
+  test("burning assets changes issuer's asset balance; issuer's dcc balance is decreased by fee") {
     for (v <- burnTxSupportedVersions) {
       val (balance, effectiveBalance) = miner.accountBalances(firstAddress)
       val issuedAssetId =

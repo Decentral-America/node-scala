@@ -53,7 +53,7 @@ class DCCEnvironmentBenchmark {
   }
 
   @Benchmark
-  def accountBalanceOf_waves_test(st: AccountBalanceOfWavesSt, bh: Blackhole): Unit = {
+  def accountBalanceOf_dcc_test(st: AccountBalanceOfDccSt, bh: Blackhole): Unit = {
     bh.consume(st.environment.accountBalanceOf(Recipient.Address(ByteStr(st.accounts.random)), None))
   }
 
@@ -91,12 +91,12 @@ object DCCEnvironmentBenchmark {
   class TransactionHeightByIdSt extends TransactionByIdSt
 
   @State(Scope.Benchmark)
-  class AccountBalanceOfWavesSt extends BaseSt {
+  class AccountBalanceOfDccSt extends BaseSt {
     val accounts: Vector[Array[Byte]] = load(benchSettings.accountsFile)(x => AddressOrAlias.fromString(x).explicitGet().bytes)
   }
 
   @State(Scope.Benchmark)
-  class AccountBalanceOfAssetSt extends AccountBalanceOfWavesSt {
+  class AccountBalanceOfAssetSt extends AccountBalanceOfDccSt {
     val assets: Vector[Array[Byte]] = load(benchSettings.assetsFile)(x => Base58.tryDecodeWithLimit(x).get)
   }
 
@@ -121,22 +121,22 @@ object DCCEnvironmentBenchmark {
   @State(Scope.Benchmark)
   class BaseSt {
     protected val benchSettings: Settings = Settings.fromConfig(ConfigFactory.load())
-    private val wavesSettings: DCCSettings = {
+    private val dccSettings: DCCSettings = {
       val config = loadConfig(ConfigFactory.parseFile(new File(benchSettings.networkConfigFile)))
       DCCSettings.fromRootConfig(config)
     }
 
     AddressScheme.current = new AddressScheme {
-      override val chainId: Byte = wavesSettings.blockchainSettings.addressSchemeCharacter.toByte
+      override val chainId: Byte = dccSettings.blockchainSettings.addressSchemeCharacter.toByte
     }
 
     private val rdb: RDB = {
-      val dir = new File(wavesSettings.dbSettings.directory)
-      if (!dir.isDirectory) throw new IllegalArgumentException(s"Can't find directory at '${wavesSettings.dbSettings.directory}'")
-      RDB.open(wavesSettings.dbSettings)
+      val dir = new File(dccSettings.dbSettings.directory)
+      if (!dir.isDirectory) throw new IllegalArgumentException(s"Can't find directory at '${dccSettings.dbSettings.directory}'")
+      RDB.open(dccSettings.dbSettings)
     }
 
-    val state = RocksDBWriter(rdb, wavesSettings.blockchainSettings, wavesSettings.dbSettings, wavesSettings.enableLightMode)
+    val state = RocksDBWriter(rdb, dccSettings.blockchainSettings, dccSettings.dbSettings, dccSettings.enableLightMode)
     val environment: Environment[Id] = {
       DCCEnvironment(
         AddressScheme.current.chainId,

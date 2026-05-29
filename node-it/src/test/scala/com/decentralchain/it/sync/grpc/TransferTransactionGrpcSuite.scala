@@ -19,14 +19,14 @@ class TransferTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
     issuedAssetId = PBTransactions.vanilla(issuedAsset, unsafe = false).explicitGet().id().toString
   }
 
-  test("asset transfer changes sender's and recipient's asset balance by transfer amount and waves by fee") {
+  test("asset transfer changes sender's and recipient's asset balance by transfer amount and dcc by fee") {
     for (v <- transferTxSupportedVersions) {
       val issuedAsset      = sender.broadcastIssue(firstAcc, "name", someAssetAmount, 8, true, issueFee, waitForTx = true)
       val issuedAssetId    = PBTransactions.vanilla(issuedAsset, unsafe = false).explicitGet().id().toString
-      val firstBalance     = sender.wavesBalance(firstAddress).available
-      val firstEffBalance  = sender.wavesBalance(firstAddress).effective
-      val secondBalance    = sender.wavesBalance(secondAddress).available
-      val secondEffBalance = sender.wavesBalance(secondAddress).effective
+      val firstBalance     = sender.dccBalance(firstAddress).available
+      val firstEffBalance  = sender.dccBalance(firstAddress).effective
+      val secondBalance    = sender.dccBalance(secondAddress).available
+      val secondEffBalance = sender.dccBalance(secondAddress).effective
 
       sender.broadcastTransfer(
         firstAcc,
@@ -38,40 +38,40 @@ class TransferTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         waitForTx = true
       )
 
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance - minFee
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance - minFee
-      sender.wavesBalance(secondAddress).available shouldBe secondBalance
-      sender.wavesBalance(secondAddress).effective shouldBe secondEffBalance
+      sender.dccBalance(firstAddress).available shouldBe firstBalance - minFee
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance - minFee
+      sender.dccBalance(secondAddress).available shouldBe secondBalance
+      sender.dccBalance(secondAddress).effective shouldBe secondEffBalance
 
       sender.assetsBalance(firstAddress, Seq(issuedAssetId)).getOrElse(issuedAssetId, 0L) shouldBe 0
       sender.assetsBalance(secondAddress, Seq(issuedAssetId)).getOrElse(issuedAssetId, 0L) shouldBe someAssetAmount
     }
   }
 
-  test("waves transfer changes waves balances and eff.b. by transfer amount and fee") {
+  test("dcc transfer changes dcc balances and eff.b. by transfer amount and fee") {
     for (v <- transferTxSupportedVersions) {
-      val firstBalance     = sender.wavesBalance(firstAddress).available
-      val firstEffBalance  = sender.wavesBalance(firstAddress).effective
-      val secondBalance    = sender.wavesBalance(secondAddress).available
-      val secondEffBalance = sender.wavesBalance(secondAddress).effective
+      val firstBalance     = sender.dccBalance(firstAddress).available
+      val firstEffBalance  = sender.dccBalance(firstAddress).effective
+      val secondBalance    = sender.dccBalance(secondAddress).available
+      val secondEffBalance = sender.dccBalance(secondAddress).effective
 
       sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(secondAddress), transferAmount, minFee, version = v, waitForTx = true)
 
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance - transferAmount - minFee
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance - transferAmount - minFee
-      sender.wavesBalance(secondAddress).available shouldBe secondBalance + transferAmount
-      sender.wavesBalance(secondAddress).effective shouldBe secondEffBalance + transferAmount
+      sender.dccBalance(firstAddress).available shouldBe firstBalance - transferAmount - minFee
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance - transferAmount - minFee
+      sender.dccBalance(secondAddress).available shouldBe secondBalance + transferAmount
+      sender.dccBalance(secondAddress).effective shouldBe secondEffBalance + transferAmount
     }
   }
 
-  test("invalid signed waves transfer should not be in UTX or blockchain") {
+  test("invalid signed dcc transfer should not be in UTX or blockchain") {
     val invalidTimestampFromFuture = ntpTime.correctedTime() + 91.minutes.toMillis
     val invalidTimestampFromPast   = ntpTime.correctedTime() - 121.minutes.toMillis
     for (v <- transferTxSupportedVersions) {
-      val firstBalance     = sender.wavesBalance(firstAddress).available
-      val firstEffBalance  = sender.wavesBalance(firstAddress).effective
-      val secondBalance    = sender.wavesBalance(secondAddress).available
-      val secondEffBalance = sender.wavesBalance(secondAddress).effective
+      val firstBalance     = sender.dccBalance(firstAddress).available
+      val firstEffBalance  = sender.dccBalance(firstAddress).effective
+      val secondBalance    = sender.dccBalance(secondAddress).available
+      val secondEffBalance = sender.dccBalance(secondAddress).effective
 
       assertGrpcError(
         sender.broadcastTransfer(
@@ -105,19 +105,19 @@ class TransferTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         Code.INVALID_ARGUMENT
       )
 
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
-      sender.wavesBalance(secondAddress).available shouldBe secondBalance
-      sender.wavesBalance(secondAddress).effective shouldBe secondEffBalance
+      sender.dccBalance(firstAddress).available shouldBe firstBalance
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
+      sender.dccBalance(secondAddress).available shouldBe secondBalance
+      sender.dccBalance(secondAddress).effective shouldBe secondEffBalance
     }
   }
 
-  test("can not make transfer without having enough waves balance") {
+  test("can not make transfer without having enough dcc balance") {
     for (v <- transferTxSupportedVersions) {
-      val firstBalance     = sender.wavesBalance(firstAddress).available
-      val firstEffBalance  = sender.wavesBalance(firstAddress).effective
-      val secondBalance    = sender.wavesBalance(secondAddress).available
-      val secondEffBalance = sender.wavesBalance(secondAddress).effective
+      val firstBalance     = sender.dccBalance(firstAddress).available
+      val firstEffBalance  = sender.dccBalance(firstAddress).effective
+      val secondBalance    = sender.dccBalance(secondAddress).available
+      val secondEffBalance = sender.dccBalance(secondAddress).effective
 
       assertGrpcError(
         sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(secondAddress), firstBalance, minFee, v, waitForTx = true),
@@ -125,10 +125,10 @@ class TransferTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         Code.INVALID_ARGUMENT
       )
 
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
-      sender.wavesBalance(secondAddress).available shouldBe secondBalance
-      sender.wavesBalance(secondAddress).effective shouldBe secondEffBalance
+      sender.dccBalance(firstAddress).available shouldBe firstBalance
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
+      sender.dccBalance(secondAddress).available shouldBe secondBalance
+      sender.dccBalance(secondAddress).effective shouldBe secondEffBalance
     }
   }
 

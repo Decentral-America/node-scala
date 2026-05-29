@@ -26,7 +26,7 @@ final case class BurnTransaction(
     with ProvenTransaction
     with Versioned.ToV3
     with SigProofsSwitch
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V3 {
 

@@ -20,7 +20,7 @@ import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.*
 
 sealed abstract class TraceStep {
-  def json: JsObject // TODO: Is this format necessary?
+  def json: JsObject // NOTE: Format is required by trace API contract
   def loggedJson: JsObject = json
 }
 

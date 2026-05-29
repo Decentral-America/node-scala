@@ -62,7 +62,7 @@ Out of scope:
 
 The node container runs with the following hardening applied:
 
-- Non-root user (`waves`, UID 999) at runtime.
+- Non-root user (`dcc`, UID 999) at runtime.
 - Wallet seed injected via environment variable; written to a `chmod 600`
   temporary file at startup and removed on exit via `trap`.
 - AmazonCorrettoCryptoProvider (ACCP) loaded for hardware-accelerated crypto.

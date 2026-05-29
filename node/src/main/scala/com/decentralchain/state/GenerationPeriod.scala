@@ -35,8 +35,8 @@ case class GenerationPeriod(activation: Height, start: Height, length: Int) exte
 }
 
 object GenerationPeriod {
-  def from(h: Height, activation: Height, wavesSettings: DCCSettings): Option[GenerationPeriod] =
-    from(h, activation, wavesSettings.blockchainSettings.functionalitySettings)
+  def from(h: Height, activation: Height, dccSettings: DCCSettings): Option[GenerationPeriod] =
+    from(h, activation, dccSettings.blockchainSettings.functionalitySettings)
 
   def from(h: Height, activation: Height, functionalitySettings: FunctionalitySettings): Option[GenerationPeriod] =
     from(h, activation, functionalitySettings.generationPeriodLength)

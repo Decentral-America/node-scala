@@ -9,7 +9,7 @@ import com.decentralchain.it.api.TransactionInfo
 import com.decentralchain.it.{BaseFreeSpec, WaitForHeight2}
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.TransferTransaction
 
 class NodeRestartTestSuite extends BaseFreeSpec with WaitForHeight2 {
@@ -39,9 +39,9 @@ class NodeRestartTestSuite extends BaseFreeSpec with WaitForHeight2 {
         1.toByte,
         nodeB.keyPair,
         AddressOrAlias.fromString(nodeA.address).explicitGet(),
-        Waves,
-        1.waves,
-        Waves,
+        Dcc,
+        1.dcc,
+        Dcc,
         minFee,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -72,7 +72,7 @@ class NodeRestartTestSuite extends BaseFreeSpec with WaitForHeight2 {
 object NodeRestartTestSuite {
   import com.decentralchain.it.NodeConfigs.*
   private val FirstNode = ConfigFactory.parseString(s"""
-                                                       |waves {
+                                                       |dcc {
                                                        |  synchronization.synchronization-timeout = 10s
                                                        |  blockchain.custom.functionality {
                                                        |    pre-activated-features.1 = 0
@@ -86,7 +86,7 @@ object NodeRestartTestSuite {
                                                        |}""".stripMargin)
 
   private val SecondNode = ConfigFactory.parseString(s"""
-                                                        |waves {
+                                                        |dcc {
                                                         |  synchronization.synchronization-timeout = 10s
                                                         |  blockchain.custom.functionality {
                                                         |    pre-activated-features.1 = 0

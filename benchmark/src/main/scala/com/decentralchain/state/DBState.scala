@@ -15,7 +15,7 @@ import java.io.File
 
 @State(Scope.Benchmark)
 abstract class DBState extends ScorexLogging {
-  @Param(Array("waves.conf"))
+  @Param(Array("dcc.conf"))
   var configFile = ""
 
   lazy val settings: DCCSettings = Application.loadApplicationConfig(Some(new File(configFile)).filter(_.exists()))

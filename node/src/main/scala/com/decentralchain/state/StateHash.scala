@@ -14,7 +14,7 @@ final case class StateHash(totalHash: ByteStr, sectionHashes: Map[SectionId.Valu
 
 object StateHash {
   object SectionId extends Enumeration {
-    val WavesBalance, AssetBalance, DataEntry, AccountScript, AssetScript, LeaseBalance, LeaseStatus, Sponsorship, Alias, NextCommittedGenerators,
+    val DccBalance, AssetBalance, DataEntry, AccountScript, AssetScript, LeaseBalance, LeaseStatus, Sponsorship, Alias, NextCommittedGenerators,
         CommittedGeneratorBalances =
       Value
   }
@@ -23,7 +23,7 @@ object StateHash {
 
   def sections(deterministicFinalityActivated: Boolean): Seq[SectionId.Value] = {
     val baseSections = Seq(
-      SectionId.WavesBalance,
+      SectionId.DccBalance,
       SectionId.AssetBalance,
       SectionId.DataEntry,
       SectionId.AccountScript,

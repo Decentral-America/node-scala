@@ -9,7 +9,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import io.decentralchain.protobuf.transaction.PBTransactions
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -51,18 +51,18 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
        |""".stripMargin
   private val script = ScriptCompiler.compile(scriptText, ScriptEstimatorV3.latest).explicitGet()._1.bytes().base64
 
-  test("TransferTransaction with Waves from proto bytes") {
+  test("TransferTransaction with Dcc from proto bytes") {
     sender.setScript(dApp, Some(script), waitForTx = true)
     val transferTx = TransferTransaction
       .selfSigned(
         version = TxVersion.V3,
         sender = source,
         recipient = recipient.toAddress,
-        asset = Waves,
+        asset = Dcc,
         amount = transferAmount,
-        feeAsset = Waves,
+        feeAsset = Dcc,
         fee = minFee,
-        attachment = ByteStr("WAVES transfer".getBytes),
+        attachment = ByteStr("DCC transfer".getBytes),
         timestamp = System.currentTimeMillis()
       )
       .explicitGet()
@@ -84,7 +84,7 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
     sender.getDataByKey(dAppAddress, "id").value shouldBe transferTx.id().toString
     sender.getDataByKey(dAppAddress, "assetId").value shouldBe "DCC"
     sender.getDataByKey(dAppAddress, "feeAssetId").value shouldBe "DCC"
-    sender.getDataByKey(dAppAddress, "attachment").value shouldBe Base58.encode("WAVES transfer".getBytes)
+    sender.getDataByKey(dAppAddress, "attachment").value shouldBe Base58.encode("DCC transfer".getBytes)
     sender.getDataByKey(dAppAddress, "senderPublicKey").value shouldBe transferTx.sender.toString
     sender.getDataByKey(dAppAddress, "sender").value shouldBe transferTx.sender.toAddress.toString
     sender.getDataByKey(dAppAddress, "recipient").value shouldBe transferTx.recipient.toString
@@ -131,9 +131,9 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
         version = TxVersion.V3,
         sender = source,
         recipient = recipient.toAddress,
-        asset = Waves,
+        asset = Dcc,
         amount = 10000,
-        feeAsset = Waves,
+        feeAsset = Dcc,
         fee = minFee,
         attachment = ByteStr("Some Attachment".getBytes),
         timestamp = System.currentTimeMillis()

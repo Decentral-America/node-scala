@@ -24,7 +24,7 @@ final case class LeaseTransaction(
 ) extends Transaction(TransactionType.Lease)
     with SigProofsSwitch
     with Versioned.ToV3
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V3 {
   override val bodyBytes: Coeval[Array[TxVersion]] = Coeval.evalOnce(LeaseTxSerializer.bodyBytes(this))
@@ -56,7 +56,7 @@ object LeaseTransaction extends TransactionParser {
   ): Either[ValidationError, TransactionT] = {
     for {
       fee    <- TxPositiveAmount(fee)(TxValidationError.InsufficientFee)
-      amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, "waves"))
+      amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, "dcc"))
       tx     <- LeaseTransaction(version, sender, recipient, amount, fee, timestamp, proofs, recipient.chainId).validatedEither
     } yield tx
 

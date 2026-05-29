@@ -16,7 +16,7 @@ class UtxPriorityPoolSpecification extends FreeSpec with SharedDomain {
     TxHelpers.signer(lastKeyPair)
   }
 
-  override val genesisBalances: Seq[WithState.AddrWithBalance] = Seq(alice -> 10000.waves)
+  override val genesisBalances: Seq[WithState.AddrWithBalance] = Seq(alice -> 10000.dcc)
 
   override def settings: DCCSettings = DomainPresets.RideV3
 
@@ -25,8 +25,8 @@ class UtxPriorityPoolSpecification extends FreeSpec with SharedDomain {
   "priority pool" - {
     "preserves correct order of transactions" in {
       val id = domain.appendKeyBlock().id()
-      val t1 = TxHelpers.transfer(alice, nextKeyPair.toAddress, fee = 0.001.waves)
-      val t2 = TxHelpers.transfer(alice, nextKeyPair.toAddress, fee = 0.01.waves, timestamp = t1.timestamp - 10000)
+      val t1 = TxHelpers.transfer(alice, nextKeyPair.toAddress, fee = 0.001.dcc)
+      val t2 = TxHelpers.transfer(alice, nextKeyPair.toAddress, fee = 0.01.dcc, timestamp = t1.timestamp - 10000)
 
       domain.appendMicroBlock(t1)
       domain.appendMicroBlock(t2)
@@ -50,7 +50,7 @@ class UtxPriorityPoolSpecification extends FreeSpec with SharedDomain {
       domain.blockchain.transactionInfo(issue.id()) shouldBe None
       domain.utxPool.all shouldBe Seq(issue)
 
-      val secondIssue = TxHelpers.issue(alice, fee = 2.waves)
+      val secondIssue = TxHelpers.issue(alice, fee = 2.dcc)
       domain.utxPool.putIfNew(secondIssue)
       pack() shouldBe Some(List(issue, secondIssue))
     }

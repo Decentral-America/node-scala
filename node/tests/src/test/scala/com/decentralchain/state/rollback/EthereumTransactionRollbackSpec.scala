@@ -2,16 +2,16 @@ package com.decentralchain.state.rollback
 
 import com.decentralchain.db.WithDomain
 import com.decentralchain.test.FlatSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{EthTxGenerator, TxHelpers}
 import com.decentralchain.utils.EthHelpers
 
 class EthereumTransactionRollbackSpec extends FlatSpec with WithDomain with EthHelpers {
   "Ethereum transfer" should "rollback" in withDomain(DomainPresets.RideV6) { d =>
-    val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 1, Waves)
+    val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 1, Dcc)
 
     withClue("genesis") {
-      d.helpers.creditWavesToDefaultSigner(1 + 100000)
+      d.helpers.creditDccToDefaultSigner(1 + 100000)
       d.balance(TxHelpers.defaultEthAddress) shouldBe (1 + 100000)
       d.balance(TxHelpers.secondAddress) shouldBe 0
     }
@@ -33,8 +33,8 @@ class EthereumTransactionRollbackSpec extends FlatSpec with WithDomain with EthH
   }
 
   "Ethereum invoke" should "rollback" in withDomain(DomainPresets.RideV6) { d =>
-    d.helpers.creditWavesToDefaultSigner()
-    d.helpers.creditWavesFromDefaultSigner(TxHelpers.secondAddress)
+    d.helpers.creditDccToDefaultSigner()
+    d.helpers.creditDccFromDefaultSigner(TxHelpers.secondAddress)
 
     val asset = d.helpers.issueAsset()
     val script = TxHelpers.scriptV5(s"""

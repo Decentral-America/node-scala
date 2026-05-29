@@ -158,6 +158,6 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     pkRestored2 shouldBe pk
   }
 
-  private def mkRandomSecretKey(): SecretKey  = mkBlsSecretKey(mkRandomWavesKeyPair().privateKey.arr)
-  private def mkRandomWavesKeyPair(): KeyPair = KeyPair(Array.fill(32)(Random.nextInt().toByte))
+  private def mkRandomSecretKey(): SecretKey  = mkBlsSecretKey(mkRandomDccKeyPair().privateKey.arr)
+  private def mkRandomDccKeyPair(): KeyPair = KeyPair(Array.fill(32)(Random.nextInt().toByte))
 }

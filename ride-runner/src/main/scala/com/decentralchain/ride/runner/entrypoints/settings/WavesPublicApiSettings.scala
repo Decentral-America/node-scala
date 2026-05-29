@@ -4,7 +4,7 @@ import pureconfig.ConfigReader
 
 import scala.concurrent.duration.FiniteDuration
 
-case class WavesPublicApiSettings(
+case class DccPublicApiSettings(
     restApi: String,
     grpcApi: String,
     grpcBlockchainUpdatesApi: String,

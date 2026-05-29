@@ -27,7 +27,7 @@ package object serde {
               id,
               height,
               block,
-              updatedWavesAmount,
+              updatedDccAmount,
               vrf,
               activatedFeatures,
               rewardShares,
@@ -51,7 +51,7 @@ package object serde {
                 body = Append.Body.Block(
                   Append.BlockAppend(
                     block = Some(PBBlocks.protobuf(block)),
-                    updatedWavesAmount = updatedWavesAmount,
+                    updatedDccAmount = updatedDccAmount,
                     activatedFeatures = activatedFeatures,
                     vrf = vrf.fold(ByteString.EMPTY)(_.toByteString),
                     rewardShares = rewardShares.map { case (addr, reward) => RewardShare(ByteString.copyFrom(addr.bytes), reward) }
@@ -140,7 +140,7 @@ package object serde {
                 id = self.id.toByteStr,
                 height = self.height,
                 block = body.block.map(PBBlocks.vanilla(_, unsafe = true).get).orNull,
-                updatedWavesAmount = body.updatedWavesAmount,
+                updatedDccAmount = body.updatedDccAmount,
                 vrf = Option.unless(body.vrf.isEmpty)(body.vrf.toByteStr),
                 activatedFeatures = body.activatedFeatures,
                 rewardShares = body.rewardShares.map { rs => (Address.fromBytes(rs.address.toByteArray).explicitGet(), rs.reward) },

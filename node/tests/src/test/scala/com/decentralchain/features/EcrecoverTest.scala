@@ -31,8 +31,8 @@ class EcrecoverTest extends PropSpec, WithDomain, OptionValues {
     withDomain(
       DomainPresets.TransactionStateSnapshot.setFeaturesHeight(BlockchainFeatures.EcrecoverFix -> 4),
       Seq(
-        AddrWithBalance(dapp.toAddress, 10.waves),
-        AddrWithBalance(invoker.toAddress, 10.waves)
+        AddrWithBalance(dapp.toAddress, 10.dcc),
+        AddrWithBalance(invoker.toAddress, 10.dcc)
       )
     ) { d =>
       d.appendBlock(TxHelpers.setScript(dapp, script))

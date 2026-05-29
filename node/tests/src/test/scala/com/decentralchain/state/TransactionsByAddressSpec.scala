@@ -45,9 +45,9 @@ class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
         GenesisSettings(
           genesisTimestamp,
           genesisTimestamp,
-          Constants.TotalWaves,
+          Constants.TotalDcc,
           None,
-          Seq(GenesisTransactionSettings(sender.toAddress.toString, Constants.TotalWaves)),
+          Seq(GenesisTransactionSettings(sender.toAddress.toString, Constants.TotalDcc)),
           1000,
           1.minute
         ),
@@ -60,9 +60,9 @@ class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
     val txCount2 = 30
 
     Seq(recipient1, recipient2).map { recipient =>
-      val transactions1 = (1 to txCount1 / 2).flatMap(_ => transfers(sender, recipient.toAddress, Constants.TotalWaves / 2 / txCount1))
+      val transactions1 = (1 to txCount1 / 2).flatMap(_ => transfers(sender, recipient.toAddress, Constants.TotalDcc / 2 / txCount1))
       val block1        = mkBlock(sender, genesisBlock.id(), transactions1)
-      val transactions2 = (1 to txCount2 / 2).flatMap(_ => transfers(sender, recipient.toAddress, Constants.TotalWaves / 2 / txCount2))
+      val transactions2 = (1 to txCount2 / 2).flatMap(_ => transfers(sender, recipient.toAddress, Constants.TotalDcc / 2 / txCount2))
       val block2        = mkBlock(sender, block1.id(), transactions2)
 
       (sender, recipient1, recipient2, Seq(genesisBlock, block1, block2))

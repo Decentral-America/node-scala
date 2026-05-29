@@ -15,7 +15,7 @@ import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.state.{GeneratorIndex, GenesisBlockHeight, Height}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.transfer.*
 
 import scala.util.Random
@@ -33,10 +33,10 @@ class MicroBlockSpecification extends FunSuite {
 
     val ts = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
-      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Waves, 5, Waves, 2, ByteStr.empty, ts + 1).explicitGet()
+      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 2, ByteStr.empty, ts + 1).explicitGet()
     val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(Random.nextInt(100).toByte)))
     val tr2: TransferTransaction =
-      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Waves, 2, ByteStr.empty, ts + 2).explicitGet()
+      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Dcc, 2, ByteStr.empty, ts + 2).explicitGet()
 
     val transactions = Seq(tr, tr2)
 
@@ -58,10 +58,10 @@ class MicroBlockSpecification extends FunSuite {
   test("MicroBlock with txs bytes/parse roundtrip, with finalizationVoting") {
     val ts = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
-      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Waves, 5, Waves, 2, ByteStr.empty, ts + 1).explicitGet()
+      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 2, ByteStr.empty, ts + 1).explicitGet()
     val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(Random.nextInt(100).toByte)))
     val tr2: TransferTransaction =
-      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Waves, 2, ByteStr.empty, ts + 2).explicitGet()
+      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Dcc, 2, ByteStr.empty, ts + 2).explicitGet()
 
     val transactions = Seq(tr, tr2)
 
@@ -198,7 +198,7 @@ class MicroBlockSpecification extends FunSuite {
 
   test("MicroBlock cannot contain more than Miner.MaxTransactionsPerMicroblock") {
     val transaction =
-      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Waves, 5, Waves, 1000, ByteStr.empty, System.currentTimeMillis()).explicitGet()
+      TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 1000, ByteStr.empty, System.currentTimeMillis()).explicitGet()
     val transactions = Seq.fill(Miner.MaxTransactionsPerMicroblock + 1)(transaction)
 
     val eitherBlockOrError = MicroBlock.buildAndSign(3.toByte, sender, transactions, prevResBlockSig, totalResBlockSig, None, None)

@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.smart.predef.{assertProvenPart, provenPart}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -73,33 +73,33 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
   property("access to Ethereum transfer from RIDE script") {
     val recipient = RandomKeyPair()
 
-    val issue = IssueTransaction.selfSigned(2.toByte, recipient, "Asset", "", ENOUGH_AMT, 8, reissuable = true, None, 1.waves, ts).explicitGet()
+    val issue = IssueTransaction.selfSigned(2.toByte, recipient, "Asset", "", ENOUGH_AMT, 8, reissuable = true, None, 1.dcc, ts).explicitGet()
 
     for {
       version <- DirectiveDictionary[StdLibVersion].all
-      asset   <- Seq(Waves, IssuedAsset(issue.id()))
+      asset   <- Seq(Dcc, IssuedAsset(issue.id()))
     } {
       val ethTransfer = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, recipient.toAddress, transferAmount, asset)
       val ethSender   = ethTransfer.senderAddress()
       val transferIssuedAsset =
-        TransferTransaction.selfSigned(2.toByte, recipient, ethSender, asset, ENOUGH_AMT, Waves, 0.001.waves, ByteStr.empty, ts).explicitGet()
+        TransferTransaction.selfSigned(2.toByte, recipient, ethSender, asset, ENOUGH_AMT, Dcc, 0.001.dcc, ByteStr.empty, ts).explicitGet()
 
       val function    = if (version >= V3) "transferTransactionById" else "transactionById"
       val verifier    = Some(accountScript(version, function, ethTransfer, asset, recipient.toAddress))
-      val setVerifier = () => SetScriptTransaction.selfSigned(1.toByte, recipient, verifier, 0.01.waves, ts).explicitGet()
+      val setVerifier = () => SetScriptTransaction.selfSigned(1.toByte, recipient, verifier, 0.01.dcc, ts).explicitGet()
 
       withDomain(settingsForRide(version.max(V6)), Seq(AddrWithBalance(ethSender), AddrWithBalance(recipient.toAddress))) { d =>
-        if (asset != Waves) d.appendBlock(issue, transferIssuedAsset)
+        if (asset != Dcc) d.appendBlock(issue, transferIssuedAsset)
         d.appendBlock(setVerifier())
         d.appendBlock(ProtoBlockVersion, ethTransfer)
 
         d.liquidSnapshot.balances((recipient.toAddress, asset)) shouldBe d.rocksDBWriter.balance(recipient.toAddress, asset) + transferAmount
-        if (asset == Waves)
-          d.liquidSnapshot.balances((ethSender, Waves)) shouldBe
-            d.rocksDBWriter.balance(ethSender, Waves) - ethTransfer.underlying.getGasLimit.longValue() - transferAmount
+        if (asset == Dcc)
+          d.liquidSnapshot.balances((ethSender, Dcc)) shouldBe
+            d.rocksDBWriter.balance(ethSender, Dcc) - ethTransfer.underlying.getGasLimit.longValue() - transferAmount
         else {
-          d.liquidSnapshot.balances((ethSender, Waves)) shouldBe
-            d.rocksDBWriter.balance(ethSender, Waves) - ethTransfer.underlying.getGasLimit.longValue()
+          d.liquidSnapshot.balances((ethSender, Dcc)) shouldBe
+            d.rocksDBWriter.balance(ethSender, Dcc) - ethTransfer.underlying.getGasLimit.longValue()
           d.liquidSnapshot.balances((ethSender, asset)) shouldBe d.rocksDBWriter.balance(ethSender, asset) - transferAmount
         }
 
@@ -131,11 +131,11 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
       .foreach { version =>
         val script = assetScript(version, dummyEthTransfer, recipient.toAddress)
         val issue =
-          IssueTransaction.selfSigned(2.toByte, recipient, "Asset", "", ENOUGH_AMT, 8, reissuable = true, Some(script), 1.waves, ts).explicitGet()
+          IssueTransaction.selfSigned(2.toByte, recipient, "Asset", "", ENOUGH_AMT, 8, reissuable = true, Some(script), 1.dcc, ts).explicitGet()
         val asset       = IssuedAsset(issue.id())
         val ethTransfer = dummyEthTransfer.copy(dummyTransfer.copy(Some(ERC20Address(asset.id.take(20)))))
         val preTransfer =
-          TransferTransaction.selfSigned(2.toByte, recipient, ethSender, asset, ENOUGH_AMT, Waves, 0.005.waves, ByteStr.empty, ts).explicitGet()
+          TransferTransaction.selfSigned(2.toByte, recipient, ethSender, asset, ENOUGH_AMT, Dcc, 0.005.dcc, ByteStr.empty, ts).explicitGet()
 
         withDomain(settingsForRide(version.max(V6)), Seq(AddrWithBalance(ethSender), AddrWithBalance(recipient.toAddress))) { d =>
           d.appendBlock(issue, preTransfer)
@@ -145,8 +145,8 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
           d.liquidSnapshot.scriptsComplexity should be > 0L
 
           d.liquidSnapshot.balances((recipient.toAddress, asset)) shouldBe transferAmount
-          d.liquidSnapshot.balances((ethTransfer.senderAddress(), Waves)) shouldBe
-            d.rocksDBWriter.balance(ethTransfer.senderAddress(), Waves) - ethTransfer.underlying.getGasPrice.longValue()
+          d.liquidSnapshot.balances((ethTransfer.senderAddress(), Dcc)) shouldBe
+            d.rocksDBWriter.balance(ethTransfer.senderAddress(), Dcc) - ethTransfer.underlying.getGasPrice.longValue()
           d.liquidSnapshot.balances((ethTransfer.senderAddress(), asset)) shouldBe
             d.rocksDBWriter.balance(ethTransfer.senderAddress(), asset) - transferAmount
         }

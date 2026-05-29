@@ -19,7 +19,7 @@ class CustomFeeTransactionSuite extends BaseTransactionSuite with CancelAfterFai
   override protected def nodeConfigs: Seq[Config] = Configs
 
   private val transferFee = 100000
-  private val assetFee    = 1.waves
+  private val assetFee    = 1.dcc
   private val assetToken  = 100
 
   test("make transfer with sponsored asset") {
@@ -56,7 +56,7 @@ class CustomFeeTransactionSuite extends BaseTransactionSuite with CancelAfterFai
     val sponsoredId = notMiner.transfer(senderKeyPair, secondAddress, 1, transferFee, Some(issuedAssetId), Some(issuedAssetId)).id
     nodes.waitForHeightAriseAndTxPresent(sponsoredId)
 
-    val sponsorship = Sponsorship.toWaves(transferFee, assetToken)
+    val sponsorship = Sponsorship.toDcc(transferFee, assetToken)
     notMiner.assertBalances(senderAddress, balance1 - fees - sponsorship, eff1 - fees - sponsorship)
     notMiner.assertBalances(secondAddress, balance2, eff2)
     notMiner.assertBalances(minerAddress, balance3 + fees + sponsorship, balance3 + fees + sponsorship)
@@ -86,21 +86,21 @@ object CustomFeeTransactionSuite {
       decimals = 2,
       reissuable = false,
       script = None,
-      fee = 1.waves,
+      fee = 1.dcc,
       timestamp = System.currentTimeMillis()
     )
     .explicitGet()
 
   private val assetId = assetTx.id()
 
-  private val minerConfig = ConfigFactory.parseString(s"""waves.fees.transfer.$assetId = 100000
-                                                         |waves.blockchain.custom.functionality {
+  private val minerConfig = ConfigFactory.parseString(s"""dcc.fees.transfer.$assetId = 100000
+                                                         |dcc.blockchain.custom.functionality {
                                                          |  feature-check-blocks-period = $featureCheckBlocksPeriod
                                                          |  blocks-for-feature-activation = $featureCheckBlocksPeriod
                                                          |  pre-activated-features = { 7 = 0, 14 = 1000000 }
                                                          |}""".stripMargin)
 
-  private val notMinerConfig = ConfigFactory.parseString("waves.miner.enable=no").withFallback(minerConfig)
+  private val notMinerConfig = ConfigFactory.parseString("dcc.miner.enable=no").withFallback(minerConfig)
 
   val Configs: Seq[Config] = Seq(
     minerConfig.withFallback(Default.head),

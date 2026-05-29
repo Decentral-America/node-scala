@@ -16,7 +16,7 @@ class FeatureActivationTestSuite extends BaseFreeSpec with ActivationStatusReque
 
   override protected def nodeConfigs: Seq[Config] = {
     NodeConfigs.newBuilder
-      .overrideBase(_.raw(s"""waves {
+      .overrideBase(_.raw(s"""dcc {
                              |  blockchain.custom.functionality {
                              |    pre-activated-features = {}
                              |    feature-check-blocks-period = $votingInterval

@@ -36,22 +36,22 @@ class EthRpcRoute(blockchain: Blockchain, transactionsApi: CommonTransactionsApi
       val results = erc20Ids
         .map(id =>
           id -> (for {
-            wavesId   <- blockchain.resolveERC20Address(ERC20Address(id))
-            assetDesc <- blockchain.assetDescription(wavesId)
-          } yield (wavesId, assetDesc))
+            dccId   <- blockchain.resolveERC20Address(ERC20Address(id))
+            assetDesc <- blockchain.assetDescription(dccId)
+          } yield (dccId, assetDesc))
         )
         .map { case (id, assetOpt) => Validated.fromOption(assetOpt, EthEncoding.toHexString(id.arr)).toValidatedNel }
         .sequence
 
       results match {
         case Validated.Invalid(ids) =>
-          complete(InvalidIds(ids.toList)) // TODO: Something more obvious like "assets does not exist" ?
+          complete(InvalidIds(ids.toList))
 
         case Validated.Valid(assets) =>
           val jsons = for {
             (assetId, desc) <- assets
           } yield AssetsApiRoute.jsonDetails(blockchain)(assetId, desc, full = false)
-          complete(jsons.sequence.leftMap(CustomValidationError(_)).map(JsArray(_))) // TODO: Only first error is displayed
+          complete(jsons.sequence.leftMap(CustomValidationError(_)).map(JsArray(_)))
       }
     } ~ (get & path("abi" / AddrSegment)) { addr =>
       complete(blockchain.accountScript(addr).map(as => EthABIConverter(as.script).jsonABI))

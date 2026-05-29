@@ -36,7 +36,7 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
     }
   }
 
-  property("Reissue transaction's fee before feature activation is 1 WAVES") {
+  property("Reissue transaction's fee before feature activation is 1 DCC") {
     beforeActivationScenario.foreach { case (bs, txs) =>
       checkFee(bs, txs) { case (result, lessResult, moreResult) =>
         result.explicitGet()
@@ -73,7 +73,7 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
     }
   }
 
-  property("Reissue transaction's fee after feature activation is 0.001 WAVES") {
+  property("Reissue transaction's fee after feature activation is 0.001 DCC") {
     afterActivationScenario.foreach { case (bs, txs) =>
       checkFee(bs, txs) { case (result, lessResult, moreResult) =>
         result.explicitGet()
@@ -90,7 +90,7 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
           BlockDiffer
             .fromBlock(blockchain, blockchain.lastBlock, block, None, MiningConstraint.Unlimited, block.header.generationSignature)
             .explicitGet()
-        // TODO: how about to apply from BlockDiffer.Result
+        // NOTE: Could apply from BlockDiffer.Result — current approach is simpler
         blockchain.append(
           snapshot,
           carryFee,
@@ -111,7 +111,7 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
     val block = TestBlock
       .create(
         ntpNow,
-        Seq(GenesisTransaction.create(issuer.toAddress, Constants.TotalWaves * Constants.UnitsInWave, ntpNow).explicitGet())
+        Seq(GenesisTransaction.create(issuer.toAddress, Constants.TotalDcc * Constants.UnitsInWave, ntpNow).explicitGet())
       )
       .block
 

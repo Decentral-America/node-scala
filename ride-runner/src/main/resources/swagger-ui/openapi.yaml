@@ -339,7 +339,7 @@ components:
         amount:
           type: integer
           format: int32
-          description: Leased WAVES amount
+          description: Leased DCC amount
           allOf:
             - $ref: '#/components/schemas/Amount'
         height:
@@ -384,7 +384,7 @@ components:
           description: Lease recipient address
         amount:
           type: string
-          description: Leased WAVES amount
+          description: Leased DCC amount
         height:
           allOf:
             - $ref: '#/components/schemas/Height'

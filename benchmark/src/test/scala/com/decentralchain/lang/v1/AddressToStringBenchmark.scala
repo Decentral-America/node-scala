@@ -8,7 +8,7 @@ import com.decentralchain.lang.v1.AddressToStringBenchmark.AddressToString
 import com.decentralchain.lang.v1.FunctionHeader.Native
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, CaseObj, FUNCTION_CALL}
 import com.decentralchain.lang.v1.evaluator.FunctionIds
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Types
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Types
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
