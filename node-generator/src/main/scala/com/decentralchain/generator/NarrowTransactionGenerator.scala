@@ -15,7 +15,7 @@ import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.DataEntry.{MaxValueSize, Type}
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType.TransactionType
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
@@ -109,7 +109,7 @@ class NarrowTransactionGenerator(
                     recipient,
                     Asset.fromCompatId(asset),
                     Random.nextInt(100),
-                    Waves,
+                    Dcc,
                     500000L,
                     createAttachment(),
                     timestamp
@@ -162,7 +162,7 @@ class NarrowTransactionGenerator(
               matcher <- randomFrom(accounts)
               seller  <- randomFrom(accounts)
               buyer   <- randomFrom(accounts)
-              pair    <- preconditions.tradeAsset.map(a => AssetPair(Waves, IssuedAsset(a.id())))
+              pair    <- preconditions.tradeAsset.map(a => AssetPair(Dcc, IssuedAsset(a.id())))
               delta = random.nextLong(10000)
               sellOrder = Order
                 .sell(
@@ -323,7 +323,7 @@ class NarrowTransactionGenerator(
             else Some(Terms.FUNCTION_CALL(FunctionHeader.User(function.name), data.toList))
 
           val asset = randomFrom(Universe.IssuedAssets.filter(a => script.paymentAssets.contains(a.name.toStringUtf8)))
-            .fold(Waves: Asset)(tx => IssuedAsset(tx.id()))
+            .fold(Dcc: Asset)(tx => IssuedAsset(tx.id()))
 
           logOption(
             Right(
@@ -334,7 +334,7 @@ class NarrowTransactionGenerator(
                 maybeFunctionCall,
                 Seq(InvokeScriptTransaction.Payment(random.nextInt(100) + 1, asset)),
                 5300000L,
-                Waves,
+                Dcc,
                 timestamp
               )
             )
@@ -357,7 +357,7 @@ class NarrowTransactionGenerator(
           }
 
           val asset = randomFrom(Universe.IssuedAssets.filter(a => script.paymentAssets.contains(a.name.toStringUtf8)))
-            .fold(Waves: Asset)(tx => IssuedAsset(tx.id()))
+            .fold(Dcc: Asset)(tx => IssuedAsset(tx.id()))
 
           logOption(
             Right(
@@ -551,7 +551,7 @@ object NarrowTransactionGenerator extends ConfigReaders {
               val account = GeneratorSettings.toKeyPair(s"${UUID.randomUUID().toString}")
 
               val transferTx = TransferTransaction
-                .selfSigned(2.toByte, richAccount, account.toAddress, Waves, balance, Waves, fee, ByteStr.empty, time.correctedTime())
+                .selfSigned(2.toByte, richAccount, account.toAddress, Dcc, balance, Dcc, fee, ByteStr.empty, time.correctedTime())
                 .explicitGet()
 
               val script   = ScriptCompiler.compile(new String(Files.readAllBytes(Paths.get(scriptFile))), estimator).explicitGet()._1
@@ -596,7 +596,7 @@ object NarrowTransactionGenerator extends ConfigReaders {
           TxVersion.V2,
           trader,
           "TRADE",
-          "Waves DEX is the best exchange ever",
+          "Dcc DEX is the best exchange ever",
           100000000,
           2,
           reissuable = true,
@@ -615,7 +615,7 @@ object NarrowTransactionGenerator extends ConfigReaders {
               acc.toAddress,
               IssuedAsset(tradeAsset.id()),
               tradeAsset.quantity.value / accounts.size,
-              Waves,
+              Dcc,
               900000,
               ByteStr(Array.fill(random.nextInt(100))(random.nextInt().toByte)),
               System.currentTimeMillis()
@@ -631,16 +631,16 @@ object NarrowTransactionGenerator extends ConfigReaders {
 
     val fundEthereumAddresses = accounts.map { kp =>
       import com.decentralchain.transaction.utils.EthConverters.*
-      val ethAccount = kp.toEthWavesAddress
+      val ethAccount = kp.toEthDccAddress
       TransferTransaction
-        .selfSigned(TxVersion.V1, accounts.head, ethAccount, Waves, 100_0000_0000L, Waves, 500000L, ByteStr.empty, System.currentTimeMillis())
+        .selfSigned(TxVersion.V1, accounts.head, ethAccount, Dcc, 100_0000_0000L, Dcc, 500000L, ByteStr.empty, System.currentTimeMillis())
         .explicitGet()
     }
 
     val setPredefScripts = settings.scripts.collect {
       case s if s.scriptFile.nonEmpty =>
         val transferTx = TransferTransaction
-          .selfSigned(2.toByte, accounts.head, s.dappAddress, Waves, 1_0000_000L, Waves, 500000L, ByteStr.empty, time.correctedTime())
+          .selfSigned(2.toByte, accounts.head, s.dappAddress, Dcc, 1_0000_000L, Dcc, 500000L, ByteStr.empty, time.correctedTime())
           .explicitGet()
 
         val script   = ScriptCompiler.compile(new String(Files.readAllBytes(Paths.get(s.scriptFile.get))), estimator).explicitGet()._1

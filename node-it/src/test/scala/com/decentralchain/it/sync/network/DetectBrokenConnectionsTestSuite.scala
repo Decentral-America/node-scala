@@ -10,7 +10,7 @@ import scala.concurrent.duration.*
 class DetectBrokenConnectionsTestSuite extends BaseFreeSpec {
 
   override protected def nodeConfigs: Seq[Config] = {
-    val highPriorityConfig = ConfigFactory.parseString("waves.network.break-idle-connections-timeout = 20s")
+    val highPriorityConfig = ConfigFactory.parseString("dcc.network.break-idle-connections-timeout = 20s")
     Default.take(2).map(highPriorityConfig.withFallback)
   }
 

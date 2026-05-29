@@ -62,7 +62,7 @@ class BigStringSuite extends BaseTransactionSuite with CancelAfterFailure {
           acc0.publicKey,
           acc2.toAddress,
           transferAmount,
-          minFee + 0.2.waves,
+          minFee + 0.2.dcc,
           System.currentTimeMillis(),
           Proofs.empty
         )

@@ -34,13 +34,13 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         smartCaller,
         dAppAddress,
         Some("justWriteData"),
-        fee = 0.00899999.waves
+        fee = 0.00899999.dcc
       ),
-      s"does not exceed minimal value of 900000 WAVES"
+      s"does not exceed minimal value of 900000 DCC"
     )
   }
 
-  test("max fee is 0.053 Waves (0.005 + extraFee(1 smart caller + 1 payment + 10 transfers))") {
+  test("max fee is 0.053 Dcc (0.005 + extraFee(1 smart caller + 1 payment + 10 transfers))") {
     val paymentAmount = 20
 
     assertApiError(
@@ -50,11 +50,11 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
           dAppAddress,
           Some("spendMaxFee"),
           payment = Seq(Payment(paymentAmount, IssuedAsset(ByteStr.decodeBase58(asset2).get))),
-          fee = 0.05299999.waves
+          fee = 0.05299999.dcc
         ),
       AssertiveApiError(
         ScriptExecutionError.Id,
-        "Error while executing dApp: Fee in WAVES for InvokeScriptTransaction (5299999 in WAVES) with 12 total scripts invoked does not exceed minimal value of 5300000 WAVES."
+        "Error while executing dApp: Fee in DCC for InvokeScriptTransaction (5299999 in DCC) with 12 total scripts invoked does not exceed minimal value of 5300000 DCC."
       )
     )
 
@@ -105,7 +105,7 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         )
         ._1
         .id,
-      "does not exceed minimal value of 900000 WAVES"
+      "does not exceed minimal value of 900000 DCC"
     )
   }
 
@@ -123,7 +123,7 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
         ),
       AssertiveApiError(
         ScriptExecutionError.Id,
-        "Error while executing dApp: Fee in WAVES for InvokeScriptTransaction (900000 in WAVES) with 2 total scripts invoked does not exceed minimal value of 1300000 WAVES."
+        "Error while executing dApp: Fee in DCC for InvokeScriptTransaction (900000 in DCC) with 2 total scripts invoked does not exceed minimal value of 1300000 DCC."
       )
     )
   }
@@ -202,10 +202,10 @@ class InvokeScriptWithSmartAccountAndAssetSuite extends BaseTransactionSuite wit
   protected override def beforeAll(): Unit = {
     super.beforeAll()
 
-    withClue("send waves to dApp and caller accounts") {
-      val dAppTransferId        = sender.transfer(sender.keyPair, dAppAddress, 5.waves, minFee).id
-      val callerTransferId      = sender.transfer(sender.keyPair, callerAddress, 5.waves, minFee).id
-      val smartCallerTransferId = sender.transfer(sender.keyPair, smartCallerAddress, 5.waves, minFee).id
+    withClue("send dcc to dApp and caller accounts") {
+      val dAppTransferId        = sender.transfer(sender.keyPair, dAppAddress, 5.dcc, minFee).id
+      val callerTransferId      = sender.transfer(sender.keyPair, callerAddress, 5.dcc, minFee).id
+      val smartCallerTransferId = sender.transfer(sender.keyPair, smartCallerAddress, 5.dcc, minFee).id
 
       nodes.waitForHeightAriseAndTxPresent(smartCallerTransferId)
       nodes.waitForTransaction(callerTransferId)

@@ -21,7 +21,7 @@ import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.state.DataEntry.Format
 import com.decentralchain.state.{AssetDistribution, AssetDistributionPage, DataEntry, EmptyDataEntry, Height, LeaseBalance, Portfolio}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.{Order, ExchangeTransaction as ExchangeTx}
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
@@ -402,7 +402,7 @@ object AsyncHttpApi extends Assertions {
       )
 
     def payment(sourceAddress: String, recipient: String, amount: Long, fee: Long): Future[Transaction] =
-      postJson("/waves/payment", PaymentRequest(amount, fee, sourceAddress, recipient)).as[Transaction]
+      postJson("/dcc/payment", PaymentRequest(amount, fee, sourceAddress, recipient)).as[Transaction]
 
     def lease(sender: KeyPair, recipient: String, amount: Long, fee: Long, version: TxVersion = TxVersion.V2): Future[Transaction] =
       signedBroadcast(
@@ -513,7 +513,7 @@ object AsyncHttpApi extends Assertions {
           func.map(fn => FUNCTION_CALL(FunctionHeader.User(fn), args)),
           payment,
           TxPositiveAmount.unsafeFrom(fee),
-          feeAssetId.map(aid => IssuedAsset(ByteStr.decodeBase58(aid).get)).getOrElse(Asset.Waves),
+          feeAssetId.map(aid => IssuedAsset(ByteStr.decodeBase58(aid).get)).getOrElse(Asset.Dcc),
           System.currentTimeMillis(),
           Proofs.empty,
           AddressScheme.current.chainId
@@ -533,7 +533,7 @@ object AsyncHttpApi extends Assertions {
           caller.publicKey,
           expression,
           TxPositiveAmount.unsafeFrom(fee),
-          feeAssetId.map(aid => IssuedAsset(ByteStr.decodeBase58(aid).get)).getOrElse(Asset.Waves),
+          feeAssetId.map(aid => IssuedAsset(ByteStr.decodeBase58(aid).get)).getOrElse(Asset.Dcc),
           System.currentTimeMillis(),
           Proofs.empty,
           AddressScheme.current.chainId
@@ -557,7 +557,7 @@ object AsyncHttpApi extends Assertions {
         func.map(fn => FUNCTION_CALL(FunctionHeader.User(fn), args)),
         payment,
         TxPositiveAmount.unsafeFrom(fee),
-        feeAssetId.map(aid => IssuedAsset(ByteStr.decodeBase58(aid).get)).getOrElse(Asset.Waves),
+        feeAssetId.map(aid => IssuedAsset(ByteStr.decodeBase58(aid).get)).getOrElse(Asset.Dcc),
         System.currentTimeMillis(),
         Proofs.empty,
         AddressScheme.current.chainId
@@ -584,7 +584,7 @@ object AsyncHttpApi extends Assertions {
         description,
         timestamp.getOrElse(System.currentTimeMillis()),
         TxPositiveAmount.unsafeFrom(fee),
-        if (feeAssetId.isDefined) IssuedAsset(ByteStr(Base58.decode(feeAssetId.get))) else Waves,
+        if (feeAssetId.isDefined) IssuedAsset(ByteStr(Base58.decode(feeAssetId.get))) else Dcc,
         Proofs.empty,
         AddressScheme.current.chainId
       ).signWith(sender.privateKey)
@@ -954,7 +954,7 @@ object AsyncHttpApi extends Assertions {
       executeRequest
     }
 
-    def debugStateAt(height: Height): Future[Map[String, Long]] = getWithApiKey(s"/debug/stateWaves/$height").as[Map[String, Long]]
+    def debugStateAt(height: Height): Future[Map[String, Long]] = getWithApiKey(s"/debug/stateDcc/$height").as[Map[String, Long]]
 
     def debugBalanceHistory(address: String, amountsAsStrings: Boolean = false): Future[Seq[BalanceHistory]] = {
       get(s"/debug/balances/history/$address", withApiKey = true, amountsAsStrings = amountsAsStrings)

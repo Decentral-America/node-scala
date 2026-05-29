@@ -18,7 +18,7 @@ class RideGeneratingBalanceSpec extends FreeSpec with WithDomain with ParallelTe
     val dAppAccount    = TxHelpers.signer(999)
     val anotherAccount = TxHelpers.signer(1)
 
-    val balances = Seq(AddrWithBalance(dAppAccount.toAddress, 100.01.waves), AddrWithBalance(anotherAccount.toAddress, 500.waves))
+    val balances = Seq(AddrWithBalance(dAppAccount.toAddress, 100.01.dcc), AddrWithBalance(anotherAccount.toAddress, 500.dcc))
 
     withDomain(preset, balances) { d =>
       val dAppScript = TxHelpers.script(
@@ -33,10 +33,10 @@ class RideGeneratingBalanceSpec extends FreeSpec with WithDomain with ParallelTe
            |  expectedEffectiveBalance: Int,
            |  expectedGeneratingBalance: Int
            |) = {
-           |  let actualRegularBalance = wavesBalance(this).regular
-           |  let actualAvailableBalance = wavesBalance(this).available
-           |  let actualEffectiveBalance = wavesBalance(this).effective
-           |  let actualGeneratingBalance = wavesBalance(this).generating
+           |  let actualRegularBalance = dccBalance(this).regular
+           |  let actualAvailableBalance = dccBalance(this).available
+           |  let actualEffectiveBalance = dccBalance(this).effective
+           |  let actualGeneratingBalance = dccBalance(this).generating
            |
            |  strict checkRegular = if (actualRegularBalance != expectedRegularBalance)
            |    then throw("Expected Regular balance to be: " + toString(expectedRegularBalance) + ", But got: " + toString(actualRegularBalance))
@@ -70,13 +70,13 @@ class RideGeneratingBalanceSpec extends FreeSpec with WithDomain with ParallelTe
 
       // Block 2
       d.appendBlock(
-        TxHelpers.setScript(dAppAccount, dAppScript), // Note: setScript costs 0.01.waves
-        assertBalancesInRide(100.waves, 100.waves, 100.waves, 100.waves)
+        TxHelpers.setScript(dAppAccount, dAppScript), // Note: setScript costs 0.01.dcc
+        assertBalancesInRide(100.dcc, 100.dcc, 100.dcc, 100.dcc)
       )
       d.blockchain.height shouldBe 2
 
       // Block 3
-      d.appendBlock(TxHelpers.transfer(anotherAccount, dAppAccount.toAddress, 10.waves))
+      d.appendBlock(TxHelpers.transfer(anotherAccount, dAppAccount.toAddress, 10.dcc))
       d.blockchain.height shouldBe 3
 
       // Fast-forward to block 1000
@@ -86,21 +86,21 @@ class RideGeneratingBalanceSpec extends FreeSpec with WithDomain with ParallelTe
       // Block 1001
       // This assertion tells us that the generating balance
       // is not being updated until the block 1002, which is expected,
-      // because `10.waves` was sent on height = 3,
+      // because `10.dcc` was sent on height = 3,
       // and until height 1002 the balance is not updated
       // (...the lowest of the last 1000 blocks, including 3 and 1002)
-      d.appendBlock(assertBalancesInRide(110.waves, 110.waves, 110.waves, 100.waves))
+      d.appendBlock(assertBalancesInRide(110.dcc, 110.dcc, 110.dcc, 100.dcc))
       d.blockchain.height shouldBe 1001
 
       // Block 1002
       d.appendBlock(
         // This assertion tells us that the generating balance
-        // was already updated after `10.waves` was sent on height = 3
-        assertBalancesInRide(110.waves, 110.waves, 110.waves, 110.waves),
-        TxHelpers.transfer(dAppAccount, anotherAccount.toAddress, 50.waves),
+        // was already updated after `10.dcc` was sent on height = 3
+        assertBalancesInRide(110.dcc, 110.dcc, 110.dcc, 110.dcc),
+        TxHelpers.transfer(dAppAccount, anotherAccount.toAddress, 50.dcc),
         // This assertion tells us that the generating balance
         // was updated by a transaction in this block.
-        assertBalancesInRide(59.99.waves, 59.99.waves, 59.99.waves, 59.99.waves)
+        assertBalancesInRide(59.99.dcc, 59.99.dcc, 59.99.dcc, 59.99.dcc)
       )
     }
   }

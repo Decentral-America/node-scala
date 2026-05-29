@@ -25,14 +25,14 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
 
   private val expectedFinalizedId, unexpectedFinalizedId, expectedEndorsedId = TxHelpers.randomBlockId
 
-  private def mkGeneratorSet(n: Int): IndexedSeq[TestGenerator] = (0 until n).map(mkGenerator(_, 100_000.waves))
+  private def mkGeneratorSet(n: Int): IndexedSeq[TestGenerator] = (0 until n).map(mkGenerator(_, 100_000.dcc))
 
   private def mkPoorGenerator(i: Int): TestGenerator = mkGenerator(i, 0L)
 
   private def mkGenerator(i: Int, initBalance: Long): TestGenerator = {
-    val wavesKp = TxHelpers.signer(i)
-    val blsKp   = BlsKeyPair(wavesKp.privateKey)
-    (wavesKp.toAddress, blsKp, initBalance)
+    val dccKp = TxHelpers.signer(i)
+    val blsKp   = BlsKeyPair(dccKp.privateKey)
+    (dccKp.toAddress, blsKp, initBalance)
   }
 
   private val defaultGenerators: IndexedSeq[TestGenerator] = mkGeneratorSet(4)
@@ -144,7 +144,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
       "not enough generator balance" in {
         started(
           normalizedGeneratorSet = Vector(
-            mkGenerator(0, 100_000.waves),
+            mkGenerator(0, 100_000.dcc),
             mkPoorGenerator(1) // activeGenerator
           )
         ).tryAddEndorsement(mk()) should produce("has no enough balance") // activeGenerator
@@ -225,9 +225,9 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
           val s = started(
             minerIndex = 1,
             normalizedGeneratorSet = Vector(
-              mkGenerator(0, 5000.waves),
-              mkGenerator(1, 2000.waves),
-              mkGenerator(2, 3000.waves)
+              mkGenerator(0, 5000.dcc),
+              mkGenerator(1, 2000.dcc),
+              mkGenerator(2, 3000.dcc)
             )
           )
 

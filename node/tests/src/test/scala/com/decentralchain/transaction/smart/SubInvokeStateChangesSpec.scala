@@ -27,7 +27,7 @@ class SubInvokeStateChangesSpec extends FlatSpec with WithDomain with JsonMatche
     val addr2f = TxHelpers.signer(2) // Calls addr3f
     val addr3f = TxHelpers.signer(4) // Fails
 
-    val balances = Seq(dAppAddress, addr2f, addr3f, addr2s, addr3s).map(acc => AddrWithBalance(acc.toAddress, 1.waves)) :+
+    val balances = Seq(dAppAddress, addr2f, addr3f, addr2s, addr3s).map(acc => AddrWithBalance(acc.toAddress, 1.dcc)) :+
       AddrWithBalance(TxHelpers.defaultAddress)
 
     withDomain(DomainPresets.RideV5, balances) { d =>

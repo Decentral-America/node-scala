@@ -10,7 +10,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.{Base58, Base64}
 import com.decentralchain.lang.script.{Script, ScriptReader}
 import com.decentralchain.ride.ScriptUtil
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.{Asset, TxNonNegativeAmount, TxValidationError}
 import pureconfig.*
 import play.api.libs.json.*
@@ -148,9 +148,9 @@ object RideRunnerInputParser {
     for {
       objCur          <- cur.asObjectCursor
       amount          <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("amount")).map(_.getOrElse(1L))
-      assetId         <- ConfigReader[Option[Asset]].from(objCur.atKeyOrUndefined("assetId")).map(_.getOrElse(Waves))
+      assetId         <- ConfigReader[Option[Asset]].from(objCur.atKeyOrUndefined("assetId")).map(_.getOrElse(Dcc))
       fee             <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("fee")).map(_.getOrElse(100_000L))
-      feeAssetId      <- ConfigReader[Option[Asset]].from(objCur.atKeyOrUndefined("feeAssetId")).map(_.getOrElse(Waves))
+      feeAssetId      <- ConfigReader[Option[Asset]].from(objCur.atKeyOrUndefined("feeAssetId")).map(_.getOrElse(Dcc))
       recipient       <- objCur.atKey("recipient").flatMap(ConfigReader[AddressOrAlias].from)
       senderPublicKey <- ConfigReader[Option[PublicKey]].from(objCur.atKeyOrUndefined("senderPublicKey")).map(_.getOrElse(EmptyPublicKey))
       height          <- ConfigReader[Option[Int]].from(objCur.atKeyOrUndefined("height"))

@@ -26,8 +26,8 @@ JAVA_OPTS="-javaagent:${RIDE_INSTALL_PATH}/kanela-agent/kanela-agent-1.0.18.jar
   -Dlogback.stdout.level=${RIDE_LOG_LEVEL}
   -Dlogback.shutdown-hook-delay=2000
   -Dconfig.override_with_env_vars=true
-  -Dwaves.defaults.blockchain.type=$RIDE_NETWORK
-  -Dwaves.defaults.directory=$RDATA"
+  -Ddcc.defaults.blockchain.type=$RIDE_NETWORK
+  -Ddcc.defaults.directory=$RDATA"
 
 if [[ -n "${ASYNCPROF_ENABLE}" && "${ASYNCPROF_ENABLE}" == "true" ]]; then
   echo "async-profiler enabled"

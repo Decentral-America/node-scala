@@ -12,7 +12,7 @@ import com.decentralchain.lang.v1.compiler.ExpressionCompiler
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.StateSyntheticBenchmark.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.*
@@ -41,9 +41,9 @@ object StateSyntheticBenchmark {
   class St extends BaseState {
     protected override def txGenP(sender: KeyPair, ts: Long): Gen[Transaction] =
       for {
-        amount    <- Gen.choose(1L, waves(1))
+        amount    <- Gen.choose(1L, dcc(1))
         recipient <- accountGen
-      } yield TransferTransaction.selfSigned(1.toByte, sender, recipient.toAddress, Waves, amount, Waves, 100000, ByteStr.empty, ts).explicitGet()
+      } yield TransferTransaction.selfSigned(1.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, 100000, ByteStr.empty, ts).explicitGet()
   }
 
   @State(Scope.Benchmark)
@@ -56,9 +56,9 @@ object StateSyntheticBenchmark {
     protected override def txGenP(sender: KeyPair, ts: Long): Gen[Transaction] =
       for {
         recipient: KeyPair <- accountGen
-        amount             <- Gen.choose(1L, waves(1))
+        amount             <- Gen.choose(1L, dcc(1))
       } yield TransferTransaction
-        .selfSigned(2.toByte, sender, recipient.toAddress, Waves, amount, Waves, 1000000, ByteStr.empty, ts)
+        .selfSigned(2.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, 1000000, ByteStr.empty, ts)
         .explicitGet()
 
     @Setup

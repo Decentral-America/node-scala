@@ -24,12 +24,12 @@
     <property name="logback.file.enabled" value="false"/>
 
     <condition class="ch.qos.logback.core.boolex.IsPropertyDefinedCondition">
-        <key>waves.directory</key>
+        <key>dcc.directory</key>
     </condition>
     <if>
         <then>
             <property name="logback.file.enabled" value="true"/>
-            <property name="logback.file.final-directory" value="${waves.directory}/log"/>
+            <property name="logback.file.final-directory" value="${dcc.directory}/log"/>
         </then>
     </if>
 
@@ -46,7 +46,7 @@
     <property name="logback.stdout.enabled" value="true"/>
     <property name="logback.utx-trace.enabled" value="false"/>
 
-    <include optional="true" file="${waves.config.directory:-.}/logback.xml"/>
+    <include optional="true" file="${dcc.config.directory:-.}/logback.xml"/>
 
     <condition class="ch.qos.logback.core.boolex.PropertyEqualityCondition">
         <key>logback.stdout.enabled</key>
@@ -77,7 +77,7 @@
     <if>
         <then>
             <property name="appender.name" value="FILE"/>
-            <property name="appender.file" value="waves"/>
+            <property name="appender.file" value="dcc"/>
             <property name="appender.level" value="${logback.file.level}"/>
 
             <include resource="file-appender-template.xml"/>

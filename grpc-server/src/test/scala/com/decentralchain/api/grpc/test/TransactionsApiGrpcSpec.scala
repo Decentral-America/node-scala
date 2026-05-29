@@ -23,7 +23,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{StateSnapshot, TxMeta, Height}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
@@ -90,23 +90,23 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
     val firstThreeSnapshots = Seq(
       StateSnapshot(balances =
         VectorMap(
-          (secondAddress, Waves)  -> (ENOUGH_AMT - 100_001),
-          (recipient, Waves)      -> 1,
-          (defaultAddress, Waves) -> 200_040_000 // reward and 40% fee
+          (secondAddress, Dcc)  -> (ENOUGH_AMT - 100_001),
+          (recipient, Dcc)      -> 1,
+          (defaultAddress, Dcc) -> 200_040_000 // reward and 40% fee
         )
       ),
       StateSnapshot(balances =
         VectorMap(
-          (secondAddress, Waves)  -> (ENOUGH_AMT - 200_002),
-          (recipient, Waves)      -> 2,
-          (defaultAddress, Waves) -> 200_080_000
+          (secondAddress, Dcc)  -> (ENOUGH_AMT - 200_002),
+          (recipient, Dcc)      -> 2,
+          (defaultAddress, Dcc) -> 200_080_000
         )
       ),
       StateSnapshot(balances =
         VectorMap(
-          (secondAddress, Waves)  -> (ENOUGH_AMT - 300_003),
-          (recipient, Waves)      -> 3,
-          (defaultAddress, Waves) -> 200_120_000
+          (secondAddress, Dcc)  -> (ENOUGH_AMT - 300_003),
+          (recipient, Dcc)      -> 3,
+          (defaultAddress, Dcc) -> 200_120_000
         )
       )
     )
@@ -129,16 +129,16 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
     getSnapshots() shouldBe firstThreeSnapshots ++ Seq(
       StateSnapshot(balances =
         VectorMap(
-          (secondAddress, Waves)  -> (ENOUGH_AMT - 400_004),
-          (recipient, Waves)      -> 4,
-          (defaultAddress, Waves) -> 400_340_000 // 2 blocks reward, 100% fee from previous block and 40% fee from current
+          (secondAddress, Dcc)  -> (ENOUGH_AMT - 400_004),
+          (recipient, Dcc)      -> 4,
+          (defaultAddress, Dcc) -> 400_340_000 // 2 blocks reward, 100% fee from previous block and 40% fee from current
         )
       ),
       StateSnapshot(balances =
         VectorMap(
-          (secondAddress, Waves)  -> (ENOUGH_AMT - 500_005),
-          (recipient, Waves)      -> 5,
-          (defaultAddress, Waves) -> 400_380_000
+          (secondAddress, Dcc)  -> (ENOUGH_AMT - 500_005),
+          (recipient, Dcc)      -> 5,
+          (defaultAddress, Dcc) -> 400_380_000
         )
       )
     )
@@ -166,7 +166,7 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
         TxHelpers.exchangeFromOrders(
           TxHelpers.order(
             OrderType.BUY,
-            Waves,
+            Dcc,
             issue.asset,
             amount = 2,
             version = Order.V4,
@@ -174,7 +174,7 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
             matcher = matcher,
             attachment = Some(attachment)
           ),
-          TxHelpers.order(OrderType.SELL, Waves, issue.asset, amount = 2, version = Order.V4, sender = issuer, matcher = matcher),
+          TxHelpers.order(OrderType.SELL, Dcc, issue.asset, amount = 2, version = Order.V4, sender = issuer, matcher = matcher),
           matcher = matcher,
           version = TxVersion.V3
         )
@@ -226,15 +226,15 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
       val challengingMiner = d.wallet.generateNewAccount().get
 
       d.appendBlock(
-        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.waves),
-        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.waves)
+        TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc),
+        TxHelpers.transfer(sender, challengedMiner.toAddress, 1000.dcc)
       )
 
       (1 to 999).foreach(_ => d.appendBlock())
 
       val invalidStateHash = ByteStr.fill(DigestLength)(1)
-      val resenderTxs = Seq(TxHelpers.transfer(resender, recipient.toAddress, 1.waves), TxHelpers.transfer(resender, recipient.toAddress, 2.waves))
-      val challengedBlockTx = TxHelpers.transfer(challengedMiner, resender.toAddress, 1001.waves)
+      val resenderTxs = Seq(TxHelpers.transfer(resender, recipient.toAddress, 1.dcc), TxHelpers.transfer(resender, recipient.toAddress, 2.dcc))
+      val challengedBlockTx = TxHelpers.transfer(challengedMiner, resender.toAddress, 1001.dcc)
       val originalBlock = d.createBlock(
         Block.ProtoBlockVersion,
         challengedBlockTx +: resenderTxs,

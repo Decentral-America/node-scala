@@ -49,9 +49,9 @@ class DebugApiRouteStateHashSpec
   private val thirdGenerator  = TxHelpers.signer(907)
 
   override def genesisBalances: Seq[AddrWithBalance] = Seq(
-    AddrWithBalance(TxHelpers.defaultSigner.toAddress, 10_000.waves),
-    AddrWithBalance(secondGenerator.toAddress, 11_000.waves),
-    AddrWithBalance(thirdGenerator.toAddress, 12_000.waves)
+    AddrWithBalance(TxHelpers.defaultSigner.toAddress, 10_000.dcc),
+    AddrWithBalance(secondGenerator.toAddress, 11_000.dcc),
+    AddrWithBalance(thirdGenerator.toAddress, 12_000.dcc)
   )
 
   val block: Block = TestBlock.create(Nil).block
@@ -94,7 +94,7 @@ class DebugApiRouteStateHashSpec
         val beforeFinalityHeader = domain.blockchain.blockHeader(beforeFinalityHeight).value
         val expectedResponseBefore = Json.obj(
           "stateHash"         -> "9a4cde77f9ae2207e23e94457dceb4fa8826a0c8a56466c1e28d83d35e087588",
-          "wavesBalanceHash"  -> "6bb9f756054493145441eb34bb09d0c26ae78ab09e25c9061b11dbac756b9b65",
+          "dccBalanceHash"  -> "6bb9f756054493145441eb34bb09d0c26ae78ab09e25c9061b11dbac756b9b65",
           "assetBalanceHash"  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"     -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -144,7 +144,7 @@ class DebugApiRouteStateHashSpec
         val afterGeneratingBalanceUpdateHeader = domain.blockchain.blockHeader(afterGeneratingBalanceUpdateHeight).value
         val expectedResponseAfter = Json.obj(
           "stateHash"                      -> "b0a55af162af037a8980b2c284bdb8faf3e08a470f768a15e862633a93e2857d",
-          "wavesBalanceHash"               -> "b00aadcea779b68ff76fe9cfac28f48786a299a856cd9fa42fc82bcab5149400",
+          "dccBalanceHash"               -> "b00aadcea779b68ff76fe9cfac28f48786a299a856cd9fa42fc82bcab5149400",
           "assetBalanceHash"               -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"                  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash"              -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -181,7 +181,7 @@ class DebugApiRouteStateHashSpec
         val headerOnGenerationPeriod = domain.blockchain.blockHeader(heightOnGenerationPeriod).value
         val expectedResponseAfter2 = Json.obj(
           "stateHash"                      -> "6bca7f4bd0390ad787d11d45048f1b6306d9492d8419dda28409683836b2ebf5",
-          "wavesBalanceHash"               -> "0bd486480e3b07b95227f0c5e6d132aff5c98491d2f60b97c4cc43a8e7aa375b",
+          "dccBalanceHash"               -> "0bd486480e3b07b95227f0c5e6d132aff5c98491d2f60b97c4cc43a8e7aa375b",
           "assetBalanceHash"               -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"                  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash"              -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",

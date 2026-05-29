@@ -15,6 +15,6 @@ case class Settings(
 
 object Settings {
   def fromConfig(config: Config): Settings = {
-    ConfigSource.fromConfig(config).at("waves.benchmark.state").loadOrThrow[Settings]
+    ConfigSource.fromConfig(config).at("dcc.benchmark.state").loadOrThrow[Settings]
   }
 }

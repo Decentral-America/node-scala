@@ -64,7 +64,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
       d.blockchain.committedGenerators(d.blockchain.currentGenerationPeriod.value).map(_._1) should contain theSameElementsInOrderAs generatorAddrs
     }
 
-    d.blockchain.wavesPortfolio(conflictGeneratorAddr) shouldBe Portfolio(balance = balanceAfter4, generationDeposit = DepositInWavelets)
+    d.blockchain.dccPortfolio(conflictGeneratorAddr) shouldBe Portfolio(balance = balanceAfter4, generationDeposit = DepositInWavelets)
     d.blockchain.balanceAtHeight(conflictGeneratorAddr, d.blockchain.height).value shouldBe (4, balanceAfter4)
 
     withClue(s"checkGeneratingBalance: ") {

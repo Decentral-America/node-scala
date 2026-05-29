@@ -56,7 +56,7 @@ object Evaluation {
       override def payments: Seq[Payment]            = Seq.empty
       override def root: InvokeScriptTransactionLike = this
       override val sender: PublicKey                 = PublicKey(ByteStr(new Array[Byte](32)))
-      override def assetFee: (Asset, Long)           = Asset.Waves -> FeeConstants(InvokeScript) * ScriptExtraFee
+      override def assetFee: (Asset, Long)           = Asset.Dcc -> FeeConstants(InvokeScript) * ScriptExtraFee
       override def timestamp: Long                   = System.currentTimeMillis()
       override def chainId: Byte                     = AddressScheme.current.chainId
       override def id: Coeval[ByteStr]               = Coeval.evalOnce(ByteStr.empty)

@@ -1,15 +1,15 @@
 package com.decentralchain.transaction
 
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 
 sealed trait TxWithFee {
   def fee: TxPositiveAmount
-  def assetFee: (Asset, Long) // TODO: Delete or rework
+  def assetFee: (Asset, Long)
 }
 
 object TxWithFee {
-  trait InWaves extends TxWithFee {
-    override def assetFee: (Asset, Long) = (Waves, fee.value)
+  trait InDcc extends TxWithFee {
+    override def assetFee: (Asset, Long) = (Dcc, fee.value)
   }
 
   trait InCustomAsset extends TxWithFee {

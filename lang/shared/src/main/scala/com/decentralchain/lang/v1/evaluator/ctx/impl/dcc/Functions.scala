@@ -1,4 +1,4 @@
-package com.decentralchain.lang.v1.evaluator.ctx.impl.waves
+package com.decentralchain.lang.v1.evaluator.ctx.impl.dcc
 
 import cats.data.EitherT
 import cats.implicits.toTraverseOps
@@ -16,8 +16,8 @@ import com.decentralchain.lang.v1.evaluator.FunctionIds.*
 import com.decentralchain.lang.v1.evaluator.ctx.impl.*
 import com.decentralchain.lang.v1.evaluator.ctx.impl.EnvironmentFunctions.AddressLength
 import com.decentralchain.lang.v1.evaluator.ctx.impl.converters.*
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Bindings.{buildAssetInfo, transactionObject}
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Types.*
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Bindings.{buildAssetInfo, transactionObject}
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Types.*
 import com.decentralchain.lang.v1.evaluator.ctx.{BaseFunction, NativeFunction, UserFunction}
 import com.decentralchain.lang.v1.evaluator.{ContextfulNativeFunction, ContextfulUserFunction, FunctionIds, Log}
 import com.decentralchain.lang.v1.traits.domain.{Issue, Lease, Recipient}
@@ -477,15 +477,15 @@ object Functions {
       }
     }
 
-  val wavesBalanceV4F: BaseFunction[Environment] =
+  val dccBalanceV4F: BaseFunction[Environment] =
     NativeFunction.withEnvironment[Environment](
-      "wavesBalance",
+      "dccBalance",
       10,
-      ACCOUNTWAVESBALANCE,
+      ACCOUNTDCCBALANCE,
       balanceDetailsType,
       ("addressOrAlias", addressOrAliasType)
     ) {
-      new ContextfulNativeFunction.Simple[Environment]("wavesBalance", LONG, Seq(("addressOrAlias", addressOrAliasType))) {
+      new ContextfulNativeFunction.Simple[Environment]("dccBalance", LONG, Seq(("addressOrAlias", addressOrAliasType))) {
         override def evaluate[F[_]: Monad](env: Environment[F], args: List[EVALUATED]): F[Either[ExecutionError, EVALUATED]] =
           args match {
             case (c: CaseObj) :: Nil =>
@@ -494,7 +494,7 @@ object Functions {
                   _.asLeft[EVALUATED].pure[F],
                   r =>
                     env
-                      .accountWavesBalanceOf(r)
+                      .accountDccBalanceOf(r)
                       .map(
                         _.map(b =>
                           CaseObj(
@@ -510,7 +510,7 @@ object Functions {
                       )
                 )
 
-            case xs => notImplemented[F, EVALUATED](s"wavesBalance(a: Address|Alias)", xs)
+            case xs => notImplemented[F, EVALUATED](s"dccBalance(a: Address|Alias)", xs)
           }
       }
     }
@@ -541,8 +541,8 @@ object Functions {
     }
   }
 
-  val wavesBalanceF: BaseFunction[Environment] =
-    UserFunction("wavesBalance", 109, LONG, ("@addressOrAlias", addressOrAliasType)) {
+  val dccBalanceF: BaseFunction[Environment] =
+    UserFunction("dccBalance", 109, LONG, ("@addressOrAlias", addressOrAliasType)) {
       FUNCTION_CALL(assetBalanceF.header, List(REF("@addressOrAlias"), REF(GlobalValNames.Unit)))
     }
 

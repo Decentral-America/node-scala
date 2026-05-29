@@ -16,7 +16,7 @@ import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.utils.Signed
@@ -34,8 +34,8 @@ class DAppListArgTypesTest extends PropSpec with WithDomain with Inside {
     val fee     = ciFee().sample.get
     val call    = Some(FUNCTION_CALL(User("f"), args))
     val genesis = Seq(invoker, dApp).map(acc => TxHelpers.genesis(acc.toAddress, ENOUGH_AMT))
-    val setDApp = SetScriptTransaction.selfSigned(1.toByte, dApp, Some(dAppScript), 0.01.waves, ts).explicitGet()
-    val ci      = () => Signed.invokeScript(1.toByte, invoker, dApp.toAddress, call, Nil, fee, Waves, ts)
+    val setDApp = SetScriptTransaction.selfSigned(1.toByte, dApp, Some(dAppScript), 0.01.dcc, ts).explicitGet()
+    val ci      = () => Signed.invokeScript(1.toByte, invoker, dApp.toAddress, call, Nil, fee, Dcc, ts)
     (genesis :+ setDApp, ci, dApp.toAddress)
   }
 

@@ -11,7 +11,7 @@ import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.test.{FlatSpec, produce}
 import com.decentralchain.test.NumericExt
 import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, TxHelpers}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.EthTxGenerator.Arg
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.utils.EthConverters.*
@@ -27,9 +27,9 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
 
   "Ethereum transfer" should "recover correct key" in {
     val senderAccount = TxHelpers.defaultSigner.toEthKeyPair
-    val senderAddress = TxHelpers.defaultSigner.toEthWavesAddress
-    val transaction   = EthTxGenerator.generateEthTransfer(senderAccount, senderAddress, 1, Waves)
-    transaction.senderAddress() shouldBe senderAccount.toWavesAddress
+    val senderAddress = TxHelpers.defaultSigner.toEthDccAddress
+    val transaction   = EthTxGenerator.generateEthTransfer(senderAccount, senderAddress, 1, Dcc)
+    transaction.senderAddress() shouldBe senderAccount.toDccAddress
   }
 
   it should "recover correct key with leading zeros" in {
@@ -37,14 +37,14 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       EthEncoding.toBytes("0x00db4a036ea48572bf27630c72a1513f48f0b4a6316606fd01c23318befdf984"),
       Array.emptyByteArray
     )
-    val tx = EthTxGenerator.generateEthTransfer(senderAcc, senderAcc.toWavesAddress, 1, Waves)
+    val tx = EthTxGenerator.generateEthTransfer(senderAcc, senderAcc.toDccAddress, 1, Dcc)
     EthEncoding.toHexString(
       tx.signerPublicKey().arr
     ) shouldBe "0x00d7cf9ff594b07273228e7dd591707d38a1dba0a39492fd64445ba9cbb3bf66c862b9752f02bf8d1a0f00ccb11ae550a7616bd965c10f0101202d75580786ee"
   }
 
   it should "recover correct address chainId" in {
-    val transfer      = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 1, Waves)
+    val transfer      = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 1, Dcc)
     val assetTransfer = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 1, TestValues.asset)
     val invoke        = EthTxGenerator.generateEthInvoke(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, "test", Nil, Nil)
 
@@ -64,14 +64,14 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
   it should "change id if signature is changed" in {
     val senderAccount = TxHelpers.defaultSigner.toEthKeyPair
     val secondAccount = TxHelpers.secondSigner.toEthKeyPair
-    val transaction1  = EthTxGenerator.generateEthTransfer(senderAccount, TxHelpers.defaultAddress, 1, Waves)
+    val transaction1  = EthTxGenerator.generateEthTransfer(senderAccount, TxHelpers.defaultAddress, 1, Dcc)
     val transaction2  = EthTxGenerator.signRawTransaction(secondAccount, AddressScheme.current.chainId)(transaction1.underlying)
     transaction1.id() shouldNot be(transaction2.id())
   }
 
   it should "reject legacy transactions" in {
     val senderAccount     = TxHelpers.defaultEthSigner
-    val eip155Transaction = EthTxGenerator.generateEthTransfer(senderAccount, TxHelpers.defaultAddress, 1, Waves)
+    val eip155Transaction = EthTxGenerator.generateEthTransfer(senderAccount, TxHelpers.defaultAddress, 1, Dcc)
 
     val legacyTransaction =
       new SignedRawTransaction(
@@ -81,24 +81,24 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     EthereumTransaction(legacyTransaction) should produce("Legacy transactions are not supported")
   }
 
-  it should "work with Long.MaxValue when transferring waves" in {
+  it should "work with Long.MaxValue when transferring dcc" in {
     val sender    = TxHelpers.signer(1).toEthKeyPair
     val recipient = TxHelpers.signer(2)
-    val balances  = Seq(AddrWithBalance(sender.toWavesAddress, Long.MaxValue))
+    val balances  = Seq(AddrWithBalance(sender.toDccAddress, Long.MaxValue))
 
     withDomain(DomainPresets.RideV6, balances) { d =>
       // Assert before transfer
-      d.blockchain.balance(sender.toWavesAddress) shouldEqual Long.MaxValue
+      d.blockchain.balance(sender.toDccAddress) shouldEqual Long.MaxValue
       d.blockchain.balance(recipient.toAddress) shouldEqual 0L
 
       // Transfer
-      val ethTxFee        = 0.001.waves
+      val ethTxFee        = 0.001.dcc
       val longMaxMinusFee = Long.MaxValue - ethTxFee
-      val transfer        = EthTxGenerator.generateEthTransfer(sender, recipient.toAddress, longMaxMinusFee, Waves)
+      val transfer        = EthTxGenerator.generateEthTransfer(sender, recipient.toAddress, longMaxMinusFee, Dcc)
       d.appendBlock(transfer)
 
       // Assert after transfer
-      d.blockchain.balance(sender.toWavesAddress) shouldEqual 0L
+      d.blockchain.balance(sender.toDccAddress) shouldEqual 0L
       d.blockchain.balance(recipient.toAddress) shouldEqual longMaxMinusFee
     }
   }
@@ -107,7 +107,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer = TxHelpers.defaultSigner
     val sender      = TxHelpers.signer(1).toEthKeyPair
     val recipient   = TxHelpers.signer(2)
-    val balances    = Seq(AddrWithBalance(sender.toWavesAddress, 1.waves))
+    val balances    = Seq(AddrWithBalance(sender.toDccAddress, 1.dcc))
 
     withDomain(DomainPresets.RideV6, balances) { d =>
       // Issue an asset
@@ -116,13 +116,13 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       d.appendBlock(issueTx)
 
       // Transfer asset to sender
-      // Note: In order to check eth transfer, we must perform waves transfer first.
+      // Note: In order to check eth transfer, we must perform dcc transfer first.
       // The reason is that ethereum-compatible account
-      // can not do waves transactions (including issue transaction) and vice versa.
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sender.toWavesAddress, Long.MaxValue, testAsset))
+      // can not do dcc transactions (including issue transaction) and vice versa.
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sender.toDccAddress, Long.MaxValue, testAsset))
 
       // Assert before transfer
-      d.portfolio(sender.toWavesAddress) shouldEqual Seq((testAsset, Long.MaxValue))
+      d.portfolio(sender.toDccAddress) shouldEqual Seq((testAsset, Long.MaxValue))
       d.portfolio(recipient.toAddress) shouldEqual Seq()
 
       // Transfer
@@ -130,7 +130,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       d.appendBlock(transfer)
 
       // Assert after transfer
-      d.portfolio(sender.toWavesAddress) shouldEqual Seq()
+      d.portfolio(sender.toDccAddress) shouldEqual Seq()
       d.portfolio(recipient.toAddress) shouldEqual Seq((testAsset, Long.MaxValue))
     }
   }
@@ -166,13 +166,13 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
   it should "not accept zero transfers" in {
     val senderAccount    = TxHelpers.defaultSigner.toEthKeyPair
     val recipientAddress = TxHelpers.secondSigner.toAddress
-    intercept[RuntimeException](EthTxGenerator.generateEthTransfer(senderAccount, recipientAddress, 0, Waves)).toString should include(
+    intercept[RuntimeException](EthTxGenerator.generateEthTransfer(senderAccount, recipientAddress, 0, Dcc)).toString should include(
       "Transaction cancellation is not supported"
     )
     intercept[RuntimeException](EthTxGenerator.generateEthTransfer(senderAccount, recipientAddress, 0, TestAsset)).toString should include(
       "NonPositiveAmount"
     )
-    intercept[RuntimeException](EthTxGenerator.generateEthTransfer(senderAccount, recipientAddress, -1, Waves)).toString should include(
+    intercept[RuntimeException](EthTxGenerator.generateEthTransfer(senderAccount, recipientAddress, -1, Dcc)).toString should include(
       "NegativeAmount"
     )
     intercept[UnsupportedOperationException](EthTxGenerator.generateEthTransfer(senderAccount, recipientAddress, -1, TestAsset))
@@ -200,9 +200,9 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
 
   "Ethereum invoke" should "recover correct key" in {
     val senderAccount = TxHelpers.defaultSigner.toEthKeyPair
-    val senderAddress = TxHelpers.defaultSigner.toEthWavesAddress
+    val senderAddress = TxHelpers.defaultSigner.toEthDccAddress
     val transaction   = EthTxGenerator.generateEthInvoke(senderAccount, senderAddress, "test", Nil, Nil)
-    transaction.senderAddress() shouldBe senderAccount.toWavesAddress
+    transaction.senderAddress() shouldBe senderAccount.toDccAddress
   }
 
   it should "recover correct key with leading zeros" in {
@@ -210,7 +210,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       EthEncoding.toBytes("0x00db4a036ea48572bf27630c72a1513f48f0b4a6316606fd01c23318befdf984"),
       Array.emptyByteArray
     )
-    val tx = EthTxGenerator.generateEthInvoke(senderAcc, senderAcc.toWavesAddress, "test", Nil, Nil)
+    val tx = EthTxGenerator.generateEthInvoke(senderAcc, senderAcc.toDccAddress, "test", Nil, Nil)
     EthEncoding.toHexString(
       tx.signerPublicKey().arr
     ) shouldBe "0x00d7cf9ff594b07273228e7dd591707d38a1dba0a39492fd64445ba9cbb3bf66c862b9752f02bf8d1a0f00ccb11ae550a7616bd965c10f0101202d75580786ee"
@@ -221,16 +221,16 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
     val balances = Seq(
-      AddrWithBalance(assetIssuer.toAddress, 1.waves),
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(assetIssuer.toAddress, 1.dcc),
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val issueTx   = TxHelpers.issue(assetIssuer, 1000)
       val testAsset = issueTx.asset
       d.appendBlock(issueTx)
 
-      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toWavesAddress, 1000, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toDccAddress, 1000, testAsset))
 
       val script = TxHelpers.script(
         """{-# STDLIB_VERSION 4 #-}
@@ -290,16 +290,16 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
     val balances = Seq(
-      AddrWithBalance(assetIssuer.toAddress, 1.waves),
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(assetIssuer.toAddress, 1.dcc),
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val issueTx   = TxHelpers.issue(assetIssuer, 1000)
       val testAsset = issueTx.asset
       d.appendBlock(issueTx)
 
-      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toWavesAddress, 1000, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toDccAddress, 1000, testAsset))
 
       val script = TxHelpers.script(
         """{-# STDLIB_VERSION 4 #-}
@@ -330,16 +330,16 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
     val balances = Seq(
-      AddrWithBalance(assetIssuer.toAddress, 1.waves),
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(assetIssuer.toAddress, 1.dcc),
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val issueTx   = TxHelpers.issue(assetIssuer, 1000)
       val testAsset = issueTx.asset
       d.appendBlock(issueTx)
 
-      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toWavesAddress, 1000, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toDccAddress, 1000, testAsset))
 
       val script = TxHelpers.script(
         """{-# STDLIB_VERSION 4 #-}
@@ -392,16 +392,16 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
     val balances = Seq(
-      AddrWithBalance(assetIssuer.toAddress, 1.waves),
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(assetIssuer.toAddress, 1.dcc),
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val issueTx   = TxHelpers.issue(assetIssuer, 1000)
       val testAsset = issueTx.asset
       d.appendBlock(issueTx)
 
-      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toWavesAddress, 1000, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toDccAddress, 1000, testAsset))
 
       val script = TxHelpers.script(
         """{-# STDLIB_VERSION 4 #-}
@@ -453,8 +453,8 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
     val balances = Seq(
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val script = TxHelpers.script(
@@ -477,7 +477,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
         dAppAccount.toAddress,
         "deposit",
         Seq(),
-        (1 to com.decentralchain.lang.v1.ContractLimits.MaxAttachedPaymentAmountV5 + 1).map(InvokeScriptTransaction.Payment(_, Waves))
+        (1 to com.decentralchain.lang.v1.ContractLimits.MaxAttachedPaymentAmountV5 + 1).map(InvokeScriptTransaction.Payment(_, Dcc))
       )
       d.createDiffE(transaction) should produceRejectOrFailedDiff("Script payment amount=11 should not exceed 10")
     }
@@ -488,15 +488,15 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
     val balances = Seq(
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val issueTx   = TxHelpers.issue(assetIssuer, 1000)
       val testAsset = issueTx.asset
       d.appendBlock(issueTx)
 
-      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toWavesAddress, 1000, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, invokerAccount.toDccAddress, 1000, testAsset))
 
       val script = TxHelpers.script(
         """{-# STDLIB_VERSION 4 #-}
@@ -543,13 +543,13 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     }
   }
 
-  it should "return money in transfers asset+waves" in {
+  it should "return money in transfers asset+dcc" in {
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
     val balances = Seq(
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val issueTx   = TxHelpers.issue(assetIssuer, 1000)
@@ -613,8 +613,8 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
     val balances = Seq(
-      AddrWithBalance(invokerAccount.toWavesAddress, 1.waves),
-      AddrWithBalance(dAppAccount.toAddress, 1.waves)
+      AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
+      AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
     withDomain(DomainPresets.RideV6, balances) { d =>
       val script = TxHelpers.script(

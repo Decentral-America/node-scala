@@ -9,7 +9,7 @@ import com.decentralchain.generator.utils.Gen
 import com.decentralchain.generator.utils.Implicits.DoubleExt
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{Proofs, Transaction, TxPositiveAmount}
@@ -27,8 +27,8 @@ class MultisigTransactionGenerator(settings: MultisigTransactionGenerator.Settin
     val bank   = accounts.head
     val owners = Seq(createAccount(), accounts(1), createAccount(), accounts(2), createAccount(), accounts(3), createAccount(), createAccount())
 
-    val enoughFee               = 0.005.waves
-    val totalAmountOnNewAccount = 1.waves
+    val enoughFee               = 0.005.dcc
+    val totalAmountOnNewAccount = 1.dcc
 
     val script: Script = Gen.multiSigScript(owners, 3, estimator)
 
@@ -40,9 +40,9 @@ class MultisigTransactionGenerator(settings: MultisigTransactionGenerator.Settin
         2.toByte,
         bank.publicKey,
         owners(1).toAddress,
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(totalAmountOnNewAccount - 2 * enoughFee - i),
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(enoughFee),
         ByteStr.empty,
         now + i,

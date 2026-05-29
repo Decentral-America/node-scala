@@ -19,8 +19,8 @@ class BlockchainUpdaterGeneratorFeeSameBlockTest extends PropSpec with DomainSce
     fee       <- smallFeeGen
     ts        <- positiveIntGen
     genesis: GenesisTransaction = GenesisTransaction.create(sender.toAddress, ENOUGH_AMT, ts).explicitGet()
-    payment: TransferTransaction <- wavesTransferGeneratorP(ts, sender, recipient.toAddress)
-    generatorPaymentOnFee: TransferTransaction = createWavesTransfer(defaultSigner, recipient.toAddress, payment.fee.value, fee, ts + 1).explicitGet()
+    payment: TransferTransaction <- dccTransferGeneratorP(ts, sender, recipient.toAddress)
+    generatorPaymentOnFee: TransferTransaction = createDccTransfer(defaultSigner, recipient.toAddress, payment.fee.value, fee, ts + 1).explicitGet()
   } yield (genesis, payment, generatorPaymentOnFee)
 
   property("block generator can spend fee after transaction before applyMinerFeeWithTransactionAfter") {

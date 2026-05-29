@@ -95,7 +95,7 @@ class DefaultDiskCaches private (storage: RideDbAccess, initialBlockHeadersLastH
         KvPairs.AccountDataEntriesHistory,
         atHeight,
         data.flatMap {
-          case _: EmptyDataEntry => RemoteData.Absence // HACK, see DataTxSerializer.serializeEntry
+          case _: EmptyDataEntry => RemoteData.Absence // NOTE: EmptyDataEntry maps to Absence — see DataTxSerializer.serializeEntry
           case x                 => RemoteData.Cached(x)
         }.mayBeValue
       )

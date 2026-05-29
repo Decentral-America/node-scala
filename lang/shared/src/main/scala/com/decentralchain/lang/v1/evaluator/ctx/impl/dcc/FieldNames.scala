@@ -1,4 +1,4 @@
-package com.decentralchain.lang.v1.evaluator.ctx.impl.waves
+package com.decentralchain.lang.v1.evaluator.ctx.impl.dcc
 
 object FieldNames {
   val WriteSet          = "WriteSet"

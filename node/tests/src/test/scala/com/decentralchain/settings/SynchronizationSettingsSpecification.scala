@@ -12,7 +12,7 @@ class SynchronizationSettingsSpecification extends FlatSpec {
   "SynchronizationSettings" should "read values" in {
     val config = ConfigFactory
       .parseString("""
-                     |waves {
+                     |dcc {
                      |  synchronization {
                      |    max-rollback = 100
                      |    max-chain-length = 101
@@ -49,7 +49,7 @@ class SynchronizationSettingsSpecification extends FlatSpec {
       """.stripMargin)
       .resolve()
 
-    val settings = ConfigSource.fromConfig(config).at("waves.synchronization").loadOrThrow[SynchronizationSettings]
+    val settings = ConfigSource.fromConfig(config).at("dcc.synchronization").loadOrThrow[SynchronizationSettings]
     settings.maxRollback should be(100)
     settings.synchronizationTimeout should be(30.seconds)
     settings.processedBlocksCacheTimeout should be(3.minutes)

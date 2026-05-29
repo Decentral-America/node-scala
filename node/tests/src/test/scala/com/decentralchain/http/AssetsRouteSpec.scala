@@ -90,7 +90,7 @@ class AssetsRouteSpec
                                                 |  ]
                                                 |}
                                                 |""".stripMargin)),
-        0.01.waves,
+        0.01.dcc,
         ntpTime.getTimestamp()
       )
       .explicitGet()
@@ -106,7 +106,7 @@ class AssetsRouteSpec
         decimals = assetDesc.decimals.toByte,
         reissuable = assetDesc.reissuable,
         script = script,
-        fee = 1.waves,
+        fee = 1.dcc,
         timestamp = TxHelpers.timestamp
       )
       .explicitGet()
@@ -131,7 +131,7 @@ class AssetsRouteSpec
     "multiple ids" in routeTest() { (d, route) =>
       val issuer = testWallet.generateNewAccount().get
 
-      d.appendBlock(TxHelpers.genesis(issuer.toAddress, 100.waves))
+      d.appendBlock(TxHelpers.genesis(issuer.toAddress, 100.dcc))
       val issueTransactions = Seq.tabulate(4) { i =>
         TxHelpers.issue(issuer, 1000 * (i + 1), 2, name = s"ISSUE_$i")
       } :+ TxHelpers.issue(issuer, 1, reissuable = false)
@@ -202,7 +202,7 @@ class AssetsRouteSpec
            |  BinaryEntry("assetId", calculateAssetId(t))
            |]""".stripMargin
       ),
-      fee = 1.01.waves
+      fee = 1.01.dcc
     )
 
     d.appendBlock(TxHelpers.genesis(tx.sender.toAddress))
@@ -231,7 +231,7 @@ class AssetsRouteSpec
         Arg.Bool(assetDesc.reissuable)
       ),
       payments = Seq.empty,
-      fee = 1.01.waves
+      fee = 1.01.dcc
     )
 
     d.appendBlock(TxHelpers.genesis(tx.sender.toAddress), TxHelpers.genesis(defaultSigner.toAddress))
@@ -298,7 +298,7 @@ class AssetsRouteSpec
   routePath("/{assetId}/distribution/{height}/limit/{limit}") in routeTest() { (d, route) =>
     val issuer           = testWallet.generateNewAccount().get
     val issueTransaction = TxHelpers.issue(issuer, 100_0000, 4, "PA_01")
-    d.appendBlock(TxHelpers.genesis(issuer.toAddress, 10.waves))
+    d.appendBlock(TxHelpers.genesis(issuer.toAddress, 10.dcc))
     val recipients = testWallet.generateNewAccounts(5)
     val transfers = recipients.zipWithIndex.map { case (kp, i) =>
       MassTransferTransaction.ParsedTransfer(kp.toAddress, TxNonNegativeAmount.unsafeFrom((i + 1) * 10000))
@@ -311,7 +311,7 @@ class AssetsRouteSpec
           issuer,
           issueTransaction.asset,
           transfers,
-          0.01.waves,
+          0.01.dcc,
           ntpTime.getTimestamp(),
           ByteStr.empty
         )
@@ -356,7 +356,7 @@ class AssetsRouteSpec
   routePath(s"/details/{id}") in routeTest() { (d, route) =>
     val sender = testWallet.generateNewAccount().get
 
-    d.appendBlock(GenesisTransaction.create(sender.toAddress, 100.waves, System.currentTimeMillis()).explicitGet())
+    d.appendBlock(GenesisTransaction.create(sender.toAddress, 100.dcc, System.currentTimeMillis()).explicitGet())
 
     forAll(nonNftTestData) { case (version, reissuable, script) =>
       val name        = s"IA_$version"
@@ -509,9 +509,9 @@ class AssetsRouteSpec
       routeTest() { (d, route) =>
         val issuer = testWallet.generateNewAccount().get
         val nfts = Seq.tabulate(5) { i =>
-          TxHelpers.issue(issuer, 1, name = s"NFT_0$i", reissuable = false, fee = 0.001.waves)
+          TxHelpers.issue(issuer, 1, name = s"NFT_0$i", reissuable = false, fee = 0.001.dcc)
         }
-        d.appendBlock(TxHelpers.genesis(issuer.toAddress, 100.waves))
+        d.appendBlock(TxHelpers.genesis(issuer.toAddress, 100.dcc))
         val nonNFT = TxHelpers.issue(issuer, 100, 2.toByte)
         d.appendBlock((nfts :+ nonNFT)*)
 
@@ -539,7 +539,7 @@ class AssetsRouteSpec
     }
     "NFTs in multiple blocks" in {
       routeTest() { (d, route) =>
-        d.appendBlock(genesis(secondAddress, 100.waves))
+        d.appendBlock(genesis(secondAddress, 100.dcc))
         val indexes =
           (1 to 5).flatMap { block =>
             val txs = (0 to 9).map { count =>

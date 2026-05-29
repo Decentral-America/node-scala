@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.consensus.TransactionsOrdering
 import com.decentralchain.test.PropSpec
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 
 import scala.util.Random
@@ -21,9 +21,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           125L,
           ByteStr.empty,
           1
@@ -34,9 +34,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           124L,
           ByteStr.empty,
           2
@@ -47,9 +47,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           124L,
           ByteStr.empty,
           1
@@ -60,7 +60,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
           Asset.fromCompatId(Some(ByteStr.empty)),
           124L,
@@ -73,7 +73,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
           Asset.fromCompatId(Some(ByteStr.empty)),
           124L,
@@ -95,9 +95,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           124L,
           ByteStr.empty,
           1
@@ -108,9 +108,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           123L,
           ByteStr.empty,
           1
@@ -121,9 +121,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           123L,
           ByteStr.empty,
           2
@@ -134,7 +134,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
           Asset.fromCompatId(Some(ByteStr.empty)),
           124L,
@@ -147,7 +147,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
           Asset.fromCompatId(Some(ByteStr.empty)),
           124L,
@@ -169,9 +169,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           1,
           ByteStr.empty,
           124L
@@ -182,9 +182,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           1,
           ByteStr.empty,
           123L
@@ -203,9 +203,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           whitelisted,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           2,
           ByteStr.empty,
           123L
@@ -216,9 +216,9 @@ class TransactionsOrderingSpecification extends PropSpec {
           1.toByte,
           KeyPair(Array.fill(32)(0: Byte)),
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
-          Waves,
+          Dcc,
           100000,
-          Waves,
+          Dcc,
           2,
           ByteStr.empty,
           124L

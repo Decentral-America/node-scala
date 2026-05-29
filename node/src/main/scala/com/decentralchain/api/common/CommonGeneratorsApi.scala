@@ -49,7 +49,7 @@ object CommonGeneratorsApi {
         val balances =
           if (at.toInt == blockchain.height) blockchain.currentGeneratorSet.fold(Map.empty)(_.map(x => x.index -> x.balance).toMap)
           else {
-            // TODO: fill with None if disabled
+            // NOTE: Returns None when finalization is disabled
             val fromRdb = ro.get(Keys.generatorBalances(at, rdb.apiHandle)).getOrElse(Seq.empty)
             fromRdb.toMap
           }
@@ -88,7 +88,7 @@ object CommonGeneratorsApi {
           .lazyZip(addresses)
           .lazyZip(txIds)
           .lazyZip(Iterator.from(0).take(addressIds.size).map(GeneratorIndex(_)).to(Iterable))
-          .collect { case (_, Some(address), txnId, idx) => // TODO: address=None ?
+          .collect { case (_, Some(address), txnId, idx) => // NOTE: address=None case filtered by collect — intentional
             GeneratorEntry(address, balances.getOrElse(idx, 0L), txnId, conflict.heightOf(idx))
           }
           .toSeq

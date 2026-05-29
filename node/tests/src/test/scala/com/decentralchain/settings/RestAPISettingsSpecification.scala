@@ -9,7 +9,7 @@ class RestAPISettingsSpecification extends FlatSpec {
   "RestAPISettings" should "read values" in {
     val config = ConfigFactory.parseString(
       """
-        |waves {
+        |dcc {
         |  rest-api {
         |    enable: yes
         |    bind-address: "127.0.0.1"
@@ -35,7 +35,7 @@ class RestAPISettingsSpecification extends FlatSpec {
         |}
       """.stripMargin
     )
-    val settings = ConfigSource.fromConfig(config).at("waves.rest-api").loadOrThrow[RestAPISettings]
+    val settings = ConfigSource.fromConfig(config).at("dcc.rest-api").loadOrThrow[RestAPISettings]
 
     settings.enable should be(true)
     settings.bindAddress should be("127.0.0.1")

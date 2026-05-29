@@ -5,18 +5,18 @@ import com.decentralchain.events.BlockchainUpdatesTestBase
 import com.decentralchain.events.BlockchainUpdatesTestBase.filterOutMinerBalanceUpdates
 import com.decentralchain.events.StateUpdate.LeaseUpdate.LeaseStatus
 import com.decentralchain.events.fixtures.PrepareInvokeTestData.*
-import com.decentralchain.events.fixtures.WavesTxChecks.*
+import com.decentralchain.events.fixtures.DccTxChecks.*
 import io.decentralchain.events.protobuf.BlockchainUpdated.Append
 import io.decentralchain.events.protobuf.TransactionMetadata.InvokeScriptMetadata
 import io.decentralchain.protobuf.transaction.PBAmounts.toVanillaAssetId
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.secondAddress
 import com.decentralchain.transaction.assets.IssueTransaction
 import org.scalactic.source.Position
 
-object InvokeWavesTxCheckers extends BlockchainUpdatesTestBase {
+object InvokeDccTxCheckers extends BlockchainUpdatesTestBase {
   def checkSimpleInvoke(
       append: Append,
       issue: IssueTransaction,
@@ -57,7 +57,7 @@ object InvokeWavesTxCheckers extends BlockchainUpdatesTestBase {
     checkInvokeScriptResultIssues(result.issues.head, issueData)
     checkInvokeScriptResultTransfers(result.transfers.head, secondTxParticipantAddress, scriptTransferAssetNum, issue.asset)
     checkInvokeScriptResultTransfers(result.transfers.apply(1), secondTxParticipantAddress, scriptTransferIssueAssetNum, invokeIssueAsset)
-    checkInvokeScriptResultTransfers(result.transfers.apply(2), secondTxParticipantAddress, scriptTransferUnitNum, Waves)
+    checkInvokeScriptResultTransfers(result.transfers.apply(2), secondTxParticipantAddress, scriptTransferUnitNum, Dcc)
     checkInvokeScriptResultReissue(result.reissues.head, issue.asset, reissueNum, reissuable = true)
     checkInvokeScriptResultBurn(result.burns.head, issue.asset, burnNum)
     checkInvokeScriptResultSponsorFee(result.sponsorFees.head, issue.asset, sponsorFeeAssetNum)
@@ -87,15 +87,15 @@ object InvokeWavesTxCheckers extends BlockchainUpdatesTestBase {
       nestedTransferAddress: Address,
       doubleNestedTransferAddress: Address
   ): Unit = {
-    val scriptTransferWavesSum               = scriptTransferUnitNum * 2
+    val scriptTransferDccSum               = scriptTransferUnitNum * 2
     val asset                                = issue.asset
-    val actualData                           = Seq(("bar", scriptTransferWavesSum))
+    val actualData                           = Seq(("bar", scriptTransferDccSum))
     val arguments                            = invokeScript.arguments
     val result                               = invokeScript.result.get
     val invokes                              = result.invokes.head
     val invokesStateChangeInvoke             = invokes.stateChanges.get.invokes.head
     val actualDataEntries                    = append.transactionStateUpdates.head.dataEntries
-    val expectDataEntries: Seq[DataEntry[?]] = Seq[DataEntry[?]](IntegerDataEntry(bar, scriptTransferWavesSum))
+    val expectDataEntries: Seq[DataEntry[?]] = Seq[DataEntry[?]](IntegerDataEntry(bar, scriptTransferDccSum))
     val expectedValues: List[Any]            = List(secondAddress.bytes, assetDappAddress.bytes, scriptTransferUnitNum, bar, issue.asset.id.arr)
     val actualArguments: List[Any] = List(
       arguments.head.value.binaryValue.get.toByteArray,
@@ -119,7 +119,7 @@ object InvokeWavesTxCheckers extends BlockchainUpdatesTestBase {
       invokesStateChangeInvoke.stateChanges.get.transfers.head,
       doubleNestedTransferAddress,
       scriptTransferUnitNum,
-      Waves
+      Dcc
     )
     checkDataEntriesStateUpdate(actualDataEntries, expectDataEntries, firstTxParticipantAddress.bytes)
   }

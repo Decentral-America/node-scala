@@ -10,7 +10,7 @@ import com.decentralchain.lang.v1.evaluator.ScriptResultV3
 import com.decentralchain.lang.v1.traits.domain.DataItem.Lng
 import com.decentralchain.lang.v1.traits.domain.{AssetTransfer, Recipient}
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.trace.{InvokeScriptTrace, TracedResult}
 import com.decentralchain.transaction.{Proofs, Transaction, TxValidationError}
@@ -28,9 +28,9 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
         sender = publicKey,
         dappAddress = address,
         fc = Some(FUNCTION_CALL(User("func"), List(CONST_STRING("param").explicitGet(), CONST_LONG(1)))),
-        p = List(InvokeScriptTransaction.Payment(1L, Waves)),
+        p = List(InvokeScriptTransaction.Payment(1L, Dcc)),
         fee = 10000000L,
-        feeAssetId = Waves,
+        feeAssetId = Dcc,
         timestamp = 1111L,
         proofs = Proofs(List(proof)),
         address.chainId

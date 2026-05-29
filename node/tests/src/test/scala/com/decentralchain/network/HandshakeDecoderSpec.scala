@@ -25,7 +25,7 @@ class HandshakeDecoderSpec extends FreeSpec {
     )
 
     val origHandshake = new Handshake(
-      applicationName = "wavesI",
+      applicationName = "dccI",
       applicationVersion = (1, 2, 3),
       nodeName = "test",
       nodeNonce = 4,

@@ -12,7 +12,7 @@ import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.*
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers, TxVersion}
@@ -27,7 +27,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
 
   def total(l: LeaseBalance): Long = l.in - l.out
 
-  property("can lease/cancel lease preserving waves invariant") {
+  property("can lease/cancel lease preserving dcc invariant") {
     val sender    = TxHelpers.signer(1)
     val recipient = TxHelpers.signer(2)
     val miner     = TestBlock.defaultSigner.toAddress
@@ -38,8 +38,8 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
     } {
       assertDiffAndState(Seq(TestBlock.create(Seq(genesis))), TestBlock.create(Seq(lease))) { case (snapshot, _) =>
         snapshot.balances shouldBe VectorMap(
-          (sender.toAddress, Waves) -> (genesis.amount.value - lease.fee.value),
-          (miner, Waves)            -> lease.fee.value
+          (sender.toAddress, Dcc) -> (genesis.amount.value - lease.fee.value),
+          (miner, Dcc)            -> lease.fee.value
         )
         snapshot.leaseBalances shouldBe Map(
           sender.toAddress    -> LeaseBalance(0, lease.amount.value),
@@ -48,8 +48,8 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
       }
       assertDiffAndState(Seq(TestBlock.create(Seq(genesis, lease))), TestBlock.create(Seq(leaseCancel))) { case (snapshot, _) =>
         snapshot.balances shouldBe VectorMap(
-          (miner, Waves)            -> (lease.fee.value + leaseCancel.fee.value),
-          (sender.toAddress, Waves) -> (genesis.amount.value - lease.fee.value - leaseCancel.fee.value)
+          (miner, Dcc)            -> (lease.fee.value + leaseCancel.fee.value),
+          (sender.toAddress, Dcc) -> (genesis.amount.value - lease.fee.value - leaseCancel.fee.value)
         )
         snapshot.leaseBalances shouldBe Map(
           sender.toAddress    -> LeaseBalance.empty,
@@ -83,7 +83,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
       )
     } yield {
       // ensure recipient has enough effective balance
-      val transfer = TxHelpers.transfer(master, recipient.toAddress, 20.waves, timestamp = ts, version = TxVersion.V1)
+      val transfer = TxHelpers.transfer(master, recipient.toAddress, 20.dcc, timestamp = ts, version = TxVersion.V1)
 
       (genesis, transfer, lease, leaseCancel, leaseCancel2)
     }
@@ -186,7 +186,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
         d.appendBlock(genesis*)
         d.appendBlock(lease)
         d.appendBlock(TestBlock.create(blockTime, d.lastBlockId, Seq(unleaseOther)).block)
-        d.liquidSnapshot.balances.get((lease.sender.toAddress, Waves)) shouldBe None
+        d.liquidSnapshot.balances.get((lease.sender.toAddress, Dcc)) shouldBe None
         val recipient = lease.recipient.asInstanceOf[Address]
         val unleaser  = unleaseOther.sender.toAddress
         total(d.liquidSnapshot.leaseBalances(recipient)) shouldBe total(d.rocksDBWriter.leaseBalance(recipient)) - lease.amount.value
@@ -203,7 +203,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
         d.appendBlock(genesis*)
         d.appendBlock(lease)
         d.appendBlock(TestBlock.create(blockTime, d.lastBlockId, Seq(unleaseRecipient)).block)
-        d.liquidSnapshot.balances.get((lease.sender.toAddress, Waves)) shouldBe None
+        d.liquidSnapshot.balances.get((lease.sender.toAddress, Dcc)) shouldBe None
         val unleaser = unleaseRecipient.sender.toAddress
         total(d.liquidSnapshot.leaseBalances(unleaser)) shouldBe total(d.rocksDBWriter.leaseBalance(unleaser))
       }
@@ -216,7 +216,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
       val recipient = TxHelpers.signer(2)
 
       val fee    = 400000L
-      val amount = 1000.waves
+      val amount = 1000.dcc
 
       val genesis = TxHelpers.genesis(master.toAddress, fee + amount)
 
@@ -248,7 +248,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
     }
   }
 
-  private val totalBalance = 1000.waves
+  private val totalBalance = 1000.dcc
   private val scenario: (Seq[AddrWithBalance], LeaseTransaction) = {
     val sender    = TxHelpers.signer(1)
     val recipient = TxHelpers.signer(2)

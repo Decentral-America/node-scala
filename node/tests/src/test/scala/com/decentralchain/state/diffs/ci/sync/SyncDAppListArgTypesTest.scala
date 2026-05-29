@@ -13,7 +13,7 @@ import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
 import com.decentralchain.transaction.utils.Signed
 import com.decentralchain.transaction.{GenesisTransaction, Transaction, TxVersion}
@@ -49,7 +49,7 @@ class SyncDAppListArgTypesTest extends PropSpec with WithDomain with Transaction
     val gTxs     = Seq(invoker, dApp1, dApp2).map(acc => GenesisTransaction.create(acc.toAddress, ENOUGH_AMT, ts).explicitGet())
     val ssTx1    = SetScriptTransaction.selfSigned(1.toByte, dApp1, Some(dApp1Script(dApp2.toAddress, args)), fee, ts).explicitGet()
     val ssTx2    = SetScriptTransaction.selfSigned(1.toByte, dApp2, Some(dApp2Script), fee, ts).explicitGet()
-    val invokeTx = () => Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Waves, ts)
+    val invokeTx = () => Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Dcc, ts)
     (gTxs ++ Seq(ssTx1, ssTx2), invokeTx)
   }
 

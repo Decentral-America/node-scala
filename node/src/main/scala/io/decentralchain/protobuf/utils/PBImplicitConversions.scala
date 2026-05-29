@@ -4,7 +4,7 @@ import com.decentralchain.lang.ValidationError
 import io.decentralchain.protobuf.{Amount, *}
 import io.decentralchain.protobuf.transaction.*
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 
 object PBImplicitConversions {
   import com.google.protobuf.{ByteString as PBByteString}
@@ -30,7 +30,7 @@ object PBImplicitConversions {
         .withAssetId(assetId.toByteString)
         .withAmount(amount)
 
-    case (Waves, amount) =>
+    case (Dcc, amount) =>
       Amount().withAmount(amount)
   }
 

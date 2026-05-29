@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.network.message.{MessageSpec, Message as ScorexMessage}
 import com.decentralchain.test.FreeSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.UpdateAssetInfoTransaction
 import com.decentralchain.{TestValues, crypto}
 import io.netty.buffer.Unpooled.wrappedBuffer
@@ -86,7 +86,7 @@ class LegacyFrameCodecSpec extends FreeSpec {
 
   "should pack update asset info in PB message" in {
     val tx = UpdateAssetInfoTransaction
-      .selfSigned(1, TestValues.keyPair, TestValues.asset.id, "bomz", "", System.currentTimeMillis(), TestValues.fee, Waves)
+      .selfSigned(1, TestValues.keyPair, TestValues.asset.id, "bomz", "", System.currentTimeMillis(), TestValues.fee, Dcc)
       .explicitGet()
     RawBytes.fromTransaction(tx) shouldBe RawBytes(PBTransactionSpec.messageCode, PBTransactionSpec.serializeData(tx))
   }

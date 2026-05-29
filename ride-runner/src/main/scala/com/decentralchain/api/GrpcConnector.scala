@@ -13,7 +13,7 @@ class GrpcConnector(executorThreads: Int) extends AutoCloseable with ScorexLoggi
     60,
     TimeUnit.SECONDS,
     new LinkedBlockingQueue[Runnable],
-    new ThreadFactoryBuilder().setNameFormat("waves-grpc-%d").setDaemon(false).build()
+    new ThreadFactoryBuilder().setNameFormat("dcc-grpc-%d").setDaemon(false).build()
   )
 
   def mkChannel(target: String, grpcClientSettings: GrpcChannelSettings): ManagedChannel = {

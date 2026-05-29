@@ -87,7 +87,7 @@ object Common {
       def hasData(recipient: Recipient): Boolean                                          = false
       def resolveAlias(name: String): Either[String, Recipient.Address]                   = ???
       def accountBalanceOf(a: Recipient, b: Option[Array[Byte]]): Either[String, Long]    = ???
-      def accountWavesBalanceOf(a: Recipient): Either[String, Environment.BalanceDetails] = ???
+      def accountDccBalanceOf(a: Recipient): Either[String, Environment.BalanceDetails] = ???
       def tthis: Environment.Tthis                                                        = Address(ByteStr.empty)
       def multiPaymentAllowed: Boolean                                                    = true
       def txId: ByteStr                                                                   = ???

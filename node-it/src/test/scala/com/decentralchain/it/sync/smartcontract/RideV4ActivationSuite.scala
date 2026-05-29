@@ -13,7 +13,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.{Assertion, CancelAfterFailure}
@@ -142,7 +142,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
 
     assertApiError(sender.reissue(callerAcc, issuedAssetId, someAssetAmount, reissuable = true, fee = reissueReducedFee)) { error =>
       error.id shouldBe StateCheckFailed.Id
-      error.message should include(s"Fee for ReissueTransaction ($reissueReducedFee in WAVES) does not exceed minimal value of $reissueFee WAVES.")
+      error.message should include(s"Fee for ReissueTransaction ($reissueReducedFee in DCC) does not exceed minimal value of $reissueFee DCC.")
     }
   }
 
@@ -197,7 +197,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
       .invokeScript(
         smartAccV3,
         smartAccV4.toAddress.toString,
-        payment = Seq(Payment(1, Waves)),
+        payment = Seq(Payment(1, Dcc)),
         fee = smartMinFee + smartFee,
         waitForTx = true
       )
@@ -213,7 +213,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
         .invokeScript(
           smartAccV3,
           smartAccV4.toAddress.toString,
-          payment = Seq(Payment(1, Waves), Payment(1, Waves)),
+          payment = Seq(Payment(1, Dcc), Payment(1, Dcc)),
           fee = smartMinFee + smartFee,
           waitForTx = true
         )
@@ -230,7 +230,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
     sender.setScript(smartAccV3, Some(dAppV3.compiled), fee = setScriptFee + smartFee, waitForTx = true)
 
     assertApiError(
-      sender.invokeScript(callerAcc, smartAccV3.toAddress.toString, payment = Seq(Payment(1, Waves), Payment(1, Waves)), waitForTx = true)
+      sender.invokeScript(callerAcc, smartAccV3.toAddress.toString, payment = Seq(Payment(1, Dcc), Payment(1, Dcc)), waitForTx = true)
     ) { error =>
       error.statusCode shouldBe 400
       error.message should include("DApp version 3 < 4 doesn't support multiple payment attachment")
@@ -356,9 +356,9 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
     }
 
     assertApiError(
-      sender.invokeScript(callerAcc, smartAccV4.toAddress.toString, Some("payBack"), payment = Seq(Payment(balance + 1, Waves)))
+      sender.invokeScript(callerAcc, smartAccV4.toAddress.toString, Some("payBack"), payment = Seq(Payment(balance + 1, Dcc)))
     ) { error =>
-      error.message should include("Transaction application leads to negative waves balance")
+      error.message should include("Transaction application leads to negative dcc balance")
       error.id shouldBe StateCheckFailed.Id
       error.statusCode shouldBe 400
     }
@@ -371,7 +371,7 @@ class RideV4ActivationSuite extends BaseTransactionSuite with CancelAfterFailure
     )(_.statusCode shouldBe 400)
 
     assertApiError(
-      sender.invokeScript(callerAcc, smartAccV3.toAddress.toString, Some("payBack"), payment = Seq(Payment(balance, Waves)), waitForTx = true)
+      sender.invokeScript(callerAcc, smartAccV3.toAddress.toString, Some("payBack"), payment = Seq(Payment(balance, Dcc)), waitForTx = true)
     )(_.statusCode shouldBe 400)
   }
 

@@ -10,7 +10,7 @@ import com.decentralchain.generator.utils.Gen
 import com.decentralchain.generator.utils.Implicits.DoubleExt
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{DataTransaction, Transaction}
@@ -26,7 +26,7 @@ class OracleTransactionGenerator(settings: Settings, val accounts: Seq[KeyPair],
 
     val script = Gen.oracleScript(oracle, settings.requiredData, estimator)
 
-    val enoughFee = 0.005.waves
+    val enoughFee = 0.005.dcc
 
     val setScript: Transaction =
       SetScriptTransaction
@@ -40,7 +40,7 @@ class OracleTransactionGenerator(settings: Settings, val accounts: Seq[KeyPair],
     val now = System.currentTimeMillis()
     val transactions: List[Transaction] = (1 to settings.transactions).map { i =>
       TransferTransaction
-        .selfSigned(2.toByte, scriptedAccount, oracle.toAddress, Waves, 1.waves, Waves, enoughFee, ByteStr.empty, now + i)
+        .selfSigned(2.toByte, scriptedAccount, oracle.toAddress, Dcc, 1.dcc, Dcc, enoughFee, ByteStr.empty, now + i)
         .explicitGet()
     }.toList
 

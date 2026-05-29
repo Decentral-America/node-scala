@@ -22,8 +22,8 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
     for (v <- issueTxSupportedVersions) {
       val assetName        = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength).mkString
       val assetDescription = "my asset description"
-      val issuerBalance    = sender.wavesBalance(issuerAddress).available
-      val issuerEffBalance = sender.wavesBalance(issuerAddress).effective
+      val issuerBalance    = sender.dccBalance(issuerAddress).available
+      val issuerEffBalance = sender.dccBalance(issuerAddress).effective
 
       val issuedAssetTx = sender.broadcastIssue(
         issuer,
@@ -39,11 +39,11 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
       )
       val issuedAssetId = PBTransactions.vanilla(issuedAssetTx, unsafe = false).explicitGet().id().toString
 
-      sender.wavesBalance(issuerAddress).available shouldBe issuerBalance - issueFee
-      sender.wavesBalance(issuerAddress).effective shouldBe issuerEffBalance - issueFee
+      sender.dccBalance(issuerAddress).available shouldBe issuerBalance - issueFee
+      sender.dccBalance(issuerAddress).effective shouldBe issuerEffBalance - issueFee
       sender.assetsBalance(issuerAddress, Seq(issuedAssetId)).getOrElse(issuedAssetId, 0L) shouldBe someAssetAmount
 
-      val assetInfo = sender.getTransaction(issuedAssetId).getWavesTransaction.getIssue
+      val assetInfo = sender.getTransaction(issuedAssetId).getDccTransaction.getIssue
 
       assetInfo.decimals shouldBe 8
       assetInfo.amount shouldBe someAssetAmount
@@ -57,8 +57,8 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
     for (v <- issueTxSupportedVersions) {
       val assetName                                 = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength + 1).mkString
       val assetDescription                          = "nft asset"
-      val issuerBalance                             = sender.wavesBalance(issuerAddress).available
-      val issuerEffBalance                          = sender.wavesBalance(issuerAddress).effective
+      val issuerBalance                             = sender.dccBalance(issuerAddress).available
+      val issuerEffBalance                          = sender.dccBalance(issuerAddress).effective
       val (nftQuantity, nftDecimals, nftReissuable) = (1, 0, false)
 
       assertGrpcError(
@@ -73,8 +73,8 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
         Code.INVALID_ARGUMENT
       )
 
-      sender.wavesBalance(issuerAddress).available shouldBe issuerBalance
-      sender.wavesBalance(issuerAddress).effective shouldBe issuerEffBalance
+      sender.dccBalance(issuerAddress).available shouldBe issuerBalance
+      sender.dccBalance(issuerAddress).effective shouldBe issuerEffBalance
     }
   }
 
@@ -114,15 +114,15 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
       sender.assetsBalance(issuerAddress, Seq(issuedAssetId)).getOrElse(issuedAssetId, 0L) shouldBe someAssetAmount
       sender.assetsBalance(issuerAddress, Seq(issuedAssetId2)).getOrElse(issuedAssetId2, 0L) shouldBe someAssetAmount
 
-      sender.getTransaction(issuedAssetId).getWavesTransaction.getIssue.name shouldBe assetName
-      sender.getTransaction(issuedAssetId2).getWavesTransaction.getIssue.name shouldBe assetName
+      sender.getTransaction(issuedAssetId).getDccTransaction.getIssue.name shouldBe assetName
+      sender.getTransaction(issuedAssetId2).getDccTransaction.getIssue.name shouldBe assetName
     }
   }
 
   test("Not able to create asset when insufficient funds") {
     val assetName        = "myasset"
-    val issuerEffBalance = sender.wavesBalance(issuerAddress).effective
-    val bigAssetFee      = issuerEffBalance + 1.waves
+    val issuerEffBalance = sender.dccBalance(issuerAddress).effective
+    val bigAssetFee      = issuerEffBalance + 1.dcc
 
     assertGrpcError(
       sender.broadcastIssue(issuer, assetName, someAssetAmount, 8, reissuable = false, bigAssetFee),

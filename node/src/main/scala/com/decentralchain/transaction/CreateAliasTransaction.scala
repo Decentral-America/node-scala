@@ -25,7 +25,7 @@ final case class CreateAliasTransaction(
 ) extends Transaction(TransactionType.CreateAlias)
     with SigProofsSwitch
     with Versioned.ToV3
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with PBSince.V3 {
 
   lazy val alias: Alias = Alias.createWithChainId(aliasName, chainId, Some(chainId)).explicitGet()

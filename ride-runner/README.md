@@ -71,7 +71,7 @@ services:
 2. The service is looking for a config in `/etc/decentralchain-ride-runner/main.conf`. During image build, a default
    configuration will be copied to this directory.
     * A default configuration is enough for a correct service working on MainNet;
-    * While running container if the value of `WAVES_NETWORK` is not `mainnet`, `testnet` or `stagenet`, default
+    * While running container if the value of `DCC_NETWORK` is not `mainnet`, `testnet` or `stagenet`, default
       configuration won't be enough for correct working. This is a scenario of using `CUSTOM` network - correct
       configuration must be provided when running container.
 3. By default, `/etc/decentralchain-ride-runner/main.conf` config includes `/etc/decentralchain-ride-runner/local.conf`.

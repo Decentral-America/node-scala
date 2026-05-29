@@ -85,7 +85,7 @@ class CommonAccountApiSpec extends FreeSpec with WithDomain with BlocksTransacti
     }
   }
 
-  "Waves distribution" - {
+  "Dcc distribution" - {
     "height is taken into account" in pending
     "balances only present in diff are not ignored" in pending
     "ignores zero balances" in pending

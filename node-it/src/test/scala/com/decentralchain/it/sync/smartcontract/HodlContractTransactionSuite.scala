@@ -9,7 +9,7 @@ import com.decentralchain.lang.v1.compiler.Terms.CONST_LONG
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
@@ -22,26 +22,26 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
   private lazy val contractAddress: String = contract.toAddress.toString
   private lazy val callerAddress: String   = caller.toAddress.toString
 
-  test("setup contract account with waves") {
+  test("setup contract account with dcc") {
     sender
       .transfer(
         sender.keyPair,
         recipient = contractAddress,
         assetId = None,
-        amount = 5.waves,
+        amount = 5.dcc,
         fee = minFee,
         waitForTx = true
       )
       .id
   }
 
-  test("setup caller account with waves") {
+  test("setup caller account with dcc") {
     sender
       .transfer(
         sender.keyPair,
         recipient = callerAddress,
         assetId = None,
-        amount = 10.waves,
+        amount = 10.dcc,
         fee = minFee,
         waitForTx = true
       )
@@ -57,7 +57,7 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
         |	@Callable(i)
         |	func deposit() = {
         |   let pmt = extract(i.payment)
-        |   if (isDefined(pmt.assetId)) then throw("can hodl waves only at the moment")
+        |   if (isDefined(pmt.assetId)) then throw("can hodl dcc only at the moment")
         |   else {
         |	  	let currentKey = toBase58String(i.caller.bytes)
         |	  	let currentAmount = match getInteger(this, currentKey) {
@@ -101,7 +101,7 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
     sender.transactionInfo[TransactionInfo](setScriptId).script.get.startsWith("base64:") shouldBe true
   }
 
-  test("caller deposits waves") {
+  test("caller deposits dcc") {
     val balanceBefore = sender.accountBalances(contractAddress)._1
     val invokeScriptId = sender
       .invokeScript(
@@ -109,8 +109,8 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
         dappAddress = contractAddress,
         func = Some("deposit"),
         args = List.empty,
-        payment = Seq(InvokeScriptTransaction.Payment(1.5.waves, Waves)),
-        fee = 1.waves,
+        payment = Seq(InvokeScriptTransaction.Payment(1.5.dcc, Dcc)),
+        fee = 1.dcc,
         waitForTx = true
       )
       ._1
@@ -118,10 +118,10 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
 
     sender.waitForTransaction(invokeScriptId)
 
-    sender.getDataByKey(contractAddress, callerAddress) shouldBe IntegerDataEntry(callerAddress, 1.5.waves)
+    sender.getDataByKey(contractAddress, callerAddress) shouldBe IntegerDataEntry(callerAddress, 1.5.dcc)
     val balanceAfter = sender.accountBalances(contractAddress)._1
 
-    (balanceAfter - balanceBefore) shouldBe 1.5.waves
+    (balanceAfter - balanceBefore) shouldBe 1.5.dcc
   }
 
   test("caller can't withdraw more than owns") {
@@ -131,9 +131,9 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
           caller,
           contractAddress,
           func = Some("withdraw"),
-          args = List(CONST_LONG(1.51.waves)),
+          args = List(CONST_LONG(1.51.dcc)),
           payment = Seq(),
-          fee = 1.waves
+          fee = 1.dcc
         ),
       "Not enough balance"
     )
@@ -146,9 +146,9 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
         caller,
         dappAddress = contractAddress,
         func = Some("withdraw"),
-        args = List(CONST_LONG(1.49.waves)),
+        args = List(CONST_LONG(1.49.dcc)),
         payment = Seq(),
-        fee = 1.waves,
+        fee = 1.dcc,
         waitForTx = true
       )
       ._1
@@ -156,20 +156,20 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
 
     val balanceAfter = sender.accountBalances(contractAddress)._1
 
-    sender.getDataByKey(contractAddress, callerAddress) shouldBe IntegerDataEntry(callerAddress, 0.01.waves)
-    (balanceAfter - balanceBefore) shouldBe -1.49.waves
+    sender.getDataByKey(contractAddress, callerAddress) shouldBe IntegerDataEntry(callerAddress, 0.01.dcc)
+    (balanceAfter - balanceBefore) shouldBe -1.49.dcc
 
     val stateChangesInfo = sender.stateChanges(invokeScriptId).stateChanges
 
     val stateChangesData = stateChangesInfo.get.data.head.asInstanceOf[PutDataResponse]
     stateChangesInfo.get.data.length shouldBe 1
     stateChangesData.`type` shouldBe "integer"
-    stateChangesData.value.asInstanceOf[Long] shouldBe 0.01.waves
+    stateChangesData.value.asInstanceOf[Long] shouldBe 0.01.dcc
 
     val stateChangesTransfers = stateChangesInfo.get.transfers.head
     stateChangesInfo.get.transfers.length shouldBe 1
     stateChangesTransfers.address shouldBe callerAddress
-    stateChangesTransfers.amount shouldBe 1.49.waves
+    stateChangesTransfers.amount shouldBe 1.49.dcc
     stateChangesTransfers.asset shouldBe None
   }
 

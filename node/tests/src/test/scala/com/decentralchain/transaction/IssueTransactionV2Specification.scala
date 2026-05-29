@@ -10,7 +10,7 @@ import com.decentralchain.lang.directives.DirectiveSet
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.script.ContractScript
 import com.decentralchain.lang.v1.compiler
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.traits.Environment
@@ -139,7 +139,7 @@ class IssueTransactionV2Specification extends PropSpec with WithNewDBForEachTest
           Seq(
             PureContext.build(V3, useNewPowPrecision = true).withEnvironment[Environment],
             CryptoContext.build(Global, V3, fixEcrecover = false).withEnvironment[Environment],
-            WavesContext.build(
+            DccContext.build(
               Global,
               DirectiveSet(V3, Account, Expression).explicitGet(),
               fixBigScriptField = true

@@ -14,7 +14,7 @@ import com.decentralchain.settings.RewardsVotingSettings
 import com.decentralchain.state.diffs.TransactionDiffer.TransactionValidationError
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.EthTxGenerator.Arg
 import com.decentralchain.transaction.EthereumTransaction.Transfer
 import com.decentralchain.transaction.TxValidationError.GenericError
@@ -36,9 +36,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
 
     withDomain(
       DomainPresets.RideV6.setFeaturesHeight(BlockchainFeatures.ConsensusImprovements -> 3),
-      Seq(AddrWithBalance(senderAcc.toWavesAddress))
+      Seq(AddrWithBalance(senderAcc.toDccAddress))
     ) { d =>
-      val transfer = EthTxGenerator.generateEthTransfer(senderAcc, senderAcc.toWavesAddress, 1, Waves)
+      val transfer = EthTxGenerator.generateEthTransfer(senderAcc, senderAcc.toDccAddress, 1, Dcc)
       d.appendAndCatchError(transfer) shouldBe TransactionDiffer.TransactionValidationError(
         GenericError("Invalid public key"),
         transfer
@@ -49,7 +49,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
 
     withDomain(
       DomainPresets.RideV6.setFeaturesHeight(BlockchainFeatures.ConsensusImprovements -> 4),
-      Seq(AddrWithBalance(senderAcc.toWavesAddress), AddrWithBalance(TxHelpers.defaultAddress))
+      Seq(AddrWithBalance(senderAcc.toDccAddress), AddrWithBalance(TxHelpers.defaultAddress))
     ) { d =>
       val invoke = EthTxGenerator.generateEthInvoke(senderAcc, TxHelpers.defaultAddress, "test", Nil, Nil)
 
@@ -74,9 +74,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val recipient = TxHelpers.address(2)
     val issuer    = TxHelpers.signer(3)
 
-    withDomain(DomainPresets.RideV6, Seq(AddrWithBalance(senderKp.toWavesAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(DomainPresets.RideV6, Seq(AddrWithBalance(senderKp.toDccAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, senderKp.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, senderKp.toDccAddress, issue.quantity.value, issue.asset)
       val ethTransfer    = () => EthTxGenerator.generateEthTransfer(senderKp, recipient, 1, issue.asset, 100000)
 
       d.appendBlock(issue, nativeTransfer)
@@ -87,37 +87,37 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     }
   }
 
-  it should "preserve waves and asset invariant" in {
+  it should "preserve dcc and asset invariant" in {
     val senderKp  = TxHelpers.secondSigner.toEthKeyPair
     val recipient = TxHelpers.address(2)
     val issuer    = TxHelpers.signer(3)
 
     val fee = TestValues.fee
 
-    withDomain(RideV6.copy(rewardsSettings = RewardsVotingSettings(None)), Seq(AddrWithBalance(senderKp.toWavesAddress))) { d =>
-      val wavesTransfer   = EthTxGenerator.generateEthTransfer(senderKp, recipient, 1.waves, Waves, fee)
-      val transferPayload = wavesTransfer.payload.asInstanceOf[Transfer]
+    withDomain(RideV6.copy(rewardsSettings = RewardsVotingSettings(None)), Seq(AddrWithBalance(senderKp.toDccAddress))) { d =>
+      val dccTransfer   = EthTxGenerator.generateEthTransfer(senderKp, recipient, 1.dcc, Dcc, fee)
+      val transferPayload = dccTransfer.payload.asInstanceOf[Transfer]
 
-      d.appendAndAssertSucceed(wavesTransfer)
-      val rewardAndFee = 6.waves - wavesTransfer.fee * 3 / 5
+      d.appendAndAssertSucceed(dccTransfer)
+      val rewardAndFee = 6.dcc - dccTransfer.fee * 3 / 5
       assertBalanceInvariant(d.liquidSnapshot, d.rocksDBWriter, rewardAndFee)
       d.blockchain.balance(recipient) shouldBe transferPayload.amount
-      d.blockchain.balance(senderKp.toWavesAddress) shouldBe ENOUGH_AMT - transferPayload.amount - fee
+      d.blockchain.balance(senderKp.toDccAddress) shouldBe ENOUGH_AMT - transferPayload.amount - fee
     }
 
-    withDomain(RideV6, Seq(AddrWithBalance(senderKp.toWavesAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(senderKp.toDccAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, senderKp.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, senderKp.toDccAddress, issue.quantity.value, issue.asset)
       val assetTransfer  = EthTxGenerator.generateEthTransfer(senderKp, recipient, issue.quantity.value, issue.asset, fee)
 
       d.appendBlock(issue, nativeTransfer)
       d.appendAndAssertSucceed(assetTransfer)
-      val rewardAndFee = 6.waves + (issue.fee.value + nativeTransfer.fee.value - assetTransfer.fee) * 3 / 5
+      val rewardAndFee = 6.dcc + (issue.fee.value + nativeTransfer.fee.value - assetTransfer.fee) * 3 / 5
       assertBalanceInvariant(d.liquidSnapshot, d.rocksDBWriter, rewardAndFee)
       d.blockchain.balance(recipient) shouldBe 0L
       d.blockchain.balance(recipient, issue.asset) shouldBe issue.quantity.value
-      d.blockchain.balance(senderKp.toWavesAddress) shouldBe ENOUGH_AMT - assetTransfer.fee
-      d.blockchain.balance(senderKp.toWavesAddress, issue.asset) shouldBe 0L
+      d.blockchain.balance(senderKp.toDccAddress) shouldBe ENOUGH_AMT - assetTransfer.fee
+      d.blockchain.balance(senderKp.toDccAddress, issue.asset) shouldBe 0L
     }
   }
 
@@ -125,9 +125,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val senderKp = TxHelpers.secondSigner.toEthKeyPair
     val issuer   = TxHelpers.signer(3)
 
-    withDomain(DomainPresets.mostRecent, Seq(AddrWithBalance(senderKp.toWavesAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(DomainPresets.mostRecent, Seq(AddrWithBalance(senderKp.toDccAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer, amount = Long.MaxValue)
-      val nativeTransfer = TxHelpers.transfer(issuer, senderKp.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, senderKp.toDccAddress, issue.quantity.value, issue.asset)
       val ethTransfer    = EthTxGenerator.generateEthTransfer(senderKp, TxHelpers.defaultAddress, issue.quantity.value, issue.asset, 100000)
 
       d.appendBlock(issue, nativeTransfer)
@@ -140,42 +140,42 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val issuer           = TxHelpers.signer(2)
     val recipientAddress = TxHelpers.secondSigner.toAddress
 
-    withDomain(RideV6, Seq(AddrWithBalance(sender.toWavesAddress, Long.MaxValue), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(sender.toDccAddress, Long.MaxValue), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer, amount = Long.MaxValue)
-      val nativeTransfer = TxHelpers.transfer(issuer, sender.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, sender.toDccAddress, issue.quantity.value, issue.asset)
 
       d.appendBlock(issue, nativeTransfer)
 
       val LongMaxMinusFee = Long.MaxValue - 200000
-      val transfer        = EthTxGenerator.generateEthTransfer(sender, recipientAddress, LongMaxMinusFee, Waves)
+      val transfer        = EthTxGenerator.generateEthTransfer(sender, recipientAddress, LongMaxMinusFee, Dcc)
       val assetTransfer   = EthTxGenerator.generateEthTransfer(sender, recipientAddress, Long.MaxValue, issue.asset)
 
       d.balance(recipientAddress) shouldBe 0L
       d.balance(recipientAddress, issue.asset) shouldBe 0L
-      d.balance(sender.toWavesAddress) shouldBe Long.MaxValue
-      d.balance(sender.toWavesAddress, issue.asset) shouldBe Long.MaxValue
+      d.balance(sender.toDccAddress) shouldBe Long.MaxValue
+      d.balance(sender.toDccAddress, issue.asset) shouldBe Long.MaxValue
 
       d.appendBlock(transfer, assetTransfer)
 
       d.balance(recipientAddress) shouldBe LongMaxMinusFee
       d.balance(recipientAddress, issue.asset) shouldBe Long.MaxValue
-      d.balance(sender.toWavesAddress) shouldBe 0L
-      d.balance(sender.toWavesAddress, issue.asset) shouldBe 0L
+      d.balance(sender.toDccAddress) shouldBe 0L
+      d.balance(sender.toDccAddress, issue.asset) shouldBe 0L
     }
   }
 
-  it should "prevent waves balance overflow" in {
+  it should "prevent dcc balance overflow" in {
     val sender           = TxHelpers.defaultSigner.toEthKeyPair
     val recipientAddress = TxHelpers.secondSigner.toAddress
 
-    withDomain(RideV6, Seq(AddrWithBalance(sender.toWavesAddress, Long.MaxValue), AddrWithBalance(recipientAddress, 100001))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(sender.toDccAddress, Long.MaxValue), AddrWithBalance(recipientAddress, 100001))) { d =>
       val LongMaxMinusFee = Long.MaxValue - 100000
-      val transfer        = EthTxGenerator.generateEthTransfer(sender, recipientAddress, LongMaxMinusFee, Waves)
+      val transfer        = EthTxGenerator.generateEthTransfer(sender, recipientAddress, LongMaxMinusFee, Dcc)
 
       d.balance(recipientAddress) shouldBe 100001L
-      d.balance(sender.toWavesAddress) shouldBe Long.MaxValue
+      d.balance(sender.toDccAddress) shouldBe Long.MaxValue
 
-      d.transactionDiffer(transfer).resultE should produce(s"$recipientAddress -> Waves balance sum overflow")
+      d.transactionDiffer(transfer).resultE should produce(s"$recipientAddress -> Dcc balance sum overflow")
     }
   }
 
@@ -184,13 +184,13 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val issuer           = TxHelpers.signer(2)
     val recipientAddress = TxHelpers.secondSigner.toAddress('W'.toByte) // Other network
 
-    withDomain(RideV6, Seq(AddrWithBalance(sender.toWavesAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(sender.toDccAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, sender.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, sender.toDccAddress, issue.quantity.value, issue.asset)
 
       d.appendBlock(issue, nativeTransfer)
 
-      val transfer      = EthTxGenerator.generateEthTransfer(sender, recipientAddress, 1, Waves)
+      val transfer      = EthTxGenerator.generateEthTransfer(sender, recipientAddress, 1, Dcc)
       val assetTransfer = EthTxGenerator.generateEthTransfer(sender, recipientAddress, 1, issue.asset)
 
       d.transactionDiffer(transfer).resultE should produce("Address belongs to another network")
@@ -202,7 +202,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val sender           = TxHelpers.defaultSigner.toEthKeyPair
     val recipientAddress = TxHelpers.secondSigner.toAddress
 
-    withDomain(RideV6, Seq(AddrWithBalance(sender.toWavesAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(sender.toDccAddress))) { d =>
       val transaction = EthTxGenerator.signRawTransaction(sender, recipientAddress.chainId)(
         RawTransaction.createTransaction(
           BigInt(System.currentTimeMillis()).bigInteger,
@@ -224,7 +224,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val sender           = TxHelpers.defaultSigner.toEthKeyPair
     val recipientAddress = TxHelpers.secondSigner.toAddress
 
-    withDomain(RideV6, Seq(AddrWithBalance(sender.toWavesAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(sender.toDccAddress))) { d =>
       val transactionFromFuture = EthTxGenerator.signRawTransaction(sender, recipientAddress.chainId)(
         RawTransaction.createTransaction(
           BigInt(System.currentTimeMillis() + 1.6.hours.toMillis).bigInteger,
@@ -255,8 +255,8 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val sender           = TxHelpers.defaultSigner.toEthKeyPair
     val recipientAddress = TxHelpers.address(1)
 
-    withDomain(RideV5, Seq(AddrWithBalance(sender.toWavesAddress))) { d =>
-      val transfer = EthTxGenerator.generateEthTransfer(sender, recipientAddress, 123, Waves)
+    withDomain(RideV5, Seq(AddrWithBalance(sender.toDccAddress))) { d =>
+      val transfer = EthTxGenerator.generateEthTransfer(sender, recipientAddress, 123, Dcc)
 
       d.transactionDiffer(transfer).resultE should produceRejectOrFailedDiff(
         s"${BlockchainFeatures.RideV6.description} feature has not been activated yet"
@@ -283,9 +283,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toDccAddress, issue.quantity.value, issue.asset)
       val setScript      = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(issue, nativeTransfer, setScript)
@@ -339,9 +339,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toDccAddress, issue.quantity.value, issue.asset)
       val setScript      = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(issue, nativeTransfer, setScript)
@@ -379,9 +379,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toDccAddress, issue.quantity.value, issue.asset)
       val setScript      = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(issue, nativeTransfer, setScript)
@@ -431,7 +431,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress))) { d =>
       val setScript = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(setScript)
@@ -478,7 +478,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress))) { d =>
       val setScript = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(setScript)
@@ -488,7 +488,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         dApp.toAddress,
         "deposit",
         Seq(),
-        (1 to com.decentralchain.lang.v1.ContractLimits.MaxAttachedPaymentAmountV5 + 1).map(InvokeScriptTransaction.Payment(_, Waves))
+        (1 to com.decentralchain.lang.v1.ContractLimits.MaxAttachedPaymentAmountV5 + 1).map(InvokeScriptTransaction.Payment(_, Dcc))
       )
       d.transactionDiffer(invoke).resultE should produceRejectOrFailedDiff("Script payment amount=11 should not exceed 10")
     }
@@ -513,9 +513,9 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
-      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toWavesAddress, issue.quantity.value, issue.asset)
+      val nativeTransfer = TxHelpers.transfer(issuer, invoker.toDccAddress, issue.quantity.value, issue.asset)
       val setScript      = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(issue, nativeTransfer, setScript)
@@ -547,12 +547,12 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     }
   }
 
-  it should "return money in transfers asset+waves" in {
+  it should "return money in transfers asset+dcc" in {
     val invoker = TxHelpers.defaultSigner.toEthKeyPair
     val dApp    = TxHelpers.secondSigner
     val issuer  = TxHelpers.signer(2)
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress), AddrWithBalance(issuer.toAddress))) { d =>
       val issue          = TxHelpers.issue(issuer)
       val nativeTransfer = TxHelpers.transfer(issuer, dApp.toAddress, issue.quantity.value, issue.asset)
 
@@ -622,7 +622,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
          |""".stripMargin
     )
 
-    withDomain(RideV6, Seq(AddrWithBalance(invoker.toWavesAddress), AddrWithBalance(dApp.toAddress))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(invoker.toDccAddress), AddrWithBalance(dApp.toAddress))) { d =>
       val setScript = TxHelpers.setScript(dApp, script)
 
       d.appendBlock(setScript)
@@ -660,7 +660,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
 
     withDomain(
       ConsensusImprovements.setFeaturesHeight(BlockchainFeatures.BlockRewardDistribution -> 4),
-      Seq(AddrWithBalance(dApp.toAddress), AddrWithBalance(ethSigner.toWavesAddress), AddrWithBalance(issuer.toAddress))
+      Seq(AddrWithBalance(dApp.toAddress), AddrWithBalance(ethSigner.toDccAddress), AddrWithBalance(issuer.toAddress))
     ) { d =>
       val script = TestCompiler(V6).compileContract(
         """
@@ -669,7 +669,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
           |""".stripMargin
       )
       val issue = TxHelpers.issue(issuer)
-      d.appendBlock(TxHelpers.setScript(dApp, script), issue, TxHelpers.transfer(issuer, ethSigner.toWavesAddress, 10, issue.asset))
+      d.appendBlock(TxHelpers.setScript(dApp, script), issue, TxHelpers.transfer(issuer, ethSigner.toDccAddress, 10, issue.asset))
       d.appendAndAssertSucceed(
         invokeWithSize(MaxInvokeScriptSizeInBytes),
         invokeWithSize(MaxInvokeScriptSizeInBytes + 1),

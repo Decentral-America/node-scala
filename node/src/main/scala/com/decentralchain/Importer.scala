@@ -116,18 +116,18 @@ object Importer extends ScorexLogging {
   private var triggers = Seq.empty[BlockchainUpdateTriggers]
 
   def initExtensions(
-      wavesSettings: DCCSettings,
+      dccSettings: DCCSettings,
       blockchainUpdater: BlockchainUpdaterImpl,
       appenderScheduler: Scheduler,
       extensionTime: Time,
       utxPool: UtxPool,
       rdb: RDB
   ): Seq[Extension] =
-    if (wavesSettings.extensions.isEmpty) Seq.empty
+    if (dccSettings.extensions.isEmpty) Seq.empty
     else {
       val extensionContext: Context = {
         new Context {
-          override def settings: DCCSettings  = wavesSettings
+          override def settings: DCCSettings  = dccSettings
           override def blockchain: Blockchain = blockchainUpdater
           override def rollbackTo(blockId: ByteStr): Task[Either[ValidationError, DiscardedBlocks]] =
             Task(blockchainUpdater.removeAfter(blockId)).executeOn(appenderScheduler)
@@ -164,7 +164,7 @@ object Importer extends ScorexLogging {
         }
       }
 
-      val extensions = wavesSettings.extensions.map { extensionClassName =>
+      val extensions = dccSettings.extensions.map { extensionClassName =>
         val extensionClass = Class.forName(extensionClassName).asInstanceOf[Class[Extension]]
         val ctor           = extensionClass.getConstructor(classOf[Context])
         log.info(s"Enable extension: $extensionClassName")

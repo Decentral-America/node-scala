@@ -197,8 +197,8 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
         TxHelpers.transfer(
           from = committedGenerator1,
           to = notCommittedGeneratorAddr,
-          amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-          fee = 1.waves
+          amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+          fee = 1.dcc
         )
       )
     )

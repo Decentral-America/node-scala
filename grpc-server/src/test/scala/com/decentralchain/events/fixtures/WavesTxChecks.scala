@@ -14,7 +14,7 @@ import io.decentralchain.protobuf.transaction.*
 import io.decentralchain.protobuf.transaction.Transaction.Data
 import io.decentralchain.protobuf.{Amount, transaction}
 import com.decentralchain.state.DataEntry
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.ExchangeTransaction
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
@@ -26,14 +26,14 @@ import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.matchers.{MatchResult, Matcher}
 
-object WavesTxChecks extends Matchers with OptionValues {
+object DccTxChecks extends Matchers with OptionValues {
   import PBAmounts.*
 
   def checkBaseTx(actualId: ByteString, actual: SignedTransaction, expected: TransactionBase)(implicit pos: Position): Unit = {
     ByteStr(actualId.toByteArray) shouldEqual expected.id()
     actual.transaction match {
-      case SignedTransaction.Transaction.WavesTransaction(value) =>
-        val assetId = if (value.getFee.assetId.isEmpty) Waves else value.getFee.assetId
+      case SignedTransaction.Transaction.DccTransaction(value) =>
+        val assetId = if (value.getFee.assetId.isEmpty) Dcc else value.getFee.assetId
         value.timestamp shouldEqual expected.timestamp
         assetId shouldEqual expected.assetFee._1
         value.fee.value.amount shouldEqual expected.assetFee._2
@@ -43,7 +43,7 @@ object WavesTxChecks extends Matchers with OptionValues {
 
   def checkCreateAlias(actualId: ByteString, actual: SignedTransaction, expected: CreateAliasTransaction)(implicit pos: Position): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.CreateAlias(value) =>
         value.alias shouldEqual expected.alias.name
       case _ => fail("not a create alias transaction")
@@ -54,7 +54,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.Transfer(value) =>
         value.amount.get.amount shouldEqual expected.amount.value
         value.recipient.get.recipient.publicKeyHash.get.toByteArray shouldBe publicKeyHash
@@ -66,7 +66,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.Issue(value) =>
         value.amount shouldEqual expected.quantity.value
         value.decimals shouldBe expected.decimals.value
@@ -82,7 +82,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.Reissue(value) =>
         value.assetAmount.get.assetId.toByteArray shouldEqual expected.asset.id.arr
         value.assetAmount.get.amount shouldEqual expected.quantity.value
@@ -95,7 +95,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.Burn(value) =>
         value.assetAmount.get.assetId.toByteArray shouldEqual expected.asset.id.arr
         value.assetAmount.get.amount shouldEqual expected.quantity.value
@@ -105,7 +105,7 @@ object WavesTxChecks extends Matchers with OptionValues {
 
   def checkExchange(actualId: ByteString, actual: SignedTransaction, expected: ExchangeTransaction)(implicit pos: Position): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.Exchange(value) =>
         value.amount shouldEqual expected.amount.value
         value.price shouldEqual expected.price.value
@@ -121,7 +121,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.Lease(value) =>
         value.recipient.get.recipient.publicKeyHash.get.toByteArray shouldBe publicKeyHash
         value.amount shouldBe expected.amount.value
@@ -133,7 +133,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.LeaseCancel(value) =>
         value.leaseId.toByteArray shouldBe expected.leaseId.arr
       case _ => fail("not a LeaseCancel transaction")
@@ -144,7 +144,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.MassTransfer(value) =>
         value.assetId.toByteArray shouldBe expected.assetId.compatId.get.arr
         value.transfers.foreach(actualTransfer =>
@@ -157,7 +157,7 @@ object WavesTxChecks extends Matchers with OptionValues {
 
   def checkDataTransaction(actualId: ByteString, actual: SignedTransaction, expected: DataTransaction)(implicit pos: Position): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.DataTransaction(value) =>
         val actualData   = value.data.map(entry => (entry.key, entry.value.value)).toMap
         val expectedData = expected.data.map(entry => (entry.key, entry.value)).toMap
@@ -179,7 +179,7 @@ object WavesTxChecks extends Matchers with OptionValues {
 
   def checkSetScriptTransaction(actualId: ByteString, actual: SignedTransaction, expected: SetScriptTransaction)(implicit pos: Position): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.SetScript(value) =>
         value.script.toByteArray shouldBe expected.script.get.bytes.value().arr
       case _ => fail("not a SetScript transaction")
@@ -190,7 +190,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.SetAssetScript(value) =>
         value.assetId.toByteArray shouldBe expected.asset.id.arr
         value.script.toByteArray shouldBe expected.script.get.bytes.value().arr
@@ -202,7 +202,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.UpdateAssetInfo(value) =>
         value.assetId.toByteArray shouldBe expected.assetId.id.arr
         value.name shouldBe expected.name
@@ -213,7 +213,7 @@ object WavesTxChecks extends Matchers with OptionValues {
   def checkSponsorFeeTransaction(actualId: ByteString, actual: SignedTransaction, expected: SponsorFeeTransaction)(implicit pos: Position): Unit = {
     checkBaseTx(actualId, actual, expected)
     val expectedAmount = expected.minSponsoredAssetFee.map(_.toString.toLong).getOrElse(0L)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.SponsorFee(value) =>
         value.minFee.value.assetId.toByteArray shouldBe expected.asset.id.arr
         value.minFee.value.amount shouldBe expectedAmount
@@ -225,7 +225,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.InvokeScript(value) =>
         value.dApp.get.getPublicKeyHash.toByteArray shouldBe publicKeyHash
       case _ => fail("not a InvokeScript transaction")
@@ -236,7 +236,7 @@ object WavesTxChecks extends Matchers with OptionValues {
       implicit pos: Position
   ): Unit = {
     checkBaseTx(actualId, actual, expected)
-    actual.transaction.wavesTransaction.value.data match {
+    actual.transaction.dccTransaction.value.data match {
       case Data.InvokeScript(value) =>
         value.dApp.get.getPublicKeyHash.toByteArray shouldBe publicKeyHash
       case _ => fail("not a InvokeScript transaction")

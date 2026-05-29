@@ -59,8 +59,8 @@ object IntegrationTestsPlugin extends AutoPlugin {
                 bootJars = Vector.empty[java.io.File],
                 workingDirectory = Option(baseDirectory.value),
                 runJVMOptions = Vector(
-                  "-Dwaves.it.logging.appender=FILE",
-                  s"-Dwaves.it.logging.dir=${logDirectoryValue / suite.name.replaceAll("""(\w)\w*\.""", "$1.")}" // foo.bar.Baz -> f.b.Baz
+                  "-Ddcc.it.logging.appender=FILE",
+                  s"-Ddcc.it.logging.dir=${logDirectoryValue / suite.name.replaceAll("""(\w)\w*\.""", "$1.")}" // foo.bar.Baz -> f.b.Baz
                 ) ++ javaOptionsValue,
                 connectInput = false,
                 envVars = envVarsValue
@@ -71,7 +71,7 @@ object IntegrationTestsPlugin extends AutoPlugin {
       )
     ) ++ inScope(Global)(
       Seq(
-        maxParallelSuites := Option(Integer.getInteger("waves.it.max-parallel-suites"))
+        maxParallelSuites := Option(Integer.getInteger("dcc.it.max-parallel-suites"))
           .getOrElse[Integer] {
             try {
               val config       = DefaultDockerClientConfig.createDefaultConfigBuilder().build()

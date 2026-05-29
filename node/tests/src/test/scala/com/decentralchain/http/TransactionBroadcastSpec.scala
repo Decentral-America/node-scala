@@ -11,7 +11,7 @@ import com.decentralchain.network.TransactionPublisher
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.test.DomainPresets.TransactionStateSnapshot
 import com.decentralchain.test.{NumericExt, SharedDomain, TestTime}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
@@ -54,9 +54,9 @@ class TransactionBroadcastSpec2
   private val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
   override def genesisBalances: Seq[AddrWithBalance] = Seq(
-    AddrWithBalance(buyerEthAccount.toWavesAddress, 1000.waves),
-    AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-    AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+    AddrWithBalance(buyerEthAccount.toDccAddress, 1000.dcc),
+    AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+    AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
   )
 
   private val transactionsApiRoute = new TransactionsApiRoute(
@@ -82,7 +82,7 @@ class TransactionBroadcastSpec2
       domain.appendBlock(issueTx)
 
       // Transfer asset to seller
-      domain.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      domain.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val timestamp = TxHelpers.timestamp
 
@@ -193,7 +193,7 @@ class TransactionBroadcastSpec2
       val recipient2 = Recipient.Alias("some_alias")
       val leaseId2   = Lease.calculateId(Lease(recipient2, amount2, nonce2), invoke.id())
       domain.appendBlock(
-        TxHelpers.transfer(TxHelpers.defaultSigner, aliasOwner.toAddress, 1.waves),
+        TxHelpers.transfer(TxHelpers.defaultSigner, aliasOwner.toAddress, 1.dcc),
         TxHelpers.createAlias("some_alias", aliasOwner)
       )
 
@@ -627,7 +627,7 @@ class TransactionBroadcastSpec
         None,
         Seq.empty,
         TxPositiveAmount.unsafeFrom(500000L),
-        Asset.Waves,
+        Asset.Dcc,
         testTime.getTimestamp(),
         Proofs.empty,
         AddressScheme.current.chainId
@@ -672,11 +672,11 @@ class TransactionBroadcastSpec
         ) ++
           Seq(TxHelpers.invoke(feeAssetId = asset), TxHelpers.invoke(payments = Seq(Payment(1, asset)))) ++
           Seq(
-            TxHelpers.exchange(TxHelpers.order(OrderType.BUY, asset, Waves), TxHelpers.order(OrderType.SELL, asset, Waves)),
-            TxHelpers.exchange(TxHelpers.order(OrderType.BUY, Waves, asset), TxHelpers.order(OrderType.SELL, Waves, asset)),
+            TxHelpers.exchange(TxHelpers.order(OrderType.BUY, asset, Dcc), TxHelpers.order(OrderType.SELL, asset, Dcc)),
+            TxHelpers.exchange(TxHelpers.order(OrderType.BUY, Dcc, asset), TxHelpers.order(OrderType.SELL, Dcc, asset)),
             TxHelpers.exchange(
-              TxHelpers.order(OrderType.BUY, IssuedAsset(validSizeAssetId), Waves, asset),
-              TxHelpers.order(OrderType.SELL, IssuedAsset(validSizeAssetId), Waves, asset)
+              TxHelpers.order(OrderType.BUY, IssuedAsset(validSizeAssetId), Dcc, asset),
+              TxHelpers.order(OrderType.SELL, IssuedAsset(validSizeAssetId), Dcc, asset)
             )
           )
       }
@@ -699,14 +699,14 @@ object TransactionBroadcastSpec extends EthHelpers {
       Order.V4,
       emptySignature,
       TxHelpers.matcher.publicKey,
-      AssetPair(testAsset, Waves),
+      AssetPair(testAsset, Dcc),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       timestamp,
       timestamp + 10000,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     ethBuyOrderTemplate.copy(
@@ -719,14 +719,14 @@ object TransactionBroadcastSpec extends EthHelpers {
       Order.V4,
       emptySignature,
       TxHelpers.matcher.publicKey,
-      AssetPair(testAsset, Waves),
+      AssetPair(testAsset, Dcc),
       OrderType.SELL,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       timestamp,
       timestamp + 10000,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     ethSellOrderTemplate.copy(

@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.transaction.{CreateAliasTransaction, Transaction}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -63,7 +63,7 @@ class ScriptExecutionErrorSuite extends BaseTransactionSuite with CancelAfterFai
     assertBadRequestAndResponse(
       sender.signedBroadcast(
         TransferTransaction
-          .selfSigned(2.toByte, firstKeyPair, secondKeyPair.toAddress, Waves, 1000, Waves, minFee + smartFee, ByteStr.empty, ts)
+          .selfSigned(2.toByte, firstKeyPair, secondKeyPair.toAddress, Dcc, 1000, Dcc, minFee + smartFee, ByteStr.empty, ts)
           .explicitGet()
           .json()
       ),

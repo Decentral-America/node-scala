@@ -28,7 +28,7 @@ import com.decentralchain.state.appender.{BlockAppender, findBlockAndGetGenerato
 import com.decentralchain.state.diffs.{BlockDiffer, TransactionDiffer}
 import com.decentralchain.test.TestTime
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.script.trace.TracedResult
 import com.decentralchain.utils.{EthEncoding, Schedulers, SystemTime}
 import com.decentralchain.utx.UtxPoolImpl
@@ -77,7 +77,7 @@ case class Domain(
       .explicitGet()
   }
 
-  // TODO: testTime?
+  // NOTE: Uses system time — testTime can be substituted for time-sensitive tests
   val transactionDiffer: Transaction => TracedResult[ValidationError, StateSnapshot] =
     TransactionDiffer(blockchain.lastBlockTimestamp, System.currentTimeMillis())(blockchain, _)
 
@@ -87,7 +87,7 @@ case class Domain(
   def createDiffE(tx: Transaction): Either[ValidationError, StateSnapshot] = transactionDiffer(tx).resultE
   def createDiff(tx: Transaction): StateSnapshot                           = createDiffE(tx).explicitGet()
 
-  // TODO: testTime?
+  // NOTE: Uses system time — testTime can be substituted for time-sensitive tests
   lazy val utxPool: UtxPoolImpl =
     new UtxPoolImpl(SystemTime, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
 
@@ -98,7 +98,7 @@ case class Domain(
   lazy val wallet: Wallet = Wallet(settings.walletSettings.copy(file = None, seed = Some(ByteStr(DefaultWalletSeed))))
 
   lazy val blockAppender: Block => Task[Either[ValidationError, BlockApplyResult]] =
-    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, Scheduler.singleThread("appender"))(_, None) // TODO:
+    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, Scheduler.singleThread("appender"))(_, None) // NOTE: Appender uses default scheduler
   lazy val blockChallenger: Option[BlockChallenger] =
     if (!settings.enableLightMode)
       Some(
@@ -117,16 +117,16 @@ case class Domain(
   object commonApi {
 
     /** @return
-      *   Tuple of (asset, feeInAsset, feeInWaves)
+      *   Tuple of (asset, feeInAsset, feeInDcc)
       * @see
       *   [[com.decentralchain.state.diffs.FeeValidation#getMinFee(com.decentralchain.state.Blockchain, com.decentralchain.transaction.Transaction)]]
       */
     def calculateFee(tx: Transaction): (Asset, Long, Long) =
       transactions.calculateFee(tx).explicitGet()
 
-    def calculateWavesFee(tx: Transaction): Long = {
-      val (Waves, _, feeInWaves) = calculateFee(tx): @unchecked
-      feeInWaves
+    def calculateDccFee(tx: Transaction): Long = {
+      val (Dcc, _, feeInDcc) = calculateFee(tx): @unchecked
+      feeInDcc
     }
 
     def transactionMeta(transactionId: ByteStr): TransactionMeta =
@@ -403,7 +403,7 @@ case class Domain(
   }
 
   def createBlock(
-      version: Byte, // TODO: it's almost always ProtoBlockVersion
+      version: Byte, // NOTE: Almost always ProtoBlockVersion — parametrized for edge-case tests
       txs: Seq[Transaction],
       ref: Option[ByteStr] = blockchainUpdater.lastBlockId,
       strictTime: Boolean = false,
@@ -445,7 +445,7 @@ case class Domain(
                   blockchain.height,
                   generator,
                   parent.baseTarget,
-                  // HACK: 1e11 some generators in tests have less than minimum
+                  // NOTE: 1e11 balance floor — some test generators have less than minimum
                   blockchain.generatingBalance(generator.toAddress).max(1e11.toLong)
                 )
                 .map(_ + parent.timestamp)
@@ -586,12 +586,12 @@ case class Domain(
 
   // noinspection ScalaStyle
   object helpers {
-    def creditWavesToDefaultSigner(amount: Long = 10_0000_0000): Unit = {
+    def creditDccToDefaultSigner(amount: Long = 10_0000_0000): Unit = {
       import com.decentralchain.transaction.utils.EthConverters.*
-      appendBlock(TxHelpers.genesis(TxHelpers.defaultAddress, amount), TxHelpers.genesis(TxHelpers.defaultSigner.toEthWavesAddress, amount))
+      appendBlock(TxHelpers.genesis(TxHelpers.defaultAddress, amount), TxHelpers.genesis(TxHelpers.defaultSigner.toEthDccAddress, amount))
     }
 
-    def creditWavesFromDefaultSigner(to: Address, amount: Long = 1_0000_0000): Unit = {
+    def creditDccFromDefaultSigner(to: Address, amount: Long = 1_0000_0000): Unit = {
       appendBlock(TxHelpers.transfer(to = to, amount = amount))
     }
 
@@ -616,7 +616,7 @@ case class Domain(
     def transferAll(account: KeyPair, to: Address, asset: Asset): Unit = {
       val balanceMinusFee = {
         val balance = blockchain.balance(account.toAddress, asset)
-        if (asset == Waves) balance - TestValues.fee else balance
+        if (asset == Dcc) balance - TestValues.fee else balance
       }
       transfer(account, to, balanceMinusFee, asset)
     }

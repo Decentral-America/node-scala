@@ -11,7 +11,7 @@ class MinerSettingsSpecification extends FlatSpec {
   "MinerSettings" should "read values" in {
     val config = ConfigFactory
       .parseString(s"""
-                      |waves {
+                      |dcc {
                       |  miner {
                       |    enable: yes
                       |    quorum: 1
@@ -27,7 +27,7 @@ class MinerSettingsSpecification extends FlatSpec {
       """.stripMargin)
       .resolve()
 
-    val settings = ConfigSource.fromConfig(config).at("waves.miner").loadOrThrow[MinerSettings]
+    val settings = ConfigSource.fromConfig(config).at("dcc.miner").loadOrThrow[MinerSettings]
 
     settings.enable should be(true)
     settings.quorum should be(1)

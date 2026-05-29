@@ -10,7 +10,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
 import com.decentralchain.transaction.{GenesisTransaction, TxVersion}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.utils.Signed
 
@@ -50,7 +50,7 @@ class SyncDAppMultiVersionTest extends PropSpec with WithDomain {
       gTx3     = GenesisTransaction.create(dApp2.toAddress, ENOUGH_AMT, ts).explicitGet()
       ssTx1    = SetScriptTransaction.selfSigned(1.toByte, dApp1, Some(dApp1Script(version1, dApp2.toAddress)), fee, ts).explicitGet()
       ssTx2    = SetScriptTransaction.selfSigned(1.toByte, dApp2, Some(dApp2Script(version2)), fee, ts).explicitGet()
-      invokeTx = Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Waves, ts)
+      invokeTx = Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Dcc, ts)
     } yield (Seq(gTx1, gTx2, gTx3, ssTx1, ssTx2), invokeTx)
 
   property("sync call can be performed between V5 and V6 dApps") {

@@ -10,10 +10,10 @@ class TxBloomFilterSpec extends PropSpec with SharedDomain {
 
   override def settings: DCCSettings = DomainPresets.TransactionStateSnapshot
 
-  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 10000.waves))
+  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 10000.dcc))
 
   property("Filter rotation works") {
-    val transfer = TxHelpers.transfer(richAccount, TxHelpers.address(1201), 10.waves)
+    val transfer = TxHelpers.transfer(richAccount, TxHelpers.address(1201), 10.dcc)
     1 to 8 foreach { _ => domain.appendBlock() }
     domain.blockchain.height shouldEqual 9
     domain.appendBlock(transfer) // transfer at height 10
@@ -22,7 +22,7 @@ class TxBloomFilterSpec extends PropSpec with SharedDomain {
     domain.appendBlockE(transfer) should produce("AlreadyInTheState")
 
     domain.appendBlock()
-    val tf2 = TxHelpers.transfer(richAccount, TxHelpers.address(1202), 20.waves)
+    val tf2 = TxHelpers.transfer(richAccount, TxHelpers.address(1202), 20.dcc)
     domain.appendBlock(tf2)
     1 to 20 foreach { _ =>
       withClue(s"height = ${domain.blockchain.height}") {

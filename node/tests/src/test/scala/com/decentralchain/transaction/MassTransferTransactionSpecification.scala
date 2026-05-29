@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.{MassTransferTxSerializer, PBTransactionSerializer}
 import com.decentralchain.transaction.transfer.*
@@ -36,7 +36,7 @@ class MassTransferTransactionSpecification extends PropSpec {
   private val massTransfers = for {
     chainId   <- Seq(Byte.MinValue, 0: Byte, AddressScheme.current.chainId, Byte.MaxValue)
     version   <- massTransferTxSupportedVersions
-    asset     <- Seq(Waves, asset)
+    asset     <- Seq(Dcc, asset)
     recipient <- Seq(recipient.toAddress(chainId), Alias(chainId, "0000"))
     fee       <- Seq(1, Long.MaxValue)
     transfers <- Seq(
@@ -221,7 +221,7 @@ class MassTransferTransactionSpecification extends PropSpec {
       .create(
         1.toByte,
         PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-        Waves,
+        Dcc,
         transfers,
         200000,
         1518091313964L,

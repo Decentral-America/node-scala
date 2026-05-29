@@ -28,7 +28,7 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
     .copy(minerSettings = baseSettings.minerSettings.copy(quorum = 0, microBlockInterval = 100.millis))
     .configure(_.copy(generationPeriodLength = 2))
 
-  "Not committed Account 2 produces a valid block when committed Account 1 spends all waves" in withManager { manager =>
+  "Not committed Account 2 produces a valid block when committed Account 1 spends all dcc" in withManager { manager =>
     val minerAcc                  = acc1
     val notCommittedAcc           = acc2
     val otherNodeNotCommittedAcc1 = otherNodeAcc1
@@ -82,13 +82,13 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
         d.lastBlock.header.generator.toAddress shouldBe minerAcc.toAddress
       }
 
-      log.debug("Trigger microblock forging with spending all waves")
+      log.debug("Trigger microblock forging with spending all dcc")
       d.utxPool.putIfNew(
         TxHelpers.transfer(
           minerAcc,
           otherNodeAcc2Addr,
-          amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-          fee = 1.waves,
+          amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+          fee = 1.dcc,
           timestamp = time.getTimestamp()
         )
       )
@@ -168,13 +168,13 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
           d.lastBlock.header.generator.toAddress shouldBe minerAcc.toAddress
         }
 
-        log.debug("Trigger microblock forging with spending all waves")
+        log.debug("Trigger microblock forging with spending all dcc")
         d.utxPool.putIfNew(
           TxHelpers.transfer(
             minerAcc,
             otherNodeAcc2Addr,
-            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-            fee = 1.waves,
+            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            fee = 1.dcc,
             timestamp = time.getTimestamp()
           )
         )
@@ -269,13 +269,13 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
           d.lastBlock.header.generator.toAddress shouldBe minerAcc.toAddress
         }
 
-        log.debug("Trigger microblock forging with spending all waves by minerAcc")
+        log.debug("Trigger microblock forging with spending all dcc by minerAcc")
         d.utxPool.putIfNew(
           TxHelpers.transfer(
             minerAcc,
             otherNodeAcc2Addr,
-            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-            fee = 1.waves,
+            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            fee = 1.dcc,
             timestamp = time.getTimestamp()
           )
         )
@@ -299,8 +299,8 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
           TxHelpers.transfer(
             otherNodeCommittedAcc1,
             otherNodeAcc2Addr,
-            amount = d.blockchain.balance(otherNodeCommittedAcc1.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-            fee = 1.waves,
+            amount = d.blockchain.balance(otherNodeCommittedAcc1.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            fee = 1.dcc,
             timestamp = time.getTimestamp()
           )
         )

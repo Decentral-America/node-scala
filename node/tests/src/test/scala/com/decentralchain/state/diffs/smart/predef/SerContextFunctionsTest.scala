@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.serialization.SerdeV1
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{DataTransaction, Proofs, TxPositiveAmount}
 
@@ -39,9 +39,9 @@ class SerContextFunctionsTest extends PropSpec {
         2.toByte,
         PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
         recipient,
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(100000000),
-        Waves,
+        Dcc,
         TxPositiveAmount.unsafeFrom(100000000),
         ByteStr.decodeBase58("4t2Xazb2SX").get,
         1526641218066L,

@@ -37,7 +37,7 @@ lazy val lang =
           PB.targets += scalapb.gen(flatPackage = true) -> sourceManaged.value,
           PB.protoSources += PB.externalIncludePath.value,
           PB.generate / includeFilter := { (f: File) =>
-            (** / "waves" / "lang" / "*.proto").matches(f.toPath)
+            (** / "dcc" / "lang" / "*.proto").matches(f.toPath)
           },
           PB.deleteTargetDirectory := false
         )
@@ -124,7 +124,7 @@ lazy val repl = crossProject(JSPlatform, JVMPlatform)
         PB.targets += scalapb.gen(flatPackage = true) -> sourceManaged.value,
         PB.protoSources += PB.externalIncludePath.value,
         PB.generate / includeFilter := { (f: File) =>
-          (** / "waves" / "*.proto").matches(f.toPath)
+          (** / "dcc" / "*.proto").matches(f.toPath)
         },
         PB.deleteTargetDirectory := false
       )
@@ -228,7 +228,7 @@ lazy val buildTarballsForDocker = taskKey[Unit]("Package node and grpc-server ta
 buildTarballsForDocker := {
   IO.copyFile(
     (node / Universal / packageZipTarball).value,
-    baseDirectory.value / "docker" / "target" / "waves.tgz"
+    baseDirectory.value / "docker" / "target" / "dcc.tgz"
   )
   IO.copyFile(
     (`grpc-server` / Universal / packageZipTarball).value,

@@ -112,7 +112,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
     log.info(s"Initial base target is ${genesis.initialBaseTarget}")
 
     val blockchainSettings = BlockchainSettings(genSettings.chainId.toChar, genSettings.functionalitySettings, genesis, RewardsSettings.MAINNET)
-    val wavesSettings = {
+    val dccSettings = {
       val settings = DCCSettings.fromRootConfig(loadConfig(options.configFile.map(readConfFile)))
       settings.copy(blockchainSettings = blockchainSettings, minerSettings = settings.minerSettings.copy(quorum = 0))
     }
@@ -120,10 +120,10 @@ object BlockchainGeneratorApp extends ScorexLogging {
     val fakeTime = new FakeTime(genSettings.timestamp.getOrElse(System.currentTimeMillis()))
 
     val blockchain = {
-      val rdb = RDB.open(wavesSettings.dbSettings)
+      val rdb = RDB.open(dccSettings.dbSettings)
       val (blockchainUpdater, rdbWriter) =
-        StorageFactory(wavesSettings, rdb, fakeTime, BlockchainUpdateTriggers.noop)
-      com.decentralchain.checkGenesis(wavesSettings, blockchainUpdater, Miner.StrictDisabledMiner)
+        StorageFactory(dccSettings, rdb, fakeTime, BlockchainUpdateTriggers.noop)
+      com.decentralchain.checkGenesis(dccSettings, blockchainUpdater, Miner.StrictDisabledMiner)
       sys.addShutdownHook(synchronized {
         blockchainUpdater.shutdown()
         rdbWriter.close()
@@ -151,13 +151,13 @@ object BlockchainGeneratorApp extends ScorexLogging {
         map.get(account).toRight(GenericError(s"No key for $account"))
     }
 
-    val utx = new UtxPoolImpl(fakeTime, blockchain, wavesSettings.utxSettings, wavesSettings.maxTxErrorLogSize, wavesSettings.minerSettings.enable)
+    val utx = new UtxPoolImpl(fakeTime, blockchain, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
     val posSelector = PoSSelector(blockchain, None)
     val utxEvents   = ConcurrentSubject.publish[UtxEvent](using scheduler)
     val miner = new MinerImpl(
       new DefaultChannelGroup("", null),
       blockchain,
-      wavesSettings,
+      dccSettings,
       fakeTime,
       utx,
       BlockEndorser.Disabled,

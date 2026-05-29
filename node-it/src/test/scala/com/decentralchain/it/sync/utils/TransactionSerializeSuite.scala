@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.compiler.Terms.TRUE
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
@@ -48,7 +48,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
     OrderType.BUY,
     TxExchangeAmount.unsafeFrom(2),
-    TxOrderPrice.unsafeFrom(60.waves),
+    TxOrderPrice.unsafeFrom(60.dcc),
     tsOrderFrom,
     tsOrderTo,
     TxMatcherFee.unsafeFrom(1)
@@ -61,7 +61,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
     OrderType.BUY,
     TxExchangeAmount.unsafeFrom(2),
-    TxOrderPrice.unsafeFrom(60.waves),
+    TxOrderPrice.unsafeFrom(60.dcc),
     tsOrderFrom,
     tsOrderTo,
     TxMatcherFee.unsafeFrom(1)
@@ -74,7 +74,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     AssetPair.createAssetPair("DCC", "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy").get,
     OrderType.SELL,
     TxExchangeAmount.unsafeFrom(3),
-    TxOrderPrice.unsafeFrom(50.waves),
+    TxOrderPrice.unsafeFrom(50.dcc),
     tsOrderFrom,
     tsOrderTo,
     TxMatcherFee.unsafeFrom(2)
@@ -86,7 +86,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       buyV1,
       sell,
       2,
-      50.waves,
+      50.dcc,
       1,
       1,
       1,
@@ -101,7 +101,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       buyV2,
       sell,
       2,
-      50.waves,
+      50.dcc,
       1,
       1,
       1,
@@ -247,11 +247,11 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     .create(
       1.toByte,
       publicKey,
-      Waves,
+      Dcc,
       MassTransferTransaction
-        .parseTransfersList(List(Transfer(firstKeyPair.toAddress.toString, 1.waves), Transfer(secondKeyPair.toAddress.toString, 2.waves)))
+        .parseTransfersList(List(Transfer(firstKeyPair.toAddress.toString, 1.dcc), Transfer(secondKeyPair.toAddress.toString, 2.dcc)))
         .explicitGet(),
-      2.waves,
+      2.dcc,
       ts,
       ByteStr.decodeBase58("59QuUcqP6p").get,
       Proofs(Seq(ByteStr.decodeBase58("FXMNu3ecy5zBjn9b69VtpuYRwxjCbxdkZ3xZpLzB8ZeFDvcgTkmEDrD29wtGYRPtyLS3LPYrL2d5UM6TpFBMUGQ").get))
@@ -265,7 +265,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get),
       100000000L,
       true,
-      1.waves,
+      1.dcc,
       ts,
       Proofs(ByteStr.decodeBase58("3LnRMrjkk7RoV35PTwcdB4yW2rqUqXaKAh8DnPk5tNWABvhVQ9oqdTk3zM8b9AbGtry7WEcQZtevfK92DCFaa6hA").get)
     )
@@ -278,7 +278,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get),
       100000000L,
       true,
-      1.waves,
+      1.dcc,
       ts,
       Proofs(Seq(ByteStr.decodeBase58("4DFEtUwJ9gjMQMuEXipv2qK7rnhhWEBqzpC3ZQesW1Kh8D822t62e3cRGWNU3N21r7huWnaty95wj2tZxYSvCfro").get))
     )
@@ -290,7 +290,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       publicKey,
       IssuedAsset(ByteStr.decodeBase58("DUyJyszsWcmZG7q2Ctk1hisDeGBPB8dEzyU8Gs5V2j3n").get),
       Some(Script.fromBase64String("base64:AQkAAGcAAAACAHho/EXujJiPAJUhuPXZYac+rt2jYg==").explicitGet()),
-      1.waves,
+      1.dcc,
       ts,
       Proofs(
         Seq(
@@ -322,7 +322,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       publicKey,
       IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get),
       Some(100000),
-      1.waves,
+      1.dcc,
       ts,
       Proofs(Seq(ByteStr.decodeBase58("3QrF81WkwGhbNvKcwpAVyBPL1MLuAG5qmR6fmtK9PTYQoFKGsFg1Rtd2kbMBuX2ZfiFX58nR1XwC19LUXZUmkXE7").get))
     )
@@ -333,9 +333,9 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     1.toByte,
     publicKey,
     recipient,
-    Waves,
+    Dcc,
     TxPositiveAmount.unsafeFrom(1900000),
-    Waves,
+    Dcc,
     TxPositiveAmount.unsafeFrom(minFee),
     ByteStr.empty,
     ts,
@@ -347,9 +347,9 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     2.toByte,
     publicKey,
     recipient,
-    Waves,
+    Dcc,
     TxPositiveAmount.unsafeFrom(100000000),
-    Waves,
+    Dcc,
     TxPositiveAmount.unsafeFrom(minFee),
     ByteStr.empty,
     ts,
@@ -370,7 +370,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
       ),
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58("73pu8pHFNpj9tmWuYjqnZ962tXzJvLGX86dxjZxGYhoK").get))),
       smartMinFee,
-      Waves,
+      Dcc,
       ts,
       Proofs(Seq(ByteStr.decodeBase58("4bfDaqBcnK3hT8ywFEFndxtS1DTSYfncUqd4s5Vyaa66PZHawtC73rDswUur6QZu5RpqM7L9NFgBHT1vhCoox4vi").get)),
       AddressScheme.current.chainId

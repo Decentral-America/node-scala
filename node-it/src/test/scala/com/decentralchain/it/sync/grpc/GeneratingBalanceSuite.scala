@@ -16,15 +16,15 @@ class GeneratingBalanceSuite extends GrpcBaseTransactionSuite {
     val recipient        = KeyPair("recipient".getBytes)
     val recipientAddress = ByteString.copyFrom(recipient.toAddress.bytes)
 
-    val initialBalance = sender.wavesBalance(senderAddress)
+    val initialBalance = sender.dccBalance(senderAddress)
 
     sender.broadcastTransfer(sender.keyPair, Recipient().withPublicKeyHash(recipientAddress), amount, minFee, 2, waitForTx = true)
 
-    val afterTransferBalance = sender.wavesBalance(senderAddress)
+    val afterTransferBalance = sender.dccBalance(senderAddress)
 
     sender.broadcastTransfer(recipient, Recipient().withPublicKeyHash(senderAddress), amount - minFee, minFee, 2, waitForTx = true)
 
-    val finalBalance = sender.wavesBalance(senderAddress)
+    val finalBalance = sender.dccBalance(senderAddress)
 
     assert(initialBalance.generating <= initialBalance.effective, "initial incorrect")
     assert(afterTransferBalance.generating <= afterTransferBalance.effective, "after transfer incorrect")

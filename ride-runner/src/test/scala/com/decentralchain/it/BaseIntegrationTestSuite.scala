@@ -59,8 +59,8 @@ abstract class BaseIntegrationTestSuite extends BaseTestSuite with HasGrpc with 
 
       override def getBalance(address: Address, asset: Asset): Long = Long.MaxValue / 3
 
-      override def getLeaseBalance(address: Address): BalanceResponse.WavesBalances =
-        BalanceResponse.WavesBalances(getBalance(address, Asset.Waves))
+      override def getLeaseBalance(address: Address): BalanceResponse.DccBalances =
+        BalanceResponse.DccBalances(getBalance(address, Asset.Dcc))
     }
 
     val testDb  = use(mkTestDb())

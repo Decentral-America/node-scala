@@ -24,7 +24,7 @@ final case class LeaseCancelTransaction(
 ) extends Transaction(TransactionType.LeaseCancel)
     with SigProofsSwitch
     with Versioned.ToV3
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V3 {
   override val bodyBytes: Coeval[Array[TxVersion]] = Coeval.evalOnce(LeaseCancelTxSerializer.bodyBytes(this))

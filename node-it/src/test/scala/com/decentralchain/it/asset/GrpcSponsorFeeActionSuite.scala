@@ -17,7 +17,7 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.freespec.AnyFreeSpec
 
 class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuiteLike {
-  private val initialWavesBalance = 100.waves
+  private val initialDccBalance = 100.dcc
 
   private val minSponsoredAssetFee          = 100
   private var sponsoredAssetId: String      = ""
@@ -79,7 +79,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
       val (assetId, _) = miner.assetsBalance(globalDAppAddress).filter(_._1.nonEmpty).head
       val assetInfo    = miner.assetInfo(assetId)
       assetInfo.sponsorship shouldBe minSponsoredAssetFee
-      assetInfo.sponsorBalance shouldBe miner.wavesBalance(globalDAppAddress).regular
+      assetInfo.sponsorBalance shouldBe miner.dccBalance(globalDAppAddress).regular
     }
 
     "Use sponsored asset as fee" in {
@@ -89,7 +89,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
       val bob   = miner.generateKeyPair()
 
       val (_, startDAppSponsorAssetBalance) = miner.assetsBalance(globalDAppAddress, Seq(sponsoredAssetId)).head
-      val startDAppBalance                  = miner.wavesBalance(globalDAppAddress).regular
+      val startDAppBalance                  = miner.dccBalance(globalDAppAddress).regular
 
       val assetFee            = 100
       val assetTransferAmount = 1000
@@ -115,12 +115,12 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
       miner.assetsBalance(byteStringAddress(alice), Seq(sponsoredAssetId)).head._2 shouldBe 0
       miner.assetsBalance(byteStringAddress(bob), Seq(sponsoredAssetId)).head._2 shouldBe assetTransferAmount
 
-      val dAppWavesOutgo = smartMinFee + Sponsorship.toWaves(assetFee, minSponsoredAssetFee)
+      val dAppDccOutgo = smartMinFee + Sponsorship.toDcc(assetFee, minSponsoredAssetFee)
 
       miner.waitForHeight(miner.height + 1)
 
       miner.assetsBalance(globalDAppAddress, Seq(sponsoredAssetId)).head._2 shouldBe startDAppSponsorAssetBalance - assetTransferAmount
-      miner.wavesBalance(globalDAppAddress).regular shouldBe startDAppBalance - dAppWavesOutgo
+      miner.dccBalance(globalDAppAddress).regular shouldBe startDAppBalance - dAppDccOutgo
     }
 
     "Cancel sponsorship" in {
@@ -196,7 +196,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
 
       val sponsoredAsset = miner.assetInfo(sponsoredAssetId)
       sponsoredAsset.sponsorship shouldBe minSponsoredAssetFee
-      sponsoredAsset.sponsorBalance shouldBe miner.wavesBalance(dAppAddress).regular
+      sponsoredAsset.sponsorBalance shouldBe miner.dccBalance(dAppAddress).regular
 
       val cancelledAsset = miner.assetInfo(cancelledAssetId)
       cancelledAsset.sponsorship shouldBe 0
@@ -261,7 +261,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
 
       val assetInfo = miner.assetInfo(assetId)
       assetInfo.sponsorship shouldBe lastMinSponsoredAssetFee
-      assetInfo.sponsorBalance shouldBe miner.wavesBalance(dAppAddress).regular
+      assetInfo.sponsorBalance shouldBe miner.dccBalance(dAppAddress).regular
     }
 
     "Sponsor and cancel sponsorship is available for same asset" in {
@@ -321,7 +321,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
   "Restrictions" - {
     "SponsorFee is available for assets issued via transaction" in {
       val dApp = miner.generateKeyPair()
-      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(dApp.toAddress), initialWavesBalance, minFee, waitForTx = true)
+      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(dApp.toAddress), initialDccBalance, minFee, waitForTx = true)
       val assetId = miner.broadcastIssue(dApp, "test", 100, 8, reissuable = true, fee = issueFee, waitForTx = true).id
 
       createDApp(
@@ -350,7 +350,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
 
     "Negative fee is not available" in {
       val dApp = miner.generateKeyPair()
-      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(dApp.toAddress), initialWavesBalance, minFee, waitForTx = true)
+      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(dApp.toAddress), initialDccBalance, minFee, waitForTx = true)
       val assetId = miner.broadcastIssue(dApp, "test", 100, 8, reissuable = true, fee = issueFee, waitForTx = true).id
 
       createDApp(
@@ -381,7 +381,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
 
     "SponsorFee is available only for assets issuing from current address" in {
       val issuer = miner.generateKeyPair()
-      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(issuer.toAddress), initialWavesBalance, minFee, waitForTx = true)
+      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(issuer.toAddress), initialDccBalance, minFee, waitForTx = true)
       val assetId = miner.broadcastIssue(issuer, "test", 100, 8, reissuable = true, fee = issueFee, waitForTx = true).id
 
       val dApp = createDApp(
@@ -411,7 +411,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
 
     "SponsorFee is not available for scripted assets" in {
       val dApp = miner.generateKeyPair()
-      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(dApp.toAddress), initialWavesBalance, minFee, waitForTx = true)
+      miner.broadcastTransfer(sender.keyPair, PBRecipients.create(dApp.toAddress), initialDccBalance, minFee, waitForTx = true)
 
       val script  = ScriptCompiler.compile("true", ScriptEstimatorV2).explicitGet()._1
       val assetId = miner.broadcastIssue(dApp, "test", 100, 8, reissuable = true, script = Right(Some(script)), fee = issueFee, waitForTx = true).id
@@ -454,7 +454,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
     miner.broadcastTransfer(
       sender.keyPair,
       PBRecipients.create(address.toAddress),
-      initialWavesBalance,
+      initialDccBalance,
       fee = minFee,
       waitForTx = true
     )

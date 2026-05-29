@@ -112,7 +112,7 @@ case class SignedInvokeScriptRequest(
         call.map(InvokeScriptRequest.buildFunctionCall).filterNot(_ == InvokeTransaction.DefaultCall),
         payment.getOrElse(Seq()),
         fee,
-        feeAssetId.getOrElse(Asset.Waves),
+        feeAssetId.getOrElse(Asset.Dcc),
         timestamp,
         proofs,
         chainId.getOrElse(_dappAddress.chainId)

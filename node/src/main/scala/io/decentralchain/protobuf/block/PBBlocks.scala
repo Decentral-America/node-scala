@@ -88,7 +88,7 @@ object PBBlocks {
     block.update(
       _.header.chainId := 0,
       _.transactions.foreach(_.transaction.modify {
-        case Transaction.WavesTransaction(value) => Transaction.WavesTransaction(value.update(_.chainId := 0))
+        case Transaction.DccTransaction(value) => Transaction.DccTransaction(value.update(_.chainId := 0))
         case other                               => other
       })
     )
@@ -99,7 +99,7 @@ object PBBlocks {
     block.update(
       _.header.chainId := chainId,
       _.transactions.foreach(_.transaction.modify {
-        case Transaction.WavesTransaction(value) => Transaction.WavesTransaction(value.update(_.chainId := chainId))
+        case Transaction.DccTransaction(value) => Transaction.DccTransaction(value.update(_.chainId := chainId))
         case other                               => other
       })
     )

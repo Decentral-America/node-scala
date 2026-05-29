@@ -16,7 +16,7 @@ import com.decentralchain.lang.v1.compiler.Types.TypeExt
 import com.decentralchain.lang.v1.compiler.{Terms, Types}
 import com.decentralchain.lang.{Global, ValidationError}
 import com.decentralchain.state.Blockchain
-import com.decentralchain.transaction.EthABIConverter.WavesByteRepr
+import com.decentralchain.transaction.EthABIConverter.DccByteRepr
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import org.web3j.abi.TypeReference
@@ -57,7 +57,7 @@ final case class EthABIConverter(script: Script) {
                         InvokeScriptTransaction.Payment(
                           amount,
                           assetId match {
-                            case WavesByteRepr => Asset.Waves
+                            case DccByteRepr => Asset.Dcc
                             case assetId       => Asset.IssuedAsset(assetId)
                           }
                         )
@@ -148,7 +148,7 @@ final case class EthABIConverter(script: Script) {
 }
 
 object EthABIConverter {
-  val WavesByteRepr: ByteStr      = ByteStr(new Array[Byte](32))
+  val DccByteRepr: ByteStr      = ByteStr(new Array[Byte](32))
   val PaymentListType: Types.LIST = Types.LIST(Types.TUPLE(List(Types.BYTESTR, Types.LONG)))
   val PaymentArgSignature: String = "(bytes32,int64)[]"
   val PaymentArgJson: JsObject = Json.obj(

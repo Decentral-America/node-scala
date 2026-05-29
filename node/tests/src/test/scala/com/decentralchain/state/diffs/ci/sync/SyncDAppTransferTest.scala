@@ -21,7 +21,7 @@ import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.state.diffs.{ENOUGH_AMT, produceRejectOrFailedDiff}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.{Asset, TxHelpers}
 import org.scalatest.Inside
 
@@ -77,7 +77,7 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
       val dApp1   = TxHelpers.signer(1)
       val dApp2   = TxHelpers.signer(2)
 
-      val balances = AddrWithBalance.enoughBalances(invoker, dApp1) :+ AddrWithBalance(dApp2.toAddress, 0.01.waves)
+      val balances = AddrWithBalance.enoughBalances(invoker, dApp1) :+ AddrWithBalance(dApp2.toAddress, 0.01.dcc)
 
       val setScript1 = TxHelpers.setScript(dApp1, invokerWithTransferDAppScript(dApp2.toAddress, 100, bigComplexityDApp1))
       val setScript2 = TxHelpers.setScript(dApp2, simpleTransferDAppScript(amount = 100, bigComplexity = bigComplexityDApp2))
@@ -94,12 +94,12 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
       ) { d =>
         d.appendBlock(preparingTxs*)
 
-        d.appendAndCatchError(invoke).toString should include("Negative waves balance")
+        d.appendAndCatchError(invoke).toString should include("Negative dcc balance")
 
         d.appendBlock()
 
         if (!bigComplexityDApp1 && !bigComplexityDApp2) {
-          d.appendAndCatchError(invoke).toString should include("negative waves balance")
+          d.appendAndCatchError(invoke).toString should include("negative dcc balance")
         } else {
           d.appendAndAssertFailed(invoke)
         }
@@ -113,7 +113,7 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
     val senderDApp  = TxHelpers.signer(3)
     val recipient   = TxHelpers.signer(4)
 
-    val transferAmount = 10.waves
+    val transferAmount = 10.dcc
 
     val genesis          = Seq(invoker, invokerDApp, senderDApp).map(acc => TxHelpers.genesis(acc.toAddress))
     val setInvokerScript = TxHelpers.setScript(invokerDApp, invokerDAppScript(senderDApp.toAddress))
@@ -131,8 +131,8 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
           call2.stateChanges.invokes shouldBe empty
         }
       }
-      blockDiff.balances((recipient.toAddress, Waves)) shouldBe transferAmount
-      blockDiff.balances((senderDApp.toAddress, Waves)) shouldBe ENOUGH_AMT - setSenderScript.fee.value - transferAmount
+      blockDiff.balances((recipient.toAddress, Dcc)) shouldBe transferAmount
+      blockDiff.balances((senderDApp.toAddress, Dcc)) shouldBe ENOUGH_AMT - setSenderScript.fee.value - transferAmount
       blockDiff.transactions.get(invoke.id()) shouldBe defined
     }
   }
@@ -143,7 +143,7 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
     val senderDApp  = TxHelpers.signer(3)
     val recipient   = TxHelpers.signer(4)
 
-    val transferAmount = 10.waves
+    val transferAmount = 10.dcc
 
     val genesis          = Seq(invoker, invokerDApp, senderDApp).map(acc => TxHelpers.genesis(acc.toAddress))
     val setInvokerScript = TxHelpers.setScript(invokerDApp, invokerDAppScript(senderDApp.toAddress))
@@ -161,8 +161,8 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
           call2.stateChanges.invokes shouldBe empty
         }
       }
-      blockDiff.balances((recipient.toAddress, Waves)) shouldBe transferAmount
-      blockDiff.balances((senderDApp.toAddress, Waves)) shouldBe ENOUGH_AMT - setSenderScript.fee.value - transferAmount
+      blockDiff.balances((recipient.toAddress, Dcc)) shouldBe transferAmount
+      blockDiff.balances((senderDApp.toAddress, Dcc)) shouldBe ENOUGH_AMT - setSenderScript.fee.value - transferAmount
       blockDiff.transactions.get(invoke.id()) shouldBe defined
     }
   }
@@ -189,7 +189,7 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
     val senderDApp  = TxHelpers.signer(3)
     val recipient   = TxHelpers.signer(4)
 
-    val transferAmount = 10.waves
+    val transferAmount = 10.dcc
 
     val setInvokerScript = TxHelpers.setScript(invokerDApp, invokerDAppScript(senderDApp.toAddress, paymentAmount = Some(transferAmount)))
     val setSenderScript  = TxHelpers.setScript(senderDApp, simpleTransferDAppScript(amount = transferAmount, recipient = Some(recipient.toAddress)))
@@ -210,8 +210,8 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
           call2.stateChanges.invokes shouldBe empty
         }
       }
-      blockDiff.balances((recipient.toAddress, Waves)) shouldBe transferAmount
-      blockDiff.balances((invokerDApp.toAddress, Waves)) shouldBe ENOUGH_AMT - setSenderScript.fee.value - transferAmount
+      blockDiff.balances((recipient.toAddress, Dcc)) shouldBe transferAmount
+      blockDiff.balances((invokerDApp.toAddress, Dcc)) shouldBe ENOUGH_AMT - setSenderScript.fee.value - transferAmount
       blockDiff.transactions.get(invoke.id()) shouldBe defined
     }
   }
@@ -269,8 +269,8 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
     )
 
   private def simpleTransferDAppScript(
-      amount: Long = 1.waves,
-      asset: Asset = Waves,
+      amount: Long = 1.dcc,
+      asset: Asset = Dcc,
       recipient: Option[Address] = None,
       bigComplexity: Boolean = false
   ): Script =

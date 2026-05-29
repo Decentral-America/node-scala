@@ -28,7 +28,7 @@ trait IntegrationSuiteWithThreeAddresses extends BaseSuite with ScalaFutures wit
   abstract protected override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val defaultBalance: Long = 100.waves
+    val defaultBalance: Long = 100.dcc
 
     def makeTransfers(accounts: Seq[KeyPair]): Seq[String] = accounts.map { acc =>
       sender.transfer(sender.keyPair, acc.toAddress.toString, defaultBalance, sender.fee(TransferTransaction.typeId)).id
@@ -53,7 +53,7 @@ trait IntegrationSuiteWithThreeAddresses extends BaseSuite with ScalaFutures wit
       ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
     }
     val setScriptTransaction = SetScriptTransaction
-      .selfSigned(1.toByte, acc, script, 0.014.waves, System.currentTimeMillis())
+      .selfSigned(1.toByte, acc, script, 0.014.dcc, System.currentTimeMillis())
       .explicitGet()
     sender
       .signedBroadcast(setScriptTransaction.json(), waitForTx = true)

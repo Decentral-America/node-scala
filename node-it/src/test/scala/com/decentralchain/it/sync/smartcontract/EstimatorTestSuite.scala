@@ -23,7 +23,7 @@ class EstimatorTestSuite extends BaseTransactionSuite with CancelAfterFailure {
       .overrideBase(
         _.raw(
           s"""
-             | waves.blockchain.custom.functionality {
+             | dcc.blockchain.custom.functionality {
              |   estimator-pre-check-height =  $featureHeight
              |   estimator-sum-overflow-fix-height = 999999
              |   pre-activated-features = {14 = 0, 15 = 999999}
@@ -136,7 +136,7 @@ class EstimatorTestSuite extends BaseTransactionSuite with CancelAfterFailure {
           sender.keyPair,
           recipient = r.toAddress.toString,
           assetId = None,
-          amount = 5.waves,
+          amount = 5.dcc,
           fee = minFee,
           waitForTx = true
         )
@@ -165,6 +165,6 @@ class EstimatorTestSuite extends BaseTransactionSuite with CancelAfterFailure {
           .get
       )
     )
-    sender.putData(smartAcc, data, 0.3.waves, waitForTx = true)
+    sender.putData(smartAcc, data, 0.3.dcc, waitForTx = true)
   }
 }

@@ -8,7 +8,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
@@ -76,7 +76,7 @@ class MassTransferSmartContractSuite extends BaseTransactionSuite with CancelAft
 
     val unsigned =
       MassTransferTransaction
-        .create(1.toByte, notMiner.publicKey, Waves, transfers, calcMassTransferFee(2) + smartFee, currTime, ByteStr.empty, Proofs.empty)
+        .create(1.toByte, notMiner.publicKey, Dcc, transfers, calcMassTransferFee(2) + smartFee, currTime, ByteStr.empty, Proofs.empty)
         .explicitGet()
 
     val accountSig = crypto.sign(notMiner.keyPair.privateKey, unsigned.bodyBytes())
@@ -91,7 +91,7 @@ class MassTransferSmartContractSuite extends BaseTransactionSuite with CancelAft
 
     val unsignedToGov =
       MassTransferTransaction
-        .create(1.toByte, notMiner.publicKey, Waves, transfersToGov, calcMassTransferFee(2) + smartFee, currTime, ByteStr.empty, Proofs.empty)
+        .create(1.toByte, notMiner.publicKey, Dcc, transfersToGov, calcMassTransferFee(2) + smartFee, currTime, ByteStr.empty, Proofs.empty)
         .explicitGet()
     val accountSigToGovFail = crypto.sign(notMiner.keyPair.privateKey, unsignedToGov.bodyBytes())
     val signedToGovFail     = unsignedToGov.copy(1.toByte, proofs = Proofs(Seq(accountSigToGovFail)))
@@ -109,7 +109,7 @@ class MassTransferSmartContractSuite extends BaseTransactionSuite with CancelAft
         .create(
           1.toByte,
           notMiner.publicKey,
-          Waves,
+          Dcc,
           transfersToGov,
           calcMassTransferFee(2) + smartFee,
           System.currentTimeMillis(),

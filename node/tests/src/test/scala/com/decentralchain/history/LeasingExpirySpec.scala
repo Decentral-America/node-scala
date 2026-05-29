@@ -47,7 +47,7 @@ class LeasingExpirySpec extends FreeSpec with WithDomain {
       .create(
         ts,
         Seq(
-          GenesisTransaction.create(lessor.toAddress, Constants.TotalWaves * Constants.UnitsInWave, ntpTime.getTimestamp()).explicitGet(),
+          GenesisTransaction.create(lessor.toAddress, Constants.TotalDcc * Constants.UnitsInWave, ntpTime.getTimestamp()).explicitGet(),
           transfer,
           createAlias
         )

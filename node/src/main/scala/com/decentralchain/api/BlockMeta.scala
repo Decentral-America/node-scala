@@ -17,7 +17,7 @@ case class BlockMeta(
     height: Int,
     size: Int,
     transactionCount: Int,
-    totalFeeInWaves: Long,
+    totalFeeInDcc: Long,
     reward: Option[Long],
     rewardShares: Seq[(Address, Long)],
     vrf: Option[ByteStr]
@@ -27,7 +27,7 @@ case class BlockMeta(
 
   val json: Coeval[JsObject] = Coeval.evalOnce {
     BlockHeaderSerializer.toJson(header, size, transactionCount, signature) ++
-      Json.obj("height" -> height, "totalFee" -> totalFeeInWaves) ++
+      Json.obj("height" -> height, "totalFee" -> totalFeeInDcc) ++
       reward.fold(Json.obj())(r =>
         Json.obj(
           "reward" -> r,
@@ -65,7 +65,7 @@ object BlockMeta {
         pbMeta.height,
         pbMeta.size,
         pbMeta.transactionCount,
-        pbMeta.totalFeeInWaves,
+        pbMeta.totalFeeInDcc,
         Some(pbMeta.reward),
         Seq(),
         if (pbMeta.vrf.isEmpty) None

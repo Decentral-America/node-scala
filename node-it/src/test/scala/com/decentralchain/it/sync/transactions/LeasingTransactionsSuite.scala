@@ -16,7 +16,7 @@ import play.api.libs.json.Json
 class LeasingTransactionsSuite extends AnyFreeSpecLike, BaseTransactionSuiteLike, CancelAfterFailure {
   private val errorMessage = "Reason: Cannot lease more than own"
 
-  "leasing waves decreases lessor's eff.b. and increases lessee's eff.b.; lessor pays fee" - {
+  "leasing dcc decreases lessor's eff.b. and increases lessee's eff.b.; lessor pays fee" - {
     each { v =>
       val (balance1, eff1) = miner.accountBalances(firstAddress)
       val (balance2, eff2) = miner.accountBalances(secondAddress)
@@ -33,7 +33,7 @@ class LeasingTransactionsSuite extends AnyFreeSpecLike, BaseTransactionSuiteLike
     }
   }
 
-  "cannot lease non-own waves" - {
+  "cannot lease non-own dcc" - {
     each { v =>
       val createdLeaseTxId = sender.lease(firstKeyPair, secondAddress, leasingAmount, leasingFee = minFee, version = v).id
       nodes.waitForHeightAriseAndTxPresent(createdLeaseTxId)
@@ -50,7 +50,7 @@ class LeasingTransactionsSuite extends AnyFreeSpecLike, BaseTransactionSuiteLike
       val (balance2, eff2) = miner.accountBalances(secondAddress)
 
       // secondAddress effective balance more than general balance
-      assertBadRequestAndResponse(sender.lease(secondKeyPair, firstAddress, balance2 + 1.waves, minFee, version = v), errorMessage)
+      assertBadRequestAndResponse(sender.lease(secondKeyPair, firstAddress, balance2 + 1.dcc, minFee, version = v), errorMessage)
       nodes.waitForHeightArise()
 
       assertBadRequestAndResponse(sender.lease(firstKeyPair, secondAddress, balance1, minFee, version = v), errorMessage)
@@ -153,7 +153,7 @@ class LeasingTransactionsSuite extends AnyFreeSpecLike, BaseTransactionSuiteLike
   "can not make leasing to yourself" - {
     each { v =>
       val (balance1, eff1) = miner.accountBalances(firstAddress)
-      assertBadRequestAndResponse(sender.lease(firstKeyPair, firstAddress, balance1 + 1.waves, minFee, v), "Transaction to yourself")
+      assertBadRequestAndResponse(sender.lease(firstKeyPair, firstAddress, balance1 + 1.dcc, minFee, v), "Transaction to yourself")
       nodes.waitForHeightArise()
 
       miner.assertBalances(firstAddress, balance1, eff1)

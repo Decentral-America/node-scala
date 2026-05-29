@@ -9,7 +9,7 @@ import com.decentralchain.crypto
 import io.decentralchain.protobuf.transaction.{PBTransactions, SignedTransaction as PBSignedTransaction}
 import com.decentralchain.state.{Height, StringDataEntry}
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}
@@ -56,9 +56,9 @@ class ChainIdSpecification extends PropSpec {
         version,
         sender.publicKey,
         addressOrAlias,
-        Waves,
+        Dcc,
         amount,
-        Waves,
+        Dcc,
         fee,
         ByteStr.empty,
         ts,
@@ -71,9 +71,9 @@ class ChainIdSpecification extends PropSpec {
           TxVersion.V3,
           sender.publicKey,
           Alias.createWithChainId("sasha", otherChainId, Some(otherChainId)).explicitGet(),
-          Waves,
+          Dcc,
           amount,
-          Waves,
+          Dcc,
           fee,
           ByteStr.empty,
           ts,
@@ -147,7 +147,7 @@ class ChainIdSpecification extends PropSpec {
         None,
         Seq.empty,
         fee,
-        Waves,
+        Dcc,
         ts,
         Proofs.empty,
         AddressScheme.current.chainId
@@ -161,7 +161,7 @@ class ChainIdSpecification extends PropSpec {
           None,
           Seq.empty,
           fee,
-          Waves,
+          Dcc,
           ts,
           Proofs.empty,
           otherChainId
@@ -233,7 +233,7 @@ class ChainIdSpecification extends PropSpec {
 
   property("ExchangeTransaction validation") {
     forAll(addressOrAliasWithVersion) { case (_, _, sender, amount, fee, ts) =>
-      val pair = AssetPair(Waves, IssuedAsset(ByteStr(bytes32gen.sample.get)))
+      val pair = AssetPair(Dcc, IssuedAsset(ByteStr(bytes32gen.sample.get)))
       validateFromOtherNetwork(
         ExchangeTransaction(
           TxVersion.V3,
@@ -295,7 +295,7 @@ class ChainIdSpecification extends PropSpec {
         MassTransferTransaction(
           TxVersion.V2,
           sender.publicKey,
-          Waves,
+          Dcc,
           Seq(ParsedTransfer(addressOrAlias, TxNonNegativeAmount.unsafeFrom(amount.value))),
           fee,
           ts,
@@ -386,7 +386,7 @@ class ChainIdSpecification extends PropSpec {
           "description",
           ts,
           fee,
-          Waves,
+          Dcc,
           Proofs.empty,
           otherChainId
         ).signWith(sender.privateKey).validatedEither.explicitGet()

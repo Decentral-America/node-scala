@@ -14,7 +14,7 @@ import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFuncti
 import com.decentralchain.state.GenesisBlockHeight
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.exchange.OrderType
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.{GenesisTransaction, Transaction, TxHelpers, TxVersion}
@@ -117,7 +117,7 @@ class CommonValidationTest extends PropSpec with WithState {
     } else {
       TxHelpers.issue(richAcc, Long.MaxValue, 2, script = None, reissuable = false, fee = Constants.UnitsInWave, version = TxVersion.V1)
     }
-    val transferWaves =
+    val transferDcc =
       TxHelpers.transfer(richAcc, recipientAcc.toAddress, 10 * Constants.UnitsInWave, fee = Constants.UnitsInWave, version = TxVersion.V1)
     val transferAssetFee = if (smartToken) {
       1 * Constants.UnitsInWave + ScriptExtraFee
@@ -149,11 +149,11 @@ class CommonValidationTest extends PropSpec with WithState {
       amount = 1,
       asset = issue.asset,
       fee = feeAmount,
-      feeAsset = if (feeInAssets) issue.asset else Waves,
+      feeAsset = if (feeInAssets) issue.asset else Dcc,
       version = TxVersion.V1
     )
 
-    (TestBlock.create(Vector[Transaction](genesis, issue, transferWaves, transferAsset) ++ sponsor ++ setScript).block, transferBack)
+    (TestBlock.create(Vector[Transaction](genesis, issue, transferDcc, transferAsset) ++ sponsor ++ setScript).block, transferBack)
   }
 
   private def createSettings(preActivatedFeatures: (BlockchainFeature, Int)*): FunctionalitySettings =
@@ -195,7 +195,7 @@ class CommonValidationTest extends PropSpec with WithState {
       val master    = TxHelpers.signer(1)
       val recipient = TxHelpers.signer(2)
 
-      val amount = 100.waves
+      val amount = 100.dcc
       val script = ExprScript(TRUE).explicitGet()
       val asset  = IssuedAsset(ByteStr.fill(32)(1))
 
@@ -215,8 +215,8 @@ class CommonValidationTest extends PropSpec with WithState {
         TxHelpers.invoke(invChainAddr, invoker = master),
         TxHelpers.invoke(invChainAlias, invoker = master),
         TxHelpers.exchangeFromOrders(
-          TxHelpers.order(OrderType.BUY, asset, Waves, Waves, amount, 1_0000_0000L, fee = 1L, sender = master),
-          TxHelpers.order(OrderType.SELL, asset, Waves, Waves, amount, 1_0000_0000L, fee = 1L, sender = recipient),
+          TxHelpers.order(OrderType.BUY, asset, Dcc, Dcc, amount, 1_0000_0000L, fee = 1L, sender = master),
+          TxHelpers.order(OrderType.SELL, asset, Dcc, Dcc, amount, 1_0000_0000L, fee = 1L, sender = recipient),
           master,
           chainId = invChainId
         ),

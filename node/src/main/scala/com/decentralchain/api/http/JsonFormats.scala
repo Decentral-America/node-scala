@@ -7,7 +7,7 @@ import play.api.libs.json.*
 import play.api.libs.json.Json.JsValueWrapper
 
 trait JsonFormats {
-  implicit lazy val wavesAddressWrites: Writes[Address] = Writes(w => JsString(w.toString))
+  implicit lazy val dccAddressWrites: Writes[Address] = Writes(w => JsString(w.toString))
 
   implicit lazy val TransactionJsonWrites: OWrites[Transaction] = OWrites(_.json())
 

@@ -7,7 +7,7 @@ import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.EthereumKeyLength
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{ECDSASignature, ECKeyPair, Sign, StructuredDataEncoder}
 import play.api.libs.json.{JsObject, Json}
@@ -18,7 +18,7 @@ object EthOrders {
   def toEip712Json(order: Order): JsObject = {
     def encodeAsset(asset: Asset): String = asset match {
       case IssuedAsset(id) => id.toString
-      case Waves           => "WAVES"
+      case Dcc           => "DCC"
     }
 
     def encodeOrderType(orderType: OrderType): String = orderType match {
@@ -182,7 +182,7 @@ object EthOrders {
        |  },
        |  "primaryType": "Order",
        |  "domain": {
-       |    "name": "Waves Order",
+       |    "name": "Dcc Order",
        |    "version": "$version",
        |    "chainId": ${AddressScheme.current.chainId}
        |  },

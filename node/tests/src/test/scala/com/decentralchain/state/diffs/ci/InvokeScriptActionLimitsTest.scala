@@ -17,7 +17,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.diffs.produceRejectOrFailedDiff
 import com.decentralchain.test.*
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import org.scalatest.{Assertion, EitherValues}
@@ -49,11 +49,11 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
         ContractLimits.MaxCallableActionsAmountBeforeV6(version)
 
     property(s"Allow not more $limit ScriptTransfer/Lease/LeaseCancel actions for V${version.id}") {
-      val wavesTransferActionsCount = (limit - 8) / 2
+      val dccTransferActionsCount = (limit - 8) / 2
       val (preparingTxs1, invoke1, masterAddress, serviceAddress1) =
         scenario(
-          balanceActionsWithIssueMasterContract(_, _, wavesTransferActionsCount, version),
-          balanceActionsWithIssueServiceContract(version, wavesTransferActionsCount)
+          balanceActionsWithIssueMasterContract(_, _, dccTransferActionsCount, version),
+          balanceActionsWithIssueServiceContract(version, dccTransferActionsCount)
         )
 
       assertDiffAndState(Seq(TestBlock.create(preparingTxs1)), TestBlock.create(Seq(invoke1), Block.ProtoBlockVersion), features(version)) {
@@ -65,8 +65,8 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
 
       val (preparingTxs2, invoke2, _, _) =
         scenario(
-          balanceActionsWithIssueMasterContract(_, _, wavesTransferActionsCount, version, extraAction = true),
-          balanceActionsWithIssueServiceContract(version, wavesTransferActionsCount)
+          balanceActionsWithIssueMasterContract(_, _, dccTransferActionsCount, version, extraAction = true),
+          balanceActionsWithIssueServiceContract(version, dccTransferActionsCount)
         )
 
       val errMsg =
@@ -264,7 +264,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
     val allActionsNested = TxHelpers.signer(2)
     val lastNested       = TxHelpers.signer(3)
 
-    val fee = 10.waves
+    val fee = 10.dcc
 
     withDomain(settings, balances = AddrWithBalance.enoughBalances(master, invoker, allActionsNested, lastNested)) { d =>
       val setMasterScript           = TxHelpers.setScript(master, masterContract(rootVersion, allActionsNested.toAddress, lastNested.toAddress))
@@ -301,7 +301,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
     val allActionsNested = TxHelpers.signer(2)
     val lastNested       = TxHelpers.signer(3)
 
-    val fee = 10.waves
+    val fee = 10.dcc
 
     withDomain(settings, balances = AddrWithBalance.enoughBalances(master, invoker, allActionsNested, lastNested)) { d =>
       val setMasterScript           = TxHelpers.setScript(master, masterContract(rootVersion, allActionsNested.toAddress, lastNested.toAddress))
@@ -332,7 +332,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
     val invoker = TxHelpers.signer(1)
     val service = TxHelpers.signer(2)
 
-    val fee = 100.waves
+    val fee = 100.dcc
 
     val genesis = Seq(
       TxHelpers.genesis(master.toAddress),
@@ -345,7 +345,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
     val setServiceScript = TxHelpers.setScript(service, serviceDApp, fee)
     val preparingTxs     = genesis :+ aliasTx :+ setMasterScript :+ setServiceScript
 
-    val invoke = TxHelpers.invoke(master.toAddress, func = Some("foo"), invoker = invoker, payments = List(Payment(10L, Waves)), fee = fee)
+    val invoke = TxHelpers.invoke(master.toAddress, func = Some("foo"), invoker = invoker, payments = List(Payment(10L, Dcc)), fee = fee)
 
     (preparingTxs, invoke, master.toAddress, service.toAddress)
   }
@@ -446,7 +446,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
     TestCompiler(version).compileContract(script)
   }
 
-  private def balanceActionsWithIssueServiceContract(version: StdLibVersion, wavesTransferActionsCount: Int): Script = {
+  private def balanceActionsWithIssueServiceContract(version: StdLibVersion, dccTransferActionsCount: Int): Script = {
     val script =
       s"""
          |{-# STDLIB_VERSION ${version.id} #-}
@@ -460,10 +460,10 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
          |     let n = Issue(an, an, 1, 0, false, unit, 0)
          |     ([
          |       IntegerEntry("bar", 1),
-         |       ${"ScriptTransfer(Address(a), 1, unit), " * wavesTransferActionsCount}
+         |       ${"ScriptTransfer(Address(a), 1, unit), " * dccTransferActionsCount}
          |       BinaryEntry("asset", n.calculateAssetId()),
          |       n,
-         |       ScriptTransfer(Address(a), 1, n.calculateAssetId())], ${wavesTransferActionsCount + 4})
+         |       ScriptTransfer(Address(a), 1, n.calculateAssetId())], ${dccTransferActionsCount + 4})
          |   else
          |     throw("Bad caller")
          | }
@@ -475,7 +475,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
   private def balanceActionsWithIssueMasterContract(
       otherAcc: Address,
       alias: Alias,
-      wavesTransferActionsCount: Int,
+      dccTransferActionsCount: Int,
       version: StdLibVersion,
       extraAction: Boolean = false
   ): Script = {
@@ -497,15 +497,15 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
          |
          | @Callable(i)
          | func foo() = {
-         |  let b1 = wavesBalance(this)
-         |  let ob1 = wavesBalance(Address(base58'$otherAcc'))
+         |  let b1 = dccBalance(this)
+         |  let ob1 = dccBalance(Address(base58'$otherAcc'))
          |  if b1 == b1 && ob1 == ob1
          |  then
-         |    strict r = invoke(Alias("${alias.name}"), "bar", [this.bytes, "aaaaaaaa"], [AttachedPayment(unit, ${wavesTransferActionsCount + 4})])
-         |    strict r1 = invoke(Alias("${alias.name}"), "bar", [this.bytes, "bbbbbbbb"], [AttachedPayment(unit, ${wavesTransferActionsCount + 4})])
+         |    strict r = invoke(Alias("${alias.name}"), "bar", [this.bytes, "aaaaaaaa"], [AttachedPayment(unit, ${dccTransferActionsCount + 4})])
+         |    strict r1 = invoke(Alias("${alias.name}"), "bar", [this.bytes, "bbbbbbbb"], [AttachedPayment(unit, ${dccTransferActionsCount + 4})])
          |    let data = getIntegerValue(Address(base58'$otherAcc'), "bar")
-         |    let b2 = wavesBalance(this)
-         |    let ob2 = wavesBalance(Address(base58'$otherAcc'))
+         |    let b2 = dccBalance(this)
+         |    let ob2 = dccBalance(Address(base58'$otherAcc'))
          |    let ab = assetBalance(this, getBinaryValue(Address(base58'$otherAcc'), "asset"))
          |    if data == 1
          |    then

@@ -32,11 +32,11 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
 
   def await[A](f: Future[A]): A = Await.result(f, 2 seconds)
 
-  test("waves context") {
+  test("dcc context") {
     val issuer = TxHelpers.signer(1000)
     val sample = TxHelpers.signer(1001)
-    val trans  = miner.transfer(miner.keyPair, issuer.toAddress.toString, 100.waves, 1.waves, version = TxVersion.V3, waitForTx = true)
-    miner.transfer(miner.keyPair, sample.toAddress.toString, 100.waves, 1.waves, waitForTx = true)
+    val trans  = miner.transfer(miner.keyPair, issuer.toAddress.toString, 100.dcc, 1.dcc, version = TxVersion.V3, waitForTx = true)
+    miner.transfer(miner.keyPair, sample.toAddress.toString, 100.dcc, 1.dcc, waitForTx = true)
     miner.createAlias(miner.keyPair, "aaaa", waitForTx = true)
 
     val failDApp = ScriptCompiler
@@ -95,7 +95,7 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
           reissuable = true,
           script = Some(assetScript),
           waitForTx = true,
-          fee = 1.waves
+          fee = 1.dcc
         )
         .id
     val height = miner.transactionStatus(assetId).height.get
@@ -108,11 +108,11 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
         BinaryDataEntry("bin", ByteStr(Base58.decode("r1Mw3j9J"))),
         BooleanDataEntry("bool", true)
       ),
-      1.waves,
+      1.dcc,
       waitForTx = true
     )
 
-    miner.setScript(issuer, Some(failDApp), 1.waves, waitForTx = true)
+    miner.setScript(issuer, Some(failDApp), 1.dcc, waitForTx = true)
 
     val settings = NodeConnectionSettings(miner.nodeApiEndpoint.toString, 'I'.toByte, issuer.toAddress.toString)
     val repl     = Repl(Some(settings))
@@ -205,8 +205,8 @@ class ReplTest extends BaseTransactionSuite with FailedTransactionSuiteLike[Stri
       )
     ).explicitGet() shouldBe "res11: Int = 1000"
 
-    await(repl.execute(s""" wavesBalance(Address(base58'${sample.toAddress}')).regular """)) shouldBe Right(s"res12: Int = ${100.waves}")
-    await(repl.execute(""" this.wavesBalance() """))
+    await(repl.execute(s""" dccBalance(Address(base58'${sample.toAddress}')).regular """)) shouldBe Right(s"res12: Int = ${100.dcc}")
+    await(repl.execute(""" this.dccBalance() """))
       .explicitGet() should fullyMatch regex "res13: BalanceDetails = BalanceDetails\\(\\s+available = \\d+\\s+regular = \\d+\\s+generating = \\d+\\s+effective = \\d+\\s+\\)".r
 
     /* It function removed from node API. Wait native protobufs implementation. */

@@ -20,8 +20,8 @@ class BlockchainUpdaterMicroblockBadSignaturesTest extends PropSpec with Propert
     recipient <- accountGen
     ts        <- positiveIntGen
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-    payment: TransferTransaction  <- wavesTransferGeneratorP(master, recipient.toAddress)
-    payment2: TransferTransaction <- wavesTransferGeneratorP(master, recipient.toAddress)
+    payment: TransferTransaction  <- dccTransferGeneratorP(master, recipient.toAddress)
+    payment2: TransferTransaction <- dccTransferGeneratorP(master, recipient.toAddress)
   } yield (genesis, payment, payment2)
 
   property("bad total resulting block signature") {

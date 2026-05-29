@@ -149,7 +149,7 @@ private class ResponsivenessLogs(csvPrefix: String, metricName: String) extends 
         def escape(s: String): String = s.replaceAll("\\r", "\\\\r").replaceAll("\\n", "\\\\n")
 
         val date       = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val fileStream = new FileOutputStream(s"${sys.props("waves.directory")}/$prefix-events-$date.csv", true)
+        val fileStream = new FileOutputStream(s"${sys.props("dcc.directory")}/$prefix-events-$date.csv", true)
         val pw         = new PrintWriter(fileStream)
         val reasonEscaped = reason match {
           case Some(see: TxValidationError.ScriptExecutionError)        => s"ScriptExecutionError(${escape(see.message)})"

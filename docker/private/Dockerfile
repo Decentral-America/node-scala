@@ -2,4 +2,4 @@
 # Build with: docker build --build-arg baseImage=ghcr.io/decentral-america/node-scala:<tag>@sha256:<digest>
 ARG baseImage
 FROM $baseImage
-COPY decentralchain.custom.conf /etc/waves/waves.conf
+COPY decentralchain.custom.conf /etc/dcc/dcc.conf

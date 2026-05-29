@@ -12,7 +12,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.network.{RawBytes, TransactionSpec}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 
 import scala.concurrent.duration.*
@@ -32,9 +32,9 @@ class SimpleTransactionsSuite extends BaseTransactionSuite {
         1.toByte,
         node.keyPair,
         Address.fromString(node.address).explicitGet(),
-        Waves,
+        Dcc,
         1L,
-        Waves,
+        Dcc,
         minFee,
         ByteStr.empty,
         System.currentTimeMillis()
@@ -52,9 +52,9 @@ class SimpleTransactionsSuite extends BaseTransactionSuite {
         1.toByte,
         node.keyPair,
         Address.fromString(node.address).explicitGet(),
-        Waves,
+        Dcc,
         1L,
-        Waves,
+        Dcc,
         minFee,
         ByteStr.empty,
         System.currentTimeMillis() + (1 days).toMillis

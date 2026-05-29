@@ -5,7 +5,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, TxHelpers, TxVersion}
@@ -25,7 +25,7 @@ class BlockchainUpdatesSubscribeSpec extends BlockchainUpdatesTestBase {
     }
 
     "BU-28. Return correct data for transfer" in {
-      val transferTx = TxHelpers.transfer(firstTxParticipant, secondTxParticipantAddress, amount, Waves, customFee)
+      val transferTx = TxHelpers.transfer(firstTxParticipant, secondTxParticipantAddress, amount, Dcc, customFee)
       withGenerateSubscription(
         settings = currentSettings,
         balances = Seq(
@@ -223,7 +223,7 @@ class BlockchainUpdatesSubscribeSpec extends BlockchainUpdatesTestBase {
 
     "BU-20. Return correct data for setAssetScript" in {
       val issue          = TxHelpers.issue(firstTxParticipant, amount, script = complexScriptBefore)
-      val setAssetScript = TxHelpers.setAssetScript(firstTxParticipant, issue.asset, complexScriptAfter, 1.waves)
+      val setAssetScript = TxHelpers.setAssetScript(firstTxParticipant, issue.asset, complexScriptAfter, 1.dcc)
       withGenerateSubscription(
         settings = currentSettings.addFeatures(BlockchainFeatures.SmartAccounts),
         balances = Seq(AddrWithBalance(firstTxParticipantAddress, firstTxParticipantBalanceBefore))

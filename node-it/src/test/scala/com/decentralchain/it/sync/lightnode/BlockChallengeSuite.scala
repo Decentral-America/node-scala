@@ -15,7 +15,7 @@ import com.decentralchain.lang.directives.values.V8
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.network.RawBytes
 import com.decentralchain.state.Height
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.OrderType
 import com.decentralchain.transaction.{Transaction, TxHelpers}
 import com.decentralchain.{TestValues, crypto}
@@ -36,7 +36,7 @@ class BlockChallengeSuite extends BaseFunSuite with TransferSending {
           BlockchainFeatures.LightNode.id.toInt             -> Height(0)
         )
       )
-      .overrideBase(_.raw("waves.blockchain.custom.functionality.light-node-block-fields-absence-interval = 0"))
+      .overrideBase(_.raw("dcc.blockchain.custom.functionality.light-node-block-fields-absence-interval = 0"))
       .withDefault(1)
       .withSpecial(1, _.lightNode)
       .withSpecial(2, _.nonMiner)
@@ -158,8 +158,8 @@ class BlockChallengeSuite extends BaseFunSuite with TransferSending {
       TxHelpers.createAlias("alias", sender.keyPair),
       TxHelpers.dataSingle(sender.keyPair),
       TxHelpers.exchange(
-        TxHelpers.order(OrderType.BUY, issue.asset, Waves, sender = sender.keyPair, matcher = sender.keyPair),
-        TxHelpers.order(OrderType.SELL, issue.asset, Waves, sender = sender.keyPair, matcher = sender.keyPair),
+        TxHelpers.order(OrderType.BUY, issue.asset, Dcc, sender = sender.keyPair, matcher = sender.keyPair),
+        TxHelpers.order(OrderType.SELL, issue.asset, Dcc, sender = sender.keyPair, matcher = sender.keyPair),
         sender.keyPair
       ),
       TxHelpers.invoke(dApp.keyPair.toAddress, Some("foo"), invoker = sender.keyPair),

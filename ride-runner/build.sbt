@@ -1,5 +1,5 @@
 name        := "decentralchain-ride-runner"
-description := "Allows to execute RIDE code independently from Waves NODE"
+description := "Allows to execute RIDE code independently from Dcc NODE"
 
 enablePlugins(
   JavaServerAppPackaging,

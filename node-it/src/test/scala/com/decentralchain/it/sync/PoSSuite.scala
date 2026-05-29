@@ -287,7 +287,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
       .overrideBase(
         _.raw(
           s"""
-             |waves {
+             |dcc {
              |  blockchain {
              |    custom {
              |      functionality {
@@ -310,7 +310,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
       )
       .overrideBase(_.nonMiner)
       .withDefault(3)
-      .withSpecial(_.raw("waves.miner.enable = yes"))
+      .withSpecial(_.raw("dcc.miner.enable = yes"))
       .buildNonConflicting()
 
   private def generatorSignature(signature: Array[Byte], publicKey: PublicKey): Array[Byte] = {

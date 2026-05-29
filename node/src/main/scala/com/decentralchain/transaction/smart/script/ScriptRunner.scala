@@ -19,7 +19,7 @@ import com.decentralchain.lang.v1.compiler.Terms.{EVALUATED, EXPR, TRUE}
 import com.decentralchain.lang.v1.evaluator.*
 import com.decentralchain.lang.v1.evaluator.ContractEvaluator.LogExtraInfo
 import com.decentralchain.lang.v1.evaluator.ctx.EvaluationContext
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Bindings
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Bindings
 import com.decentralchain.lang.v1.traits.domain.PseudoTx
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.state.*

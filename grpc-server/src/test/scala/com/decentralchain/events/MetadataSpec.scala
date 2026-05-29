@@ -15,19 +15,19 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
   "BlockchainUpdates returns correct metadata for supported transaction types" in withDomainAndRepo(RideV6) { (d, r) =>
     val genesisAddress = TxHelpers.signer(100)
 
-    d.appendBlock(TxHelpers.genesis(genesisAddress.toAddress, 100000.waves))
+    d.appendBlock(TxHelpers.genesis(genesisAddress.toAddress, 100000.dcc))
 
     val issuer = TxHelpers.signer(50)
     val issue  = TxHelpers.issue(issuer, decimals = 2)
 
     val matcher = TxHelpers.signer(200)
 
-    val wavesOrder = TxHelpers.order(
+    val dccOrder = TxHelpers.order(
       OrderType.SELL,
       issue.asset,
-      Asset.Waves,
+      Asset.Dcc,
       amount = 100L,
-      price = 1.waves,
+      price = 1.dcc,
       sender = issuer,
       matcher = matcher
     )
@@ -37,13 +37,13 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
       4.toByte,
       OrderAuthentication.Eip712Signature(ByteStr(new Array[Byte](64))),
       matcher.publicKey,
-      AssetPair(issue.asset, Asset.Waves),
+      AssetPair(issue.asset, Asset.Dcc),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(100L),
-      TxOrderPrice.unsafeFrom(1.waves),
+      TxOrderPrice.unsafeFrom(1.dcc),
       System.currentTimeMillis(),
       System.currentTimeMillis() + 10000,
-      TxMatcherFee.unsafeFrom(0.003.waves)
+      TxMatcherFee.unsafeFrom(0.003.dcc)
     )
 
     val signedEthOrder = ethOrder.copy(
@@ -52,21 +52,21 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
 
     val exchange = TxHelpers.exchange(
       signedEthOrder,
-      wavesOrder,
+      dccOrder,
       matcher,
       100L,
-      1.waves,
+      1.dcc,
       version = 3.toByte
     )
 
     val massTransfer = TxHelpers.massTransfer(
       genesisAddress,
       Seq(
-        issuer.toAddress              -> 100.waves,
-        matcher.toAddress             -> 100.waves,
-        ethOrderSender.toWavesAddress -> 100.waves
+        issuer.toAddress              -> 100.dcc,
+        matcher.toAddress             -> 100.dcc,
+        ethOrderSender.toDccAddress -> 100.dcc
       ),
-      fee = 0.003.waves
+      fee = 0.003.dcc
     )
 
     val ethTransfer = EthTxGenerator.generateEthTransfer(
@@ -74,7 +74,7 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
       matcher.toAddress,
       10,
       issue.asset,
-      0.005.waves
+      0.005.dcc
     )
 
     d.appendBlock(
@@ -98,7 +98,7 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
           genesisAddress.toAddress.toByteString,
           TransactionMetadata.Metadata.MassTransfer(
             TransactionMetadata.MassTransferMetadata(
-              Seq(issuer.toAddress, matcher.toAddress, ethOrderSender.toWavesAddress).map(_.toByteString)
+              Seq(issuer.toAddress, matcher.toAddress, ethOrderSender.toDccAddress).map(_.toByteString)
             )
           )
         ),
@@ -116,7 +116,7 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
           )
         ),
         TransactionMetadata(
-          ethOrderSender.toWavesAddress.toByteString,
+          ethOrderSender.toDccAddress.toByteString,
           TransactionMetadata.Metadata.Ethereum(
             TransactionMetadata.EthereumMetadata(
               ethTransfer.timestamp,

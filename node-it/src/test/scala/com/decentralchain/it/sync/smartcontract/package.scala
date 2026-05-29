@@ -67,12 +67,12 @@ package object smartcontract {
        | }
      """.stripMargin
 
-  def wavesContextScript(dtx: DataTransaction, accountScript: Boolean): String =
+  def dccContextScript(dtx: DataTransaction, accountScript: Boolean): String =
     s"""
        |{-# STDLIB_VERSION 2 #-}
        | match tx {
        |  case ext : ExchangeTransaction =>
-       |    # Waves context
+       |    # Dcc context
        |    let dtx = extract(transactionById(base58'${dtx.id().toString}'))
        |    let entries = match dtx {
        |       case d: DataTransaction =>
@@ -105,7 +105,7 @@ package object smartcontract {
        |
        |     #case t1: TransferTransaction => addressFromRecipient(t1.recipient) == Address(base58'')
        |
-       |     let balances = assetBalance(ext.sender, unit) > 0 && wavesBalance(ext.sender) != 0
+       |     let balances = assetBalance(ext.sender, unit) > 0 && dccBalance(ext.sender) != 0
        |
        |     entries && balances && aFromPK && aFromStr && height > 0
        |  ${if (accountScript) "case _: SetScriptTransaction => true" else ""}

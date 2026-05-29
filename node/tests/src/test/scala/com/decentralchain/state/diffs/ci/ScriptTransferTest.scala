@@ -14,7 +14,7 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
 import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType
 import com.decentralchain.transaction.TxHelpers.{invoke, issue, secondAddress, secondSigner, setScript}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -109,7 +109,7 @@ class ScriptTransferTest extends PropSpec with WithDomain {
          """.stripMargin
       )
       d.appendBlock(setScript(secondSigner, dApp))
-      d.appendAndAssertSucceed(invoke(payments = Seq(Payment(paymentAmount, Waves))))
+      d.appendAndAssertSucceed(invoke(payments = Seq(Payment(paymentAmount, Dcc))))
       d.blockchain.balance(secondAddress) shouldBe paymentAmount - transferAmount
     }
   }

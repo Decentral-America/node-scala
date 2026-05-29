@@ -9,7 +9,7 @@ import com.decentralchain.lagonaki.mocks.TestBlock.create as block
 import com.decentralchain.settings.{FunctionalitySettings, TestFunctionalitySettings}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.ScriptsAndSponsorship
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
 import com.decentralchain.transaction.{Asset, GenesisTransaction, TxHelpers, TxVersion}
 
@@ -36,7 +36,7 @@ class MassTransferTransactionDiffTest extends PropSpec with WithDomain {
 
         Seq(Some(issue.id()), None).map { issueIdOpt =>
           val maybeAsset = Asset.fromCompatId(issueIdOpt)
-          val transfer   = TxHelpers.massTransfer(master, transfers, maybeAsset, fee = 1.waves, version = TxVersion.V1)
+          val transfer   = TxHelpers.massTransfer(master, transfers, maybeAsset, fee = 1.dcc, version = TxVersion.V1)
 
           (genesis, issue, transfer)
         }
@@ -57,7 +57,7 @@ class MassTransferTransactionDiffTest extends PropSpec with WithDomain {
             case aid @ IssuedAsset(_) =>
               d.balance(transfer.sender.toAddress) shouldBe ENOUGH_AMT - fees
               d.balance(transfer.sender.toAddress, aid) shouldBe ENOUGH_AMT - totalAmount
-            case Waves =>
+            case Dcc =>
               d.balance(transfer.sender.toAddress) shouldBe ENOUGH_AMT - fees - totalAmount
           }
           for (ParsedTransfer(recipient, amount) <- transfer.transfers) {
@@ -65,7 +65,7 @@ class MassTransferTransactionDiffTest extends PropSpec with WithDomain {
               transfer.assetId match {
                 case aid @ IssuedAsset(_) =>
                   d.balance(recipient.asInstanceOf[Address], aid) shouldBe amount.value
-                case Waves =>
+                case Dcc =>
                   d.balance(recipient.asInstanceOf[Address]) shouldBe amount.value
               }
             }

@@ -19,7 +19,7 @@ object InvokeScriptTxValidator extends TxValidator[InvokeScriptTransaction] {
   def checkAmounts(payments: Seq[Payment]): ValidatedNV = {
     val invalid = payments.filter(_.amount <= 0)
     if (invalid.nonEmpty)
-      Invalid(NonEmptyList.fromListUnsafe(invalid.toList).map(p => NonPositiveAmount(p.amount, p.assetId.fold("Waves")(_.toString))))
+      Invalid(NonEmptyList.fromListUnsafe(invalid.toList).map(p => NonPositiveAmount(p.amount, p.assetId.fold("Dcc")(_.toString))))
     else Valid(())
   }
 

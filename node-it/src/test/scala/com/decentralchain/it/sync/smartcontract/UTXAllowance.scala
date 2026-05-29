@@ -22,7 +22,7 @@ class UTXAllowance extends BaseFreeSpec with WaitForHeight2 {
 
       val acc = i.createKeyPair()
 
-      i.transfer(i.keyPair, acc.toAddress.toString, 10.waves, 0.005.waves, None, waitForTx = true)
+      i.transfer(i.keyPair, acc.toAddress.toString, 10.dcc, 0.005.dcc, None, waitForTx = true)
 
       val scriptText = s"""true""".stripMargin
       val script     = ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1.bytes().base64
@@ -37,8 +37,8 @@ class UTXAllowance extends BaseFreeSpec with WaitForHeight2 {
           accounts.head,
           recipient = accounts.head.toAddress.toString,
           assetId = None,
-          amount = 1.waves,
-          fee = minFee + 0.004.waves,
+          amount = 1.dcc,
+          fee = minFee + 0.004.dcc,
           version = 2
         ),
       "transactions from scripted accounts are denied from UTX pool"
@@ -50,8 +50,8 @@ class UTXAllowance extends BaseFreeSpec with WaitForHeight2 {
           accounts(1),
           recipient = accounts(1).toAddress.toString,
           assetId = None,
-          amount = 1.01.waves,
-          fee = minFee + 0.004.waves,
+          amount = 1.01.dcc,
+          fee = minFee + 0.004.dcc,
           version = 2
         )
         .id
@@ -65,7 +65,7 @@ class UTXAllowance extends BaseFreeSpec with WaitForHeight2 {
 object UTXAllowance {
   import com.decentralchain.it.NodeConfigs.*
   private val FirstNode = ConfigFactory.parseString(s"""
-                                                       |waves {
+                                                       |dcc {
                                                        |  utx.allow-transactions-from-smart-accounts = false
                                                        |  miner {
                                                        |      quorum = 0
@@ -74,7 +74,7 @@ object UTXAllowance {
                                                        |}""".stripMargin)
 
   private val SecondNode = ConfigFactory.parseString(s"""
-                                                        |waves {
+                                                        |dcc {
                                                         |  utx.allow-transactions-from-smart-accounts = true
                                                         |  miner {
                                                         |      enable = no

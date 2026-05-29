@@ -15,7 +15,7 @@ import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import io.decentralchain.protobuf.block.VanillaBlock
 import com.decentralchain.state.Height
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeExpressionTransaction
 import org.scalatest.{Assertion, CancelAfterFailure}
 
@@ -66,7 +66,7 @@ class InvokeExpressionGrpcSuite extends GrpcBaseTransactionSuite with CancelAfte
 
   private def checkTx(tx: InvokeExpressionTransaction): Assertion = {
     tx.fee.value shouldBe invokeExpressionFee
-    tx.feeAssetId shouldBe Waves
+    tx.feeAssetId shouldBe Dcc
     tx.sender shouldBe firstAcc.publicKey
     tx.expression shouldBe expr
     tx.version shouldBe 1

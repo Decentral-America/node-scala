@@ -37,10 +37,10 @@ class TxStateSnapshotHashSpec extends PropSpec {
 
   private val testScript = bs(TestCompiler(V6).compileExpression("true").bytes().arr)
 
-  private val wavesBalances = TSS(balances =
+  private val dccBalances = TSS(balances =
     Seq(
-      TSS.Balance(bs(address1.bytes), Some(Amount(amount = 10.waves))),
-      TSS.Balance(bs(address2.bytes), Some(Amount(amount = 20.waves)))
+      TSS.Balance(bs(address1.bytes), Some(Amount(amount = 10.dcc))),
+      TSS.Balance(bs(address2.bytes), Some(Amount(amount = 20.dcc)))
     )
   )
 
@@ -85,16 +85,16 @@ class TxStateSnapshotHashSpec extends PropSpec {
 
   private val newLease = TSS(
     leaseBalances = Seq(
-      TSS.LeaseBalance(bs(address1.bytes), out = 45.waves),
-      TSS.LeaseBalance(bs(address2.bytes), in = 55.waves)
+      TSS.LeaseBalance(bs(address1.bytes), out = 45.dcc),
+      TSS.LeaseBalance(bs(address2.bytes), in = 55.dcc)
     ),
     newLeases = Seq(
-      TSS.NewLease(leaseId, bs(signer101.publicKey.arr), bs(address2.bytes), 25.waves)
+      TSS.NewLease(leaseId, bs(signer101.publicKey.arr), bs(address2.bytes), 25.dcc)
     )
   )
 
   private val cancelledLease = TSS(
-    leaseBalances = Seq(TSS.LeaseBalance(bs(address3.bytes), out = 20.waves), TSS.LeaseBalance(bs(TxHelpers.address(104).bytes), in = 0.waves)),
+    leaseBalances = Seq(TSS.LeaseBalance(bs(address3.bytes), out = 20.dcc), TSS.LeaseBalance(bs(TxHelpers.address(104).bytes), in = 0.dcc)),
     cancelledLeases = Seq(
       TSS.CancelledLease(leaseId)
     )
@@ -105,13 +105,13 @@ class TxStateSnapshotHashSpec extends PropSpec {
   )
 
   private val alias = TSS(
-    aliases = Some(TSS.Alias(bs(address2.bytes), "wavesevo"))
+    aliases = Some(TSS.Alias(bs(address2.bytes), "dccevo"))
   )
 
   private val volumeAndFee = TSS(
     orderFills = Seq(
-      TSS.OrderFill(orderId1, 10.waves, 2000),
-      TSS.OrderFill(orderId2, 10.waves, 2000)
+      TSS.OrderFill(orderId1, 10.dcc, 2000),
+      TSS.OrderFill(orderId2, 10.dcc, 2000)
     )
   )
 
@@ -143,7 +143,7 @@ class TxStateSnapshotHashSpec extends PropSpec {
   )
   private val failedTransaction = TSS(
     balances = Seq(
-      TSS.Balance(bs(address2.bytes), Some(Amount(amount = 25.995.waves)))
+      TSS.Balance(bs(address2.bytes), Some(Amount(amount = 25.995.dcc)))
     ),
     transactionStatus = TransactionStatus.FAILED
   )
@@ -161,7 +161,7 @@ class TxStateSnapshotHashSpec extends PropSpec {
   )
 
   private val all = TSS(
-    assetBalances.balances ++ wavesBalances.balances,
+    assetBalances.balances ++ dccBalances.balances,
     newLease.leaseBalances ++ cancelledLease.leaseBalances,
     newLease.newLeases,
     cancelledLease.cancelledLeases,
@@ -181,8 +181,8 @@ class TxStateSnapshotHashSpec extends PropSpec {
   private val testData = Table(
     ("clue", "state snapshot", "base64 bytes", "tx id", "previous state hash", "expected result"),
     (
-      "waves balances",
-      wavesBalances,
+      "dcc balances",
+      dccBalances,
       "CiQKGgFUYP1Q7yDeRXEgffuciL58HC+KIscK2I+1EgYQgJTr3AMKJAoaAVRCxcljc/UP2BNQYE8cFPKmySVq2v0ZsCoSBhCAqNa5Bw==",
       ByteStr.empty,
       Hex.toHexString(TxStateSnapshotHashBuilder.InitStateHash.arr),

@@ -24,7 +24,7 @@ case class DataTransaction(
 ) extends Transaction(TransactionType.Data)
     with ProvenTransaction
     with Versioned.ToV2
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V2 {
 
@@ -32,7 +32,7 @@ case class DataTransaction(
   override val bytes: Coeval[Array[Byte]]     = Coeval.evalOnce(DataTxSerializer.toBytes(this))
   override val json: Coeval[JsObject]         = Coeval.evalOnce(DataTxSerializer.toJson(this))
 
-  private[decentralchain] lazy val protoDataPayload = PBTransactions.protobuf(this).getWavesTransaction.getDataTransaction.toByteArray
+  private[decentralchain] lazy val protoDataPayload = PBTransactions.protobuf(this).getDccTransaction.getDataTransaction.toByteArray
 }
 
 object DataTransaction extends TransactionParser {

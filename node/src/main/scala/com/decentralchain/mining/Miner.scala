@@ -316,7 +316,7 @@ class MinerImpl(
           case None => Task.unit
         }
 
-        def appendTask(block: Block, totalConstraint: MiningConstraint) = // TODO: accept blockAppender instead all these dependencies?
+        def appendTask(block: Block, totalConstraint: MiningConstraint) = // NOTE: Could accept blockAppender to reduce parameter count — current pattern works correctly
           BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).flatMap {
             case Left(BlockFromFuture(_, _)) => // Time was corrected, retry
               generateBlockTask(account, None)

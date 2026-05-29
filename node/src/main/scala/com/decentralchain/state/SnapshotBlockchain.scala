@@ -10,7 +10,7 @@ import com.decentralchain.features.BlockchainFeatures.RideV6
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.TxMeta.Status
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{AliasDoesNotExist, AliasIsDisabled}
 import com.decentralchain.transaction.transfer.{TransferTransaction, TransferTransactionLike}
 import com.decentralchain.transaction.{Asset, CommitToGenerationTransaction, ERC20Address, Transaction}
@@ -42,16 +42,16 @@ case class SnapshotBlockchain(
     inner.balances(innerBalances) ++ snapshotBalances
   }
 
-  override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] = {
+  override def dccBalances(addresses: Seq[Address]): Map[Address, Long] = {
     val (innerBalances, snapshotBalances) = addresses
       .foldLeft((Seq[Address](), Map[Address, Long]())) { case ((innerBalances, snapshotBalances), address) =>
         snapshot.balances
-          .get((address, Waves))
+          .get((address, Dcc))
           .fold(
             (innerBalances :+ address, snapshotBalances)
           )(balance => (innerBalances, snapshotBalances + (address -> balance)))
       }
-    inner.wavesBalances(innerBalances) ++ snapshotBalances
+    inner.dccBalances(innerBalances) ++ snapshotBalances
   }
 
   override def effectiveBalanceBanHeights(address: Address): Seq[Int] = {
@@ -146,7 +146,7 @@ case class SnapshotBlockchain(
   override def filledVolumeAndFee(orderId: ByteStr): VolumeAndFee =
     snapshot.orderFills.getOrElse(orderId, inner.filledVolumeAndFee(orderId))
 
-  override def balanceAtHeight(address: Address, h: Int, assetId: Asset = Waves): Option[(Int, Long)] =
+  override def balanceAtHeight(address: Address, h: Int, assetId: Asset = Dcc): Option[(Int, Long)] =
     if (maybeSnapshot.forall(!_.balances.contains(address -> assetId)) || h < this.height) {
       inner.balanceAtHeight(address, h, assetId)
     } else {
@@ -223,7 +223,7 @@ case class SnapshotBlockchain(
 
   override def blockRewardVotes(height: Int): Seq[Long] = inner.blockRewardVotes(height)
 
-  override def wavesAmount(height: Int): BigInt = {
+  override def dccAmount(height: Int): BigInt = {
     val parentBlockHeader = blockMeta match {
       case None => inner.blockHeader(height - 1)
       case _    => inner.lastBlockHeader
@@ -234,7 +234,7 @@ case class SnapshotBlockchain(
       voting            <- parentBlockHeader.header.finalizationVoting
     } yield voting.conflict.size
 
-    inner.wavesAmount(height) +
+    inner.dccAmount(height) +
       BigInt(reward.getOrElse(0L)) -
       parentConflictEndorsements.getOrElse(0) * CommitToGenerationTransaction.DepositInWavelets
   }

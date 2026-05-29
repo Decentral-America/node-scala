@@ -13,7 +13,7 @@ import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.RideV5
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.{TransactionType, TxHelpers}
@@ -153,7 +153,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
         val currentBlockReward  = (0.4 * invokeFee).toLong
         val balanceDiff         = reward + previousBlockReward + currentBlockReward - invokeFee
         val dbBalance           = d.rocksDBWriter.balance(defaultAddress)
-        Map((defaultAddress, Waves) -> (dbBalance + balanceDiff))
+        Map((defaultAddress, Dcc) -> (dbBalance + balanceDiff))
       }
     }
   }

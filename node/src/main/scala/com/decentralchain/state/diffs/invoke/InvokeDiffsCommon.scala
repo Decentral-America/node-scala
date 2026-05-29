@@ -24,7 +24,7 @@ import com.decentralchain.lang.v1.traits.domain.Tx.{BurnPseudoTx, ReissuePseudoT
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.FeeValidation.*
 import com.decentralchain.state.diffs.{BalanceDiffValidation, DiffsCommon}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.*
@@ -48,24 +48,24 @@ object InvokeDiffsCommon {
   def txFeeDiff(blockchain: Blockchain, tx: InvokeScriptTransactionLike): Either[GenericError, (Long, Map[Address, Portfolio])] = {
     val attachedFee = tx.fee
     tx.feeAssetId match {
-      case Waves => Right((attachedFee, Map(tx.sender.toAddress -> Portfolio(-attachedFee))))
+      case Dcc => Right((attachedFee, Map(tx.sender.toAddress -> Portfolio(-attachedFee))))
       case asset @ IssuedAsset(_) =>
         for {
           assetInfo <- blockchain
             .assetDescription(asset)
             .toRight(GenericError(s"Asset $asset does not exist, cannot be used to pay fees"))
-          feeInWaves <- Either.cond(
+          feeInDcc <- Either.cond(
             assetInfo.sponsorship > 0,
-            Sponsorship.toWaves(attachedFee, assetInfo.sponsorship),
+            Sponsorship.toDcc(attachedFee, assetInfo.sponsorship),
             GenericError(s"Asset $asset is not sponsored, cannot be used to pay fees")
           )
           portfolioDiff <- Portfolio
             .combine(
               Map[Address, Portfolio](tx.sender.toAddress        -> Portfolio.build(asset, -attachedFee)),
-              Map[Address, Portfolio](assetInfo.issuer.toAddress -> Portfolio.build(-feeInWaves, asset, attachedFee))
+              Map[Address, Portfolio](assetInfo.issuer.toAddress -> Portfolio.build(-feeInDcc, asset, attachedFee))
             )
             .leftMap(GenericError(_))
-        } yield (feeInWaves, portfolioDiff)
+        } yield (feeInDcc, portfolioDiff)
     }
   }
 
@@ -100,7 +100,7 @@ object InvokeDiffsCommon {
     val minFee = calculateMinFee(tx, blockchain, issueList, additionalScriptsInvoked, stepsNumber)
 
     val resultE = for {
-      (attachedFeeInWaves, portfolioDiff) <- txFeeDiff(blockchain, tx)
+      (attachedFeeInDcc, portfolioDiff) <- txFeeDiff(blockchain, tx)
       _ <- {
         lazy val errorMessage = {
           val stepsInfo =
@@ -130,12 +130,12 @@ object InvokeDiffsCommon {
         }
 
         Either.cond(
-          attachedFeeInWaves >= minFee,
+          attachedFeeInDcc >= minFee,
           (),
           makeError(errorMessage, invocationComplexity)
         )
       }
-    } yield (attachedFeeInWaves, portfolioDiff)
+    } yield (attachedFeeInDcc, portfolioDiff)
     TracedResult(resultE).withAttributes(Attribute.MinFee -> minFee)
   }
 
@@ -297,7 +297,7 @@ object InvokeDiffsCommon {
               Map(tx.sender.toAddress -> Portfolio.build(asset, -amt)),
               Map(dAppAddress         -> Portfolio.build(asset, amt))
             )
-          case Waves =>
+          case Dcc =>
             Portfolio.combine(
               Map(tx.sender.toAddress -> Portfolio(-amt)),
               Map(dAppAddress         -> Portfolio(amt))
@@ -347,7 +347,7 @@ object InvokeDiffsCommon {
     payments
       .collectFirstSome {
         case Payment(_, IssuedAsset(id)) => InvokeDiffsCommon.checkAsset(blockchain, id).swap.toOption
-        case Payment(_, Waves)           => None
+        case Payment(_, Dcc)           => None
       }
       .map(GenericError(_))
       .toLeft(())
@@ -481,7 +481,7 @@ object InvokeDiffsCommon {
           for {
             address <- resolveAddress(addressRepr, blockchain)
             diff <- Asset.fromCompatId(asset) match {
-              case Waves =>
+              case Dcc =>
                 val portfolio = Portfolio.combine(Map(address -> Portfolio(amount)), Map(dAppAddress -> Portfolio(-amount))).leftMap(GenericError(_))
                 TracedResult(
                   portfolio.flatMap(p =>

@@ -127,9 +127,9 @@ class MicroBlockAppendingAfterFinalizationSpec extends BaseFinalizationSpec {
 
     val generators = Seq(generator1, generator2, generator3)
     val initBalances = Seq(
-      AddrWithBalance(generator1.toAddress, 5000.waves),
-      AddrWithBalance(generator2.toAddress, 2000.waves),
-      AddrWithBalance(generator3.toAddress, 3000.waves)
+      AddrWithBalance(generator1.toAddress, 5000.dcc),
+      AddrWithBalance(generator2.toAddress, 2000.dcc),
+      AddrWithBalance(generator3.toAddress, 3000.dcc)
     )
 
     withDomain(defaultSettings, initBalances) { d =>

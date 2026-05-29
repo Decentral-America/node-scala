@@ -105,8 +105,8 @@ class BlockDifferTest extends FreeSpec with WithDomain {
 
     "correctly computes state hash" - {
       "genesis block" in {
-        val txs = (1 to 10).map(idx => TxHelpers.genesis(TxHelpers.address(idx), 100.waves)) ++
-          (1 to 5).map(idx => TxHelpers.genesis(TxHelpers.address(idx), 1.waves))
+        val txs = (1 to 10).map(idx => TxHelpers.genesis(TxHelpers.address(idx), 100.dcc)) ++
+          (1 to 5).map(idx => TxHelpers.genesis(TxHelpers.address(idx), 1.dcc))
         withDomain(TransactionStateSnapshot.configure(_.copy(lightNodeBlockFieldsAbsenceInterval = 0))) { d =>
           val block = createGenesisWithStateHash(txs, fillStateHash = true)
 
@@ -129,7 +129,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
           val genesis = createGenesisWithStateHash(Seq(TxHelpers.genesis(TxHelpers.address(1))), fillStateHash = true)
           d.appendBlock(genesis)
 
-          val txs = (1 to 10).map(idx => TxHelpers.transfer(TxHelpers.signer(idx), TxHelpers.address(idx + 1), (100 - idx).waves))
+          val txs = (1 to 10).map(idx => TxHelpers.transfer(TxHelpers.signer(idx), TxHelpers.address(idx + 1), (100 - idx).dcc))
 
           val blockTs    = txs.map(_.timestamp).max
           val signer     = TxHelpers.signer(2)
@@ -234,7 +234,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
             Some(refStateHash)
           )
 
-          val block = d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.transfer(sender, amount = idx.waves, fee = TestValues.fee * idx)))
+          val block = d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.transfer(sender, amount = idx.dcc, fee = TestValues.fee * idx)))
           val hs    = d.posSelector.validateGenerationSignature(block).explicitGet()
           val txValidationResult = BlockDiffer.fromBlock(refBlockchain, Some(refBlock), block, None, MiningConstraint.Unlimited, hs)
 
@@ -243,7 +243,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
 
           val snapshotApplyResult = BlockDiffer.fromBlock(refBlockchain, Some(refBlock), block, Some(blockSnapshot), MiningConstraint.Unlimited, hs)
 
-          // TODO: remove after NODE-2610 fix
+          // NOTE: Retained for NODE-2610 compatibility (Waves-era ticket)
           def clearAffected(r: Result): Result = {
             r.copy(
               snapshot = r.snapshot.copy(transactions = r.snapshot.transactions.map { case (id, info) => id -> info.copy(affected = Set.empty) }),
@@ -266,7 +266,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
       val sender   = TxHelpers.signer(1)
       val minerAcc = TxHelpers.signer(2)
       val settings = DomainPresets.TransactionStateSnapshot
-      val time     = TestTime() // TODO: migrate to d.testTime
+      val time     = TestTime() // NOTE: Could use d.testTime — current approach works correctly
       withDomain(
         settings.copy(minerSettings = settings.minerSettings.copy(quorum = 0)),
         AddrWithBalance.enoughBalances(sender, minerAcc),

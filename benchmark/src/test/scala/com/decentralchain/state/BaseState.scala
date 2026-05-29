@@ -21,14 +21,14 @@ trait BaseState {
   import BaseState.*
 
   val benchSettings: Settings = Settings.fromConfig(ConfigFactory.load())
-  val wavesSettings: DCCSettings = {
+  val dccSettings: DCCSettings = {
     val config = loadConfig(ConfigFactory.parseFile(new File(benchSettings.networkConfigFile)))
     DCCSettings.fromRootConfig(config)
   }
   private val fsSettings: FunctionalitySettings = updateFunctionalitySettings(FunctionalitySettings.TESTNET)
   private val rdb: RDB = {
     val dir = Files.createTempDirectory("state-synthetic").toAbsolutePath.toString
-    RDB.open(wavesSettings.dbSettings.copy(directory = dir))
+    RDB.open(dccSettings.dbSettings.copy(directory = dir))
   }
 
   val state: RocksDBWriter = TestRocksDB.withFunctionalitySettings(rdb, fsSettings)
@@ -39,7 +39,7 @@ trait BaseState {
   private var _lastBlock: Block = scala.compiletime.uninitialized
   def lastBlock: Block          = _lastBlock
 
-  protected def waves(n: Float): Long = (n * 100000000L).toLong
+  protected def dcc(n: Float): Long = (n * 100000000L).toLong
   protected val accountGen: Gen[KeyPair] =
     Gen.containerOfN[Array, Byte](32, Arbitrary.arbitrary[Byte]).map(seed => KeyPair(seed))
 
@@ -63,7 +63,7 @@ trait BaseState {
   private val initGen: Gen[(KeyPair, Block)] = for {
     rich <- accountGen
   } yield {
-    val genesisTx = GenesisTransaction.create(rich.toAddress, waves(100000000L), System.currentTimeMillis() - 10000).explicitGet()
+    val genesisTx = GenesisTransaction.create(rich.toAddress, dcc(100000000L), System.currentTimeMillis() - 10000).explicitGet()
     (rich, TestBlock.create(time = genesisTx.timestamp, Seq(genesisTx)).block)
   }
 
