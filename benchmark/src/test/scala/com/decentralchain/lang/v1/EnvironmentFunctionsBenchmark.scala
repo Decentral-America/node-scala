@@ -18,7 +18,7 @@ import com.decentralchain.lang.v1.compiler.Terms.{CONST_STRING, EVALUATED, EXPR,
 import com.decentralchain.lang.v1.evaluator.Log
 import com.decentralchain.lang.v1.evaluator.ctx.EvaluationContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.EnvironmentFunctions
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.{Functions, WavesContext}
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.{Functions, DccContext}
 import com.decentralchain.lang.v1.traits.*
 import com.decentralchain.lang.v1.traits.domain.Recipient.Address
 import com.decentralchain.lang.v1.traits.domain.{BlockInfo, Recipient, ScriptAssetInfo, Tx}
@@ -114,7 +114,7 @@ object EnvironmentFunctionsBenchmark {
     override def lastBlockOpt(): Option[BlockInfo]                                                               = ???
     override def blockInfoByHeight(height: Int): Option[BlockInfo]                                               = ???
     override def accountBalanceOf(addressOrAlias: Recipient, assetId: Option[Array[Byte]]): Either[String, Long] = ???
-    override def accountWavesBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails]    = ???
+    override def accountDccBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails]    = ???
     override def tthis: Environment.Tthis                                                                        = ???
     override def multiPaymentAllowed: Boolean                                                                    = ???
     override def transferTransactionFromProto(b: Array[Byte]): Option[Tx.Transfer]                               = ???
@@ -164,7 +164,7 @@ object EnvironmentFunctionsBenchmark {
 @State(Scope.Benchmark)
 class AddressFromString {
   val ctx: EvaluationContext[Environment, Id] =
-    WavesContext
+    DccContext
       .build(Global, DirectiveSet(V4, Account, DApp).explicitGet(), true)
       .evaluationContext(environment)
 

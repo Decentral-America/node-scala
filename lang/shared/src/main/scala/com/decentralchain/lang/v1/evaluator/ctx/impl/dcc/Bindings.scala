@@ -1,4 +1,4 @@
-package com.decentralchain.lang.v1.evaluator.ctx.impl.waves
+package com.decentralchain.lang.v1.evaluator.ctx.impl.dcc
 
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*

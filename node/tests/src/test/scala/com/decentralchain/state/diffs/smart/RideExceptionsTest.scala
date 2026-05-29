@@ -22,7 +22,7 @@ import com.decentralchain.transaction.TxHelpers.*
 class RideExceptionsTest extends PropSpec with WithDomain {
   property("throwing java exception from ride functions should correctly fail or reject invoke after light node activation") {
     assert(
-      FUNCTION_CALL(Native(ACCOUNTWAVESBALANCE), List(REF("unit"))),
+      FUNCTION_CALL(Native(ACCOUNTDCCBALANCE), List(REF("unit"))),
       "Unexpected recipient type Unit",
       rejectBefore = false
     )

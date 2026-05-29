@@ -36,7 +36,7 @@ sealed trait UtilsEvaluationRequest {
           (addr, ov)    <- ovs.accounts
           (id, balance) <- ov.assetBalances
         } yield ((addr, id), balance.value)) ++ VectorMap.from(ovs.accounts.flatMap { case (addr, acc) =>
-          acc.regularBalance.map(v => ((addr, Asset.Waves), v.value))
+          acc.regularBalance.map(v => ((addr, Asset.Dcc), v.value))
         }))
       )
     }

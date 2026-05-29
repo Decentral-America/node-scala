@@ -18,7 +18,7 @@ import com.decentralchain.ride.runner.*
 import com.decentralchain.ride.runner.input.RideRunnerBlockchainState
 import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.AliasDoesNotExist
 import com.decentralchain.transaction.transfer.{TransferTransaction, TransferTransactionLike}
 import com.decentralchain.transaction.{Asset, Proofs, Transaction, TxPositiveAmount}
@@ -30,7 +30,7 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
   override def hasData(address: Address): Boolean = input.accounts.get(address).fold(false)(_.data.nonEmpty)
 
   // Ride: get*Value (data), get* (data)
-  /** Retrieves Waves balance snapshot in the [from, to] range (inclusive) */
+  /** Retrieves Dcc balance snapshot in the [from, to] range (inclusive) */
   override def accountData(acc: Address, key: String): Option[DataEntry[?]] = for {
     accountState <- input.accounts.get(acc)
     data         <- accountState.data
@@ -94,7 +94,7 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
   // Ride: blockInfoByHeight
   override def blockReward(height: Int): Option[Long] = input.blocks.get(height).map(_.blockReward)
 
-  // Ride: wavesBalance, height, lastBlock
+  // Ride: dccBalance, height, lastBlock
   override def height: Int = input.height
 
   override def finalizedHeight: Option[Height] = ???
@@ -136,11 +136,11 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
     alias         <- state.aliases
   } yield alias -> addr
 
-  // Ride: get*Value (data), get* (data), isDataStorageUntouched, balance, scriptHash, wavesBalance
+  // Ride: get*Value (data), get* (data), isDataStorageUntouched, balance, scriptHash, dccBalance
   override def resolveAlias(a: Alias): Either[ValidationError, Address] =
     resolveAlias.get(a).toRight(AliasDoesNotExist(a): ValidationError)
 
-  // Ride: wavesBalance
+  // Ride: dccBalance
   override def leaseBalance(address: Address): LeaseBalance = {
     val r = for {
       accountState <- input.accounts.get(address)
@@ -149,21 +149,21 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
     r.getOrElse(LeaseBalance(0, 0))
   }
 
-  // Ride: assetBalance, wavesBalance
+  // Ride: assetBalance, dccBalance
   override def balance(address: Address, mayBeAssetId: Asset): Long =
     input.accounts.get(address).flatMap(_.balance(mayBeAssetId)).getOrElse(0L)
 
   private val balanceSnapshotsCache = mkCache[Address, Seq[BalanceSnapshot]] { address =>
     val generatingBalance = input.accounts
       .get(address)
-      .flatMap { addressState => addressState.generatingBalance.map(_.value).orElse(addressState.balance(Waves)) }
+      .flatMap { addressState => addressState.generatingBalance.map(_.value).orElse(addressState.balance(Dcc)) }
       .getOrElse(0L)
 
     Seq(BalanceSnapshot(Height(height), generatingBalance, 0, 0, 0))
   }
 
-  // Ride: wavesBalance (specifies to=None)
-  /** Retrieves Waves balance snapshot in the [from, to] range (inclusive) */
+  // Ride: dccBalance (specifies to=None)
+  /** Retrieves Dcc balance snapshot in the [from, to] range (inclusive) */
   override def balanceSnapshots(address: Address, from: Int, to: Option[BlockId]): Seq[BalanceSnapshot] =
     // "to" always None
     balanceSnapshotsCache.get(address).filter(_.height >= Height(from))
@@ -194,7 +194,7 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
 
   override def balances(req: Seq[(Address, Asset)]): Map[(Address, Asset), Long] = ???
 
-  override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] = ???
+  override def dccBalances(addresses: Seq[Address]): Map[Address, Long] = ???
 
   override def effectiveBalanceBanHeights(address: Address): Seq[Int] = Seq.empty
 

@@ -118,7 +118,7 @@ object MerkleRootTestSuite {
 
   val Config: Config = ConfigFactory.parseString(
     s"""
-       |waves {
+       |dcc {
        |   blockchain.custom {
        |      functionality {
        |        pre-activated-features {

@@ -10,7 +10,7 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
 import com.decentralchain.lang.v1.compiler.Terms.{EXPR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.utils.Signed
@@ -187,7 +187,7 @@ class PseudoTransactionSuite extends BaseTransactionSuite {
       Some(FUNCTION_CALL(FunctionHeader.User(func), args)),
       Seq.empty,
       smartMinFee + smartFee,
-      Waves,
+      Dcc,
       System.currentTimeMillis()
     )
 }

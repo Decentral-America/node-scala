@@ -26,7 +26,7 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
     NodeConfigs
       .Builder(Default, 2, Seq.empty)
       .overrideBase(_.preactivatedFeatures((RideV6.id, Height(0))))
-      .overrideBase(_.raw(s"waves.blockchain.custom.functionality.allow-multiple-proofs-in-create-alias-until = 0"))
+      .overrideBase(_.raw(s"dcc.blockchain.custom.functionality.allow-multiple-proofs-in-create-alias-until = 0"))
       .buildNonConflicting()
 
   var version: Byte = 1
@@ -146,7 +146,7 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
     val aliasFee  = createAlias(thirdKeyPair, thirdAddressAlias)
     val aliasFull = fullAliasByAddress(thirdAddress, thirdAddressAlias)
     // lease maximum value, to pass next thirdAddress
-    val leasingAmount = balance1 - minFee - 0.5.waves
+    val leasingAmount = balance1 - minFee - 0.5.dcc
 
     val leasingTx = sender.lease(firstKeyPair, aliasFull, leasingAmount, minFee).id
     nodes.waitForHeightAriseAndTxPresent(leasingTx)
@@ -183,7 +183,7 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
       3.toByte,
       notMiner.publicKey,
       "abc12345",
-      TxPositiveAmount.unsafeFrom(0.005.waves),
+      TxPositiveAmount.unsafeFrom(0.005.dcc),
       System.currentTimeMillis(),
       Proofs.empty,
       AddressScheme.current.chainId

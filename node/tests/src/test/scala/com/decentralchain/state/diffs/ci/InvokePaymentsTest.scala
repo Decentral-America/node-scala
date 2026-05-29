@@ -7,7 +7,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.LeaseBalance
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -67,7 +67,7 @@ class InvokePaymentsTest extends PropSpec with WithDomain {
     test("false")
   }
 
-  property("invoke on insufficient balance is always rejected for asset payment and fails on big complexity for waves") {
+  property("invoke on insufficient balance is always rejected for asset payment and fails on big complexity for dcc") {
     val invoker = signer(2)
     withDomain(RideV5, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(invoker.toAddress, invokeFee)) { d =>
       val dApp = TestCompiler(V5).compileContract(
@@ -90,10 +90,10 @@ class InvokePaymentsTest extends PropSpec with WithDomain {
         s"Transaction application leads to negative asset '$asset' balance"
       )
       d.appendAndAssertFailed(
-        invoke(invoker = invoker, func = Some("complex"), payments = Seq(Payment(1, Waves))),
-        "negative waves balance"
+        invoke(invoker = invoker, func = Some("complex"), payments = Seq(Payment(1, Dcc))),
+        "negative dcc balance"
       )
-      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Waves)))) should produce(s"negative waves balance")
+      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Dcc)))) should produce(s"negative dcc balance")
     }
   }
 
@@ -109,7 +109,7 @@ class InvokePaymentsTest extends PropSpec with WithDomain {
       d.appendBlock(setScript(secondSigner, dApp))
       d.appendBlock(lease(recipient = invoker.toAddress, amount = 1))
       d.blockchain.leaseBalance(invoker.toAddress) shouldBe LeaseBalance(1, 0)
-      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Waves)))) should produce(s"negative waves balance")
+      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Dcc)))) should produce(s"negative dcc balance")
     }
   }
 
@@ -129,7 +129,7 @@ class InvokePaymentsTest extends PropSpec with WithDomain {
       d.appendBlock(setScript(secondSigner, dApp))
       d.appendBlock(lease(sender = invoker, recipient = defaultAddress, amount = 1))
       d.blockchain.leaseBalance(invoker.toAddress) shouldBe LeaseBalance(0, 1)
-      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Waves)))) should produce("negative effective balance")
+      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Dcc)))) should produce("negative effective balance")
     }
   }
 }

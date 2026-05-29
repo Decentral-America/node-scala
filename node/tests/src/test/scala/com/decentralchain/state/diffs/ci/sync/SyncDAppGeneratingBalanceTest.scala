@@ -16,9 +16,9 @@ class SyncDAppGeneratingBalanceTest extends PropSpec with WithDomain {
       s"""
          | @Callable(i)
          | func default() = {
-         |   strict generatingBefore = i.caller.wavesBalance().generating
+         |   strict generatingBefore = i.caller.dccBalance().generating
          |   strict result = Address(base58'$defaultAddress').invoke("call", [], [AttachedPayment(unit, $amount)])
-         |   strict generatingAfter = i.caller.wavesBalance().generating
+         |   strict generatingAfter = i.caller.dccBalance().generating
          |   [
          |     IntegerEntry("generatingDiff", generatingBefore - generatingAfter)
          |   ]

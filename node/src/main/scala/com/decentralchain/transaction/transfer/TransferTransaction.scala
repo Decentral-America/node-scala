@@ -5,7 +5,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.serialization.impl.TransferTxSerializer
 import com.decentralchain.transaction.validation.*
 import com.decentralchain.transaction.validation.impl.TransferTxValidator
@@ -30,7 +30,7 @@ case class TransferTransaction(
 ) extends Transaction(
       TransactionType.Transfer,
       assetId match {
-        case Waves          => Seq()
+        case Dcc          => Seq()
         case a: IssuedAsset => Seq(a)
       }
     )
@@ -83,7 +83,7 @@ object TransferTransaction extends TransactionParser {
       chainId: Byte = AddressScheme.current.chainId
   ): Either[ValidationError, TransferTransaction] =
     for {
-      amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, asset.maybeBase58Repr.getOrElse("waves")))
+      amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, asset.maybeBase58Repr.getOrElse("dcc")))
       fee    <- TxPositiveAmount(fee)(TxValidationError.InsufficientFee)
       tx     <- TransferTransaction(version, sender, recipient, asset, amount, feeAsset, fee, attachment, timestamp, proofs, chainId).validatedEither
     } yield tx

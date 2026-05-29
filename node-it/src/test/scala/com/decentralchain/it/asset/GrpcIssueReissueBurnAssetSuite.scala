@@ -22,8 +22,8 @@ import org.scalatest.freespec.AnyFreeSpec
 import scala.util.Random
 
 class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactionSuiteLike {
-  private val initialWavesBalance = 100.waves
-  private val setScriptPrice      = 0.01.waves
+  private val initialDccBalance = 100.dcc
+  private val setScriptPrice      = 0.01.dcc
 
   private val CallableMethod    = "@Callable"
   private val TransactionMethod = "Transaction"
@@ -45,7 +45,7 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
         val tx  = issue(acc, method, data, fee)
 
         validateIssuedAssets(acc, tx, data, method = method)
-        sender.wavesBalance(acc).regular shouldBe (initialWavesBalance - setScriptPrice - fee)
+        sender.dccBalance(acc).regular shouldBe (initialDccBalance - setScriptPrice - fee)
       }
 
     for (data <- Seq(simpleNonreissuableAsset, simpleReissuableAsset)) s"${data.assetType} asset could be partially burned" in {
@@ -254,7 +254,7 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
       .explicitGet()
       ._1
 
-    miner.broadcastTransfer(sender.keyPair, PBRecipients.create(address.toAddress), initialWavesBalance, minFee, waitForTx = true)
+    miner.broadcastTransfer(sender.keyPair, PBRecipients.create(address.toAddress), initialDccBalance, minFee, waitForTx = true)
 
     miner.waitForTransaction(
       miner
@@ -441,7 +441,7 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
   }
 
   def invocationCost(issuesCount: Int, isSmartAcc: Boolean = true, smartPaymentCount: Int = 0, smartAssetsInActions: Int = 0): Long = {
-    0.005.waves + (if (isSmartAcc) 0.004.waves else 0L) + 0.004.waves * smartPaymentCount + 0.004.waves * smartAssetsInActions + 1.waves * issuesCount
+    0.005.dcc + (if (isSmartAcc) 0.004.dcc else 0L) + 0.004.dcc * smartPaymentCount + 0.004.dcc * smartAssetsInActions + 1.dcc * issuesCount
   }
 
   def script(asset: Asset, function: String = ""): String = {

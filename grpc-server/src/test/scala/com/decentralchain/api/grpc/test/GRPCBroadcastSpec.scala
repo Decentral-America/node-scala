@@ -7,7 +7,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.test.{FlatSpec, NumericExt}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.utils.EthConverters.*
 import com.decentralchain.transaction.{EthTxGenerator, TxExchangeAmount, TxHelpers, TxMatcherFee, TxOrderPrice, TxVersion}
@@ -32,9 +32,9 @@ class GRPCBroadcastSpec extends FlatSpec with WithDomain with ParallelTestExecut
     val sellerEthAccount = TxHelpers.signer(2).toEthKeyPair
 
     val balances = Seq(
-      AddrWithBalance(buyerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(sellerEthAccount.toWavesAddress, 1000.waves),
-      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.waves)
+      AddrWithBalance(buyerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(sellerEthAccount.toDccAddress, 1000.dcc),
+      AddrWithBalance(TxHelpers.matcher.toAddress, 1000.dcc)
     )
 
     withDomain(DomainPresets.RideV6, balances) { d =>
@@ -46,7 +46,7 @@ class GRPCBroadcastSpec extends FlatSpec with WithDomain with ParallelTestExecut
       d.appendBlock(issueTx)
 
       // Transfer asset to seller
-      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toWavesAddress, 1000L, testAsset))
+      d.appendBlock(TxHelpers.transfer(assetIssuer, sellerEthAccount.toDccAddress, 1000L, testAsset))
 
       val ethBuyOrder  = ethBuyOrderSigned(testAsset, buyerEthAccount, TxHelpers.timestamp)
       val ethSellOrder = ethSellOrderSigned(testAsset, sellerEthAccount, TxHelpers.timestamp)
@@ -60,7 +60,7 @@ class GRPCBroadcastSpec extends FlatSpec with WithDomain with ParallelTestExecut
     withDomain(DomainPresets.RideV6) { d =>
       val grpcApi = getGrpcApi(d)
 
-      val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 10, Waves)
+      val transaction = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, 10, Dcc)
 
       Try(Await.result(grpcApi.broadcast(PBTransactions.protobuf(transaction)), 10.seconds)).toEither should matchPattern {
         case Left(err) if err.toString.contains("ETH transactions should not be broadcasted over gRPC") =>
@@ -80,14 +80,14 @@ object GRPCBroadcastSpec {
       Order.V4,
       emptySignature,
       TxHelpers.matcher.publicKey,
-      AssetPair(testAsset, Waves),
+      AssetPair(testAsset, Dcc),
       OrderType.BUY,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       timestamp,
       timestamp + 10000,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     ethBuyOrderTemplate.copy(
@@ -100,14 +100,14 @@ object GRPCBroadcastSpec {
       Order.V4,
       emptySignature,
       TxHelpers.matcher.publicKey,
-      AssetPair(testAsset, Waves),
+      AssetPair(testAsset, Dcc),
       OrderType.SELL,
       TxExchangeAmount.unsafeFrom(1),
       TxOrderPrice.unsafeFrom(100L),
       timestamp,
       timestamp + 10000,
       TxMatcherFee.unsafeFrom(100000),
-      Waves
+      Dcc
     )
 
     ethSellOrderTemplate.copy(

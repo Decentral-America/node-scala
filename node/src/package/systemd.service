@@ -6,7 +6,7 @@ Requires=${{start_facilities}}
 Type=simple
 ExecStart=/usr/share/${{app_name}}/bin/${{app_name}} \
   -Dlogback.pattern="%%-5level %%logger{26} - %%msg%%n" \
-  -- /etc/${{app_name}}/waves.conf
+  -- /etc/${{app_name}}/dcc.conf
 Restart=always
 RestartSec=${{retryTimeout}}
 RestartPreventExitStatus=10 38 61 74

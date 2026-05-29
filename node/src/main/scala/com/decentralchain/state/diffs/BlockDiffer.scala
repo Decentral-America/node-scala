@@ -13,7 +13,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.StateSnapshot.monoid
 import com.decentralchain.state.TxStateSnapshotHashBuilder.TxStatusInfo
 import com.decentralchain.state.patch.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.exchange.ExchangeTransaction
 import com.decentralchain.transaction.lease.LeaseTransaction
@@ -47,7 +47,7 @@ object BlockDiffer {
     def apply(l: Long): Long = l / divider * dividend
   }
 
-  case class TxFeeInfo(feeAsset: Asset, feeAmount: Long, carry: Long, wavesFee: Long)
+  case class TxFeeInfo(feeAsset: Asset, feeAmount: Long, carry: Long, dccFee: Long)
 
   val CurrentBlockFeePart: Fraction = Fraction(2, 5)
 
@@ -165,10 +165,10 @@ object BlockDiffer {
         blockchain
       )
       (
-        Portfolio.waves(blockRewardShares.miner),
-        daoAddress.fold(Map[Address, Portfolio]())(addr => Map(addr -> Portfolio.waves(blockRewardShares.daoAddress)).filter(_._2.balance > 0)),
+        Portfolio.dcc(blockRewardShares.miner),
+        daoAddress.fold(Map[Address, Portfolio]())(addr => Map(addr -> Portfolio.dcc(blockRewardShares.daoAddress)).filter(_._2.balance > 0)),
         xtnBuybackAddress.fold(Map[Address, Portfolio]())(addr =>
-          Map(addr -> Portfolio.waves(blockRewardShares.xtnBuybackAddress)).filter(_._2.balance > 0)
+          Map(addr -> Portfolio.dcc(blockRewardShares.xtnBuybackAddress)).filter(_._2.balance > 0)
         )
       )
     }
@@ -330,7 +330,7 @@ object BlockDiffer {
           case None => Left(s"Invalid endorsement index in $endorsement, valid: [0; ${committed.size}]")
           case Some((addr, _)) =>
             val orig    = r.getOrElse(addr, Portfolio.empty)
-            val updated = orig.combine(Portfolio.waves(-CommitToGenerationTransaction.DepositInWavelets))
+            val updated = orig.combine(Portfolio.dcc(-CommitToGenerationTransaction.DepositInWavelets))
             updated.map(r.updated(addr, _))
         }
     }
@@ -339,7 +339,7 @@ object BlockDiffer {
   def maybeApplySponsorship(blockchain: Blockchain, sponsorshipEnabled: Boolean, transactionFee: (Asset, Long)): (Asset, Long) =
     transactionFee match {
       case (ia: IssuedAsset, fee) if sponsorshipEnabled =>
-        Waves -> Sponsorship.toWaves(fee, blockchain.assetDescription(ia).get.sponsorship)
+        Dcc -> Sponsorship.toDcc(fee, blockchain.assetDescription(ia).get.sponsorship)
       case _ => transactionFee
     }
 
@@ -349,7 +349,7 @@ object BlockDiffer {
       miner: Address
   ): Either[ValidationError, StateSnapshot] = {
     val blockchain           = blockchainUpdater.referencedBlockchain(reference)
-    val feeFromPreviousBlock = Portfolio.waves(blockchain.carryFee(Some(reference)))
+    val feeFromPreviousBlock = Portfolio.dcc(blockchain.carryFee(Some(reference)))
 
     val daoAddress        = blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten
     val xtnBuybackAddress = blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
@@ -363,10 +363,10 @@ object BlockDiffer {
     )
 
     for {
-      minerReward <- Portfolio.waves(rewardShares.miner).combine(feeFromPreviousBlock).leftMap(GenericError(_))
+      minerReward <- Portfolio.dcc(rewardShares.miner).combine(feeFromPreviousBlock).leftMap(GenericError(_))
       resultPf = Map(miner -> minerReward) ++
-        daoAddress.map(_ -> Portfolio.waves(rewardShares.daoAddress)) ++
-        xtnBuybackAddress.map(_ -> Portfolio.waves(rewardShares.xtnBuybackAddress))
+        daoAddress.map(_ -> Portfolio.dcc(rewardShares.daoAddress)) ++
+        xtnBuybackAddress.map(_ -> Portfolio.dcc(rewardShares.xtnBuybackAddress))
       withRewards   <- StateSnapshot.build(blockchain, portfolios = resultPf.filterNot(_._2.isEmpty))
       penaltiesPf   <- calculatePenalties(blockchain, reference).leftMap(GenericError(_))
       withPenalties <- withRewards.addBalances(penaltiesPf, blockchain).leftMap(GenericError(_))
@@ -444,7 +444,7 @@ object BlockDiffer {
                 Result(
                   newSnapshot,
                   carryFee + txFeeInfo.carry,
-                  currTotalFee + txFeeInfo.wavesFee,
+                  currTotalFee + txFeeInfo.dccFee,
                   updatedConstraint,
                   newKeyBlockSnapshot,
                   TxStateSnapshotHashBuilder
@@ -486,7 +486,7 @@ object BlockDiffer {
         Result(
           currSnapshot |+| txSnapshot.withTransaction(nti),
           carryFee + txFeeInfo.map(_.carry).getOrElse(0L),
-          currTotalFee + txFeeInfo.map(_.wavesFee).getOrElse(0L),
+          currTotalFee + txFeeInfo.map(_.dccFee).getOrElse(0L),
           currConstraint,
           keyBlockSnapshot.withTransaction(nti),
           TxStateSnapshotHashBuilder.createHashFromSnapshot(txSnapshot, Some(TxStatusInfo(tx.id(), txStatus))).createHash(prevStateHash)
@@ -499,12 +499,12 @@ object BlockDiffer {
     val (feeAsset, feeAmount) = maybeApplySponsorship(blockchain, hasSponsorship, tx.assetFee)
     val currentBlockFee       = CurrentBlockFeePart(feeAmount)
 
-    // carry is 60% of waves fees the next miner will get. obviously carry fee only makes sense when both
-    // NG and sponsorship is active. also if sponsorship is active, feeAsset can only be Waves
+    // carry is 60% of dcc fees the next miner will get. obviously carry fee only makes sense when both
+    // NG and sponsorship is active. also if sponsorship is active, feeAsset can only be Dcc
     val carry    = if (hasNg && hasSponsorship) feeAmount - currentBlockFee else 0
-    val wavesFee = if (feeAsset == Waves) feeAmount else 0L
+    val dccFee = if (feeAsset == Dcc) feeAmount else 0L
 
-    TxFeeInfo(feeAsset, feeAmount, carry, wavesFee)
+    TxFeeInfo(feeAsset, feeAmount, carry, dccFee)
   }
 
   private def leasePatchesSnapshot(blockchain: Blockchain): StateSnapshot =

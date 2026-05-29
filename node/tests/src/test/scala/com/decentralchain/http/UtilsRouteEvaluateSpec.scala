@@ -355,7 +355,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
         val dAppAccount2 = TxHelpers.secondSigner
         val dAppAddress2 = TxHelpers.secondAddress
-        d.helpers.creditWavesFromDefaultSigner(dAppAddress2)
+        d.helpers.creditDccFromDefaultSigner(dAppAddress2)
         val testScript2 = TxHelpers.scriptV5(s"""
                                                 |@Callable(i)
                                                 |func callable() = {
@@ -555,15 +555,15 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
         "negative" in {
           val exprTests = Table[Seq[(Asset, Long)]](
             "paymentAssetWithAmounts",
-            Seq(Asset.Waves -> 3),
+            Seq(Asset.Dcc -> 3),
             Seq(asset       -> 3),
-            Seq(Asset.Waves -> 3, asset -> 3)
+            Seq(Asset.Dcc -> 3, asset -> 3)
           )
 
           forAll(exprTests) { paymentAssetWithAmounts =>
             val setScriptTx = mkSetScriptTx(paymentAssetWithAmounts*)
 
-            val hasWavesAsset  = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Waves }
+            val hasDccAsset  = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Dcc }
             val hasIssuedAsset = paymentAssetWithAmounts.exists { case (a, _) => a == asset }
             withDomain(
               RideV6,
@@ -583,7 +583,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
                   dAppAddress.toString -> Json
                     .obj()
                     .deepMerge {
-                      if (hasWavesAsset) Json.obj("regularBalance" -> collectLessBalance(Asset.Waves))
+                      if (hasDccAsset) Json.obj("regularBalance" -> collectLessBalance(Asset.Dcc))
                       else Json.obj()
                     }
                     .deepMerge {
@@ -612,9 +612,9 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
         "positive" in {
           val exprTests = Table[Seq[(Asset, Long)]](
             "paymentAssetWithAmounts",
-            Seq(Asset.Waves -> 1),
+            Seq(Asset.Dcc -> 1),
             Seq(asset       -> 1),
-            Seq(Asset.Waves -> 1, asset -> 2)
+            Seq(Asset.Dcc -> 1, asset -> 2)
           )
 
           forAll(exprTests) { paymentAssetWithAmounts =>
@@ -636,7 +636,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               val blockchainOverrides = Json.obj(
                 "accounts" -> Json.obj(
                   dAppAddress.toString -> Json
-                    .obj("regularBalance" -> collectBalance(Asset.Waves))
+                    .obj("regularBalance" -> collectBalance(Asset.Dcc))
                     .deepMerge {
                       if (hasIssuedAsset) Json.obj("assetBalances" -> Json.obj(asset.toString -> collectBalance(asset)))
                       else Json.obj()
@@ -701,18 +701,18 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
           val invocationTests = Table[Asset, Seq[(Asset, Long)]](
             ("feeAsset", "paymentAssetWithAmounts"),
-            (Asset.Waves, Seq(Asset.Waves -> 1)),
-            (Asset.Waves, Seq(asset -> 1)),
-            (asset, Seq(Asset.Waves -> 1)),
+            (Asset.Dcc, Seq(Asset.Dcc -> 1)),
+            (Asset.Dcc, Seq(asset -> 1)),
+            (asset, Seq(Asset.Dcc -> 1)),
             (asset, Seq(asset -> 1)),
-            (asset, Seq(Asset.Waves -> 1, asset -> 2)),
-            (Asset.Waves, Seq(Asset.Waves -> 1, asset -> 2))
+            (asset, Seq(Asset.Dcc -> 1, asset -> 2)),
+            (Asset.Dcc, Seq(Asset.Dcc -> 1, asset -> 2))
           )
 
           forAll(invocationTests) { case (feeAsset, paymentAssetWithAmounts) =>
             val setScriptTx = mkSetScriptTx(paymentAssetWithAmounts*)
 
-            val hasWavesAsset  = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Waves }
+            val hasDccAsset  = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Dcc }
             val hasIssuedAsset = (paymentAssetWithAmounts.map(_._1) :+ feeAsset).contains(asset)
             withDomain(
               RideV6,
@@ -726,7 +726,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               if (hasIssuedAsset) d.appendBlock(issueTx)
               if (feeAsset == asset) d.appendBlock(sponsorshipTx)
 
-              val (invocationFeeInWaves, invocationFeeInAsset) = if (feeAsset == asset) (0, defaultInvocationFee) else (defaultInvocationFee, 0)
+              val (invocationFeeInDcc, invocationFeeInAsset) = if (feeAsset == asset) (0, defaultInvocationFee) else (defaultInvocationFee, 0)
 
               // -1 to test insufficient funds
               def collectLessBalance(asset: Asset): Long = paymentAssetWithAmounts.collect { case (`asset`, x) => x }.sum - 1
@@ -736,7 +736,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
                   callerAddress.toString -> Json
                     .obj()
                     .deepMerge {
-                      if (hasWavesAsset) Json.obj("regularBalance" -> (invocationFeeInWaves + collectLessBalance(Asset.Waves)))
+                      if (hasDccAsset) Json.obj("regularBalance" -> (invocationFeeInDcc + collectLessBalance(Asset.Dcc)))
                       else Json.obj()
                     }
                     .deepMerge {
@@ -798,12 +798,12 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
           val invocationTests = Table[Asset, Seq[(Asset, Long)]](
             ("feeAsset", "paymentAssetWithAmounts"),
-            (Asset.Waves, Seq(Asset.Waves -> 1)),
-            (Asset.Waves, Seq(asset -> 1)),
-            (asset, Seq(Asset.Waves -> 1)),
+            (Asset.Dcc, Seq(Asset.Dcc -> 1)),
+            (Asset.Dcc, Seq(asset -> 1)),
+            (asset, Seq(Asset.Dcc -> 1)),
             (asset, Seq(asset -> 1)),
-            (asset, Seq(Asset.Waves -> 1, asset -> 2)),
-            (Asset.Waves, Seq(Asset.Waves -> 1, asset -> 2))
+            (asset, Seq(Asset.Dcc -> 1, asset -> 2)),
+            (Asset.Dcc, Seq(Asset.Dcc -> 1, asset -> 2))
           )
 
           forAll(invocationTests) { case (feeAsset, paymentAssetWithAmounts) =>
@@ -821,17 +821,17 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               if (hasIssuedAsset) d.appendBlock(issueTx)
               if (feeAsset == asset) d.appendBlock(sponsorshipTx)
 
-              val (invocationFeeInWaves, invocationFeeInAsset) = if (feeAsset == asset) (0, defaultInvocationFee) else (defaultInvocationFee, 0)
+              val (invocationFeeInDcc, invocationFeeInAsset) = if (feeAsset == asset) (0, defaultInvocationFee) else (defaultInvocationFee, 0)
 
               def collectBalance(asset: Asset): Long = paymentAssetWithAmounts.collect { case (`asset`, x) => x }.sum
 
-              val callerWavesBalance = invocationFeeInWaves + collectBalance(Asset.Waves)
+              val callerDccBalance = invocationFeeInDcc + collectBalance(Asset.Dcc)
               val callerAssetBalance = invocationFeeInAsset + collectBalance(asset)
               val blockchainOverrides = Json.obj(
                 "accounts" -> Json.obj(
                   callerAddress.toString -> Json
                     .obj(
-                      "regularBalance" -> callerWavesBalance,
+                      "regularBalance" -> callerDccBalance,
                       "assetBalances"  -> Json.obj(asset.toString -> callerAssetBalance)
                     )
                 )
@@ -866,14 +866,14 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
         }
       }
 
-      "waves balances" in {
+      "dcc balances" in {
         val miner        = scriptTransferReceiver
         val minerAddress = miner.toAddress
 
         val script = TestCompiler(V6).compileContract(
           s"""
              | @Callable(i)
-             | func default() = ([], wavesBalance(Address(base58'$minerAddress')))
+             | func default() = ([], dccBalance(Address(base58'$minerAddress')))
              | """.stripMargin
         )
         val setScriptTx = setScript(dAppAccount, script)
@@ -888,14 +888,14 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
             )
             .as[JsObject]
 
-        val minerInitialWavesBalance = 10001
+        val minerInitialDccBalance = 10001
         val leasingTx                = lease(miner, dAppAddress, 333)
 
         withDomain(
           RideV6,
           Seq(
             AddrWithBalance(dAppAddress, setScriptTx.fee.value),
-            AddrWithBalance(minerAddress, minerInitialWavesBalance + leasingTx.fee.value)
+            AddrWithBalance(minerAddress, minerInitialDccBalance + leasingTx.fee.value)
           )
         ) { d =>
           d.appendBlock(setScriptTx, leasingTx)
@@ -914,23 +914,23 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
                   (json \ "result" \ "value" \ "_2" \ "value" \ tpe \ "value").asOpt[Long] shouldBe Some(expected)
                 }
 
-                check("available", minerInitialWavesBalance - leasingTx.amount.value)
-                check("regular", minerInitialWavesBalance)
-                check("generating", minerInitialWavesBalance - leasingTx.amount.value)
-                check("effective", minerInitialWavesBalance - leasingTx.amount.value)
+                check("available", minerInitialDccBalance - leasingTx.amount.value)
+                check("regular", minerInitialDccBalance)
+                check("generating", minerInitialDccBalance - leasingTx.amount.value)
+                check("effective", minerInitialDccBalance - leasingTx.amount.value)
               }
             }
           }
 
           markup("with overrides")
           forAll(Table("regularBalanceDiff", -1000, 0, 1000)) { regularBalanceDiff =>
-            val minerOverriddenWavesBalance = minerInitialWavesBalance + regularBalanceDiff
+            val minerOverriddenDccBalance = minerInitialDccBalance + regularBalanceDiff
             Post(
               routePath(s"/script/evaluate/$dAppAddress"),
               invocation(
                 Json.obj(
                   "accounts" -> Json.obj(
-                    minerAddress.toString -> Json.obj("regularBalance" -> minerOverriddenWavesBalance)
+                    minerAddress.toString -> Json.obj("regularBalance" -> minerOverriddenDccBalance)
                   )
                 )
               )
@@ -943,10 +943,10 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
                     (json \ "result" \ "value" \ "_2" \ "value" \ tpe \ "value").asOpt[Long] shouldBe Some(expected)
                   }
 
-                  check("available", minerOverriddenWavesBalance - leasingTx.amount.value)
-                  check("regular", minerOverriddenWavesBalance)
-                  check("generating", math.min(minerInitialWavesBalance, minerOverriddenWavesBalance) - leasingTx.amount.value)
-                  check("effective", minerOverriddenWavesBalance - leasingTx.amount.value)
+                  check("available", minerOverriddenDccBalance - leasingTx.amount.value)
+                  check("regular", minerOverriddenDccBalance)
+                  check("generating", math.min(minerInitialDccBalance, minerOverriddenDccBalance) - leasingTx.amount.value)
+                  check("effective", minerOverriddenDccBalance - leasingTx.amount.value)
                 }
               }
             }
@@ -956,7 +956,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
     }
 
     "validation of root call" in {
-      withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 0.01 waves))) { d =>
+      withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 0.01 dcc))) { d =>
         val route = seal(utilsApi.copy(blockchain = d.blockchain).route)
         val dApp = TestCompiler(V6).compileContract(
           s"""
@@ -1001,7 +1001,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
         // negative payment
         Post(routePath(s"/script/evaluate/$secondAddress"), Json.parse("""{"payment":[{"amount":-1,"assetId":null}]}""")) ~> route ~> check {
-          responseAs[String] should include("non-positive amount: -1 of Waves")
+          responseAs[String] should include("non-positive amount: -1 of Dcc")
         }
 
         // illegal payment asset id
@@ -1039,14 +1039,14 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
           Json.parse("""{"call": {"function":"syncCallWithPayment"}, "payment":[{"amount":99,"assetId":null}]}""")
         ) ~> route ~> check {
           (responseAs[JsObject] \ "payment" \ 0 \ "amount").as[Int] shouldBe 99
-          (responseAs[JsObject] \ "message").as[String] should include("negative waves balance")
+          (responseAs[JsObject] \ "message").as[String] should include("negative dcc balance")
         }
       }
     }
 
     "taking into account sync call transfers" in {
       val thirdAddress = signer(2).toAddress
-      withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 0.01 waves), AddrWithBalance(thirdAddress, 1 waves))) { d =>
+      withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 0.01 dcc), AddrWithBalance(thirdAddress, 1 dcc))) { d =>
         val route = seal(utilsApi.copy(blockchain = d.blockchain).route)
         val dApp1 = TestCompiler(V6).compileContract(
           s"""
@@ -1078,7 +1078,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
     "taking into account sync call payments" in {
       val thirdAddress = signer(2).toAddress
-      withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 1 waves), AddrWithBalance(thirdAddress, 0.01 waves))) { d =>
+      withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 1 dcc), AddrWithBalance(thirdAddress, 0.01 dcc))) { d =>
         val route = seal(utilsApi.copy(blockchain = d.blockchain).route)
         val dApp1 = TestCompiler(V6).compileContract(
           s"""
@@ -1112,7 +1112,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
   "SAPI-833. correctly sent chainId when sender is not set" in {
     val dappAccount    = TxHelpers.signer(224)
     val anotherAccount = TxHelpers.signer(224)
-    withDomain(RideV6, Seq(AddrWithBalance(dappAccount.toAddress, 20.waves))) { d =>
+    withDomain(RideV6, Seq(AddrWithBalance(dappAccount.toAddress, 20.dcc))) { d =>
       val route = seal(utilsApi.copy(blockchain = d.blockchain).route)
       d.appendBlock(
         TxHelpers.setScript(

@@ -210,7 +210,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       |}
       |
       |@Callable(i)
-      |func writeAndSendWaves(value: Int, recipient: String, amount: Int) = {
+      |func writeAndSendDcc(value: Int, recipient: String, amount: Int) = {
       |    ScriptResult(
       |        WriteSet([DataEntry("result", value)]),
       |        TransferSet([ScriptTransfer(Address(recipient.fromBase58String()), amount, unit)])
@@ -238,7 +238,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       |}
       |
       |@Callable(i)
-      |func writeAndSendWaves(value: Int, recipient: String, amount: Int) = {
+      |func writeAndSendDcc(value: Int, recipient: String, amount: Int) = {
       |    ScriptResult(
       |        WriteSet([DataEntry("result", value)]),
       |        TransferSet([ScriptTransfer(Address(recipient.fromBase58String()), amount, unit)])
@@ -583,7 +583,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       val json = responseAs[JsValue]
       (json \ "complexity").as[Long] shouldBe 113
       (json \ "verifierComplexity").as[Long] shouldBe 113
-      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendWaves" -> 68)
+      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendDcc" -> 68)
       (json \ "extraFee").as[Long] shouldBe FeeValidation.ScriptExtraFee
     }
 
@@ -591,7 +591,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       val json = responseAs[JsValue]
       (json \ "complexity").as[Long] shouldBe 68
       (json \ "verifierComplexity").as[Long] shouldBe 0
-      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendWaves" -> 68)
+      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendDcc" -> 68)
       (json \ "extraFee").as[Long] shouldBe FeeValidation.ScriptExtraFee
     }
 
@@ -629,7 +629,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       val json = responseAs[JsValue]
       (json \ "complexity").as[Long] shouldBe 68
       (json \ "verifierComplexity").as[Long] shouldBe 0
-      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendWaves" -> 68)
+      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendDcc" -> 68)
       (json \ "extraFee").as[Long] shouldBe 0
     }
 
@@ -637,7 +637,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       val json = responseAs[JsValue]
       (json \ "complexity").as[Long] shouldBe 113
       (json \ "verifierComplexity").as[Long] shouldBe 113
-      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendWaves" -> 68)
+      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendDcc" -> 68)
       (json \ "extraFee").as[Long] shouldBe 0
     }
 
@@ -751,7 +751,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       (json \ "script").as[String] shouldBe dAppBase64
       (json \ "complexity").as[Long] shouldBe 113
       (json \ "verifierComplexity").as[Long] shouldBe 113
-      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendWaves" -> 68)
+      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendDcc" -> 68)
       (json \ "extraFee").as[Long] shouldBe FeeValidation.ScriptExtraFee
     }
 
@@ -760,7 +760,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
       (json \ "script").as[String] shouldBe dAppWithoutVerifierBase64
       (json \ "complexity").as[Long] shouldBe 68
       (json \ "verifierComplexity").as[Long] shouldBe 0
-      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendWaves" -> 68)
+      (json \ "callableComplexities").as[Map[String, Int]] shouldBe Map("write" -> 27, "sendAsset" -> 66, "writeAndSendDcc" -> 68)
       (json \ "extraFee").as[Long] shouldBe FeeValidation.ScriptExtraFee
     }
 

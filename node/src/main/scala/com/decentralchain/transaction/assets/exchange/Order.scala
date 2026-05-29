@@ -5,7 +5,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.assets.exchange.Validation.booleanOperators
 import com.decentralchain.transaction.serialization.impl.OrderSerializer
@@ -35,7 +35,7 @@ case class Order(
     timestamp: TxTimestamp,
     expiration: TxTimestamp,
     matcherFee: TxMatcherFee,
-    matcherFeeAssetId: Asset = Waves,
+    matcherFeeAssetId: Asset = Dcc,
     priceMode: OrderPriceMode = OrderPriceMode.Default,
     attachment: Option[ByteStr] = None
 ) extends Proven {
@@ -68,7 +68,7 @@ case class Order(
     (timestamp > 0) :| "timestamp should be > 0" &&
     (expiration - atTime <= MaxLiveTime) :| "expiration should be earlier than 30 days" &&
     (expiration >= atTime) :| "expiration should be > currentTime" &&
-    (matcherFeeAssetId == Waves || version >= Order.V3) :| "matcherFeeAssetId should be waves" &&
+    (matcherFeeAssetId == Dcc || version >= Order.V3) :| "matcherFeeAssetId should be dcc" &&
     (version > 0 && version < 5) :| "invalid version" &&
     (eip712Signature.isEmpty || version >= Order.V4) :| "eip712Signature available only in V4" &&
     eip712Signature.forall(es => es.size == 65 || es.size == 129) :| "eip712Signature should be of length 65 or 129" &&
@@ -108,7 +108,7 @@ case class Order(
     if (eip712Signature.isDefined) Right(()) else super.verifyFirstProof(isRideV6Activated)
 
   override def toString: String = {
-    val matcherFeeAssetIdStr = if (version == 3) s" matcherFeeAssetId=${matcherFeeAssetId.fold("Waves")(_.toString)}," else ""
+    val matcherFeeAssetIdStr = if (version == 3) s" matcherFeeAssetId=${matcherFeeAssetId.fold("Dcc")(_.toString)}," else ""
     s"OrderV$version(id=${idStr()}, sender=$senderPublicKey, matcher=$matcherPublicKey, pair=$assetPair, type=$orderType, amount=$amount, " +
       s"price=$price, priceMode=$priceMode, ts=$timestamp, exp=$expiration, fee=$matcherFee,$matcherFeeAssetIdStr, eip712Signature=$eip712Signature, proofs=$proofs)"
   }
@@ -144,7 +144,7 @@ object Order {
       timestamp: TxTimestamp,
       expiration: TxTimestamp,
       matcherFee: Long,
-      matcherFeeAssetId: Asset = Asset.Waves,
+      matcherFeeAssetId: Asset = Asset.Dcc,
       priceMode: OrderPriceMode = OrderPriceMode.Default,
       attachment: Option[ByteStr] = None
   ): Either[ValidationError, Order] =
@@ -181,7 +181,7 @@ object Order {
       timestamp: TxTimestamp,
       expiration: TxTimestamp,
       matcherFee: Long,
-      matcherFeeAssetId: Asset = Waves,
+      matcherFeeAssetId: Asset = Dcc,
       priceMode: OrderPriceMode = OrderPriceMode.Default,
       attachment: Option[ByteStr] = None
   ): Either[ValidationError, Order] =
@@ -211,7 +211,7 @@ object Order {
       timestamp: TxTimestamp,
       expiration: TxTimestamp,
       matcherFee: Long,
-      matcherFeeAssetId: Asset = Waves,
+      matcherFeeAssetId: Asset = Dcc,
       priceMode: OrderPriceMode = OrderPriceMode.Default,
       attachment: Option[ByteStr] = None
   ): Either[ValidationError, Order] =

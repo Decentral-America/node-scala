@@ -17,8 +17,8 @@ object AppInitializer extends ScorexLogging {
     val config = loadConfig(externalConfig)
 
     // DO NOT LOG BEFORE THIS LINE, THIS PROPERTY IS USED IN logback.xml
-    System.setProperty("waves.directory", config.getString("waves.directory"))
-    if (config.hasPath("waves.config.directory")) System.setProperty("waves.config.directory", config.getString("waves.config.directory"))
+    System.setProperty("dcc.directory", config.getString("dcc.directory"))
+    if (config.hasPath("dcc.config.directory")) System.setProperty("dcc.config.directory", config.getString("dcc.config.directory"))
 
     // Can't use config.getString, because a part of config is hard-coded in BlockchainSettings
     val blockchainSettings = BlockchainSettings.fromRootConfig(config)

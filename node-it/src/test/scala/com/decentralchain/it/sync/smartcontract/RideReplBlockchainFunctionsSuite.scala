@@ -15,7 +15,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.repl.Repl
 import com.decentralchain.lang.v1.repl.node.http.NodeConnectionSettings
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry, Height}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.transfer.TransferTransaction
 import org.scalatest.Assertion
@@ -108,9 +108,9 @@ class RideReplBlockchainFunctionsSuite extends BaseTransactionSuite {
     assert(s"this.assetBalance(base58'$assetId')", "= 700")
   }
 
-  test("wavesBalance()") {
+  test("dccBalance()") {
     assert(
-      "this.wavesBalance()",
+      "this.dccBalance()",
       """
         |BalanceDetails(
         |	available = 9899600000
@@ -208,7 +208,7 @@ class RideReplBlockchainFunctionsSuite extends BaseTransactionSuite {
             recipient = Alias.createWithChainId(alias, chainId.toByte).explicitGet(),
             asset = IssuedAsset(ByteStr.decodeBase58(assetId).get),
             amount = transferAmount,
-            feeAsset = Waves,
+            feeAsset = Dcc,
             fee = responseTx.fee,
             attachment = ByteStr(attachment.getBytes(StandardCharsets.UTF_8)),
             timestamp = responseTx.timestamp

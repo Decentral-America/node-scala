@@ -56,8 +56,8 @@ class InvokeScriptPayAndTransferAssetGrpcSuite extends GrpcBaseTransactionSuite 
       .toString
   }
 
-  test("set script to dApp account and transfer out all waves") {
-    val dAppBalance = sender.wavesBalance(dAppAddress)
+  test("set script to dApp account and transfer out all dcc") {
+    val dAppBalance = sender.dccBalance(dAppAddress)
     sender.broadcastTransfer(
       dApp,
       Recipient().withPublicKeyHash(callerAddress),
@@ -79,7 +79,7 @@ class InvokeScriptPayAndTransferAssetGrpcSuite extends GrpcBaseTransactionSuite 
            |  if (isDefined(i.payment)) then
            |    let pay = extract(i.payment)
            |    TransferSet([ScriptTransfer(receiver, 1, pay.assetId)])
-           |  else throw("need payment in WAVES or any Asset")
+           |  else throw("need payment in DCC or any Asset")
            |}
         """.stripMargin,
         estimator
@@ -90,17 +90,17 @@ class InvokeScriptPayAndTransferAssetGrpcSuite extends GrpcBaseTransactionSuite 
   }
 
   test("dApp can transfer payed asset if its own balance is 0") {
-    val dAppInitBalance     = sender.wavesBalance(dAppAddress)
-    val callerInitBalance   = sender.wavesBalance(callerAddress)
-    val receiverInitBalance = sender.wavesBalance(receiverAddress)
+    val dAppInitBalance     = sender.dccBalance(dAppAddress)
+    val callerInitBalance   = sender.dccBalance(callerAddress)
+    val receiverInitBalance = sender.dccBalance(receiverAddress)
 
     val paymentAmount = 10
 
     invoke("resendPayment", paymentAmount, assetId)
 
-    sender.wavesBalance(dAppAddress).regular shouldBe dAppInitBalance.regular
-    sender.wavesBalance(callerAddress).regular shouldBe callerInitBalance.regular - smartMinFee
-    sender.wavesBalance(receiverAddress).regular shouldBe receiverInitBalance.regular
+    sender.dccBalance(dAppAddress).regular shouldBe dAppInitBalance.regular
+    sender.dccBalance(callerAddress).regular shouldBe callerInitBalance.regular - smartMinFee
+    sender.dccBalance(receiverAddress).regular shouldBe receiverInitBalance.regular
 
     sender.assetsBalance(dAppAddress, Seq(assetId)).getOrElse(assetId, 0L) shouldBe paymentAmount - 1
     sender.assetsBalance(callerAddress, Seq(assetId)).getOrElse(assetId, 0L) shouldBe assetQuantity - paymentAmount
@@ -108,18 +108,18 @@ class InvokeScriptPayAndTransferAssetGrpcSuite extends GrpcBaseTransactionSuite 
   }
 
   test("dApp can transfer payed smart asset if its own balance is 0") {
-    val dAppInitBalance     = sender.wavesBalance(dAppAddress)
-    val callerInitBalance   = sender.wavesBalance(callerAddress)
-    val receiverInitBalance = sender.wavesBalance(receiverAddress)
+    val dAppInitBalance     = sender.dccBalance(dAppAddress)
+    val callerInitBalance   = sender.dccBalance(callerAddress)
+    val receiverInitBalance = sender.dccBalance(receiverAddress)
 
     val paymentAmount = 10
     val fee           = smartMinFee + smartFee * 2
 
     invoke("resendPayment", paymentAmount, smartAssetId, fee)
 
-    sender.wavesBalance(dAppAddress).regular shouldBe dAppInitBalance.regular
-    sender.wavesBalance(callerAddress).regular shouldBe callerInitBalance.regular - fee
-    sender.wavesBalance(receiverAddress).regular shouldBe receiverInitBalance.regular
+    sender.dccBalance(dAppAddress).regular shouldBe dAppInitBalance.regular
+    sender.dccBalance(callerAddress).regular shouldBe callerInitBalance.regular - fee
+    sender.dccBalance(receiverAddress).regular shouldBe receiverInitBalance.regular
 
     sender.assetsBalance(dAppAddress, Seq(smartAssetId)).getOrElse(smartAssetId, 0L) shouldBe paymentAmount - 1
     sender.assetsBalance(callerAddress, Seq(smartAssetId)).getOrElse(smartAssetId, 0L) shouldBe assetQuantity - paymentAmount
@@ -127,37 +127,37 @@ class InvokeScriptPayAndTransferAssetGrpcSuite extends GrpcBaseTransactionSuite 
   }
 
   test("dApp can't transfer payed smart asset if it rejects transfers and its own balance is 0") {
-    val dAppInitBalance     = sender.wavesBalance(dAppAddress)
-    val callerInitBalance   = sender.wavesBalance(callerAddress)
-    val receiverInitBalance = sender.wavesBalance(receiverAddress)
+    val dAppInitBalance     = sender.dccBalance(dAppAddress)
+    val callerInitBalance   = sender.dccBalance(callerAddress)
+    val receiverInitBalance = sender.dccBalance(receiverAddress)
 
     val paymentAmount = 10
     val fee           = smartMinFee + smartFee * 2
 
     assertGrpcError(invoke("resendPayment", paymentAmount, rejAssetId, fee), "Transaction is not allowed by token-script")
 
-    sender.wavesBalance(dAppAddress).regular shouldBe dAppInitBalance.regular
-    sender.wavesBalance(callerAddress).regular shouldBe callerInitBalance.regular
-    sender.wavesBalance(receiverAddress).regular shouldBe receiverInitBalance.regular
+    sender.dccBalance(dAppAddress).regular shouldBe dAppInitBalance.regular
+    sender.dccBalance(callerAddress).regular shouldBe callerInitBalance.regular
+    sender.dccBalance(receiverAddress).regular shouldBe receiverInitBalance.regular
 
     sender.assetsBalance(dAppAddress, Seq(rejAssetId)).getOrElse(rejAssetId, 0L) shouldBe 0L
     sender.assetsBalance(callerAddress, Seq(rejAssetId)).getOrElse(rejAssetId, 0L) shouldBe assetQuantity
     sender.assetsBalance(receiverAddress, Seq(rejAssetId)).getOrElse(rejAssetId, 0L) shouldBe 0L
   }
 
-  test("dApp can transfer payed Waves if its own balance is 0") {
-    val dAppInitBalance     = sender.wavesBalance(dAppAddress)
-    val callerInitBalance   = sender.wavesBalance(callerAddress)
-    val receiverInitBalance = sender.wavesBalance(receiverAddress)
+  test("dApp can transfer payed Dcc if its own balance is 0") {
+    val dAppInitBalance     = sender.dccBalance(dAppAddress)
+    val callerInitBalance   = sender.dccBalance(callerAddress)
+    val receiverInitBalance = sender.dccBalance(receiverAddress)
 
     dAppInitBalance.regular shouldBe 0
 
     val paymentAmount = 10
     invoke("resendPayment", paymentAmount)
 
-    sender.wavesBalance(dAppAddress).regular shouldBe dAppInitBalance.regular + paymentAmount - 1
-    sender.wavesBalance(callerAddress).regular shouldBe callerInitBalance.regular - paymentAmount - smartMinFee
-    sender.wavesBalance(receiverAddress).regular shouldBe receiverInitBalance.regular + 1
+    sender.dccBalance(dAppAddress).regular shouldBe dAppInitBalance.regular + paymentAmount - 1
+    sender.dccBalance(callerAddress).regular shouldBe callerInitBalance.regular - paymentAmount - smartMinFee
+    sender.dccBalance(receiverAddress).regular shouldBe receiverInitBalance.regular + 1
   }
 
   def invoke(func: String, amount: Long, assetId: String = "DCC", fee: Long = 500000): PBSignedTransaction = {

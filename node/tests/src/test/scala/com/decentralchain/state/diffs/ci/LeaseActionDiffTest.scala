@@ -20,7 +20,7 @@ import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.state.diffs.{ENOUGH_AMT, produceRejectOrFailedDiff}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, invoke, lease, secondAddress, secondSigner, setScript}
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
@@ -181,8 +181,8 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
     val invokerAlias   = Alias.create("invoker_alias").explicitGet()
     val dAppAlias      = Alias.create("dapp_alias").explicitGet()
     val fee            = TxHelpers.ciFee(1)
-    val leaseTxAmount1 = 5.waves
-    val leaseTxAmount2 = 10.waves
+    val leaseTxAmount1 = 5.dcc
+    val leaseTxAmount2 = 10.dcc
     val generatedRecipient =
       if (selfLease)
         if (useAlias)
@@ -194,7 +194,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       else
         invoker.toAddress
     val recipient   = customRecipient.getOrElse(generatedRecipient.toRide)
-    val leaseAmount = customAmount.getOrElse(2.waves)
+    val leaseAmount = customAmount.getOrElse(2.dcc)
 
     val genesis = Seq(
       TxHelpers.genesis(dAppAcc.toAddress),
@@ -256,14 +256,14 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       d.appendBlock(invoke)
 
       val invokerSpentFee  = preparingTxs.collect(extractFee(invoker)).sum
-      val invokerPortfolio = d.blockchain.wavesPortfolio(invoker)
+      val invokerPortfolio = d.blockchain.dccPortfolio(invoker)
       invokerPortfolio.lease shouldBe LeaseBalance(leaseAmount, out = 0)
       invokerPortfolio.balance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
       invokerPortfolio.spendableBalance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
       invokerPortfolio.effectiveBalance(false).explicitGet() shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value + leaseAmount
 
       val dAppSpentFee  = preparingTxs.collect(extractFee(dAppAcc)).sum
-      val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+      val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
       dAppPortfolio.lease shouldBe LeaseBalance(in = 0, leaseAmount)
       dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
       dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee - leaseAmount
@@ -293,13 +293,13 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
           d.appendBlock(invoke)
           val totalLeaseAmount = leaseAmount + leaseTxFromDApp.amount.value
 
-          val invokerPortfolio = d.blockchain.wavesPortfolio(invoker)
+          val invokerPortfolio = d.blockchain.dccPortfolio(invoker)
           invokerPortfolio.lease shouldBe LeaseBalance(totalLeaseAmount, out = 0)
           invokerPortfolio.balance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.spendableBalance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.effectiveBalance(false).explicitGet() shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value + totalLeaseAmount
 
-          val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+          val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
           dAppPortfolio.lease shouldBe LeaseBalance(in = 0, totalLeaseAmount)
           dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
           dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee - totalLeaseAmount
@@ -334,13 +334,13 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
           d.appendBlock(invoke)
           val totalLeaseAmount = leaseAmount + leaseTxFromDApp.amount.value
 
-          val invokerPortfolio = d.blockchain.wavesPortfolio(invoker)
+          val invokerPortfolio = d.blockchain.dccPortfolio(invoker)
           invokerPortfolio.lease shouldBe LeaseBalance(totalLeaseAmount, out = 0)
           invokerPortfolio.balance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.spendableBalance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.effectiveBalance(false).explicitGet() shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value + totalLeaseAmount
 
-          val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+          val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
           dAppPortfolio.lease shouldBe LeaseBalance(in = 0, totalLeaseAmount)
           dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
           dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee - totalLeaseAmount
@@ -372,13 +372,13 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
           d.appendBlock(invoke)
           val leaseAmountDiff = leaseAmount - leaseTxToDApp.amount.value
 
-          val invokerPortfolio = d.blockchain.wavesPortfolio(invoker)
+          val invokerPortfolio = d.blockchain.dccPortfolio(invoker)
           invokerPortfolio.lease shouldBe LeaseBalance(in = leaseAmount, out = leaseTxToDApp.amount.value)
           invokerPortfolio.balance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.spendableBalance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value - leaseTxToDApp.amount.value
           invokerPortfolio.effectiveBalance(false).explicitGet() shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value + leaseAmountDiff
 
-          val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+          val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
           dAppPortfolio.lease shouldBe LeaseBalance(in = leaseTxToDApp.amount.value, out = leaseAmount)
           dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
           dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee - leaseAmount
@@ -411,13 +411,13 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
           d.appendBlock(invoke)
           val leaseAmountDiff = leaseAmount - leaseTxToDApp.amount.value
 
-          val invokerPortfolio = d.blockchain.wavesPortfolio(invoker)
+          val invokerPortfolio = d.blockchain.dccPortfolio(invoker)
           invokerPortfolio.lease shouldBe LeaseBalance(in = leaseAmount, out = leaseTxToDApp.amount.value)
           invokerPortfolio.balance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.spendableBalance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value - leaseTxToDApp.amount.value
           invokerPortfolio.effectiveBalance(false).explicitGet() shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value + leaseAmountDiff
 
-          val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+          val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
           dAppPortfolio.lease shouldBe LeaseBalance(in = leaseTxToDApp.amount.value, out = leaseAmount)
           dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
           dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee - leaseAmount
@@ -453,13 +453,13 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
           d.appendBlock(invoke)
           val leaseAmountDiff = leaseAmount - leaseTxToDApp.amount.value + leaseTxFromDApp.amount.value
 
-          val invokerPortfolio = d.blockchain.wavesPortfolio(invoker)
+          val invokerPortfolio = d.blockchain.dccPortfolio(invoker)
           invokerPortfolio.lease shouldBe LeaseBalance(in = leaseAmount + leaseTxFromDApp.amount.value, out = leaseTxToDApp.amount.value)
           invokerPortfolio.balance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value
           invokerPortfolio.spendableBalance shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value - leaseTxToDApp.amount.value
           invokerPortfolio.effectiveBalance(false).explicitGet() shouldBe ENOUGH_AMT - invokerSpentFee - invoke.fee.value + leaseAmountDiff
 
-          val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+          val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
           dAppPortfolio.lease shouldBe LeaseBalance(in = leaseTxToDApp.amount.value, out = leaseAmount + leaseTxFromDApp.amount.value)
           dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
           dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee - leaseAmount - leaseTxFromDApp.amount.value
@@ -497,8 +497,8 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       d.appendBlock(preparingTxs*)
       d.appendBlock(invoke, leaseCancelTx)
       d.liquidSnapshot.errorMessage(invoke.id()) shouldBe empty
-      d.liquidSnapshot.balances((invoker, Waves)) shouldBe d.rocksDBWriter.balance(invoker) - invoke.fee.value
-      d.liquidSnapshot.balances((dAppAcc, Waves)) shouldBe d.rocksDBWriter.balance(dAppAcc) - leaseCancelTx.fee.value
+      d.liquidSnapshot.balances((invoker, Dcc)) shouldBe d.rocksDBWriter.balance(invoker) - invoke.fee.value
+      d.liquidSnapshot.balances((dAppAcc, Dcc)) shouldBe d.rocksDBWriter.balance(dAppAcc) - leaseCancelTx.fee.value
     }
   }
 
@@ -567,7 +567,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       TestBlock.create(Seq(invoke)),
       v5Features
     ) { case (snapshot, _) =>
-      snapshot.errorMessage(invoke.id()).get.text shouldBe "NonPositiveAmount(0,waves)"
+      snapshot.errorMessage(invoke.id()).get.text shouldBe "NonPositiveAmount(0,dcc)"
     }
   }
 
@@ -589,7 +589,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       TestBlock.create(Seq(invoke)),
       v5Features
     ) { case (_, blockchain) =>
-      blockchain.wavesPortfolio(dAppAcc).effectiveBalance(false).explicitGet() shouldBe 0
+      blockchain.dccPortfolio(dAppAcc).effectiveBalance(false).explicitGet() shouldBe 0
     }
   }
 
@@ -681,7 +681,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
         features(version)
       ) { case (snapshot, _) =>
         snapshot.errorMessage(invoke.id()) shouldBe empty
-        snapshot.balances((invoker, Waves)) shouldBe ENOUGH_AMT - invoke.fee.value
+        snapshot.balances((invoker, Dcc)) shouldBe ENOUGH_AMT - invoke.fee.value
         snapshot.leaseBalances(dAppAcc) shouldBe LeaseBalance(in = 0, out = amount * limit)
         snapshot.leaseBalances(recipient) shouldBe LeaseBalance(in = amount * limit, out = 0)
       }
@@ -722,14 +722,14 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       d.appendBlock(preparingTxs*)
       d.appendBlock(invoke)
 
-      val recipientPortfolio = d.blockchain.wavesPortfolio(recipient)
+      val recipientPortfolio = d.blockchain.dccPortfolio(recipient)
       recipientPortfolio.lease shouldBe LeaseBalance.empty
       recipientPortfolio.balance shouldBe 0
       recipientPortfolio.spendableBalance shouldBe 0
       recipientPortfolio.effectiveBalance(false).explicitGet() shouldBe 0
 
       val dAppSpentFee  = preparingTxs.collect(extractFee(dAppAcc)).sum
-      val dAppPortfolio = d.blockchain.wavesPortfolio(dAppAcc)
+      val dAppPortfolio = d.blockchain.dccPortfolio(dAppAcc)
       dAppPortfolio.lease shouldBe LeaseBalance.empty
       dAppPortfolio.balance shouldBe ENOUGH_AMT - dAppSpentFee
       dAppPortfolio.spendableBalance shouldBe ENOUGH_AMT - dAppSpentFee
@@ -767,7 +767,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       v5Features
     ) { case (snapshot, _) =>
       snapshot.errorMessage(invoke.id()) shouldBe empty
-      snapshot.balances((invoker, Waves)) shouldBe ENOUGH_AMT - invoke.fee.value
+      snapshot.balances((invoker, Dcc)) shouldBe ENOUGH_AMT - invoke.fee.value
       snapshot.leaseBalances(dAppAcc) shouldBe LeaseBalance(in = 0, out = amount)
       snapshot.leaseBalances(recipient) shouldBe LeaseBalance(in = amount, 0)
     }
@@ -908,7 +908,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
         features(version)
       ) { case (snapshot, _) =>
         snapshot.errorMessage(invoke.id()) shouldBe empty
-        snapshot.balances((invoker, Waves)) shouldBe ENOUGH_AMT - invoke.fee.value
+        snapshot.balances((invoker, Dcc)) shouldBe ENOUGH_AMT - invoke.fee.value
         snapshot.leaseBalances.get(invoker) shouldBe None
         snapshot.leaseBalances(dAppAcc) shouldBe LeaseBalance(in = 0, out = leaseAmount)
         snapshot.leaseBalances(recipient) shouldBe LeaseBalance(in = leaseAmount, out = 0)
@@ -1007,7 +1007,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
   property("ScriptTransfer after LeaseCancel of transferring balance") {
     withDomain(
       RideV5.configure(_.copy(blockVersion3AfterHeight = 0)),
-      Seq(AddrWithBalance(secondAddress, 1.006.waves))
+      Seq(AddrWithBalance(secondAddress, 1.006.dcc))
     ) { d =>
       val leaseTx = lease(secondSigner, defaultAddress, amount = 1)
       val dApp = TestCompiler(V5).compileContract(

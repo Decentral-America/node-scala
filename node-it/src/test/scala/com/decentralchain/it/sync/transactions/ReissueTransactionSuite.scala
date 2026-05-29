@@ -13,7 +13,7 @@ import com.decentralchain.transaction.assets.ReissueTransaction
 
 class ReissueTransactionSuite extends BaseTransactionSuite {
 
-  test("asset reissue changes issuer's asset balance; issuer's waves balance is decreased by fee") {
+  test("asset reissue changes issuer's asset balance; issuer's dcc balance is decreased by fee") {
     for (v <- reissueTxSupportedVersions) {
       val (balance, effectiveBalance) = miner.accountBalances(firstAddress)
 
@@ -67,7 +67,7 @@ class ReissueTransactionSuite extends BaseTransactionSuite {
         error =>
           error.id shouldBe StateCheckFailed.Id
           error.message should include(
-            s"Fee for ReissueTransaction (${reissueReducedFee - 1} in WAVES) does not exceed minimal value of $reissueReducedFee WAVES."
+            s"Fee for ReissueTransaction (${reissueReducedFee - 1} in DCC) does not exceed minimal value of $reissueReducedFee DCC."
           )
       }
     }
@@ -76,7 +76,7 @@ class ReissueTransactionSuite extends BaseTransactionSuite {
   test("not able to reissue if cannot pay fee - insufficient funds") {
     for (v <- reissueTxSupportedVersions) {
       val (balance, effectiveBalance) = miner.accountBalances(firstAddress)
-      val reissueFee                  = effectiveBalance + 1.waves
+      val reissueFee                  = effectiveBalance + 1.dcc
 
       val issuedAssetId = sender.issue(firstKeyPair, "name4", "description4", someAssetAmount, decimals = 2, reissuable = true, issueFee).id
 

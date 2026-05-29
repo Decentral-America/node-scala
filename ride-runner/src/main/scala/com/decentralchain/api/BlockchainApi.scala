@@ -2,7 +2,7 @@ package com.decentralchain.api
 
 import com.decentralchain.account.{Address, Alias, PublicKey}
 import com.decentralchain.api.BlockchainApi.*
-import io.decentralchain.api.grpc.BalanceResponse.WavesBalances
+import io.decentralchain.api.grpc.BalanceResponse.DccBalances
 import com.decentralchain.blockchain.SignedBlockHeaderWithVrf
 import com.decentralchain.events.WrappedEvent
 import io.decentralchain.events.api.grpc.protobuf.SubscribeEvent
@@ -24,7 +24,7 @@ trait BlockchainApi {
   def getAssetDescription(asset: Asset.IssuedAsset): Option[AssetDescription]
   def resolveAlias(alias: Alias): Option[Address]
   def getBalance(address: Address, asset: Asset): Long
-  def getLeaseBalance(address: Address): WavesBalances
+  def getLeaseBalance(address: Address): DccBalances
   def getTransactionHeight(id: TransactionId): Option[Height]
 }
 

@@ -21,7 +21,7 @@ class SeveralAccountMiningSuite extends BaseFunSuite {
     val minerBalance1 = miner.balance(MinerPk1.toAddress.toString).balance
     val fromHeight    = miner.height
     miner.waitForHeight(miner.height + 5, 2.minutes)
-    val tx                  = miner.transfer(MinerPk1, notMiner.address, minerBalance1 - 10.waves, waitForTx = true)
+    val tx                  = miner.transfer(MinerPk1, notMiner.address, minerBalance1 - 10.dcc, waitForTx = true)
     val minerTransferHeight = nodes.waitForTransaction(tx.id).height
     nodes.waitForHeight(Height(minerTransferHeight) + 5)
     val pkMiners = Set(MinerPk1.toAddress.toString, MinerPk2.toAddress.toString)
@@ -41,7 +41,7 @@ object SeveralAccountMiningSuite {
 
   private val minerConfig =
     ConfigFactory.parseString(s"""
-                                 |waves {
+                                 |dcc {
                                  |  blockchain.custom.genesis {
                                  |     average-block-delay = 3s
                                  |  }
@@ -57,7 +57,7 @@ object SeveralAccountMiningSuite {
 
   private val nonMinerConfig =
     ConfigFactory.parseString(s"""
-                                 |waves {
+                                 |dcc {
                                  |  blockchain.custom.genesis {
                                  |     average-block-delay = 3s
                                  |  }

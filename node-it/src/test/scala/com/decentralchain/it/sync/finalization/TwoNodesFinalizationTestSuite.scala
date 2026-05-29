@@ -17,7 +17,7 @@ class TwoNodesFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLo
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.preactivatedFeatures((BlockchainFeatures.DeterministicFinality.id, Height(0))))
-      .overrideBase(_.raw("waves.miner.minimal-block-generation-offset = 10s"))
+      .overrideBase(_.raw("dcc.miner.minimal-block-generation-offset = 10s"))
       .withDefault(2)
       .buildNonConflicting()
 
@@ -74,7 +74,7 @@ class TwoNodesFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLo
         )
 
       // We need at least one transaction, otherwise there won't be a microblock, thus no voting, no finalization
-      node1.transfer(miner1Acc, miner2Addr, 1.waves, waitForTx = true)
+      node1.transfer(miner1Acc, miner2Addr, 1.dcc, waitForTx = true)
 
       val updatedFinalizedHeight = node1.finalizedHeight
       if (updatedFinalizedHeight < finalizedHeight1)

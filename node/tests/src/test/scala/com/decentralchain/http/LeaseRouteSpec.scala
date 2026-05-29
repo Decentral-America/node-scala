@@ -32,7 +32,7 @@ import scala.concurrent.duration.*
 class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAPISettingsHelper with SharedDomain with SharedSchedulerMixin {
   private val richAccount = TxHelpers.signer(200)
 
-  override def genesisBalances: Seq[WithState.AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 500_000.waves))
+  override def genesisBalances: Seq[WithState.AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 500_000.dcc))
   override def settings: DCCSettings                           = DomainPresets.ContinuationTransaction
 
   private val route =
@@ -109,7 +109,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val lessor         = TxHelpers.signer(201)
       val leaseRecipient = TxHelpers.address(202)
 
-      domain.appendBlock(TxHelpers.transfer(richAccount, lessor.toAddress, 30.006.waves))
+      domain.appendBlock(TxHelpers.transfer(richAccount, lessor.toAddress, 30.006.dcc))
 
       forAll(transactionVersions) { v =>
         val leaseTransaction = TxHelpers.lease(lessor, leaseRecipient, version = v)
@@ -135,7 +135,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val lessor         = TxHelpers.signer(202)
       val leaseRecipient = TxHelpers.address(203)
 
-      domain.appendBlock(TxHelpers.transfer(richAccount, lessor.toAddress, 35.waves))
+      domain.appendBlock(TxHelpers.transfer(richAccount, lessor.toAddress, 35.dcc))
       forAll(transactionVersions) { v =>
         val leaseTransaction = TxHelpers.lease(lessor, leaseRecipient, version = v)
         domain.appendBlock(leaseTransaction)
@@ -167,14 +167,14 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         TxHelpers.invoke(
           dappAddress.toAddress,
           Some("leaseTo"),
-          Seq(CONST_BYTESTR(ByteStr(leaseRecipient.bytes)).explicitGet(), CONST_LONG(10_000.waves)),
+          Seq(CONST_BYTESTR(ByteStr(leaseRecipient.bytes)).explicitGet(), CONST_LONG(10_000.dcc)),
           invoker = dappAddress
         )
       )
 
     "created by InvokeScriptTransaction and canceled by CancelLeaseTransaction" in {
       val (setScript, invoke) = setScriptAndInvoke
-      domain.appendBlock(TxHelpers.transfer(richAccount, dappAddress.toAddress, 20_000.waves), setScript, invoke)
+      domain.appendBlock(TxHelpers.transfer(richAccount, dappAddress.toAddress, 20_000.dcc), setScript, invoke)
       val leaseId = domain.blockchain
         .accountData(dappAddress.toAddress, "leaseId")
         .collect { case i: BinaryDataEntry =>
@@ -210,7 +210,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
     "created and canceled by InvokeScriptTransaction" in {
       val (setScript, invoke) = setScriptAndInvoke
 
-      domain.appendBlock(TxHelpers.transfer(richAccount, dappAddress.toAddress, 20_000.waves), setScript, invoke)
+      domain.appendBlock(TxHelpers.transfer(richAccount, dappAddress.toAddress, 20_000.dcc), setScript, invoke)
       val invokeStatus = domain.blockchain.transactionMeta(invoke.id()).get.status
       assert(invokeStatus == Status.Succeeded, "Invoke has failed")
 
@@ -254,7 +254,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       val invoke = TxHelpers.invokeExpression(
         TestCompiler(V6).compileFreeCall(
           s"""
-             |let lease = Lease(Address(base58'${recipient.toString}'), ${10000.waves})
+             |let lease = Lease(Address(base58'${recipient.toString}'), ${10000.dcc})
              |[
              |  lease,
              |  BinaryEntry("leaseId", lease.calculateLeaseId())
@@ -263,7 +263,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         sender
       )
 
-      domain.appendBlock(TxHelpers.transfer(richAccount, sender.toAddress, 10001.waves), invoke)
+      domain.appendBlock(TxHelpers.transfer(richAccount, sender.toAddress, 10001.dcc), invoke)
       val leaseId = domain.blockchain
         .accountData(sender.toAddress, "leaseId")
         .collect { case i: BinaryDataEntry =>
@@ -301,7 +301,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
           keyPair = sender,
           address = dApp.toAddress,
           funcName = "leaseTo",
-          args = Seq(Arg.Bytes(ByteStr(recipient.bytes)), Arg.Integer(10000.waves)),
+          args = Seq(Arg.Bytes(ByteStr(recipient.bytes)), Arg.Integer(10000.dcc)),
           payments = Seq.empty
         )
 
@@ -309,10 +309,10 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            sender.toWavesAddress -> 0.005.waves,
-            dApp.toAddress        -> 10_0001.waves
+            sender.toDccAddress -> 0.005.dcc,
+            dApp.toAddress        -> 10_0001.dcc
           ),
-          fee = 0.002.waves
+          fee = 0.002.dcc
         ),
         setScriptTransaction(dApp),
         invoke
@@ -355,7 +355,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         List(
           CONST_BYTESTR(ByteStr(target.toAddress.bytes)).explicitGet(),
           CONST_BYTESTR(ByteStr(recipient.toAddress.bytes)).explicitGet(),
-          CONST_LONG(10_000.waves)
+          CONST_LONG(10_000.dcc)
         ),
         invoker = proxy
       )
@@ -364,10 +364,10 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            proxy.toAddress  -> 1.waves,
-            target.toAddress -> 10_001.waves
+            proxy.toAddress  -> 1.dcc,
+            target.toAddress -> 10_001.dcc
           ),
-          fee = 0.002.waves
+          fee = 0.002.dcc
         ),
         setScriptTransaction(target),
         TxHelpers.setScript(
@@ -451,12 +451,12 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            invoker.toAddress                   -> 1.waves,
-            dApp1.toAddress                     -> 1.waves,
-            dApp2.toAddress                     -> 1.waves,
-            invoker.toEthKeyPair.toWavesAddress -> 1.waves
+            invoker.toAddress                   -> 1.dcc,
+            dApp1.toAddress                     -> 1.dcc,
+            dApp2.toAddress                     -> 1.dcc,
+            invoker.toEthKeyPair.toDccAddress -> 1.dcc
           ),
-          fee = 0.005.waves
+          fee = 0.005.dcc
         ),
         TxHelpers.setScript(dApp1, dAppScript1),
         TxHelpers.setScript(dApp2, dAppScript2)
@@ -514,7 +514,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
     val leases3 = Seq.tabulate(10)(i => TxHelpers.lease(sender, TxHelpers.address(261 + i)))
     val leases4 = Seq.tabulate(10)(i => TxHelpers.lease(sender, TxHelpers.address(271 + i)))
 
-    domain.appendBlock(TxHelpers.transfer(richAccount, sender.toAddress, 10_000.waves))
+    domain.appendBlock(TxHelpers.transfer(richAccount, sender.toAddress, 10_000.dcc))
     domain.appendBlock(leases1*)
     domain.appendBlock(leases2*)
     domain.appendBlock(leases3*)

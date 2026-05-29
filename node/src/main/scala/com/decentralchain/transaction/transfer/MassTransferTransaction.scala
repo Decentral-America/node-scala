@@ -7,7 +7,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.serialization.impl.MassTransferTxSerializer
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
@@ -31,13 +31,13 @@ case class MassTransferTransaction(
 ) extends Transaction(
       TransactionType.MassTransfer,
       assetId match {
-        case Waves          => Seq()
+        case Dcc          => Seq()
         case a: IssuedAsset => Seq(a)
       }
     )
     with ProvenTransaction
     with Versioned.ToV2
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V2 {
 

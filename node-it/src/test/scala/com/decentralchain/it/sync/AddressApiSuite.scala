@@ -61,7 +61,7 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
     }
   }
 
-  test("balances for waves should be correct") {
+  test("balances for dcc should be correct") {
     assertBalances(None)
   }
 
@@ -71,7 +71,7 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
   }
 
   test("limit violation requests should be handled correctly") {
-    val limit     = miner.config.getInt("waves.rest-api.transactions-by-address-limit")
+    val limit     = miner.config.getInt("dcc.rest-api.transactions-by-address-limit")
     val addresses = List.fill(limit + 1)(firstAddress)
     assertApiError(
       miner.get(s"/addresses/balance?${addresses.map(a => s"address=$a").mkString("&")}"),
@@ -152,7 +152,7 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.quorum(0))
-      .overrideBase(_.raw("waves.rest-api.transactions-by-address-limit = 20"))
+      .overrideBase(_.raw("dcc.rest-api.transactions-by-address-limit = 20"))
       .withDefault(1)
       .withSpecial(_.nonMiner)
       .buildNonConflicting()

@@ -41,8 +41,8 @@ class InvokeActionsAvailabilityTest
     val leaseActionsCheck =
       s"""
          | strict c4 = if (
-         |   this.wavesBalance().effective == startBalance.effective + $leaseAmount + $transferAmount       &&
-         |   dApp2.wavesBalance().available == startDApp2Balance.available - $leaseAmount - $transferAmount
+         |   this.dccBalance().effective == startBalance.effective + $leaseAmount + $transferAmount       &&
+         |   dApp2.dccBalance().available == startDApp2Balance.available - $leaseAmount - $transferAmount
          | ) then true else throw("Lease actions error")
        """.stripMargin
 
@@ -56,11 +56,11 @@ class InvokeActionsAvailabilityTest
          |
          | @Callable(inv)
          | func default() = {
-         |    strict startBalance = this.wavesBalance()
-         |    strict startDApp2Balance = dApp2.wavesBalance()
+         |    strict startBalance = this.dccBalance()
+         |    strict startDApp2Balance = dApp2.dccBalance()
          |    strict r = dApp2.invoke("default", nil, [])
          |    strict c1 = if (dApp2.getStringValue("key") == "value") then true else throw("Data error")
-         |    strict c2 = if (this.wavesBalance().regular == startBalance.regular + $transferAmount) then true else throw("Transfer error")
+         |    strict c2 = if (this.dccBalance().regular == startBalance.regular + $transferAmount) then true else throw("Transfer error")
          |    $assetActionsCheck
          |    $leaseActionsCheck
          |    []
@@ -113,7 +113,7 @@ class InvokeActionsAvailabilityTest
     val asset                = IssuedAsset(issue.id.value())
     val payments             = Seq(Payment(paymentAmount, asset))
     val preparingTxs         = Seq(issue, setScriptCallingDApp, setScriptProxyDApp)
-    val invoke               = TxHelpers.invoke(proxyDApp.toAddress, func = None, invoker = invoker, payments = payments, fee = 1.005.waves)
+    val invoke               = TxHelpers.invoke(proxyDApp.toAddress, func = None, invoker = invoker, payments = payments, fee = 1.005.dcc)
 
     withDomain(RideV5, balances) { d =>
       d.appendBlock(preparingTxs*)

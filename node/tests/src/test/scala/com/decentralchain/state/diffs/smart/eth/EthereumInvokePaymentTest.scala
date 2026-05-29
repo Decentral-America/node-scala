@@ -5,7 +5,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.EthTxGenerator
 import com.decentralchain.transaction.EthereumTransaction.Invocation
 import com.decentralchain.transaction.TxHelpers.*
@@ -33,7 +33,7 @@ class EthereumInvokePaymentTest extends PropSpec with WithDomain with EthHelpers
     val issueTx       = issue(script = Some(paymentScript))
     val asset         = IssuedAsset(issueTx.id())
     def invoke        = EthTxGenerator.generateEthInvoke(defaultEthSigner, secondAddress, "default", Nil, Seq(Payment(1, asset)))
-    withDomain(RideV6, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthWavesAddress)) { d =>
+    withDomain(RideV6, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthDccAddress)) { d =>
       d.appendBlock(issueTx)
 
       d.appendBlock(setScript(secondSigner, dApp(bigComplexity = false)))
@@ -56,10 +56,10 @@ class EthereumInvokePaymentTest extends PropSpec with WithDomain with EthHelpers
          """.stripMargin
       )
       val issueTx  = issue()
-      val token    = if (isAsset) IssuedAsset(issueTx.id()) else Waves
+      val token    = if (isAsset) IssuedAsset(issueTx.id()) else Dcc
       val payments = Seq(Payment(amount, token))
       val settings = RideV6.configure(_.copy(ethInvokePaymentsCheckHeight = 4))
-      val balances = AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthWavesAddress)
+      val balances = AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthDccAddress)
       def invoke   = EthTxGenerator.generateEthInvoke(defaultEthSigner, secondAddress, "default", Nil, payments)
       withDomain(settings, balances) { d =>
         d.appendBlock(issueTx, transfer(asset = token), setScript(secondSigner, dApp))

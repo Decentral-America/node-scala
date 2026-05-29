@@ -6,7 +6,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.*
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.EthereumTransaction.Transfer
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.*
@@ -17,7 +17,7 @@ import com.decentralchain.transaction.validation.impl.DataTxValidator
 
 object FeeValidation {
 
-  case class FeeDetails(asset: Asset, requirements: Chain[String], minFeeInAsset: Long, minFeeInWaves: Long)
+  case class FeeDetails(asset: Asset, requirements: Chain[String], minFeeInAsset: Long, minFeeInDcc: Long)
 
   val ScriptExtraFee    = 400000L
   val FeeUnit           = 100000
@@ -64,14 +64,14 @@ object FeeValidation {
 
   private def notEnoughFeeError(txType: TransactionType.TransactionType, feeDetails: FeeDetails, feeAmount: Long): ValidationError = {
     val actualFee   = s"$feeAmount in ${feeDetails.asset.fold("DCC")(_.id.toString)}"
-    val requiredFee = s"${feeDetails.minFeeInWaves} DCC${feeDetails.asset.fold("")(id => s" or ${feeDetails.minFeeInAsset} ${id.id.toString}")}"
+    val requiredFee = s"${feeDetails.minFeeInDcc} DCC${feeDetails.asset.fold("")(id => s" or ${feeDetails.minFeeInAsset} ${id.id.toString}")}"
 
     val errorMessage = s"Fee for ${txType.transactionName} ($actualFee) does not exceed minimal value of $requiredFee."
 
     GenericError((if (feeDetails.requirements.nonEmpty) (feeDetails.requirements mkString_ ". ") ++ ". " else "") ++ errorMessage)
   }
 
-  private case class FeeInfo(assetInfo: Option[(IssuedAsset, AssetDescription)], requirements: Chain[String], wavesFee: Long)
+  private case class FeeInfo(assetInfo: Option[(IssuedAsset, AssetDescription)], requirements: Chain[String], dccFee: Long)
 
   private def feeInUnits(blockchain: Blockchain, tx: Transaction): Either[ValidationError, Long] = {
     FeeConstants
@@ -127,18 +127,18 @@ object FeeValidation {
       for {
         feeInUnits <- feeInUnits(blockchain, tx)
         r <- txAsset match {
-          case Waves => Right(FeeInfo(None, Chain.empty, feeInUnits * FeeUnit))
+          case Dcc => Right(FeeInfo(None, Chain.empty, feeInUnits * FeeUnit))
           case assetId @ IssuedAsset(_) =>
             for {
               assetInfo <- blockchain
                 .assetDescription(assetId)
                 .toRight(GenericError(s"Asset ${assetId.id.toString} does not exist, cannot be used to pay fees"))
-              wavesFee <- Either.cond(
+              dccFee <- Either.cond(
                 assetInfo.sponsorship > 0,
                 feeInUnits * FeeUnit,
                 GenericError(s"Asset ${assetId.id.toString} is not sponsored, cannot be used to pay fees")
               )
-            } yield FeeInfo(Some((assetId, assetInfo)), Chain.empty, wavesFee)
+            } yield FeeInfo(Some((assetId, assetInfo)), Chain.empty, dccFee)
         }
       } yield r
     }
@@ -202,10 +202,10 @@ object FeeValidation {
       .map(feeAfterSmartTokens(blockchain, tx))
       .map(feeAfterSmartAccounts(blockchain, tx))
       .map {
-        case FeeInfo(Some((assetId, assetInfo)), reqs, amountInWaves) =>
-          FeeDetails(assetId, reqs, Sponsorship.fromWaves(amountInWaves, assetInfo.sponsorship), amountInWaves)
-        case FeeInfo(None, reqs, amountInWaves) =>
-          FeeDetails(Waves, reqs, amountInWaves, amountInWaves)
+        case FeeInfo(Some((assetId, assetInfo)), reqs, amountInDcc) =>
+          FeeDetails(assetId, reqs, Sponsorship.fromDcc(amountInDcc, assetInfo.sponsorship), amountInDcc)
+        case FeeInfo(None, reqs, amountInDcc) =>
+          FeeDetails(Dcc, reqs, amountInDcc, amountInDcc)
       }
   }
 }

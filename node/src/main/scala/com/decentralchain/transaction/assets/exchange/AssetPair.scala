@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.serialization.Deser
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves, WavesName}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc, DccName}
 import com.decentralchain.transaction.assets.exchange.Validation.booleanOperators
 import play.api.libs.json.{JsObject, Json}
 
@@ -37,12 +37,12 @@ object AssetPair {
   }
 
   def assetIdStr(aid: Asset): String = aid match {
-    case Waves           => WavesName
+    case Dcc           => DccName
     case IssuedAsset(id) => id.toString
   }
 
   def extractAssetId(a: String): Try[Asset] = a match {
-    case `WavesName` => Success(Waves)
+    case `DccName` => Success(Dcc)
     case other       => ByteStr.decodeBase58(other).map(IssuedAsset(_))
   }
 

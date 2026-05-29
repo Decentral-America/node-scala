@@ -65,7 +65,7 @@ case class DebugApiRoute(
 
   private lazy val configStr             = configRoot.render(ConfigRenderOptions.concise().setJson(true).setFormatted(true))
   private lazy val fullConfig: JsValue   = Json.parse(configStr)
-  private lazy val wavesConfig: JsObject = Json.obj("waves" -> (fullConfig \ "waves").get)
+  private lazy val dccConfig: JsObject = Json.obj("dcc" -> (fullConfig \ "dcc").get)
 
   override val settings: RestAPISettings = ws.restAPISettings
 
@@ -73,7 +73,7 @@ case class DebugApiRoute(
 
   override lazy val route: Route = pathPrefix("debug") {
     withAuth {
-      balanceHistory ~ stateHash ~ validate ~ state ~ info ~ stateWaves ~ rollback ~ blacklist ~ minerInfo ~ configInfo ~ print
+      balanceHistory ~ stateHash ~ validate ~ state ~ info ~ stateDcc ~ rollback ~ blacklist ~ minerInfo ~ configInfo ~ print
     }
   }
 
@@ -92,7 +92,7 @@ case class DebugApiRoute(
   private def distribution(height: Int): Route = optionalHeaderValueByType(Accept) { accept =>
     routeTimeout.executeToFuture {
       assetsApi
-        .wavesDistribution(height, None)
+        .dccDistribution(height, None)
         .toListL
         .map {
           case l if accept.exists(_.mediaRanges.exists(CustomJson.acceptsNumbersAsStrings)) =>
@@ -107,7 +107,7 @@ case class DebugApiRoute(
     distribution(blockchain.height)
   }
 
-  def stateWaves: Route = (path("stateWaves" / IntNumber) & get) { height =>
+  def stateDcc: Route = (path("stateDcc" / IntNumber) & get) { height =>
     distribution(height)
   }
 
@@ -174,14 +174,14 @@ case class DebugApiRoute(
     // Redact sensitive fields before returning
     val redactedConfig = if (full) {
       val redacted = fullConfig.as[JsObject]
-      val wavesObj = (redacted \ "waves").asOpt[JsObject].getOrElse(Json.obj())
-      val redactedWaves = wavesObj
+      val dccObj = (redacted \ "dcc").asOpt[JsObject].getOrElse(Json.obj())
+      val redactedDcc = dccObj
         .transform((__ \ "wallet").json.prune)
-        .getOrElse(wavesObj)
+        .getOrElse(dccObj)
         .transform((__ \ "rest-api" \ "api-key-hash").json.prune)
-        .getOrElse(wavesObj)
-      redacted ++ Json.obj("waves" -> redactedWaves)
-    } else wavesConfig
+        .getOrElse(dccObj)
+      redacted ++ Json.obj("dcc" -> redactedDcc)
+    } else dccConfig
     complete(redactedConfig)
   }
 

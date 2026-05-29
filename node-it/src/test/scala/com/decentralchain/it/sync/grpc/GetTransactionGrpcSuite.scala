@@ -18,11 +18,11 @@ class GetTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       .explicitGet()
       .id()
       .toString
-    val transactionBySenderAndId = sender.getTransaction(sender = firstAddress, id = txId).getWavesTransaction
+    val transactionBySenderAndId = sender.getTransaction(sender = firstAddress, id = txId).getDccTransaction
     val transactionByRecipientAndId =
-      sender.getTransaction(recipient = Some(Recipient().withPublicKeyHash(secondAddress)), id = txId).getWavesTransaction
+      sender.getTransaction(recipient = Some(Recipient().withPublicKeyHash(secondAddress)), id = txId).getDccTransaction
     val transactionBySenderRecipientAndId =
-      sender.getTransaction(sender = firstAddress, recipient = Some(Recipient().withPublicKeyHash(secondAddress)), id = txId).getWavesTransaction
+      sender.getTransaction(sender = firstAddress, recipient = Some(Recipient().withPublicKeyHash(secondAddress)), id = txId).getDccTransaction
 
     transactionBySenderAndId.senderPublicKey shouldBe ByteString.copyFrom(Base58.decode(firstAcc.publicKey.toString))
     transactionByRecipientAndId.getTransfer.getRecipient shouldBe PBRecipients.create(secondAcc.toAddress)
@@ -38,8 +38,8 @@ class GetTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     val transactionsByIds = sender.getTransactionSeq(txsIds, sender = thirdAddress, recipient = Some(Recipient().withPublicKeyHash(secondAddress)))
     transactionsByIds.size shouldBe 10
     for (tx <- transactionsByIds) {
-      tx.getTransaction.getWavesTransaction.senderPublicKey shouldBe ByteString.copyFrom(thirdAcc.publicKey.arr)
-      tx.getTransaction.getWavesTransaction.getTransfer.getRecipient shouldBe PBRecipients.create(secondAcc.toAddress)
+      tx.getTransaction.getDccTransaction.senderPublicKey shouldBe ByteString.copyFrom(thirdAcc.publicKey.arr)
+      tx.getTransaction.getDccTransaction.getTransfer.getRecipient shouldBe PBRecipients.create(secondAcc.toAddress)
     }
   }
 }

@@ -4,7 +4,7 @@ import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.crypto.SignatureLength
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.OrderPriceMode.{AssetDecimals, FixedDecimals}
 import com.decentralchain.transaction.{Asset, Proofs, TxExchangeAmount, TxMatcherFee, TxOrderPrice, TxVersion}
 import com.decentralchain.utils.{EthEncoding, byteStrFormat}
@@ -135,8 +135,8 @@ object OrderJson {
   val assetReads: Reads[Asset] = Asset.assetReads(true)
 
   implicit val assetPairReads: Reads[AssetPair] = {
-    val r = (JsPath \ "amountAsset").readWithDefault[Asset](Waves)(using assetReads) and
-      (JsPath \ "priceAsset").readWithDefault[Asset](Waves)(using assetReads)
+    val r = (JsPath \ "amountAsset").readWithDefault[Asset](Dcc)(using assetReads) and
+      (JsPath \ "priceAsset").readWithDefault[Asset](Dcc)(using assetReads)
     r(AssetPair(_, _))
   }
 
@@ -197,7 +197,7 @@ object OrderJson {
       (JsPath \ "signature").readNullable[Array[Byte]] and
       (JsPath \ "proofs").readNullable[Array[Array[Byte]]] and
       (JsPath \ "version").read[Byte] and
-      (JsPath \ "matcherFeeAssetId").readNullable[Asset].map(_.getOrElse(Waves)) and
+      (JsPath \ "matcherFeeAssetId").readNullable[Asset].map(_.getOrElse(Dcc)) and
       (JsPath \ "eip712Signature")
         .readNullable[String]
         .map(_.map(EthEncoding.toBytes)) and

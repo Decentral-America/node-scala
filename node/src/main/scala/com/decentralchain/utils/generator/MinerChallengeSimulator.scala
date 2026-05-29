@@ -67,7 +67,7 @@ object MinerChallengeSimulator {
       genesis,
       RewardsSettings.MAINNET
     )
-    val wavesSettings = {
+    val dccSettings = {
       val settings = DCCSettings.fromRootConfig(loadConfig(Some(nodeConfFile).map(readConfFile)))
       settings.copy(blockchainSettings = blockchainSettings, minerSettings = settings.minerSettings.copy(quorum = 0))
     }
@@ -94,7 +94,7 @@ object MinerChallengeSimulator {
         map.get(account).toRight(GenericError(s"No key for $account"))
     }
 
-    var originalBlockchain = BlockchainObjects.createOriginal(wavesSettings, wallet, genSettings.timestamp.getOrElse(System.currentTimeMillis()))
+    var originalBlockchain = BlockchainObjects.createOriginal(dccSettings, wallet, genSettings.timestamp.getOrElse(System.currentTimeMillis()))
     var challengingBlockchain: Option[BlockchainObjects] = None
 
     while (!Thread.currentThread().isInterrupted && !quit) synchronized {
@@ -114,8 +114,8 @@ object MinerChallengeSimulator {
       if (originalBlockchain.blockchain.height == forkHeight + 1 && challengingBlockchain.isEmpty) {
         originalBlockchain.blockchain.shutdown()
         originalBlockchain.rdb.close()
-        challengingBlockchain = Some(BlockchainObjects.createChallenging(wavesSettings, wallet, challengingMiner, maliciousMiner))
-        originalBlockchain = BlockchainObjects.createOriginal(wavesSettings, wallet, prevTime.time)
+        challengingBlockchain = Some(BlockchainObjects.createChallenging(dccSettings, wallet, challengingMiner, maliciousMiner))
+        originalBlockchain = BlockchainObjects.createOriginal(dccSettings, wallet, prevTime.time)
       }
     }
   }
@@ -164,30 +164,30 @@ object MinerChallengeSimulator {
   }
 
   object BlockchainObjects {
-    def createOriginal(wavesSettings: DCCSettings, wallet: Wallet, startTime: Long): BlockchainObjects = {
-      val rdb      = RDB.open(wavesSettings.dbSettings)
+    def createOriginal(dccSettings: DCCSettings, wallet: Wallet, startTime: Long): BlockchainObjects = {
+      val rdb      = RDB.open(dccSettings.dbSettings)
       val fakeTime = createFakeTime(startTime)
       val (blockchainUpdater, _) =
-        StorageFactory(wavesSettings, rdb, fakeTime, BlockchainUpdateTriggers.noop)
-      com.decentralchain.checkGenesis(wavesSettings, blockchainUpdater, Miner.StrictDisabledMiner)
+        StorageFactory(dccSettings, rdb, fakeTime, BlockchainUpdateTriggers.noop)
+      com.decentralchain.checkGenesis(dccSettings, blockchainUpdater, Miner.StrictDisabledMiner)
       sys.addShutdownHook(synchronized {
         blockchainUpdater.shutdown()
         rdb.close()
       })
-      val (miner, appender) = createMinerAndAppender(blockchainUpdater, fakeTime, wavesSettings, wallet)
+      val (miner, appender) = createMinerAndAppender(blockchainUpdater, fakeTime, dccSettings, wallet)
       BlockchainObjects(blockchainUpdater, rdb, miner, appender, fakeTime, false)
     }
 
     def createChallenging(
-        wavesSettings: DCCSettings,
+        dccSettings: DCCSettings,
         wallet: Wallet,
         challengingMiner: SeedKeyPair,
         maliciousMiner: SeedKeyPair
     ): BlockchainObjects = {
-      val correctBlockchainDbDir = wavesSettings.dbSettings.directory + "/../challenged"
-      FileUtils.copyDirectory(new File(wavesSettings.dbSettings.directory), new File(correctBlockchainDbDir))
-      val dbSettings       = wavesSettings.dbSettings.copy(directory = correctBlockchainDbDir)
-      val fixedDCCSettings = wavesSettings.copy(dbSettings = dbSettings)
+      val correctBlockchainDbDir = dccSettings.dbSettings.directory + "/../challenged"
+      FileUtils.copyDirectory(new File(dccSettings.dbSettings.directory), new File(correctBlockchainDbDir))
+      val dbSettings       = dccSettings.dbSettings.copy(directory = correctBlockchainDbDir)
+      val fixedDCCSettings = dccSettings.copy(dbSettings = dbSettings)
       val rdb              = RDB.open(dbSettings)
       val rocksDBWriter = RocksDBWriter(
         rdb,
@@ -226,14 +226,14 @@ object MinerChallengeSimulator {
         rdb.close()
       })
 
-      val (miner, appender) = createMinerAndAppender(blockchainUpdater, fakeTime, wavesSettings, wallet)
+      val (miner, appender) = createMinerAndAppender(blockchainUpdater, fakeTime, dccSettings, wallet)
       BlockchainObjects(blockchainUpdater, rdb, miner, appender, fakeTime, true)
     }
 
     private def createMinerAndAppender(
         blockchain: BlockchainUpdaterImpl,
         fakeTime: Time,
-        wavesSettings: DCCSettings,
+        dccSettings: DCCSettings,
         wallet: Wallet
     ): (
         MinerImpl,
@@ -242,13 +242,13 @@ object MinerChallengeSimulator {
             Option[com.decentralchain.network.BlockSnapshotResponse]
         ) => monix.eval.Task[Either[com.decentralchain.lang.ValidationError, com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult]]
     ) = {
-      val utx = new UtxPoolImpl(fakeTime, blockchain, wavesSettings.utxSettings, wavesSettings.maxTxErrorLogSize, wavesSettings.minerSettings.enable)
+      val utx = new UtxPoolImpl(fakeTime, blockchain, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
       val posSelector = PoSSelector(blockchain, None)
       val utxEvents   = ConcurrentSubject.publish[UtxEvent](using scheduler)
       val miner = new MinerImpl(
         new DefaultChannelGroup("", null),
         blockchain,
-        wavesSettings,
+        dccSettings,
         fakeTime,
         utx,
         BlockEndorser.Disabled,

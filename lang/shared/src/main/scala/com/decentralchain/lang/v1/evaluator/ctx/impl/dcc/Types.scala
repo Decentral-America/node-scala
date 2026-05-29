@@ -1,4 +1,4 @@
-package com.decentralchain.lang.v1.evaluator.ctx.impl.waves
+package com.decentralchain.lang.v1.evaluator.ctx.impl.dcc
 
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.compiler.Types.*
@@ -563,7 +563,7 @@ object Types {
     )
   )
 
-  def buildWavesTypes(proofsEnabled: Boolean, stdLibVersion: StdLibVersion): Seq[FINAL] = {
+  def buildDccTypes(proofsEnabled: Boolean, stdLibVersion: StdLibVersion): Seq[FINAL] = {
     val activeTxTypes                       = buildActiveTransactionTypes(proofsEnabled, stdLibVersion)
     val obsoleteTxTypes                     = buildObsoleteTransactionTypes(proofsEnabled, stdLibVersion)
     val transactionsCommonType              = UNION.create(activeTxTypes, Some("Transaction"))

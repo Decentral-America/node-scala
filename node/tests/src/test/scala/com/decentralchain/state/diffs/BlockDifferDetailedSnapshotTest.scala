@@ -11,7 +11,7 @@ import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.StateSnapshot
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.{NG, RideV6, SettingsFromDefaultConfig}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 
@@ -37,10 +37,10 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
 
       val (master, b) = genesisBlock
       assertDetailedSnapshot(b, RideV6) { case (snapshot, keyBlockSnapshot) =>
-        snapshot.balances((master, Waves)) shouldBe ENOUGH_AMT
-        keyBlockSnapshot.balances.get((master, Waves)) shouldBe None
+        snapshot.balances((master, Dcc)) shouldBe ENOUGH_AMT
+        keyBlockSnapshot.balances.get((master, Dcc)) shouldBe None
         keyBlockSnapshot.transactions.size shouldBe 1
-        keyBlockSnapshot.transactions.head._2.snapshot.balances((master, Waves)) shouldBe ENOUGH_AMT
+        keyBlockSnapshot.transactions.head._2.snapshot.balances((master, Dcc)) shouldBe ENOUGH_AMT
       }
     }
 
@@ -48,9 +48,9 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
       val fee1 = 999999
       val fee2 = 100000
 
-      val gAmount = 30.waves
-      val amount1 = 15.waves
-      val amount2 = 7.waves
+      val gAmount = 30.dcc
+      val amount1 = 15.dcc
+      val amount2 = 7.dcc
 
       val a1 = TxHelpers.signer(1)
       val a2 = TxHelpers.signer(2)
@@ -65,18 +65,18 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
       "transaction snapshots are correct" in {
         assertDetailedSnapshot(block.block, RideV6) { case (_, keyBlockSnapshot) =>
           val transactionSnapshots = keyBlockSnapshot.transactions.map(_._2.snapshot).toSeq
-          transactionSnapshots(0).balances((address1, Waves)) shouldBe gAmount
-          transactionSnapshots(1).balances((address1, Waves)) shouldBe gAmount - amount1 - fee1 + fee1 / 5 * 2
-          transactionSnapshots(1).balances((address2, Waves)) shouldBe amount1
-          transactionSnapshots(2).balances((address1, Waves)) shouldBe gAmount - amount1 - fee1 + fee1 / 5 * 2 + amount2 + fee2 / 5 * 2
-          transactionSnapshots(2).balances((address2, Waves)) shouldBe amount1 - amount2 - fee2
+          transactionSnapshots(0).balances((address1, Dcc)) shouldBe gAmount
+          transactionSnapshots(1).balances((address1, Dcc)) shouldBe gAmount - amount1 - fee1 + fee1 / 5 * 2
+          transactionSnapshots(1).balances((address2, Dcc)) shouldBe amount1
+          transactionSnapshots(2).balances((address1, Dcc)) shouldBe gAmount - amount1 - fee1 + fee1 / 5 * 2 + amount2 + fee2 / 5 * 2
+          transactionSnapshots(2).balances((address2, Dcc)) shouldBe amount1 - amount2 - fee2
         }
       }
 
       "miner reward is correct" - {
         "without NG" in {
           assertDetailedSnapshot(block.block, SettingsFromDefaultConfig) { case (_, keyBlockSnapshot) =>
-            keyBlockSnapshot.balances((address1, Waves)) shouldBe fee1 + fee2
+            keyBlockSnapshot.balances((address1, Dcc)) shouldBe fee1 + fee2
           }
         }
 
@@ -91,8 +91,8 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
             val a1 = TxHelpers.signer(1)
             val a2 = TxHelpers.signer(2)
 
-            val amount1 = 2.waves
-            val amount2 = 1.waves
+            val amount1 = 2.dcc
+            val amount2 = 1.dcc
 
             val genesis   = TxHelpers.genesis(a1.toAddress)
             val transfer1 = TxHelpers.transfer(a1, a2.toAddress, amount1, fee = fee1, version = TxVersion.V1)
@@ -106,7 +106,7 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
                 BlockDiffer
                   .fromBlock(d.blockchain, Some(d.lastBlock), block, None, MiningConstraint.Unlimited, block.header.generationSignature)
                   .explicitGet()
-              detailedSnapshot.balances((defaultAddress, Waves)) shouldBe fee1
+              detailedSnapshot.balances((defaultAddress, Dcc)) shouldBe fee1
             }
           }
         }

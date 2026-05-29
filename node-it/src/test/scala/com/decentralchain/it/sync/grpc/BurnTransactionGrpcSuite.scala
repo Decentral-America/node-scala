@@ -10,7 +10,7 @@ class BurnTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 
   private val decimals: Byte = 2
 
-  test("burning assets changes issuer's asset balance; issuer's waves balance is decreased by fee") {
+  test("burning assets changes issuer's asset balance; issuer's dcc balance is decreased by fee") {
     for (v <- burnTxSupportedVersions) {
       val issuedAssetId = PBTransactions
         .vanilla(
@@ -24,11 +24,11 @@ class BurnTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       sender.assetsBalance(firstAddress, Seq(issuedAssetId))(issuedAssetId) shouldBe issueAmount
 
       // burn half of the coins and check balance
-      val balance = sender.wavesBalance(firstAddress)
+      val balance = sender.dccBalance(firstAddress)
       sender.broadcastBurn(firstAcc, issuedAssetId, issueAmount / 2, minFee, version = v, waitForTx = true)
 
-      sender.wavesBalance(firstAddress).available shouldBe balance.available - minFee
-      sender.wavesBalance(firstAddress).effective shouldBe balance.effective - minFee
+      sender.dccBalance(firstAddress).available shouldBe balance.available - minFee
+      sender.dccBalance(firstAddress).effective shouldBe balance.effective - minFee
 
       sender.assetsBalance(firstAddress, Seq(issuedAssetId))(issuedAssetId) shouldBe issueAmount / 2
 

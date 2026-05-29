@@ -7,7 +7,7 @@ import pureconfig.ConfigSource
 class UtxSettingsSpecification extends FlatSpec {
   "UTXSettings" should "read values" in {
     val config = ConfigFactory
-      .parseString("""waves {
+      .parseString("""dcc {
                      |  utx {
                      |    max-size = 100
                      |    max-bytes-size = 100
@@ -23,7 +23,7 @@ class UtxSettingsSpecification extends FlatSpec {
                      |}""".stripMargin)
       .resolve()
 
-    val settings = ConfigSource.fromConfig(config).at("waves.utx").loadOrThrow[UtxSettings]
+    val settings = ConfigSource.fromConfig(config).at("dcc.utx").loadOrThrow[UtxSettings]
     settings.maxSize shouldBe 100
     settings.maxBytesSize shouldBe 100L
     settings.maxScriptedSize shouldBe 100

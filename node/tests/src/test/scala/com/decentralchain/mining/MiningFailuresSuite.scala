@@ -114,15 +114,15 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest {
       override def currentGeneratorSet: Option[GeneratorSet] = ???
     }
 
-    val wavesSettings = {
+    val dccSettings = {
       val config = ConfigFactory
         .parseString("""
-                       |waves.miner {
+                       |dcc.miner {
                        |  quorum = 0
                        |  interval-after-last-block-then-generation-is-allowed = 0
                        |}
                        |
-                       |waves.features.supported=[2]
+                       |dcc.features.supported=[2]
                        |""".stripMargin)
         .withFallback(ConfigFactory.load())
 
@@ -130,7 +130,7 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest {
     }
 
     val blockchainSettings = {
-      val bs = wavesSettings.blockchainSettings
+      val bs = dccSettings.blockchainSettings
       val fs = bs.functionalitySettings
       bs.copy(functionalitySettings = fs.copy(blockVersion3AfterHeight = 0, preActivatedFeatures = Map(2.toShort -> 0)))
     }
@@ -140,12 +140,12 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest {
       val allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
       val wallet      = Wallet(WalletSettings(None, Some("123"), None))
       val utxPool =
-        new UtxPoolImpl(ntpTime, blockchainUpdater, wavesSettings.utxSettings, wavesSettings.maxTxErrorLogSize, wavesSettings.minerSettings.enable)
-      val pos = PoSSelector(blockchainUpdater, wavesSettings.synchronizationSettings.maxBaseTarget)
+        new UtxPoolImpl(ntpTime, blockchainUpdater, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
+      val pos = PoSSelector(blockchainUpdater, dccSettings.synchronizationSettings.maxBaseTarget)
       new MinerImpl(
         allChannels,
         blockchainUpdater,
-        wavesSettings.copy(blockchainSettings = blockchainSettings),
+        dccSettings.copy(blockchainSettings = blockchainSettings),
         ntpTime,
         utxPool,
         BlockEndorser.Disabled,

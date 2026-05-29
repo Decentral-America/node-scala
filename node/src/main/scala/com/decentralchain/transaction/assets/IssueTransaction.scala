@@ -34,7 +34,7 @@ case class IssueTransaction(
     with ProvenTransaction
     with FastHashId
     with SigProofsSwitch
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with PBSince.V3 {
 
   override val bodyBytes: Coeval[Array[TxType]] = Coeval.evalOnce(IssueTxSerializer.bodyBytes(this))

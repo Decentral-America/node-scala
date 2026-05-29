@@ -22,7 +22,7 @@ case class PaymentTransaction(
     chainId: Byte
 ) extends Transaction(TransactionType.Payment)
     with ProvenTransaction
-    with TxWithFee.InWaves {
+    with TxWithFee.InDcc {
 
   val bodyBytes: Coeval[Array[Byte]] = Coeval.evalOnce(PaymentTxSerializer.bodyBytes(this))
 
@@ -59,7 +59,7 @@ object PaymentTransaction extends TransactionParser {
   ): Either[ValidationError, PaymentTransaction] =
     for {
       fee    <- TxPositiveAmount(fee)(TxValidationError.InsufficientFee)
-      amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, "waves"))
+      amount <- TxPositiveAmount(amount)(TxValidationError.NonPositiveAmount(amount, "dcc"))
       tx     <- PaymentTransaction(sender, recipient, amount, fee, timestamp, signature, recipient.chainId).validatedEither
     } yield tx
 }

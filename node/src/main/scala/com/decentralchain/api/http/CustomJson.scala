@@ -76,7 +76,7 @@ object CustomJson {
     "sponsorBalance",
     "totalAmount",
     "totalFee",
-    "totalWavesAmount",
+    "totalDccAmount",
     "value"
   )
 
@@ -86,7 +86,7 @@ object CustomJson {
   }
 
   private lazy val mapper = (new ObjectMapper)
-    .registerModule(new SimpleModule("WavesJson").addSerializer(classOf[JsValue], NumberAsStringSerializer))
+    .registerModule(new SimpleModule("DccJson").addSerializer(classOf[JsValue], NumberAsStringSerializer))
     .configure(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN, true)
 
   def writeValueAsString(value: JsValue): String = {

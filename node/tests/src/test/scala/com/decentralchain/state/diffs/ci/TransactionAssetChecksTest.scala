@@ -48,11 +48,11 @@ class TransactionAssetChecksTest extends PropSpec with WithDomain {
     withDomain(
       TransactionStateSnapshot,
       AddrWithBalance.enoughBalances(defaultSigner, secondSigner) ++ Seq(
-        AddrWithBalance(defaultSigner.toEthWavesAddress),
-        AddrWithBalance(secondSigner.toEthWavesAddress)
+        AddrWithBalance(defaultSigner.toEthDccAddress),
+        AddrWithBalance(secondSigner.toEthDccAddress)
       )
     ) { d =>
-      d.appendBlock(setScript(secondSigner, dApp), issueTx, transfer(secondSigner, defaultSigner.toEthWavesAddress, asset = asset))
+      d.appendBlock(setScript(secondSigner, dApp), issueTx, transfer(secondSigner, defaultSigner.toEthDccAddress, asset = asset))
       Try(
         generateEthInvoke(defaultEthSigner, secondAddress, "default", Nil, Seq(Payment(1, IssuedAsset(ByteStr.fill(31)(1)))))
       ).toEither should produce("InvocationTargetException")
@@ -66,7 +66,7 @@ class TransactionAssetChecksTest extends PropSpec with WithDomain {
       )
       val invokeWithIssued = generateEthInvoke(secondSigner.toEthKeyPair, secondAddress, "default", Nil, payments = Seq(Payment(1, asset)))
       d.appendBlockE(invokeWithIssued) should produce("negative asset balance")
-      d.appendBlock(transfer(secondSigner, secondSigner.toEthWavesAddress, asset = asset))
+      d.appendBlock(transfer(secondSigner, secondSigner.toEthDccAddress, asset = asset))
       d.appendAndAssertSucceed(invokeWithIssued)
     }
   }
@@ -94,11 +94,11 @@ class TransactionAssetChecksTest extends PropSpec with WithDomain {
     withDomain(
       TransactionStateSnapshot,
       AddrWithBalance.enoughBalances(defaultSigner, secondSigner) ++ Seq(
-        AddrWithBalance(defaultSigner.toEthWavesAddress),
-        AddrWithBalance(secondSigner.toEthWavesAddress)
+        AddrWithBalance(defaultSigner.toEthDccAddress),
+        AddrWithBalance(secondSigner.toEthDccAddress)
       )
     ) { d =>
-      d.appendBlock(setScript(secondSigner, dApp), issueTx, transfer(secondSigner, defaultSigner.toEthWavesAddress, asset = asset))
+      d.appendBlock(setScript(secondSigner, dApp), issueTx, transfer(secondSigner, defaultSigner.toEthDccAddress, asset = asset))
       (31 to 33).foreach(i =>
         d.appendBlockE(generateEthTransfer(defaultEthSigner, secondAddress, 1, IssuedAsset(ByteStr.fill(i)(1)))) should produce(
           "Can't resolve ERC20 address"
@@ -106,7 +106,7 @@ class TransactionAssetChecksTest extends PropSpec with WithDomain {
       )
       val transferIssued = generateEthTransfer(secondSigner.toEthKeyPair, secondAddress, 1, asset)
       d.appendBlockE(transferIssued) should produce(s"negative asset balance")
-      d.appendBlock(transfer(secondSigner, secondSigner.toEthWavesAddress, asset = asset))
+      d.appendBlock(transfer(secondSigner, secondSigner.toEthDccAddress, asset = asset))
       d.appendAndAssertSucceed(transferIssued)
     }
   }

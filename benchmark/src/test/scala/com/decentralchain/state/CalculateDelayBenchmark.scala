@@ -8,10 +8,10 @@ import java.util.concurrent.TimeUnit
 
 /*
 [info] Benchmark                                (configFile)  Mode  Cnt  Score   Error  Units
-[info] CalculateDelayBenchmark.calculateDelay1    waves.conf  avgt   10  1,616 ± 0,244  us/op
-[info] CalculateDelayBenchmark.calculateDelay2    waves.conf  avgt   10  1,671 ± 0,073  us/op
-[info] CalculateDelayBenchmark.calculateDelay3    waves.conf  avgt   10  1,688 ± 0,228  us/op
-[info] CalculateDelayBenchmark.calculateDelay4    waves.conf  avgt   10  1,656 ± 0,020  us/op
+[info] CalculateDelayBenchmark.calculateDelay1    dcc.conf  avgt   10  1,616 ± 0,244  us/op
+[info] CalculateDelayBenchmark.calculateDelay2    dcc.conf  avgt   10  1,671 ± 0,073  us/op
+[info] CalculateDelayBenchmark.calculateDelay3    dcc.conf  avgt   10  1,688 ± 0,228  us/op
+[info] CalculateDelayBenchmark.calculateDelay4    dcc.conf  avgt   10  1,656 ± 0,020  us/op
  */
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)

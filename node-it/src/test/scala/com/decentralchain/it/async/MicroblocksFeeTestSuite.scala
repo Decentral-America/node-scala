@@ -25,7 +25,7 @@ class MicroblocksFeeTestSuite extends BaseFreeSpec {
           // Not mining node sends transfer transactions to another not mining node
           // Mining nodes collect fee
           (1 to n).map { _ =>
-            notMiner.transfer(notMiner.keyPair, firstAddress, (1 + Random.nextInt(10)).waves, fee)
+            notMiner.transfer(notMiner.keyPair, firstAddress, (1 + Random.nextInt(10)).dcc, fee)
           }
         }
         .map(_ => ())
@@ -44,7 +44,7 @@ class MicroblocksFeeTestSuite extends BaseFreeSpec {
       _ <- traverse(nodes)(_.height).map(_.max)
 
       _ <- traverse(nodes)(_.waitForHeight(microblockActivationHeight - 1))
-      _ <- txRequestsGen(200, 2.waves)
+      _ <- txRequestsGen(200, 2.dcc)
       _ <- traverse(nodes)(_.waitForHeight(microblockActivationHeight + 3))
 
       initialBalances <- notMiner.debugStateAt(microblockActivationHeight - 1) // 100%
@@ -81,7 +81,7 @@ class MicroblocksFeeTestSuite extends BaseFreeSpec {
 
   private val microblockActivationHeight = Height(10)
   private val minerConfig = ConfigFactory.parseString(
-    s"""waves {
+    s"""dcc {
        |  blockchain.custom.functionality.pre-activated-features.2 = $microblockActivationHeight
        |  miner.quorum = 3
        |}
@@ -89,7 +89,7 @@ class MicroblocksFeeTestSuite extends BaseFreeSpec {
   )
 
   private val notMinerConfig = ConfigFactory.parseString(
-    s"""waves {
+    s"""dcc {
        |  blockchain.custom.functionality.pre-activated-features.2 = $microblockActivationHeight
        |  miner.enable = no
        |}

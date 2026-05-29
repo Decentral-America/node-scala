@@ -4,7 +4,7 @@ import cats.syntax.either.*
 import com.decentralchain.account.Address
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.state.{Blockchain, LeaseBalance, StateSnapshot}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.TxValidationError.AccountBalanceError
 
@@ -17,31 +17,30 @@ object BalanceDiffValidation {
   }
 
   def apply(b: Blockchain)(snapshot: StateSnapshot): Either[AccountBalanceError, StateSnapshot] = {
-    def checkWaves(
+    def checkDcc(
         acc: Address,
-        newWaves: Long,
+        newDcc: Long,
         newLease: LeaseBalance,
         additionalDeposit: Long
     ): Either[(Address, String), Unit] = {
-      val oldWaves   = b.balance(acc)
+      val oldDcc   = b.balance(acc)
       val oldDeposit = b.generationDeposit(acc)
       val oldLease   = b.leaseBalance(acc)
 
       val newDeposit          = oldDeposit + additionalDeposit
-      val newWavesWithDeposit = newWaves - newDeposit
+      val newDccWithDeposit = newDcc - newDeposit
 
       val leaseOutDiff = newLease.out - oldLease.out
 
-      val stateChanges = s"old: w=$oldWaves, $oldLease, d=$oldDeposit, new: w=$newWaves, $newLease, d=$newDeposit"
+      val stateChanges = s"old: w=$oldDcc, $oldLease, d=$oldDeposit, new: w=$newDcc, $newLease, d=$newDeposit"
 
-      // TODO: additional tests
       val errorMessage =
-        if (newWaves < 0) s"negative waves balance: $acc, old: $oldWaves, new: $newWaves".asLeft
-        else if (newWavesWithDeposit < 0) {
+        if (newDcc < 0) s"negative dcc balance: $acc, old: $oldDcc, new: $newDcc".asLeft
+        else if (newDccWithDeposit < 0) {
           if (newDeposit > oldDeposit) s"$acc not enough funds for deposit, $stateChanges".asLeft
           else s"$acc trying to spend a deposit, $stateChanges".asLeft
-        } else if (newWavesWithDeposit < newLease.out && b.height > b.settings.functionalitySettings.allowLeasedBalanceTransferUntilHeight) {
-          if (newWavesWithDeposit + newLease.in - newLease.out < 0) s"negative effective balance: $acc, $stateChanges".asLeft
+        } else if (newDccWithDeposit < newLease.out && b.height > b.settings.functionalitySettings.allowLeasedBalanceTransferUntilHeight) {
+          if (newDccWithDeposit + newLease.in - newLease.out < 0) s"negative effective balance: $acc, $stateChanges".asLeft
           else if (leaseOutDiff == 0) s"$acc trying to spend leased money".asLeft
           else s"leased being more than own: $acc, $stateChanges".asLeft
         } else Either.unit
@@ -49,14 +48,14 @@ object BalanceDiffValidation {
       errorMessage.leftMap(acc -> _)
     }
 
-    val wavesCheck =
+    val dccCheck =
       snapshot.balances
         .flatMap {
-          case ((address, Waves), balance) =>
+          case ((address, Dcc), balance) =>
             val currentLeaseBalance = snapshot.leaseBalances.getOrElse(address, b.leaseBalance(address))
             val depositedOnNext = DepositInWavelets *
               snapshot.nextCommittedGenerators.find { case (pk, _) => pk.toAddress == address }.size
-            checkWaves(address, balance, currentLeaseBalance, depositedOnNext).fold(error => List(error), _ => Nil)
+            checkDcc(address, balance, currentLeaseBalance, depositedOnNext).fold(error => List(error), _ => Nil)
           case _ =>
             Nil
         }
@@ -64,13 +63,13 @@ object BalanceDiffValidation {
     val assetsCheck =
       snapshot.balances
         .collectFirst {
-          case ((address, asset), balance) if asset != Waves && balance < 0 =>
+          case ((address, asset), balance) if asset != Dcc && balance < 0 =>
             Map(address -> s"negative asset balance: $address, new portfolio: ${negativeAssetsInfo(address, snapshot)}")
         }
         .getOrElse(Map())
 
     val positiveBalanceErrors =
-      wavesCheck ++ assetsCheck
+      dccCheck ++ assetsCheck
 
     if (positiveBalanceErrors.isEmpty) {
       Right(snapshot)

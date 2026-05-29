@@ -16,7 +16,7 @@ class GrpcReflectionApiSuite extends GrpcBaseTransactionSuite {
     NodeConfigs
       .Builder(Default, 1, Seq())
       .overrideBase(_.quorum(0))
-      .overrideBase(_.raw("waves.extensions = [com.decentralchain.api.grpc.GRPCServerExtension\ncom.decentralchain.events.BlockchainUpdates]"))
+      .overrideBase(_.raw("dcc.extensions = [com.decentralchain.api.grpc.GRPCServerExtension\ncom.decentralchain.events.BlockchainUpdates]"))
       .buildNonConflicting()
 
   test("successful getServerReflectionInfo call for BU") {
@@ -25,7 +25,7 @@ class GrpcReflectionApiSuite extends GrpcBaseTransactionSuite {
       .usePlaintext()
       .build()
     val call    = buChannel.newCall(getServerReflectionInfoMethod, CallOptions.DEFAULT)
-    val request = ServerReflectionRequest.newBuilder().setFileContainingSymbol("waves.events.grpc.BlockchainUpdatesApi").build()
+    val request = ServerReflectionRequest.newBuilder().setFileContainingSymbol("dcc.events.grpc.BlockchainUpdatesApi").build()
     val result  = Try(ClientCalls.blockingUnaryCall(call, request))
     result.isSuccess shouldBe true
     result.get.hasFileDescriptorResponse shouldBe true
@@ -33,7 +33,7 @@ class GrpcReflectionApiSuite extends GrpcBaseTransactionSuite {
 
   test("successful getServerReflectionInfo call for GRPC methods") {
     val call    = nodes.head.grpcChannel.newCall(getServerReflectionInfoMethod, CallOptions.DEFAULT)
-    val request = ServerReflectionRequest.newBuilder().setFileContainingSymbol("waves.node.grpc.BlocksApi").build()
+    val request = ServerReflectionRequest.newBuilder().setFileContainingSymbol("dcc.node.grpc.BlocksApi").build()
     val result  = Try(ClientCalls.blockingUnaryCall(call, request))
     result.isSuccess shouldBe true
     result.get.hasFileDescriptorResponse shouldBe true

@@ -13,7 +13,7 @@ import com.decentralchain.state.Height
 
 import scala.collection.{immutable, mutable}
 
-// TODO: .switch: use in appender when changed height
+// NOTE: .switch pattern — use in appender when height changes (in-progress consensus feature)
 trait EndorsementStorage {
 
   /** @return true, if it can be shared with neighbors
@@ -38,7 +38,7 @@ object EndorsementStorage {
   }
 
   class InMemory(blockAtHeight: (BlockId, Height) => Boolean) extends EndorsementStorage, StrictLogging {
-    private var currentFilter = none[EndorsementFilter] // TODO: remove option?
+    private var currentFilter = none[EndorsementFilter] // NOTE: Option wrapper kept for initialization safety
 
     private val sharedWithNeighbors     = mutable.HashSet.empty[EndorseBlock]
     private val processedValidEndorsers = mutable.HashSet.empty[GeneratorIndex]

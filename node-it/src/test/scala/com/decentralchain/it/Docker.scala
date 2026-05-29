@@ -79,7 +79,7 @@ class Docker(
   private val networkPrefix = s"${InetAddress.getByAddress(toByteArray(networkSeed)).getHostAddress}/28"
 
   private val logDir: Coeval[Path] = Coeval.evalOnce {
-    val r = Option(System.getProperty("waves.it.logging.dir"))
+    val r = Option(System.getProperty("dcc.it.logging.dir"))
       .map(Paths.get(_))
       .getOrElse(Paths.get(System.getProperty("user.dir"), "logs", RunId, tag.replaceAll("""(\w)\w*\.""", "$1.")))
 
@@ -91,9 +91,9 @@ class Docker(
 
   private def ipForNode(nodeId: Int) = InetAddress.getByAddress(toByteArray(nodeId & 0xf | networkSeed)).getHostAddress
 
-  private lazy val wavesNetwork: Network = {
+  private lazy val dccNetwork: Network = {
     val id          = Random.nextInt(Int.MaxValue)
-    val networkName = s"waves-$id"
+    val networkName = s"dcc-$id"
 
     def network: Option[Network] =
       try {
@@ -144,7 +144,7 @@ class Docker(
     attempt(5)
   }
 
-  def createNetwork: Network = wavesNetwork
+  def createNetwork: Network = dccNetwork
 
   def startNodes(nodeConfigs: Seq[Config]): Seq[DockerNode] = {
     log.trace(s"Starting ${nodeConfigs.size} containers")
@@ -202,13 +202,13 @@ class Docker(
 
   private def startNodeInternal(nodeConfig: Config, autoConnect: Boolean = true): DockerNode =
     try {
-      val nodeName = nodeConfig.getString("waves.network.node-name")
+      val nodeName = nodeConfig.getString("dcc.network.node-name")
       val peersOverrides = if (autoConnect) {
         val otherAddrs = peersFor(nodeName)
 
         ConfigFactory
           .parseMap(Map("known-peers" -> otherAddrs.map(addr => s"${addr.getHostString}:${addr.getPort}").asJava).asJava)
-          .atPath("waves.network")
+          .atPath("dcc.network")
       } else ConfigFactory.empty()
 
       val overrides = peersOverrides
@@ -222,7 +222,7 @@ class Docker(
         .withFallback(defaultReference())
         .resolve()
 
-      val networkPort          = actualConfig.getString("waves.network.port")
+      val networkPort          = actualConfig.getString("dcc.network.port")
       val internalDebuggerPort = 5005
 
       val nodeNumber = nodeName.replace("node", "").toInt
@@ -230,11 +230,11 @@ class Docker(
 
       val javaOptions = Option(System.getenv("CONTAINER_JAVA_OPTS")).getOrElse("")
       val configOverrides: String = {
-        val ntpServer    = Option(System.getenv("NTP_SERVER")).fold("")(x => s"-Dwaves.ntp-server=$x ")
-        val maxCacheSize = Option(System.getenv("MAX_CACHE_SIZE")).fold("")(x => s"-Dwaves.max-cache-size=$x ")
+        val ntpServer    = Option(System.getenv("NTP_SERVER")).fold("")(x => s"-Ddcc.ntp-server=$x ")
+        val maxCacheSize = Option(System.getenv("MAX_CACHE_SIZE")).fold("")(x => s"-Ddcc.max-cache-size=$x ")
 
         var config = s"$javaOptions ${renderProperties(asProperties(overrides))} " +
-          s"-Dlogback.stdout.level=TRACE -Dlogback.file.level=OFF -Dwaves.network.declared-address=$ip:$networkPort $ntpServer $maxCacheSize"
+          s"-Dlogback.stdout.level=TRACE -Dlogback.file.level=OFF -Ddcc.network.declared-address=$ip:$networkPort $ntpServer $maxCacheSize"
 
         // Debugger
         if (enableDebugger) config += s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:$internalDebuggerPort "
@@ -262,7 +262,7 @@ class Docker(
 
       val exposedPorts = new java.util.HashSet[String]()
       exposedPorts.add(s"$internalDebuggerPort")
-      if (Try(nodeConfig.getStringList("waves.extensions").contains("com.decentralchain.events.BlockchainUpdates")).getOrElse(false)) {
+      if (Try(nodeConfig.getStringList("dcc.extensions").contains("com.decentralchain.events.BlockchainUpdates")).getOrElse(false)) {
         exposedPorts.add("6881")
       }
 
@@ -270,14 +270,14 @@ class Docker(
         .builder()
         .image(imageName)
         .exposedPorts(exposedPorts)
-        .networkingConfig(ContainerConfig.NetworkingConfig.create(Map(wavesNetwork.name() -> endpointConfigFor(nodeName)).asJava))
+        .networkingConfig(ContainerConfig.NetworkingConfig.create(Map(dccNetwork.name() -> endpointConfigFor(nodeName)).asJava))
         .hostConfig(hostConfig)
         .env(envs*)
         .build()
 
       val containerId = {
         val jenkinsJobIdFromEnv = sys.env.get("JENKINS_JOB_ID").fold("")(s => s"-$s")
-        val containerName       = s"${wavesNetwork.name()}-$nodeName$jenkinsJobIdFromEnv"
+        val containerName       = s"${dccNetwork.name()}-$nodeName$jenkinsJobIdFromEnv"
         dumpContainers(
           client.listContainers(DockerClient.ListContainersParam.filter("name", containerName)),
           "Containers with same name"
@@ -308,17 +308,17 @@ class Docker(
     val networkPort = settings.networkSettings.derivedBindAddress.get.getPort
 
     val containerInfo  = inspectContainer(containerId)
-    val wavesIpAddress = containerInfo.networkSettings().networks().get(wavesNetwork.name()).ipAddress()
+    val dccIpAddress = containerInfo.networkSettings().networks().get(dccNetwork.name()).ipAddress()
 
-    NodeInfo(restApiPort, networkPort, wavesIpAddress, containerInfo.networkSettings().ports())
+    NodeInfo(restApiPort, networkPort, dccIpAddress, containerInfo.networkSettings().ports())
   }
 
   @tailrec
   private def inspectContainer(containerId: String): ContainerInfo = {
     val containerInfo = client.inspectContainer(containerId)
-    if (containerInfo.networkSettings().networks().asScala.contains(wavesNetwork.name())) containerInfo
+    if (containerInfo.networkSettings().networks().asScala.contains(dccNetwork.name())) containerInfo
     else {
-      log.debug(s"Container $containerId has not connected to the network ${wavesNetwork.name()} yet, retry")
+      log.debug(s"Container $containerId has not connected to the network ${dccNetwork.name()} yet, retry")
       Thread.sleep(1000)
       inspectContainer(containerId)
     }
@@ -376,7 +376,7 @@ class Docker(
 
       // Docker do not allow updating ENV https://github.com/moby/moby/issues/8838 :(
       log.debug("Set new config directly in the entrypoint.sh script")
-      val shPath = "/usr/share/waves/bin/entrypoint.sh"
+      val shPath = "/usr/share/dcc/bin/entrypoint.sh"
       val scriptCmd: Array[String] =
         Array("sh", "-c", s"sed -i 's|$${JAVA_OPTS}|$${JAVA_OPTS} $renderedConfig|' $shPath && cat $shPath")
 
@@ -422,11 +422,11 @@ class Docker(
       }
 
       try {
-        client.removeNetwork(wavesNetwork.id)
+        client.removeNetwork(dccNetwork.id)
       } catch {
         case NonFatal(e) =>
           // https://github.com/moby/moby/issues/17217
-          log.warn(s"Can not remove network ${wavesNetwork.name()}", e)
+          log.warn(s"Can not remove network ${dccNetwork.name()}", e)
       }
 
       http.close()
@@ -494,7 +494,7 @@ class Docker(
 
   private def disconnectFromNetwork(containerId: String): Unit = {
     log.info(s"Trying to disconnect container $containerId from network ...")
-    client.disconnectFromNetwork(containerId, wavesNetwork.id())
+    client.disconnectFromNetwork(containerId, dccNetwork.id())
   }
 
   def restartContainer(node: DockerNode): DockerNode = {
@@ -528,7 +528,7 @@ class Docker(
   private def connectToNetwork(node: DockerNode): Unit = {
     log.info(s"Trying to connect node $node to network ...")
     client.connectToNetwork(
-      wavesNetwork.id(),
+      dccNetwork.id(),
       NetworkConnection
         .builder()
         .containerId(node.containerId)
@@ -569,7 +569,7 @@ class Docker(
 object Docker {
   val NodeImageName: String = "com.decentralchain/node-it:latest"
 
-  private val ContainerRoot = Paths.get("/usr/share/waves")
+  private val ContainerRoot = Paths.get("/usr/share/dcc")
   private val ProfilerPort  = 10001
 
   private val RunId = Option(System.getenv("RUN_ID")).getOrElse(DateTimeFormatter.ofPattern("MM-dd--HH_mm_ss").format(LocalDateTime.now()))
@@ -578,7 +578,7 @@ object Docker {
   private val propsMapper = new JavaPropsMapper
 
   val configTemplate: Config   = parseResources("template.conf")
-  val initialWavesAmount: Long = configTemplate.getLong("waves.blockchain.custom.genesis.initial-balance")
+  val initialDccAmount: Long = configTemplate.getLong("dcc.blockchain.custom.genesis.initial-balance")
 
   def genesisOverride(featuresConfig: Option[Config] = None): Config = {
     // Starting a node and applying the genesis block takes a non-negligible amount of time. If we do not introduce an offset,
@@ -595,14 +595,14 @@ object Docker {
     val offsetMs        = 12_000
     val genesisTs: Long = System.currentTimeMillis() + offsetMs
 
-    val timestampOverrides = parseString(s"""waves.blockchain.custom.genesis {
+    val timestampOverrides = parseString(s"""dcc.blockchain.custom.genesis {
                                             |  timestamp = $genesisTs
                                             |  block-timestamp = $genesisTs
                                             |  signature = null # To calculate it in Block.genesis
                                             |}""".stripMargin)
 
     val genesisConfig = timestampOverrides.withFallback(configTemplate)
-    val gs            = ConfigSource.fromConfig(genesisConfig).at("waves.blockchain.custom.genesis").loadOrThrow[GenesisSettings]
+    val gs            = ConfigSource.fromConfig(genesisConfig).at("dcc.blockchain.custom.genesis").loadOrThrow[GenesisSettings]
     val featuresConfigAdjusted = featuresConfig
       .map(_.withFallback(configTemplate))
       .getOrElse(configTemplate)
@@ -610,7 +610,7 @@ object Docker {
     val features =
       ConfigSource
         .fromConfig(featuresConfigAdjusted)
-        .at("waves.blockchain.custom.functionality.pre-activated-features")
+        .at("dcc.blockchain.custom.functionality.pre-activated-features")
         .loadOrThrow[Map[Short, Int]]
 
     val isRideV6Activated          = features.get(BlockchainFeatures.RideV6.id).contains(0)
@@ -618,12 +618,12 @@ object Docker {
 
     val genesisSignature = Block.genesis(gs, isRideV6Activated, isTxStateSnapshotActivated).explicitGet().id()
 
-    parseString(s"waves.blockchain.custom.genesis.signature = $genesisSignature").withFallback(timestampOverrides)
+    parseString(s"dcc.blockchain.custom.genesis.signature = $genesisSignature").withFallback(timestampOverrides)
   }
 
   AddressScheme.current = new AddressScheme {
     override val chainId: Byte =
-      ConfigSource.fromConfig(configTemplate).at("waves.blockchain.custom.address-scheme-character").loadOrThrow[String].charAt(0).toByte
+      ConfigSource.fromConfig(configTemplate).at("dcc.blockchain.custom.address-scheme-character").loadOrThrow[String].charAt(0).toByte
   }
 
   def apply(owner: Class[?]): Docker = new Docker(tag = owner.getSimpleName)
@@ -642,10 +642,10 @@ object Docker {
       .map { case (k, v) => s"-D$k=$v" }
       .mkString(" ")
 
-  case class NodeInfo(restApiPort: Int, networkPort: Int, wavesIpAddress: String, ports: JMap[String, JList[PortBinding]]) {
+  case class NodeInfo(restApiPort: Int, networkPort: Int, dccIpAddress: String, ports: JMap[String, JList[PortBinding]]) {
     val nodeApiEndpoint: URL                       = URI.create(s"http://localhost:${externalPort(restApiPort)}").toURL
     val hostNetworkAddress: InetSocketAddress      = new InetSocketAddress("localhost", externalPort(networkPort))
-    val containerNetworkAddress: InetSocketAddress = new InetSocketAddress(wavesIpAddress, networkPort)
+    val containerNetworkAddress: InetSocketAddress = new InetSocketAddress(dccIpAddress, networkPort)
 
     def externalPort(internalPort: Int): Int = ports.get(s"$internalPort/tcp").get(0).hostPort().toInt
   }

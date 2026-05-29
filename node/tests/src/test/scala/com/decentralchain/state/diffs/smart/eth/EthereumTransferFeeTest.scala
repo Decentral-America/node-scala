@@ -8,7 +8,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.{Asset, EthTxGenerator}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType.Transfer
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.utils.EthConverters.*
@@ -24,8 +24,8 @@ class EthereumTransferFeeTest extends PropSpec with WithDomain with EthHelpers {
     val assetScript = TestCompiler(V5).compileExpression("true")
     val issueTx     = issue(script = Some(assetScript))
     val asset       = IssuedAsset(issueTx.id())
-    val preTransfer = transfer(to = defaultSigner.toEthWavesAddress, asset = asset)
-    withDomain(RideV6, Seq(AddrWithBalance(defaultSigner.toEthWavesAddress))) { d =>
+    val preTransfer = transfer(to = defaultSigner.toEthDccAddress, asset = asset)
+    withDomain(RideV6, Seq(AddrWithBalance(defaultSigner.toEthDccAddress))) { d =>
       d.appendBlock(issueTx, preTransfer)
       assertMinFee(d, asset, transferSmartFee)
     }
@@ -34,16 +34,16 @@ class EthereumTransferFeeTest extends PropSpec with WithDomain with EthHelpers {
   property("non-smart asset should require standard fee") {
     val issueTx     = issue()
     val asset       = IssuedAsset(issueTx.id())
-    val preTransfer = transfer(to = defaultSigner.toEthWavesAddress, asset = asset)
-    withDomain(RideV6, Seq(AddrWithBalance(defaultSigner.toEthWavesAddress))) { d =>
+    val preTransfer = transfer(to = defaultSigner.toEthDccAddress, asset = asset)
+    withDomain(RideV6, Seq(AddrWithBalance(defaultSigner.toEthDccAddress))) { d =>
       d.appendBlock(issueTx, preTransfer)
       assertMinFee(d, asset, transferFee)
     }
   }
 
-  property("Waves should require standard fee") {
-    withDomain(RideV6, Seq(AddrWithBalance(defaultSigner.toEthWavesAddress))) { d =>
-      assertMinFee(d, Waves, transferFee)
+  property("Dcc should require standard fee") {
+    withDomain(RideV6, Seq(AddrWithBalance(defaultSigner.toEthDccAddress))) { d =>
+      assertMinFee(d, Dcc, transferFee)
     }
   }
 

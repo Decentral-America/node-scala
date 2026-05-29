@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{GenericError, OrderValidationError}
 import com.decentralchain.transaction.assets.exchange.AssetPair.extractAssetId
 import com.decentralchain.transaction.serialization.impl.ExchangeTxSerializer
@@ -216,7 +216,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
           time,
           expirationTimestamp,
           buyMatcherFee,
-          if (buyV == 3) buyerMatcherFeeAssetId else Waves
+          if (buyV == 3) buyerMatcherFeeAssetId else Dcc
         )
         .explicitGet()
       val sell = Order
@@ -230,7 +230,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
           time,
           expirationTimestamp,
           sellMatcherFee,
-          if (sellV == 3) sellerMatcherFeeAssetId else Waves
+          if (sellV == 3) sellerMatcherFeeAssetId else Dcc
         )
         .explicitGet()
 
@@ -308,7 +308,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
       create(version = TxVersion.V3, sellOrder = buy, buyOrder = buy) shouldBe Left(GenericError("sellOrder should has OrderType.SELL"))
 
       create(
-        buyOrder = buy.copy(assetPair = buy.assetPair.copy(amountAsset = Waves)),
+        buyOrder = buy.copy(assetPair = buy.assetPair.copy(amountAsset = Dcc)),
         sellOrder = sell.copy(assetPair = sell.assetPair.copy(priceAsset = IssuedAsset(ByteStr(Array(1: Byte)))))
       ) shouldBe an[Left[?, ?]]
     }
@@ -369,7 +369,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
             time,
             expirationTimestamp,
             matcherFee,
-            if (sellV == 3) sellerMatcherFeeAssetId else Waves
+            if (sellV == 3) sellerMatcherFeeAssetId else Dcc
           )
           .explicitGet()
       val buy =
@@ -384,7 +384,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
             time,
             expirationTimestamp,
             matcherFee,
-            if (buyV == 3) buyerMatcherFeeAssetId else Waves
+            if (buyV == 3) buyerMatcherFeeAssetId else Dcc
           )
           .explicitGet()
 

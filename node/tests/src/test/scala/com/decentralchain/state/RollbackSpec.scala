@@ -23,7 +23,7 @@ import com.decentralchain.lang.v1.traits.domain.Lease
 import com.decentralchain.settings.{TestFunctionalitySettings, DCCSettings}
 import com.decentralchain.test.*
 import com.decentralchain.state.{Height, TransactionId}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxValidationError.AliasDoesNotExist
 import com.decentralchain.transaction.lease.LeaseTransaction
@@ -64,7 +64,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
   "NODE-1143, NODE-1144. Rollback resets" - {
     "Rollback save dropped blocks order" in {
       val sender         = TxHelpers.signer(1)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       val blocksCount    = 10
       withDomain(balances = Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val genesisSignature = d.lastBlockId
@@ -137,11 +137,11 @@ class RollbackSpec extends FreeSpec with WithDomain {
       }
     }
 
-    "waves balances" in {
+    "dcc balances" in {
       val sender         = TxHelpers.signer(1)
       val recipient      = TxHelpers.signer(2)
       val txCount        = (1 to 10).toList
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       val fee            = 1
       withDomain(balances = Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val genesisSignature = d.lastBlockId
@@ -177,7 +177,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
     "lease balances and states" in {
       val sender         = TxHelpers.signer(1)
       val recipient      = TxHelpers.signer(2)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       withDomain(balances = Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         d.blockchainUpdater.height shouldBe 1
         val genesisBlockId = d.lastBlockId
@@ -235,7 +235,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
     "asset balances" in {
       val sender         = TxHelpers.signer(1)
       val recipient      = TxHelpers.signer(2)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       val assetAmount    = 100
       withDomain(balances = Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val genesisBlockId   = d.lastBlockId
@@ -263,7 +263,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
               d.lastBlockId,
               Seq(
                 TransferTransaction
-                  .selfSigned(1.toByte, sender, recipient.toAddress, IssuedAsset(issueTransaction.id()), assetAmount, Waves, 1, ByteStr.empty, nextTs)
+                  .selfSigned(1.toByte, sender, recipient.toAddress, IssuedAsset(issueTransaction.id()), assetAmount, Dcc, 1, ByteStr.empty, nextTs)
                   .explicitGet()
               )
             )
@@ -282,7 +282,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
 
     "asset quantity and reissuability" in {
       val sender         = TxHelpers.signer(1)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       withDomain(balances = Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val genesisBlockId = d.lastBlockId
 
@@ -375,7 +375,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
 
     "aliases" in {
       val sender         = TxHelpers.signer(1)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       val alias          = Alias.create("alias").explicitGet()
       withDomain(balances = Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val genesisBlockId = d.lastBlockId
@@ -400,7 +400,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
 
     "data transaction" in {
       val sender         = TxHelpers.signer(1)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       val dataEntry      = StringDataEntry("str", "test-1")
       withDomain(createSettings(BlockchainFeatures.DataTransaction -> 0), Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val genesisBlockId = d.lastBlockId
@@ -918,7 +918,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
 
     "address script" in {
       val sender         = TxHelpers.signer(1)
-      val initialBalance = 100.waves
+      val initialBalance = 100.dcc
       withDomain(createSettings(SmartAccounts -> 0), Seq(AddrWithBalance(sender.toAddress, initialBalance))) { d =>
         val script = ExprScript(TRUE).explicitGet()
 

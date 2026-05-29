@@ -1,6 +1,6 @@
 package com.decentralchain.crypto.bls
 
-import com.decentralchain.account.PrivateKey as WavesPrivateKey
+import com.decentralchain.account.PrivateKey as DccPrivateKey
 import com.decentralchain.common.state.ByteStr
 import supranational.blst
 
@@ -14,20 +14,20 @@ sealed trait BlsKeyPair {
 }
 
 object BlsKeyPair {
-  def apply(wavesPrivateKey: WavesPrivateKey): BlsKeyPair = new BlsSeedKeyPair(wavesPrivateKey.arr)
+  def apply(dccPrivateKey: DccPrivateKey): BlsKeyPair = new BlsSeedKeyPair(dccPrivateKey.arr)
 }
 
-private final class BlsSeedKeyPair(private val wavesPrivateKey: Array[Byte]) extends BlsKeyPair {
-  private lazy val sk: blst.SecretKey = BlsUtils.mkBlsSecretKey(wavesPrivateKey)
+private final class BlsSeedKeyPair(private val dccPrivateKey: Array[Byte]) extends BlsKeyPair {
+  private lazy val sk: blst.SecretKey = BlsUtils.mkBlsSecretKey(dccPrivateKey)
   lazy val publicKey: BlsPublicKey    = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
 
   def sign(message: Array[Byte]): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message)))
 
   override def equals(other: Any): Boolean = other match {
-    case other: BlsSeedKeyPair => util.Arrays.equals(other.wavesPrivateKey, wavesPrivateKey)
+    case other: BlsSeedKeyPair => util.Arrays.equals(other.dccPrivateKey, dccPrivateKey)
     case _                     => false
   }
 
-  private lazy val hc          = util.Arrays.hashCode(wavesPrivateKey)
+  private lazy val hc          = util.Arrays.hashCode(dccPrivateKey)
   override def hashCode(): Int = hc
 }

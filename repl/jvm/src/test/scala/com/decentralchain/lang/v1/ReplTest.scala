@@ -63,7 +63,7 @@ class ReplTest extends AnyPropSpec with Matchers {
     await(repl.execute(s""" throw("") """)) shouldBe Left("Evaluation error")
   }
 
-  property("waves context funcs absent") {
+  property("dcc context funcs absent") {
     val repl = Repl()
 
     await(repl.execute(s""" transferTransactionById(base58'fdg') """)) should produce("Blockchain state is unavailable from REPL")

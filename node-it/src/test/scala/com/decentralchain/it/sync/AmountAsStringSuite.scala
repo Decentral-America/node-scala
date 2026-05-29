@@ -281,10 +281,10 @@ class AmountAsStringSuite extends BaseTransactionSuite with OverflowBlock {
     val rewardsAsInteger = sender.rewardStatus()
     val rewards          = sender.rewardStatus(amountsAsStrings = true)
     val rewardsByHeight  = sender.rewardStatus(Some(currentHeight), amountsAsStrings = true)
-    rewards.totalWavesAmount shouldBe rewardsAsInteger.totalWavesAmount
+    rewards.totalDccAmount shouldBe rewardsAsInteger.totalDccAmount
     rewards.currentReward shouldBe rewardsAsInteger.currentReward
     rewards.minIncrement shouldBe rewardsAsInteger.minIncrement
-    rewardsByHeight.totalWavesAmount shouldBe rewardsAsInteger.totalWavesAmount
+    rewardsByHeight.totalDccAmount shouldBe rewardsAsInteger.totalDccAmount
     rewardsByHeight.currentReward shouldBe rewardsAsInteger.currentReward
     rewardsByHeight.minIncrement shouldBe rewardsAsInteger.minIncrement
   }
@@ -294,12 +294,12 @@ class AmountAsStringSuite extends BaseTransactionSuite with OverflowBlock {
 
     sender.debugBalanceHistory(firstAddress, amountsAsStrings = true).head.balance shouldBe firstBalance
 
-    val stateWavesOnHeight = sender.getWithCustomHeader(
-      s"/debug/stateWaves/${sender.height}",
+    val stateDccOnHeight = sender.getWithCustomHeader(
+      s"/debug/stateDcc/${sender.height}",
       headerValue = "application/json;large-significand-format=string",
       withApiKey = true
     )
-    (parseResponse(stateWavesOnHeight) \ firstAddress).get shouldBe JsString(firstBalance.toString)
+    (parseResponse(stateDccOnHeight) \ firstAddress).get shouldBe JsString(firstBalance.toString)
   }
 
   private def parseResponse(response: Response): JsValue = Json.parse(response.getResponseBody)

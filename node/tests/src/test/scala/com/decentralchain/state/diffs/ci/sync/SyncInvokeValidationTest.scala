@@ -4,7 +4,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 
@@ -291,8 +291,8 @@ class SyncInvokeValidationTest extends PropSpec with WithDomain {
          """.stripMargin
       )
       d.appendBlock(setScript(dApp1Signer, dApp1), setScript(dApp2Signer, dApp2))
-      d.appendAndAssertSucceed(invoke(dApp1Address, payments = Seq.fill(10)(Payment(1, Waves))))
-      d.appendBlockE(invoke(dApp1Address, payments = Seq.fill(11)(Payment(1, Waves)))) should produce("Script payment amount=11 should not exceed 10")
+      d.appendAndAssertSucceed(invoke(dApp1Address, payments = Seq.fill(10)(Payment(1, Dcc))))
+      d.appendBlockE(invoke(dApp1Address, payments = Seq.fill(11)(Payment(1, Dcc)))) should produce("Script payment amount=11 should not exceed 10")
     }
   }
 }

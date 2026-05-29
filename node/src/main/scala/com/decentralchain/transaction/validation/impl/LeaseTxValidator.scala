@@ -17,5 +17,5 @@ object LeaseTxValidator extends TxValidator[LeaseTransaction] {
   }
 
   def validateAmount(amount: Long): Either[ValidationError, TxPositiveAmount] =
-    TxPositiveAmount.from(amount).left.map[ValidationError](_ => TxValidationError.NonPositiveAmount(amount, "waves"))
+    TxPositiveAmount.from(amount).left.map[ValidationError](_ => TxValidationError.NonPositiveAmount(amount, "dcc"))
 }

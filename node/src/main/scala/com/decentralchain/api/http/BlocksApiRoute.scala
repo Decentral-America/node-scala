@@ -7,7 +7,7 @@ import com.decentralchain.api.http.ApiError.{BlockDoesNotExist, NotFinalized, To
 import com.decentralchain.block.Block
 import com.decentralchain.settings.RestAPISettings
 import com.decentralchain.state.{Height, TxMeta}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Transaction
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.utils.Time
@@ -166,7 +166,7 @@ object BlocksApiRoute {
   }
 
   private def transactionField(blockVersion: Byte, transactions: Seq[(TxMeta, Transaction)]): JsObject = Json.obj(
-    "fee" -> transactions.map(_._2.assetFee).collect { case (Waves, feeAmt) => feeAmt }.sum,
+    "fee" -> transactions.map(_._2.assetFee).collect { case (Dcc, feeAmt) => feeAmt }.sum,
     "transactions" -> JsArray(transactions.map { case (tm, transaction) =>
       transaction.json() ++ TransactionJsonSerializer.applicationStatus(blockVersion >= Block.ProtoBlockVersion, tm.status)
     })

@@ -29,7 +29,7 @@ case class ExchangeTransaction(
 ) extends Transaction(TransactionType.Exchange, order1.assetPair.checkedAssets)
     with Versioned.ToV3
     with ProvenTransaction
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with SigProofsSwitch
     with PBSince.V3 {

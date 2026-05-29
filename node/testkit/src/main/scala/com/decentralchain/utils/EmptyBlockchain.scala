@@ -9,7 +9,7 @@ import com.decentralchain.lang.ValidationError
 import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.*
 import com.decentralchain.state.TxMeta.Status
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.transfer.TransferTransactionLike
 import com.decentralchain.transaction.{Asset, ERC20Address, Transaction}
@@ -45,7 +45,7 @@ trait EmptyBlockchain extends Blockchain {
 
   override def blockRewardVotes(height: Int): Seq[Long] = Seq.empty
 
-  override def wavesAmount(height: Int): BigInt = 0
+  override def dccAmount(height: Int): BigInt = 0
 
   override def transferById(id: ByteStr): Option[(Int, TransferTransactionLike)] = None
 
@@ -67,8 +67,8 @@ trait EmptyBlockchain extends Blockchain {
 
   override def filledVolumeAndFee(orderId: ByteStr): VolumeAndFee = VolumeAndFee(0, 0)
 
-  /** Retrieves Waves balance snapshot in the [from, to] range (inclusive) */
-  override def balanceAtHeight(address: Address, height: Int, assetId: Asset = Waves): Option[(Int, Long)] = Option.empty
+  /** Retrieves Dcc balance snapshot in the [from, to] range (inclusive) */
+  override def balanceAtHeight(address: Address, height: Int, assetId: Asset = Dcc): Option[(Int, Long)] = Option.empty
   override def balanceSnapshots(address: Address, from: Int, to: Option[ByteStr]): Seq[BalanceSnapshot]    = Seq.empty
 
   override def accountScript(address: Address): Option[AccountScriptInfo] = None
@@ -85,7 +85,7 @@ trait EmptyBlockchain extends Blockchain {
 
   override def balances(req: Seq[(Address, Asset)]): Map[(Address, Asset), Long] = Map.empty
 
-  override def wavesBalances(addresses: Seq[Address]): Map[Address, Long] = Map.empty
+  override def dccBalances(addresses: Seq[Address]): Map[Address, Long] = Map.empty
 
   override def effectiveBalanceBanHeights(address: Address): Seq[Int] = Seq.empty
 

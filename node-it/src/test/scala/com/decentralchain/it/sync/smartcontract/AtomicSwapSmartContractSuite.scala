@@ -11,7 +11,7 @@ import com.decentralchain.it.api.TransactionInfo
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{Proofs, TxPositiveAmount}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
@@ -97,9 +97,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
           version = 2.toByte,
           sender = AliceBC1,
           recipient = swapBC1.toAddress,
-          asset = Waves,
+          asset = Dcc,
           amount = transferAmount + setScriptFee + smartFee,
-          feeAsset = Waves,
+          feeAsset = Dcc,
           fee = setScriptFee + smartFee,
           attachment = ByteStr.empty,
           timestamp = System.currentTimeMillis()
@@ -119,9 +119,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
           version = 2.toByte,
           sender = swapBC1,
           recipient = AliceBC1.toAddress,
-          asset = Waves,
+          asset = Dcc,
           amount = transferAmount,
-          feeAsset = Waves,
+          feeAsset = Dcc,
           fee = setScriptFee + smartFee,
           attachment = ByteStr.empty,
           timestamp = System.currentTimeMillis()
@@ -143,9 +143,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
         version = 2.toByte,
         sender = swapBC1.publicKey,
         recipient = BobBC1.toAddress,
-        assetId = Waves,
+        assetId = Dcc,
         amount = TxPositiveAmount.unsafeFrom(transferAmount),
-        feeAssetId = Waves,
+        feeAssetId = Dcc,
         fee = TxPositiveAmount.unsafeFrom(setScriptFee + smartFee),
         attachment = ByteStr.empty,
         timestamp = System.currentTimeMillis(),
@@ -181,9 +181,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
         version = 2.toByte,
         sender = swapBC1,
         recipient = AliceBC1.toAddress,
-        asset = Waves,
+        asset = Dcc,
         amount = transferAmount,
-        feeAsset = Waves,
+        feeAsset = Dcc,
         fee = setScriptFee + smartFee,
         attachment = ByteStr.empty,
         timestamp = System.currentTimeMillis()

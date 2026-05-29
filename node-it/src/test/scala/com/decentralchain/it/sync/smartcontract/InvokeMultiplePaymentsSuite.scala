@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.compiler.Terms.CONST_STRING
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
@@ -35,7 +35,7 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
         caller,
         dAppAddress,
         Some("f"),
-        payment = Seq(Payment(1.waves, Waves)),
+        payment = Seq(Payment(1.dcc, Dcc)),
         args = List(CONST_STRING("recipientalias").explicitGet()),
         waitForTx = true
       )
@@ -53,7 +53,7 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
           caller,
           dAppAddress,
           Some("f"),
-          payment = Seq(Payment(1.waves, Waves)),
+          payment = Seq(Payment(1.dcc, Dcc)),
           args = List(CONST_STRING(alias).explicitGet())
         ),
       s"Alias 'alias:I:$alias"
@@ -65,7 +65,7 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
           caller,
           dAppAddress,
           Some("f"),
-          payment = Seq(Payment(1.waves, Waves)),
+          payment = Seq(Payment(1.dcc, Dcc)),
           args = List(CONST_STRING(s"alias:I:$alias").explicitGet()),
           waitForTx = true
         ),
@@ -78,10 +78,10 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
     sender.getData(dAppAddress).size shouldBe 0
   }
 
-  test("can invoke with single payment of Waves") {
-    sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(1.waves, Waves)), waitForTx = true)
+  test("can invoke with single payment of Dcc") {
+    sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(1.dcc, Dcc)), waitForTx = true)
     sender.getData(dAppAddress).size shouldBe 2
-    sender.getDataByKey(dAppAddress, "amount_0").as[IntegerDataEntry].value shouldBe 1.waves
+    sender.getDataByKey(dAppAddress, "amount_0").as[IntegerDataEntry].value shouldBe 1.dcc
     sender.getDataByKey(dAppAddress, "asset_0").as[BinaryDataEntry].value shouldBe ByteStr.empty
   }
 
@@ -92,8 +92,8 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
     sender.getDataByKey(dAppAddress, "asset_0").as[BinaryDataEntry].value shouldBe asset1.id
   }
 
-  test("can invoke with two payments of Waves") {
-    sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(5, Waves), Payment(17, Waves)), waitForTx = true)
+  test("can invoke with two payments of Dcc") {
+    sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(5, Dcc), Payment(17, Dcc)), waitForTx = true)
     sender.getData(dAppAddress).size shouldBe 4
     sender.getDataByKey(dAppAddress, "amount_0").as[IntegerDataEntry].value shouldBe 5
     sender.getDataByKey(dAppAddress, "asset_0").as[BinaryDataEntry].value shouldBe ByteStr.empty
@@ -124,7 +124,7 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
       sender.invokeScript(
         caller,
         dAppAddress,
-        payment = Seq(Payment(3, Waves), Payment(6, Waves), Payment(7, Waves))
+        payment = Seq(Payment(3, Dcc), Payment(6, Dcc), Payment(7, Dcc))
       )
     ) { error =>
       error.message should include("Script payment amount=3 should not exceed 2")
@@ -134,17 +134,17 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
   }
 
   test("can't attach more than balance") {
-    val wavesBalance  = sender.accountBalances(callerAddress)._1
+    val dccBalance  = sender.accountBalances(callerAddress)._1
     val asset1Balance = sender.assetBalance(callerAddress, asset1.id.toString).balance
 
     assertApiError(
       sender.invokeScript(
         caller,
         dAppAddress,
-        payment = Seq(Payment(wavesBalance - 1.waves, Waves), Payment(2.waves, Waves))
+        payment = Seq(Payment(dccBalance - 1.dcc, Dcc), Payment(2.dcc, Dcc))
       )
     ) { error =>
-      error.message should include("Transaction application leads to negative waves balance to (at least) temporary negative state")
+      error.message should include("Transaction application leads to negative dcc balance to (at least) temporary negative state")
       error.id shouldBe StateCheckFailed.Id
       error.statusCode shouldBe 400
     }
@@ -162,12 +162,12 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
     }
   }
 
-  test("can't attach leased Waves") {
-    val wavesBalance = sender.accountBalances(callerAddress)._1
-    sender.lease(caller, dAppAddress, wavesBalance - 1.waves, waitForTx = true)
+  test("can't attach leased Dcc") {
+    val dccBalance = sender.accountBalances(callerAddress)._1
+    sender.lease(caller, dAppAddress, dccBalance - 1.dcc, waitForTx = true)
 
     assertApiError(
-      sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(0.75.waves, Waves), Payment(0.75.waves, Waves)))
+      sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(0.75.dcc, Dcc), Payment(0.75.dcc, Dcc)))
     ) { error =>
       error.message should include("Accounts balance errors")
       error.id shouldBe StateCheckFailed.Id
@@ -175,16 +175,16 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
     }
   }
 
-  test("can't attach with zero Waves amount") {
+  test("can't attach with zero Dcc amount") {
     assertApiError(
-      sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(1, asset1), Payment(0, Waves))),
-      NonPositiveAmount("0 of Waves")
+      sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(1, asset1), Payment(0, Dcc))),
+      NonPositiveAmount("0 of Dcc")
     )
   }
 
   test("can't attach with zero asset amount") {
     assertApiError(
-      sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(0, asset1), Payment(1, Waves))),
+      sender.invokeScript(caller, dAppAddress, payment = Seq(Payment(0, asset1), Payment(1, Dcc))),
       NonPositiveAmount(s"0 of $asset1")
     )
   }

@@ -28,7 +28,7 @@ import com.decentralchain.metrics.*
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.BalanceDiffValidation
 import com.decentralchain.state.diffs.invoke.CallArgumentPolicy.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.smart.DAppEnvironment.ActionLimits
 import com.decentralchain.transaction.smart.script.ScriptRunner
@@ -453,8 +453,8 @@ object InvokeScriptDiff {
           .headOption
           .fold[Either[ValidationError, Unit]](Right(())) { case (address, asset) =>
             val msg = asset match {
-              case Waves =>
-                s"$address: Negative waves balance: old = ${blockchain.balance(address)}, new = ${snapshot.balances((address, Waves))}"
+              case Dcc =>
+                s"$address: Negative dcc balance: old = ${blockchain.balance(address)}, new = ${snapshot.balances((address, Dcc))}"
               case ia: IssuedAsset =>
                 s"$address: Negative asset $ia balance: old = ${blockchain.balance(address, ia)}, new = ${snapshot.balances((address, ia))}"
             }

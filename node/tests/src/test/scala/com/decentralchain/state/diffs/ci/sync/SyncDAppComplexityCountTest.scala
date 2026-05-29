@@ -16,7 +16,7 @@ import com.decentralchain.state.Portfolio
 import com.decentralchain.state.diffs.BlockDiffer.CurrentBlockFeePart
 import com.decentralchain.state.diffs.{ENOUGH_AMT, ci}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.smart.{InvokeTransaction, SetScriptTransaction}
@@ -109,7 +109,7 @@ class SyncDAppComplexityCountTest extends PropSpec with WithDomain {
     )
 
     val invokerGenesis = TxHelpers.genesis(invoker.toAddress)
-    val assetIssue     = TxHelpers.issue(invoker, ENOUGH_AMT, script = Some(assetScript(if (raiseError) sigVerify else groth)), fee = 1.waves)
+    val assetIssue     = TxHelpers.issue(invoker, ENOUGH_AMT, script = Some(assetScript(if (raiseError) sigVerify else groth)), fee = 1.dcc)
     val asset          = IssuedAsset(assetIssue.id())
     val payment        = List(Payment(1, asset))
 
@@ -215,7 +215,7 @@ class SyncDAppComplexityCountTest extends PropSpec with WithDomain {
           val expectedPortfolios = if (exceeding || raiseError) basePortfolios else basePortfolios |+| additionalPortfolios
           expectedPortfolios
             .foreach { case (address, expectedPortfolio) =>
-              expectedPortfolio.balance shouldBe snapshot.balances.get((address, Waves)).map(_ - db.balance(address)).getOrElse(0L)
+              expectedPortfolio.balance shouldBe snapshot.balances.get((address, Dcc)).map(_ - db.balance(address)).getOrElse(0L)
               expectedPortfolio.assets.foreach { case (asset, balance) =>
                 balance shouldBe snapshot.balances.get((address, asset)).map(_ - db.balance(address, asset)).getOrElse(0L)
               }

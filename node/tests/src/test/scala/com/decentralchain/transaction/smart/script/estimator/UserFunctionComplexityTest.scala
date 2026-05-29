@@ -8,7 +8,7 @@ import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.FunctionHeader.User
 import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.*
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.*
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, GlobalValNames, PureContext}
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.lang.v1.{CTX, FunctionHeader}
@@ -35,7 +35,7 @@ class UserFunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
         Seq(
           PureContext.build(V1, useNewPowPrecision = true).withEnvironment[Environment],
           CryptoContext.build(Global, V1, fixEcrecover = true).withEnvironment[Environment],
-          WavesContext.build(
+          DccContext.build(
             Global,
             DirectiveSet(V1, Account, Expression).explicitGet(),
             fixBigScriptField = true
@@ -93,8 +93,8 @@ class UserFunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
     val exprAddressFromString = FUNCTION_CALL(User("addressFromString"), List(CONST_STRING("address").explicitGet()))
     est(exprAddressFromString).explicitGet() shouldBe 125
 
-    val exprWavesBalance = FUNCTION_CALL(User("wavesBalance"), List(CONST_STRING("alias").explicitGet()))
-    est(exprWavesBalance).explicitGet() shouldBe 110
+    val exprDccBalance = FUNCTION_CALL(User("dccBalance"), List(CONST_STRING("alias").explicitGet()))
+    est(exprDccBalance).explicitGet() shouldBe 110
   }
 
   private val ctxV2 = {
@@ -104,7 +104,7 @@ class UserFunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
         Seq(
           PureContext.build(V2, useNewPowPrecision = true).withEnvironment[Environment],
           CryptoContext.build(Global, V2, fixEcrecover = true).withEnvironment[Environment],
-          WavesContext.build(
+          DccContext.build(
             Global,
             DirectiveSet(V2, Account, Expression).explicitGet(),
             fixBigScriptField = true
@@ -162,8 +162,8 @@ class UserFunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
     val exprAddressFromString = FUNCTION_CALL(User("addressFromString"), List(CONST_STRING("address").explicitGet()))
     est(exprAddressFromString).explicitGet() shouldBe 125
 
-    val exprWavesBalance = FUNCTION_CALL(User("wavesBalance"), List(CONST_STRING("alias").explicitGet()))
-    est(exprWavesBalance).explicitGet() shouldBe 110
+    val exprDccBalance = FUNCTION_CALL(User("dccBalance"), List(CONST_STRING("alias").explicitGet()))
+    est(exprDccBalance).explicitGet() shouldBe 110
   }
 
   private val ctxV3 = {
@@ -173,7 +173,7 @@ class UserFunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
         Seq(
           PureContext.build(V3, useNewPowPrecision = true).withEnvironment[Environment],
           CryptoContext.build(Global, V3, fixEcrecover = true).withEnvironment[Environment],
-          WavesContext.build(
+          DccContext.build(
             Global,
             DirectiveSet(V3, Account, Expression).explicitGet(),
             fixBigScriptField = true
@@ -238,7 +238,7 @@ class UserFunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
     val exprAddressFromString = FUNCTION_CALL(User("addressFromString"), List(CONST_STRING("address").explicitGet()))
     est(exprAddressFromString).explicitGet() shouldBe 125
 
-    val exprWavesBalance = FUNCTION_CALL(User("wavesBalance"), List(CONST_STRING("alias").explicitGet()))
-    est(exprWavesBalance).explicitGet() shouldBe 110
+    val exprDccBalance = FUNCTION_CALL(User("dccBalance"), List(CONST_STRING("alias").explicitGet()))
+    est(exprDccBalance).explicitGet() shouldBe 110
   }
 }

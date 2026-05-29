@@ -1,4 +1,4 @@
-package com.decentralchain.lang.v1.evaluator.ctx.impl.waves
+package com.decentralchain.lang.v1.evaluator.ctx.impl.dcc
 
 import cats.syntax.semigroup.*
 import com.decentralchain.lang.directives.DirectiveSet
@@ -6,13 +6,13 @@ import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.v1.compiler.Types.FINAL
 import com.decentralchain.lang.v1.evaluator.ContextfulVal
 import com.decentralchain.lang.v1.evaluator.ctx.BaseFunction
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Functions.*
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Types.*
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.Vals.*
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Functions.*
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Types.*
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.Vals.*
 import com.decentralchain.lang.v1.traits.*
 import com.decentralchain.lang.v1.{BaseGlobal, CTX}
 
-object WavesContext {
+object DccContext {
   def build(global: BaseGlobal, ds: DirectiveSet, fixBigScriptField: Boolean): CTX[Environment] =
     invariableCtx |+| variableCtx(global, ds, fixBigScriptField)
 
@@ -29,13 +29,13 @@ object WavesContext {
   private val balanceV123Functions =
     Array(
       assetBalanceF,
-      wavesBalanceF
+      dccBalanceF
     )
 
   private val balanceV4Functions =
     Array(
       assetBalanceV4F,
-      wavesBalanceV4F
+      dccBalanceV4F
     )
 
   private val invariableCtx =
@@ -151,6 +151,6 @@ object WavesContext {
   }
 
   private def variableTypes(version: StdLibVersion, proofsEnabled: Boolean) =
-    buildWavesTypes(proofsEnabled, version) ++
+    buildDccTypes(proofsEnabled, version) ++
       (if (version >= V3) dAppTypes(version) else Nil)
 }

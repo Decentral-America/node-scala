@@ -75,7 +75,7 @@ class BasicMessagesRepoSpec extends FreeSpec {
 
   "PBTransactionSpec max length" in {
     val maxSizeTransaction = PBSignedTransaction(
-      PBSignedTransaction.Transaction.WavesTransaction(
+      PBSignedTransaction.Transaction.DccTransaction(
         PBTransaction(
           Byte.MaxValue,
           ByteString.copyFrom(bytes32gen.sample.get),

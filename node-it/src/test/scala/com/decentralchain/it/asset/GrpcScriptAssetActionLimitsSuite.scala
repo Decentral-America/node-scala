@@ -26,11 +26,11 @@ class GrpcScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite with
       .explicitGet()
       ._1
 
-    miner.broadcastTransfer(sender.keyPair, PBRecipients.create(address.toAddress), initialWavesBalance, minFee, waitForTx = true)
+    miner.broadcastTransfer(sender.keyPair, PBRecipients.create(address.toAddress), initialDccBalance, minFee, waitForTx = true)
 
     nodes.foreach(
       _.waitForTxAndHeightArise(
-        miner.setScript(address, Right(Some(compiledScript)), fee = 1.waves, timestamp = System.currentTimeMillis(), waitForTx = true).id
+        miner.setScript(address, Right(Some(compiledScript)), fee = 1.dcc, timestamp = System.currentTimeMillis(), waitForTx = true).id
       )
     )
 
@@ -78,7 +78,7 @@ class GrpcScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite with
 
           val assetInfo = miner.assetInfo(issueAssetId)
           assetInfo.sponsorship shouldBe minSponsoredAssetFee
-          assetInfo.sponsorBalance shouldBe miner.wavesBalance(dAppAddress).regular
+          assetInfo.sponsorBalance shouldBe miner.dccBalance(dAppAddress).regular
 
           miner.assetsBalance(dAppAddress).contains(issueAssetId) shouldBe true
         }

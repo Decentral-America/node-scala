@@ -13,7 +13,7 @@ import pureconfig.*
 import scala.concurrent.duration.DurationInt
 
 case class RideRunnerGlobalSettings(
-    publicApi: WavesPublicApiSettings,
+    publicApi: DccPublicApiSettings,
     blockchain: BlockchainSettings,
     restApi: RestAPISettings,
     rideRunner: RideRunnerCommonSettings,
@@ -50,5 +50,5 @@ case class RideRunnerGlobalSettings(
 }
 
 object RideRunnerGlobalSettings {
-  def fromRootConfig(config: Config): RideRunnerGlobalSettings = ConfigSource.fromConfig(config).at("waves").loadOrThrow[RideRunnerGlobalSettings]
+  def fromRootConfig(config: Config): RideRunnerGlobalSettings = ConfigSource.fromConfig(config).at("dcc").loadOrThrow[RideRunnerGlobalSettings]
 }

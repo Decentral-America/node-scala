@@ -12,7 +12,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.utils.Signed
 import com.decentralchain.transaction.{GenesisTransaction, TxVersion}
@@ -51,11 +51,11 @@ class SyncDAppBalanceCheckTest extends PropSpec with WithDomain with Transaction
       dApp2   <- accountGen
       fee     <- ciFee()
       gTx1     = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
-      gTx2     = GenesisTransaction.create(dApp1.toAddress, 0.01.waves, ts).explicitGet()
+      gTx2     = GenesisTransaction.create(dApp1.toAddress, 0.01.dcc, ts).explicitGet()
       gTx3     = GenesisTransaction.create(dApp2.toAddress, ENOUGH_AMT, ts).explicitGet()
-      ssTx1    = SetScriptTransaction.selfSigned(1.toByte, dApp1, Some(dApp1Script(dApp2.toAddress)), 0.01.waves, ts).explicitGet()
-      ssTx2    = SetScriptTransaction.selfSigned(1.toByte, dApp2, Some(dApp2Script), 0.01.waves, ts).explicitGet()
-      invokeTx = () => Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Waves, ts)
+      ssTx1    = SetScriptTransaction.selfSigned(1.toByte, dApp1, Some(dApp1Script(dApp2.toAddress)), 0.01.dcc, ts).explicitGet()
+      ssTx2    = SetScriptTransaction.selfSigned(1.toByte, dApp2, Some(dApp2Script), 0.01.dcc, ts).explicitGet()
+      invokeTx = () => Signed.invokeScript(TxVersion.V3, invoker, dApp1.toAddress, None, Nil, fee, Dcc, ts)
     } yield (Seq(gTx1, gTx2, gTx3, ssTx1, ssTx2), invokeTx)
 
   property("temporary negative balance of sync call produces error") {
@@ -69,7 +69,7 @@ class SyncDAppBalanceCheckTest extends PropSpec with WithDomain with Transaction
       d.appendBlock(preparingTxs*)
 
       val invoke1 = invoke()
-      d.appendAndCatchError(invoke1).toString should include("Negative waves balance")
+      d.appendAndCatchError(invoke1).toString should include("Negative dcc balance")
     }
   }
 }

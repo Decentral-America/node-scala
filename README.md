@@ -1,6 +1,6 @@
 # DecentralChain Node (node-scala)
 
-**DecentralChain** is an open-source blockchain platform forked from [Waves 1.6.x](https://github.com/Decentral-America/DCC).
+**DecentralChain** is an open-source blockchain platform forked from [Dcc 1.6.x](https://github.com/Decentral-America/DCC).
 This repository (node-scala) is the Scala-based full node for the DecentralChain network, featuring the RIDE smart contract language.
 
 ## Overview
@@ -10,7 +10,7 @@ The DecentralChain node connects to the blockchain network and provides:
 - Processing and validation of transactions
 - Generation and storage of blocks
 - Network communication with other nodes
-- REST API (compatible with Waves API)
+- REST API (compatible with Dcc API)
 - Extensions management
 
 ## Getting started
@@ -23,18 +23,18 @@ Linux:
 ```bash
 sudo apt-get update
 sudo apt-get install openjdk-11-jre
-java -jar node/target/waves-all*.jar path/to/config/decentralchain-{network}.conf
+java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
 Mac (with Homebrew):
 ```bash
 brew install openjdk@11
-java -jar node/target/waves-all*.jar path/to/config/decentralchain-{network}.conf
+java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
 Windows (with OpenJDK 11 installed):
 ```bash
-java -jar node/target/waves-all*.jar path/to/config/decentralchain-{network}.conf
+java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
 ## Configuration
@@ -73,7 +73,7 @@ sbt checkPR
 
 ```bash
 sbt node-it/docker
-sbt -Dwaves.it.max-parallel-suites=1 node-it/test
+sbt -Ddcc.it.max-parallel-suites=1 node-it/test
 ```
 
 ### Build packages
@@ -108,9 +108,9 @@ For major changes, please open an issue first. Please follow the [code of conduc
 
 ## Links
 
-- **Predecessor repo:** [Decentral-America/DCC](https://github.com/Decentral-America/DCC) (based on Waves 1.6.x)
+- **Predecessor repo:** [Decentral-America/DCC](https://github.com/Decentral-America/DCC) (based on Dcc 1.6.x)
 - **Website:** [decentralchain.io](https://decentralchain.io)
-- **API docs:** [DecentralChain REST API](https://docs.decentralchain.io/en/waves-node/node-api/)
+- **API docs:** [DecentralChain REST API](https://docs.decentralchain.io/en/dcc-node/node-api/)
 
 ## Licence
 

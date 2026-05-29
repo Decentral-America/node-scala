@@ -7,7 +7,7 @@ import com.decentralchain.lang.Global
 import com.decentralchain.lang.directives.values.{Account, DApp, StdLibVersion, V3}
 import com.decentralchain.lang.directives.{DirectiveDictionary, DirectiveSet}
 import com.decentralchain.lang.v1.evaluator.ctx.InvariableContext
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.DccContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.state.Blockchain
@@ -22,7 +22,7 @@ object CachedDAppCTX {
     } yield {
       val ctx = PureContext.build(version, useNewPowPrecision).withEnvironment[Environment] |+|
         CryptoContext.build(Global, version, fixEcrecover).withEnvironment[Environment] |+|
-        WavesContext.build(Global, DirectiveSet(version, Account, DApp).explicitGet(), fixBigScriptField)
+        DccContext.build(Global, DirectiveSet(version, Account, DApp).explicitGet(), fixBigScriptField)
       ((version, useNewPowPrecision, fixBigScriptField, fixEcrecover), InvariableContext(ctx))
     }).toMap
 

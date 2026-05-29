@@ -22,12 +22,12 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 
   protected override def beforeAll(): Unit = {
     super.beforeAll()
-    sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(fourthAddress), 10.waves, minFee, waitForTx = true)
+    sender.broadcastTransfer(firstAcc, Recipient().withPublicKeyHash(fourthAddress), 10.dcc, minFee, waitForTx = true)
   }
 
   test("should not put 65-sized proof") {
     val keyPair = sender.generateKeyPair()
-    sender.broadcastTransfer(sender.keyPair, PBRecipients.create(keyPair.toAddress), 1.waves, 100000L, waitForTx = true)
+    sender.broadcastTransfer(sender.keyPair, PBRecipients.create(keyPair.toAddress), 1.dcc, 100000L, waitForTx = true)
     sender.setScript(
       keyPair,
       Right(
@@ -55,7 +55,7 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 
     assertGrpcError(
       sender.broadcast(
-        dataTx.getWavesTransaction,
+        dataTx.getDccTransaction,
         dataTx.proofs :+ ByteString.copyFrom(new Array[Byte](65)),
         waitForTx = true
       ),
@@ -63,31 +63,31 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     )
   }
 
-  test("sender's waves balance is decreased by fee.") {
+  test("sender's dcc balance is decreased by fee.") {
     for (v <- dataTxSupportedVersions) {
-      val firstBalance    = sender.wavesBalance(firstAddress).available
-      val firstEffBalance = sender.wavesBalance(firstAddress).effective
+      val firstBalance    = sender.dccBalance(firstAddress).available
+      val firstEffBalance = sender.dccBalance(firstAddress).effective
       val entry           = DataEntry("int", DataEntry.Value.IntValue(0xcafebabe))
       val data            = List(entry)
       val fee             = calcDataFee(data, v)
       sender.putData(firstAcc, data, fee, version = v, waitForTx = true)
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance - fee
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance - fee
+      sender.dccBalance(firstAddress).available shouldBe firstBalance - fee
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance - fee
     }
   }
 
-  test("cannot put data without having enough waves") {
+  test("cannot put data without having enough dcc") {
     for (v <- dataTxSupportedVersions) {
-      val firstBalance    = sender.wavesBalance(firstAddress).available
-      val firstEffBalance = sender.wavesBalance(firstAddress).effective
+      val firstBalance    = sender.dccBalance(firstAddress).available
+      val firstEffBalance = sender.dccBalance(firstAddress).effective
       val entry           = DataEntry("bool", DataEntry.Value.BoolValue(false))
       val data            = List(entry)
 
       assertGrpcError(sender.putData(firstAcc, data, firstBalance + 1, version = v), "Accounts balance errors", Code.INVALID_ARGUMENT)
 
       nodes.foreach(n => n.waitForHeight(n.height + 1))
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
+      sender.dccBalance(firstAddress).available shouldBe firstBalance
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
     }
   }
 
@@ -95,28 +95,28 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     val entry = DataEntry("bool", DataEntry.Value.BoolValue(false))
     val data  = List(entry)
     for (v <- dataTxSupportedVersions) {
-      val firstBalance    = sender.wavesBalance(firstAddress).available
-      val firstEffBalance = sender.wavesBalance(firstAddress).effective
+      val firstBalance    = sender.dccBalance(firstAddress).available
+      val firstEffBalance = sender.dccBalance(firstAddress).effective
       assertGrpcError(
         sender.putData(firstAcc, data, minFee, timestamp = System.currentTimeMillis() + 1.day.toMillis, version = v),
         "Transaction timestamp .* is more than .*ms in the future",
         Code.INVALID_ARGUMENT
       )
       sender.waitForHeight(sender.height + 1)
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
+      sender.dccBalance(firstAddress).available shouldBe firstBalance
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
     }
   }
   test("cannot broadcast data transaction with insufficient fee") {
     val entry = DataEntry("bool", DataEntry.Value.BoolValue(false))
     val data  = List(entry)
     for (v <- dataTxSupportedVersions) {
-      val firstBalance    = sender.wavesBalance(firstAddress).available
-      val firstEffBalance = sender.wavesBalance(firstAddress).effective
+      val firstBalance    = sender.dccBalance(firstAddress).available
+      val firstEffBalance = sender.dccBalance(firstAddress).effective
       assertGrpcError(sender.putData(firstAcc, data, minFee - 1, v), "Fee .* does not exceed minimal value", Code.INVALID_ARGUMENT)
       sender.waitForHeight(sender.height + 1)
-      sender.wavesBalance(firstAddress).available shouldBe firstBalance
-      sender.wavesBalance(firstAddress).effective shouldBe firstEffBalance
+      sender.dccBalance(firstAddress).available shouldBe firstBalance
+      sender.dccBalance(firstAddress).effective shouldBe firstEffBalance
     }
   }
 
@@ -172,8 +172,8 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       sender.getData(txSenderAddress) should contain theSameElementsAs boolList ++ reIntList ++ stringList
 
       // define tx with all types
-      val firstBalance       = sender.wavesBalance(txSenderAddress).available
-      val firstEffBalance    = sender.wavesBalance(txSenderAddress).effective
+      val firstBalance       = sender.dccBalance(txSenderAddress).available
+      val firstEffBalance    = sender.dccBalance(txSenderAddress).effective
       val intEntry2          = DataEntry("int", DataEntry.Value.IntValue(-127))
       val boolEntry2         = DataEntry("bool", DataEntry.Value.BoolValue(false))
       val blobEntry2         = DataEntry("blob", DataEntry.Value.BinaryValue(ByteString.copyFrom(Array[Byte](127.toByte, 0, 1, 1))))
@@ -189,8 +189,8 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       sender.getDataByKey(txSenderAddress, "str") shouldBe List(stringEntry2)
       sender.getData(txSenderAddress) should contain theSameElementsAs dataAllTypes
 
-      sender.wavesBalance(txSenderAddress).available shouldBe firstBalance - fee
-      sender.wavesBalance(txSenderAddress).effective shouldBe firstEffBalance - fee
+      sender.dccBalance(txSenderAddress).available shouldBe firstBalance - fee
+      sender.dccBalance(txSenderAddress).effective shouldBe firstEffBalance - fee
     }
   }
 
@@ -228,7 +228,7 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         Code.INVALID_ARGUMENT
       )
       assertGrpcError(
-        sender.putData(firstAcc, List(DataEntry("", DataEntry.Value.BoolValue(false))), 1.waves, version = v),
+        sender.putData(firstAcc, List(DataEntry("", DataEntry.Value.BoolValue(false))), 1.dcc, version = v),
         "Empty key found",
         Code.INVALID_ARGUMENT
       )
@@ -236,7 +236,7 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         sender.putData(
           firstAcc,
           List(DataEntry("abc", DataEntry.Value.BoolValue(false)), DataEntry("abc", DataEntry.Value.BoolValue(false))),
-          1.waves,
+          1.dcc,
           version = v
         ),
         "Duplicated keys found",

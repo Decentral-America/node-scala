@@ -6,7 +6,7 @@ import io.decentralchain.events.api.grpc.protobuf.GetBlockUpdatesRangeRequest
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, TxHelpers, TxVersion}
@@ -30,7 +30,7 @@ class BlockchainUpdatesGetBlockUpdatesRangeSpec extends BlockchainUpdatesTestBas
     }
 
     "BU-172. Return correct data for transfer" in {
-      val transferTx = TxHelpers.transfer(firstTxParticipant, secondTxParticipantAddress, amount, Waves, customFee)
+      val transferTx = TxHelpers.transfer(firstTxParticipant, secondTxParticipantAddress, amount, Dcc, customFee)
       withGenerateGetBlockUpdateRange(
         GetBlockUpdatesRangeRequest.of(1, 2),
         settings = currentSettings,
@@ -262,7 +262,7 @@ class BlockchainUpdatesGetBlockUpdatesRangeSpec extends BlockchainUpdatesTestBas
 
     "BU-167. Return correct data for setAssetScript" in {
       val issue          = TxHelpers.issue(firstTxParticipant, amount, script = complexScriptBefore)
-      val setAssetScript = TxHelpers.setAssetScript(firstTxParticipant, issue.asset, complexScriptAfter, 1.waves)
+      val setAssetScript = TxHelpers.setAssetScript(firstTxParticipant, issue.asset, complexScriptAfter, 1.dcc)
       withGenerateGetBlockUpdateRange(
         GetBlockUpdatesRangeRequest.of(1, 3),
         settings = currentSettings.addFeatures(BlockchainFeatures.SmartAccounts),

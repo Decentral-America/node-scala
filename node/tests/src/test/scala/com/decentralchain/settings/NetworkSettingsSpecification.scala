@@ -9,7 +9,7 @@ import scala.concurrent.duration.*
 class NetworkSettingsSpecification extends FlatSpec {
 
   "NetworkSpecification" should "read values from config" in {
-    val config = loadConfig(ConfigFactory.parseString("""waves.network {
+    val config = loadConfig(ConfigFactory.parseString("""dcc.network {
                                                         |  bind-address: "127.0.0.1"
                                                         |  port: 6868
                                                         |  node-name: "default-node-name"
@@ -38,7 +38,7 @@ class NetworkSettingsSpecification extends FlatSpec {
                                                         |    ignore-rx-messages = [23]
                                                         |  }
                                                         |}""".stripMargin))
-    val networkSettings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+    val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
 
     networkSettings.derivedBindAddress should be(Some(new InetSocketAddress("127.0.0.1", 6868)))
     networkSettings.derivedNodeName should be("default-node-name")
@@ -63,14 +63,14 @@ class NetworkSettingsSpecification extends FlatSpec {
 
   it should "generate random nonce" in {
     val config          = loadConfig(ConfigFactory.empty())
-    val networkSettings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+    val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
 
     networkSettings.derivedNonce should not be 0
   }
 
   it should "build node name using nonce" in {
-    val config          = loadConfig(ConfigFactory.parseString("waves.network.nonce = 12345"))
-    val networkSettings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+    val config          = loadConfig(ConfigFactory.parseString("dcc.network.nonce = 12345"))
+    val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
 
     networkSettings.derivedNonce should be(12345)
     networkSettings.derivedNodeName should be("Node-12345")
@@ -78,7 +78,7 @@ class NetworkSettingsSpecification extends FlatSpec {
 
   it should "build node name using random nonce" in {
     val config          = loadConfig(ConfigFactory.empty())
-    val networkSettings = ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+    val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
 
     networkSettings.derivedNonce should not be 0
     networkSettings.derivedNodeName should be(s"Node-${networkSettings.derivedNonce}")
@@ -87,11 +87,11 @@ class NetworkSettingsSpecification extends FlatSpec {
   it should "fail with IllegalArgumentException on too long node name" in {
     val config = loadConfig(
       ConfigFactory.parseString(
-        "waves.network.node-name = очень-длинное-название-в-многобайтной-кодировке-отличной-от-однобайтной-кодировки-американского-института-стандартов"
+        "dcc.network.node-name = очень-длинное-название-в-многобайтной-кодировке-отличной-от-однобайтной-кодировки-американского-института-стандартов"
       )
     )
     intercept[IllegalArgumentException] {
-      ConfigSource.fromConfig(config).at("waves.network").loadOrThrow[NetworkSettings]
+      ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
     }
   }
 }

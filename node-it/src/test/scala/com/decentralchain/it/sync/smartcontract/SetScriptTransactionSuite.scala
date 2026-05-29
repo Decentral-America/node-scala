@@ -10,7 +10,7 @@ import com.decentralchain.it.sync.{minFee, setScriptFee, transferAmount}
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{Proofs, TxPositiveAmount}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
@@ -29,7 +29,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
 
   protected override def beforeAll(): Unit = {
     super.beforeAll()
-    sender.transfer(acc0, acc4.toAddress.toString, 10.waves, waitForTx = true)
+    sender.transfer(acc0, acc4.toAddress.toString, 10.dcc, waitForTx = true)
   }
 
   test("set acc0 as 2of2 multisig") {
@@ -78,7 +78,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
           recipient = acc3.toAddress.toString,
           assetId = None,
           amount = transferAmount,
-          fee = minFee + 0.00001.waves + 0.00002.waves
+          fee = minFee + 0.00001.dcc + 0.00002.dcc
         )
       )
       sender.assertBalances(contract.toAddress.toString, contractBalance, contractEffBalance)
@@ -96,10 +96,10 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
           version = 2.toByte,
           sender = contract.publicKey,
           recipient = acc3.toAddress,
-          assetId = Waves,
+          assetId = Dcc,
           amount = TxPositiveAmount.unsafeFrom(1000),
-          feeAssetId = Waves,
-          fee = TxPositiveAmount.unsafeFrom(minFee + 0.004.waves),
+          feeAssetId = Dcc,
+          fee = TxPositiveAmount.unsafeFrom(minFee + 0.004.dcc),
           attachment = ByteStr.empty,
           timestamp = System.currentTimeMillis(),
           proofs = Proofs.empty,
@@ -114,8 +114,8 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
 
       sender.assertBalances(
         contract.toAddress.toString,
-        contractBalance - 1000 - minFee - 0.004.waves,
-        contractEffBalance - 1000 - minFee - 0.004.waves
+        contractBalance - 1000 - minFee - 0.004.dcc,
+        contractEffBalance - 1000 - minFee - 0.004.dcc
       )
       sender.assertBalances(acc3.toAddress.toString, acc3Balance + 1000, acc3EffBalance + 1000)
     }
@@ -130,7 +130,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
           version = v,
           sender = contract.publicKey,
           script = None,
-          fee = setScriptFee + 0.004.waves,
+          fee = setScriptFee + 0.004.dcc,
           timestamp = System.currentTimeMillis(),
           proofs = Proofs.empty
         )
@@ -151,8 +151,8 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
       sender.addressScriptInfo(contract.toAddress.toString).scriptText shouldBe None
       sender.assertBalances(
         contract.toAddress.toString,
-        contractBalance - setScriptFee - 0.004.waves,
-        contractEffBalance - setScriptFee - 0.004.waves
+        contractBalance - setScriptFee - 0.004.dcc,
+        contractEffBalance - setScriptFee - 0.004.dcc
       )
     }
   }

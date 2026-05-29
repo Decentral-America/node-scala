@@ -7,7 +7,7 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.test.*
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -33,7 +33,7 @@ class BigLetChain extends BaseTransactionSuite with CancelAfterFailure {
 
     val pkNewAddress = sender.createKeyPair()
 
-    sender.transfer(firstKeyPair, pkNewAddress.toAddress.toString, 10.waves, minFee, waitForTx = true)
+    sender.transfer(firstKeyPair, pkNewAddress.toAddress.toString, 10.dcc, minFee, waitForTx = true)
 
     val scriptSet          = SetScriptTransaction.selfSigned(1.toByte, pkNewAddress, Some(compiledScript), setScriptFee, System.currentTimeMillis())
     val scriptSetBroadcast = sender.signedBroadcast(scriptSet.explicitGet().json())
@@ -43,9 +43,9 @@ class BigLetChain extends BaseTransactionSuite with CancelAfterFailure {
       2.toByte,
       pkNewAddress,
       pkNewAddress.toAddress,
-      Waves,
-      1.waves,
-      Waves,
+      Dcc,
+      1.dcc,
+      Dcc,
       smartMinFee,
       ByteStr.empty,
       System.currentTimeMillis()

@@ -11,7 +11,7 @@ import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.FeeValidation.FeeUnit
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxVersion.{V1, V2}
@@ -71,7 +71,7 @@ class InvokeValidationTest extends PropSpec with WithDomain {
     }
   }
 
-  property("invoke payment balance in Waves should be checked before script execution only if spending exceeds fee, in asset — always") {
+  property("invoke payment balance in Dcc should be checked before script execution only if spending exceeds fee, in asset — always") {
     withDomain(RideV5, Seq(AddrWithBalance(secondAddress, ENOUGH_AMT), AddrWithBalance(signer(2).toAddress, invokeFee))) { d =>
       val script = TestCompiler(V5).compileContract(
         """
@@ -81,17 +81,17 @@ class InvokeValidationTest extends PropSpec with WithDomain {
       )
       d.appendBlock(setScript(secondSigner, script))
 
-      // Waves payment and fee
-      d.appendBlockE(invoke(invoker = signer(2), payments = Seq(Payment(invokeFee, Waves)))) should produce(
+      // Dcc payment and fee
+      d.appendBlockE(invoke(invoker = signer(2), payments = Seq(Payment(invokeFee, Dcc)))) should produce(
         "Explicit script termination"
       )
-      d.appendBlockE(invoke(invoker = signer(2), payments = Seq(Payment(invokeFee + 1, Waves)))) should produce(
+      d.appendBlockE(invoke(invoker = signer(2), payments = Seq(Payment(invokeFee + 1, Dcc)))) should produce(
         "Attempt to transfer unavailable funds: " +
-          "Transaction application leads to negative waves balance to (at least) temporary negative state, " +
+          "Transaction application leads to negative dcc balance to (at least) temporary negative state, " +
           "current balance equals 500000, spends equals -1000001, result is -500001"
       )
 
-      // asset payment and Waves fee
+      // asset payment and Dcc fee
       val i     = issue()
       val asset = IssuedAsset(i.id.value())
       d.appendBlock(i)

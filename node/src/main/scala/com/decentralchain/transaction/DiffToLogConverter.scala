@@ -8,12 +8,12 @@ import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BOOLEAN, CONST_BYTE
 import com.decentralchain.lang.v1.compiler.Types.{CASETYPEREF, UNIT}
 import com.decentralchain.lang.v1.evaluator.EvaluatorV2.LogKeys.*
 import com.decentralchain.lang.v1.evaluator.Log
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.{Bindings, Types}
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.{Bindings, Types}
 import com.decentralchain.lang.v1.traits.domain.Recipient
 import com.decentralchain.lang.v1.traits.domain.Recipient.Address
 import com.decentralchain.lang.{CommonError, ExecutionError}
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 
 object DiffToLogConverter {
 
@@ -22,7 +22,7 @@ object DiffToLogConverter {
     def byteStrToMap(byteStr: ByteStr, fieldName: String) = CONST_BYTESTR(byteStr).map(bs => Map(fieldName -> bs)).getOrElse(Map.empty)
     def assetToMap(asset: Asset, fieldName: String) = (asset match {
       case IssuedAsset(id) => CONST_BYTESTR(id)
-      case Waves           => CaseObj(UNIT, Map.empty).asRight[CommonError]
+      case Dcc           => CaseObj(UNIT, Map.empty).asRight[CommonError]
     }).map(assetObj => Map(fieldName -> assetObj)).getOrElse(Map.empty)
     def arrToMap(items: Seq[EVALUATED], fieldName: String) =
       ARR(items.toIndexedSeq, false).map(arr => Map(fieldName -> arr)).getOrElse(Map.empty)

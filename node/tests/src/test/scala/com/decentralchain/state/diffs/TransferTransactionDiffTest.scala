@@ -10,29 +10,29 @@ import com.decentralchain.transaction.{TxHelpers, TxValidationError, TxVersion}
 
 class TransferTransactionDiffTest extends PropSpec with WithDomain {
 
-  property("transfers assets to recipient preserving waves invariant") {
+  property("transfers assets to recipient preserving dcc invariant") {
     val sender    = TxHelpers.secondAddress
     val senderKp  = TxHelpers.secondSigner
     val recipient = TxHelpers.address(2)
 
     withDomain(DomainPresets.mostRecent.copy(rewardsSettings = RewardsVotingSettings(None)), AddrWithBalance.enoughBalances(senderKp)) { d =>
-      val wavesTransfer = TxHelpers.transfer(senderKp, recipient)
-      d.appendAndAssertSucceed(wavesTransfer)
-      val rewardFee = 6.waves - wavesTransfer.fee.value * 3 / 5
+      val dccTransfer = TxHelpers.transfer(senderKp, recipient)
+      d.appendAndAssertSucceed(dccTransfer)
+      val rewardFee = 6.dcc - dccTransfer.fee.value * 3 / 5
       assertBalanceInvariant(d.liquidSnapshot, d.rocksDBWriter, rewardFee)
-      d.blockchain.balance(recipient) shouldBe wavesTransfer.amount.value
-      d.blockchain.balance(sender) shouldBe ENOUGH_AMT - wavesTransfer.amount.value - wavesTransfer.fee.value
+      d.blockchain.balance(recipient) shouldBe dccTransfer.amount.value
+      d.blockchain.balance(sender) shouldBe ENOUGH_AMT - dccTransfer.amount.value - dccTransfer.fee.value
     }
 
     withDomain(DomainPresets.mostRecent, AddrWithBalance.enoughBalances(senderKp)) { d =>
       val asset         = d.helpers.issueAsset(senderKp)
       val assetTransfer = TxHelpers.transfer(senderKp, recipient, asset = asset, amount = 1000)
       d.appendAndAssertSucceed(assetTransfer)
-      val rewardAndFee = 6.waves + (1.waves - assetTransfer.fee.value) * 3 / 5
+      val rewardAndFee = 6.dcc + (1.dcc - assetTransfer.fee.value) * 3 / 5
       assertBalanceInvariant(d.liquidSnapshot, d.rocksDBWriter, rewardAndFee)
       d.blockchain.balance(recipient) shouldBe 0L
       d.blockchain.balance(recipient, asset) shouldBe 1000L
-      d.blockchain.balance(sender) shouldBe ENOUGH_AMT - assetTransfer.fee.value - 1.waves
+      d.blockchain.balance(sender) shouldBe ENOUGH_AMT - assetTransfer.fee.value - 1.dcc
       d.blockchain.balance(sender, asset) shouldBe 0L
     }
   }

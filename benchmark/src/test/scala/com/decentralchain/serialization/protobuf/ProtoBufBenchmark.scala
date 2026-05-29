@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
 import io.decentralchain.protobuf.transaction.PBTransactions
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.transfer.MassTransferTransaction
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
@@ -35,7 +35,7 @@ class ProtoBufBenchmark {
         .create(
           1.toByte,
           PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-          Waves,
+          Dcc,
           transfers,
           200000,
           1518091313964L,
@@ -62,7 +62,7 @@ class ProtoBufBenchmark {
         .create(
           1.toByte,
           PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-          Waves,
+          Dcc,
           transfers,
           200000,
           1518091313964L,

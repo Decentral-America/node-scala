@@ -60,10 +60,10 @@ class InvokeWithTransferSmartassetSuite extends BaseTransactionSuite with Cancel
 
   test("prereqisetes: issue asset and set dapp") {
     val issuerData = List(IntegerDataEntry("x", 1))
-    sender.putData(issuerAcc, issuerData, 0.1.waves, waitForTx = true)
+    sender.putData(issuerAcc, issuerData, 0.1.dcc, waitForTx = true)
 
     val dAppData = List(IntegerDataEntry("y", 1))
-    sender.putData(dApp, dAppData, 0.1.waves, waitForTx = true)
+    sender.putData(dApp, dAppData, 0.1.dcc, waitForTx = true)
 
     issuedAssetId = sender.issue(thirdKeyPair, "some", "asset", someAssetAmount, script = Some(assetScript), waitForTx = true).id
     sender.transfer(issuerAcc, dApp.toAddress.toString, someAssetAmount, smartMinFee, Some(issuedAssetId), waitForTx = true)

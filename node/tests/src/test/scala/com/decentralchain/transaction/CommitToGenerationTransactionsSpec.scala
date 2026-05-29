@@ -89,31 +89,31 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     AddrWithBalance.enoughBalances(sender)
   ) { d =>
     log.info("No deposits")
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe 0L
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe 0L
 
     log.info("Deposit for one next period")
     val currPeriodTx = TxHelpers.commitToGeneration(Height(3), sender)
     d.appendBlock(currPeriodTx)
     d.blockchain.height shouldBe 2
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
 
     log.info("Deposit for one current period")
     d.appendBlock()
     d.blockchain.height shouldBe 3
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
 
     log.info("Deposit for two periods")
     val nextPeriodTx = TxHelpers.commitToGeneration(Height(5), sender)
     d.appendBlock(nextPeriodTx)
-    val wavesPortfolio = d.blockchain.wavesPortfolio(sender.toAddress)
-    wavesPortfolio.generationDeposit shouldBe 2 * CommitToGenerationTransaction.DepositInWavelets
-    wavesPortfolio.spendableBalance shouldBe (wavesPortfolio.balance - wavesPortfolio.generationDeposit)
+    val dccPortfolio = d.blockchain.dccPortfolio(sender.toAddress)
+    dccPortfolio.generationDeposit shouldBe 2 * CommitToGenerationTransaction.DepositInWavelets
+    dccPortfolio.spendableBalance shouldBe (dccPortfolio.balance - dccPortfolio.generationDeposit)
 
     d.appendBlock()
     d.blockchain.height shouldBe 5
 
     log.info("Deposit for one period if not committed for next")
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
   }
 
   "Can't commit" - {
@@ -156,7 +156,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
       withDomain(
         DeterministicFinality,
         Seq(
-          AddrWithBalance(sender.toAddress, 1000000.waves),
+          AddrWithBalance(sender.toAddress, 1000000.dcc),
           AddrWithBalance(
             newGenerator.toAddress,
             GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets
@@ -177,8 +177,8 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
       withDomain(
         DeterministicFinality,
         Seq(
-          AddrWithBalance(sender.toAddress, 1000000.waves),
-          AddrWithBalance(newGenerator.toAddress, 10000.waves)
+          AddrWithBalance(sender.toAddress, 1000000.dcc),
+          AddrWithBalance(newGenerator.toAddress, 10000.dcc)
         )
       ) { d =>
         val periodStart = Height(3001)
@@ -194,9 +194,9 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   }
 
   "Expected BLS key and PoP" in {
-    val wavesPk = PrivateKey(ByteStr.decodeBase58("7UR2CZi6Gv6v1yqmgcPDD98ZtosvtHnNZRxvrHA2Tuyn").get)
+    val dccPk = PrivateKey(ByteStr.decodeBase58("7UR2CZi6Gv6v1yqmgcPDD98ZtosvtHnNZRxvrHA2Tuyn").get)
 
-    val blsKp = BlsKeyPair(wavesPk)
+    val blsKp = BlsKeyPair(dccPk)
     blsKp.publicKey.byteStr.base64Raw shouldBe "jrugi0W0es2WxuHoptQtchqwactZsldOGucYObZrEIOpxbWmhL8dodvpnzA+2qUf"
 
     CommitToGenerationTransaction.mkPopSignature(blsKp, Height(1001)).byteStr.base64Raw shouldBe

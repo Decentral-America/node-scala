@@ -6,7 +6,7 @@ import cats.syntax.traverse.*
 import com.decentralchain.account.Address
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{GenericError, Validation}
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
@@ -45,7 +45,7 @@ object MassTransferTransactionDiff {
         .flatMap { completePortfolio =>
           val assetIssued =
             tx.assetId match {
-              case Waves                  => true
+              case Dcc                  => true
               case asset @ IssuedAsset(_) => blockchain.assetDescription(asset).isDefined
             }
           Either

@@ -22,7 +22,7 @@ class FatalErrorHandler extends ChannelInboundHandlerAdapter with ScorexLogging 
           log.error(s"${id(ctx)} Fatal error in channel, terminating application", cause)
           forceStopApplication()
         },
-        "waves-platform-shutdown-thread"
+        "dcc-platform-shutdown-thread"
       ).start()
   }
 }

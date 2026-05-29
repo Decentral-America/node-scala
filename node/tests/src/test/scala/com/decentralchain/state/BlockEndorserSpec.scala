@@ -92,7 +92,7 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
           val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = generator1, strictTime = true)
           d.appender.appendBlock(block2WithCommitments)
 
-          log.debug("Append block 3 of new period with spending all WAVES by generator2")
+          log.debug("Append block 3 of new period with spending all DCC by generator2")
           d.appender.appendBlock(
             d.createBlock(
               version = Block.ProtoBlockVersion,
@@ -100,8 +100,8 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
                 TxHelpers.transfer(
                   from = generator2,
                   to = generator1.toAddress,
-                  amount = d.blockchain.balance(generator2.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-                  fee = 1.waves
+                  amount = d.blockchain.balance(generator2.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+                  fee = 1.dcc
                 )
               ),
               generator = generator1,

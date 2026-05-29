@@ -23,13 +23,13 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
   ): FinalizationVoting = FinalizationVoting(valid, finalizedHeight, aggregatedEndorsement = None, conflict)
 
   protected def mkConflictEndorsement(
-      wavesAcc: KeyPair,
+      dccAcc: KeyPair,
       idx: GeneratorIndex,
       endorsedId: BlockId,
       finalizedHeight: Height = GenesisBlockHeight,
       finalizedId: BlockId = TxHelpers.randomBlockId
   ): BlockEndorsement = BlockEndorsement.signed(
-    BlsKeyPair(wavesAcc.privateKey),
+    BlsKeyPair(dccAcc.privateKey),
     idx,
     finalizedId,
     finalizedHeight = finalizedHeight,
@@ -41,12 +41,12 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
 
   extension (self: FinalizationVoting) {
     def withConflict(
-        wavesAcc: KeyPair,
+        dccAcc: KeyPair,
         idx: GeneratorIndex,
         endorsedId: BlockId,
         finalizedHeight: Height = GenesisBlockHeight,
         finalizedId: BlockId = TxHelpers.randomBlockId
-    ): FinalizationVoting = self.copy(conflict = self.conflict :+ mkConflictEndorsement(wavesAcc, idx, endorsedId, finalizedHeight, finalizedId))
+    ): FinalizationVoting = self.copy(conflict = self.conflict :+ mkConflictEndorsement(dccAcc, idx, endorsedId, finalizedHeight, finalizedId))
 
     def signed(endorsedId: BlockId, finalizedId: BlockId, validEndorsers: KeyPair*): FinalizationVoting = {
       val aggSig = validEndorsers

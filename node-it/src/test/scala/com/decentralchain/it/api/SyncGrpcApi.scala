@@ -2,7 +2,7 @@ package com.decentralchain.it.api
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{AddressScheme, KeyPair}
-import io.decentralchain.api.grpc.BalanceResponse.WavesBalances
+import io.decentralchain.api.grpc.BalanceResponse.DccBalances
 import io.decentralchain.api.grpc.{TransactionStatus as PBTransactionStatus, *}
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
@@ -16,7 +16,7 @@ import io.decentralchain.protobuf.Amount
 import io.decentralchain.protobuf.block.Block.Header
 import io.decentralchain.protobuf.block.{PBBlocks, VanillaBlock}
 import io.decentralchain.protobuf.transaction.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.Order
 import com.decentralchain.transaction.{Asset, TxVersion}
 import io.grpc.Status.Code
@@ -190,8 +190,8 @@ object SyncGrpcApi extends Assertions {
       assert(actual == balance, s"Asset balance mismatch, required=$balance, actual=$actual")
     }
 
-    def wavesBalance(address: ByteString): WavesBalances = {
-      accounts.getBalances(BalancesRequest.of(address, Seq(ByteString.EMPTY))).next().getWaves
+    def dccBalance(address: ByteString): DccBalances = {
+      accounts.getBalances(BalancesRequest.of(address, Seq(ByteString.EMPTY))).next().getDcc
     }
 
     def getTransaction(id: String, sender: ByteString = ByteString.EMPTY, recipient: Option[Recipient] = None): PBSignedTransaction = {
@@ -304,7 +304,7 @@ object SyncGrpcApi extends Assertions {
     }
 
     def signedBroadcast(tx: PBSignedTransaction, waitForTx: Boolean = false): PBSignedTransaction = {
-      maybeWaitForTransaction(sync(async(n).broadcast(tx.getWavesTransaction, tx.proofs)), waitForTx)
+      maybeWaitForTransaction(sync(async(n).broadcast(tx.getDccTransaction, tx.proofs)), waitForTx)
     }
 
     def broadcast(tx: PBTransaction, proofs: Seq[ByteString], waitForTx: Boolean = false): PBSignedTransaction = {
@@ -364,7 +364,7 @@ object SyncGrpcApi extends Assertions {
         updatedName: String,
         updatedDescription: String,
         fee: Long,
-        feeAsset: Asset = Waves,
+        feeAsset: Asset = Dcc,
         version: TxVersion = TxVersion.V1,
         waitForTx: Boolean = false
     ): PBSignedTransaction = {

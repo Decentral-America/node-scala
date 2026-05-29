@@ -9,7 +9,7 @@ import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
 import com.decentralchain.transaction.transfer.TransferTransaction
@@ -83,7 +83,7 @@ class SpentComplexitySpec
     "does not count verifier complexity when InvokeScript is sent from smart account" in
       withDomain(settings, Seq(AddrWithBalance(sender.toAddress, 10_000_00000000L))) { d =>
         val invokeTx = Signed
-          .invokeScript(2.toByte, sender, sender.toAddress, None, Seq.empty, 90_0000L, Asset.Waves, ntpTime.getTimestamp())
+          .invokeScript(2.toByte, sender, sender.toAddress, None, Seq.empty, 90_0000L, Asset.Dcc, ntpTime.getTimestamp())
 
         d.appendBlock(
           SetScriptTransaction.selfSigned(2.toByte, sender, Some(contract), 100_0000L, ntpTime.getTimestamp()).explicitGet(),
@@ -104,7 +104,7 @@ class SpentComplexitySpec
           .explicitGet()
 
         val transferAsset = TransferTransaction
-          .selfSigned(2.toByte, sender, recipient.toAddress, issue.asset, 50_00L, Waves, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
+          .selfSigned(2.toByte, sender, recipient.toAddress, issue.asset, 50_00L, Dcc, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
           .explicitGet()
 
         val invokeTx = Signed
@@ -115,7 +115,7 @@ class SpentComplexitySpec
             None,
             Seq(InvokeScriptTransaction.Payment(50_00L, issue.asset)),
             90_0000L,
-            Asset.Waves,
+            Asset.Dcc,
             ntpTime.getTimestamp()
           )
 
@@ -142,11 +142,11 @@ class SpentComplexitySpec
         .explicitGet()
 
       val transferAsset = TransferTransaction
-        .selfSigned(2.toByte, sender, recipient.toAddress, issue.asset, 50_00L, Waves, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
+        .selfSigned(2.toByte, sender, recipient.toAddress, issue.asset, 50_00L, Dcc, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
         .explicitGet()
 
       val returnFrom = TransferTransaction
-        .selfSigned(2.toByte, recipient, sender.toAddress, issue.asset, 49_00L, Waves, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
+        .selfSigned(2.toByte, recipient, sender.toAddress, issue.asset, 49_00L, Dcc, 90_0000L, ByteStr.empty, ntpTime.getTimestamp())
         .explicitGet()
 
       d.appendBlock(

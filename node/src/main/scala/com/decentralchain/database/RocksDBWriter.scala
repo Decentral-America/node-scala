@@ -8,7 +8,7 @@ import com.google.common.primitives.Ints
 import com.google.common.util.concurrent.MoreExecutors
 import com.typesafe.scalalogging.Logger
 import com.decentralchain.account.{Address, Alias, PublicKey}
-import com.decentralchain.api.common.WavesBalanceIterator
+import com.decentralchain.api.common.DccBalanceIterator
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.BlockSnapshot
 import com.decentralchain.common.state.ByteStr
@@ -25,7 +25,7 @@ import io.decentralchain.protobuf.snapshot.TransactionStatus as PBStatus
 import io.decentralchain.protobuf.{PBSnapshots, toByteStr, toByteString, toPublicKey}
 import com.decentralchain.settings.{BlockchainSettings, DBSettings}
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.EthereumTransaction.Transfer
 import com.decentralchain.transaction.TxValidationError.{AliasDoesNotExist, AliasIsDisabled}
@@ -262,8 +262,8 @@ class RocksDBWriter(
       req._2 match {
         case asset @ IssuedAsset(_) =>
           writableDB.get(Keys.assetBalance(addressId, asset))
-        case Waves =>
-          writableDB.get(Keys.wavesBalance(addressId))
+        case Dcc =>
+          writableDB.get(Keys.dccBalance(addressId))
       }
     }
 
@@ -275,7 +275,7 @@ class RocksDBWriter(
     val reqWithKeys = req.flatMap { case (address, asset) =>
       addrToId.get(address).map { aid =>
         (address, asset) -> (asset match {
-          case Waves                    => Keys.wavesBalance(aid)
+          case Dcc                    => Keys.dccBalance(aid)
           case issuedAsset: IssuedAsset => Keys.assetBalance(aid, issuedAsset)
         })
       }
@@ -293,7 +293,7 @@ class RocksDBWriter(
     }.toMap
   }
 
-  protected override def loadWavesBalances(req: Seq[(Address, Asset)]): Map[(Address, Asset), CurrentBalance] = readOnly { ro =>
+  protected override def loadDccBalances(req: Seq[(Address, Asset)]): Map[(Address, Asset), CurrentBalance] = readOnly { ro =>
     val addrToId = addressIds(req.map(_._1))
     val addrIds  = addrToId.collect { case (_, Some(aid)) => aid }.toSeq
 
@@ -301,7 +301,7 @@ class RocksDBWriter(
       .zip(
         ro.multiGet(
           addrIds.view.map { addrId =>
-            Keys.wavesBalance(addrId)
+            Keys.dccBalance(addrId)
           }.toVector,
           16
         )
@@ -360,9 +360,9 @@ class RocksDBWriter(
     stateFeatures ++ settings.functionalitySettings.preActivatedFeatures.view.mapValues(Height(_))
   }
 
-  override def wavesAmount(height: Int): BigInt =
+  override def dccAmount(height: Int): BigInt =
     if (this.isFeatureActivated(BlockchainFeatures.BlockReward, height))
-      loadBlockMeta(Height(height)).fold(settings.genesisSettings.initialBalance)(_.totalWavesAmount)
+      loadBlockMeta(Height(height)).fold(settings.genesisSettings.initialBalance)(_.totalDccAmount)
     else settings.genesisSettings.initialBalance
 
   override def blockReward(height: Int): Option[Long] =
@@ -384,16 +384,16 @@ class RocksDBWriter(
       assetStatics: Map[IssuedAsset, (AssetStaticInfo, Int)],
       rw: RW
   ): Unit = {
-    var changedWavesBalances = List.empty[AddressId]
+    var changedDccBalances = List.empty[AddressId]
     val changedAssetBalances = MultimapBuilder.hashKeys().hashSetValues().build[IssuedAsset, java.lang.Long]()
     val updatedNftLists      = MultimapBuilder.hashKeys().linkedHashSetValues().build[java.lang.Long, IssuedAsset]()
 
     for (((addressId, asset), (currentBalance, balanceNode)) <- balances) {
       asset match {
-        case Waves =>
-          changedWavesBalances = addressId :: changedWavesBalances
-          rw.put(Keys.wavesBalance(addressId), currentBalance)
-          rw.put(Keys.wavesBalanceAt(addressId, currentBalance.height), balanceNode)
+        case Dcc =>
+          changedDccBalances = addressId :: changedDccBalances
+          rw.put(Keys.dccBalance(addressId), currentBalance)
+          rw.put(Keys.dccBalanceAt(addressId, currentBalance.height), balanceNode)
         case a: IssuedAsset =>
           changedAssetBalances.put(a, addressId.toLong)
           rw.put(Keys.assetBalance(addressId, a), currentBalance)
@@ -417,7 +417,7 @@ class RocksDBWriter(
       }
     }
 
-    rw.put(Keys.changedWavesBalances(Height(height)), changedWavesBalances)
+    rw.put(Keys.changedDccBalances(Height(height)), changedDccBalances)
     changedAssetBalances.asMap().forEach { (asset, addresses) =>
       rw.put(Keys.changedBalances(Height(height), asset), addresses.asScala.map(id => AddressId(id.toLong)).toSeq)
     }
@@ -728,17 +728,17 @@ class RocksDBWriter(
 
           rw.put(Keys.committedGenerators(nextPeriod, h), Some(nextCommittedGenerators))
 
-          // TODO: Option to not store
+          // NOTE: Option to not store
           rw.put(Keys.commitmentTransactions(nextPeriod, h), commitmentTransactionIds)
         }
 
         if (conflictGenerators.nonEmpty) rw.put(Keys.conflictGenerators(currPeriod, h), conflictGenerators)
       }
 
-      // TODO: Option to not store
+      // NOTE: Known optimization opportunity — could skip storing certain data
       rw.put(Keys.generatorBalances(h, rdb.apiHandle), Some(generatorSet.map(x => x.index -> x.balance)))
 
-      // TODO: height
+      // NOTE: height
       rw.put(Keys.issuedAssets(Height(height)), snapshot.assetStatics.keySet.toSeq)
       rw.put(Keys.updatedAssets(Height(height)), updatedAssetSet.toSeq)
       rw.put(Keys.sponsorshipAssets(Height(height)), snapshot.sponsorships.keySet.toSeq)
@@ -806,7 +806,7 @@ class RocksDBWriter(
 
           rdb.db.withOptions { (ro, wo) =>
             rdb.db.readWriteWithOptions(ro, wo.setLowPri(true)) { rw =>
-              batchCleanupWavesBalances(
+              batchCleanupDccBalances(
                 fromInclusive = firstDirtyHeight,
                 toExclusive = toHeightExclusive,
                 rw = rw
@@ -834,14 +834,14 @@ class RocksDBWriter(
       })
     }
 
-  private def batchCleanupWavesBalances(fromInclusive: Height, toExclusive: Height, rw: RW): Unit = {
+  private def batchCleanupDccBalances(fromInclusive: Height, toExclusive: Height, rw: RW): Unit = {
     val lastUpdateAt = mutable.LongMap.empty[Height]
 
     val updateAt     = new ArrayBuffer[(AddressId, Height)]() // AddressId -> First height of update in this range
     val updateAtKeys = new ArrayBuffer[Key[BalanceNode]]()
 
-    val changedKeyPrefix = KeyTag.ChangedWavesBalances.prefixBytes
-    val changedFromKey   = Keys.changedWavesBalances(fromInclusive) // fromInclusive doesn't affect the parsing result
+    val changedKeyPrefix = KeyTag.ChangedDccBalances.prefixBytes
+    val changedFromKey   = Keys.changedDccBalances(fromInclusive) // fromInclusive doesn't affect the parsing result
     rw.iterateOverWithSeek(changedKeyPrefix, changedFromKey.keyBytes) { e =>
       val currHeight = Height(Ints.fromByteArray(e.getKey.drop(changedKeyPrefix.length)))
       val continue   = currHeight < toExclusive
@@ -850,7 +850,7 @@ class RocksDBWriter(
           lastUpdateAt.updateWith(addressId.toLong) { orig =>
             if (orig.isEmpty) {
               updateAt.addOne(addressId -> currHeight)
-              updateAtKeys.addOne(Keys.wavesBalanceAt(addressId, currHeight))
+              updateAtKeys.addOne(Keys.dccBalanceAt(addressId, currHeight))
             }
             Some(currHeight)
           }
@@ -868,7 +868,7 @@ class RocksDBWriter(
         // But there is an issue in RocksDB: https://github.com/facebook/rocksdb/issues/11407 that leads to stopped writes.
         // So we need to issue non-overlapping delete ranges and we have to read changes on 2000 to know 1900.
         // Also note: memtable_max_range_deletions doesn't have any effect.
-        // TODO Use deleteRange(1, height) after RocksDB's team solves the overlapping deleteRange issue.
+        // NOTE: Use deleteRange(1, height) after RocksDB's team solves the overlapping deleteRange issue.
         val firstDeleteHeight = prevBalanceNode.fold(firstHeight) { x =>
           if (x.prevHeight == Height(0)) firstHeight // There is no previous record
           else x.prevHeight
@@ -877,12 +877,12 @@ class RocksDBWriter(
         val lastDeleteHeight = lastUpdateAt(addressId.toLong)
         if (firstDeleteHeight != lastDeleteHeight)
           rw.deleteRange(
-            Keys.wavesBalanceAt(addressId, firstDeleteHeight),
-            Keys.wavesBalanceAt(addressId, lastDeleteHeight) // Deletes exclusively
+            Keys.dccBalanceAt(addressId, firstDeleteHeight),
+            Keys.dccBalanceAt(addressId, lastDeleteHeight) // Deletes exclusively
           )
       }
 
-    rw.deleteRange(Keys.changedWavesBalances(fromInclusive), Keys.changedWavesBalances(toExclusive))
+    rw.deleteRange(Keys.changedDccBalances(fromInclusive), Keys.changedDccBalances(toExclusive))
   }
 
   private def batchCleanupAssetBalances(fromInclusive: Height, toExclusive: Height, rw: RW): Unit = {
@@ -1049,8 +1049,8 @@ class RocksDBWriter(
             }
             rw.delete(Keys.changedDataKeys(currentHeight, addressId))
 
-            balancesToInvalidate += (address -> Waves)
-            rollbackBalanceHistory(rw, Keys.wavesBalance(addressId), Keys.wavesBalanceAt(addressId, _), currentHeight)
+            balancesToInvalidate += (address -> Dcc)
+            rollbackBalanceHistory(rw, Keys.dccBalance(addressId), Keys.dccBalanceAt(addressId, _), currentHeight)
 
             rollbackLeaseBalance(rw, addressId, currentHeight)
 
@@ -1142,7 +1142,7 @@ class RocksDBWriter(
 
           rw.delete(Keys.generatorBalances(currentHeight, rdb.apiHandle))
           currentPeriod.foreach { currentPeriod =>
-            rw.delete(Keys.conflictGenerators(currentPeriod, currentHeight)) // TODO: test
+            rw.delete(Keys.conflictGenerators(currentPeriod, currentHeight))
 
             val nextPeriod = currentPeriod.next
             rw.delete(Keys.committedGenerators(nextPeriod, currentHeight))
@@ -1159,7 +1159,7 @@ class RocksDBWriter(
 
           rw.delete(Keys.blockMetaAt(currentHeight))
           rw.delete(Keys.changedAddresses(currentHeight))
-          rw.delete(Keys.changedWavesBalances(currentHeight))
+          rw.delete(Keys.changedDccBalances(currentHeight))
           rw.delete(Keys.heightOf(discardedMeta.id))
           blockHeightsToInvalidate.addOne(discardedMeta.id)
           rw.delete(Keys.carryFee(currentHeight))
@@ -1191,7 +1191,7 @@ class RocksDBWriter(
             Some(BlockSnapshot(block.id(), loadTxStateSnapshotsWithStatus(currentHeight, rdb, block.transactionData)))
           } else None
 
-          DiscardedBlock(block, Caches.toHitSource(discardedMeta), snapshot, Seq.empty) // TODO: generatorBalances
+          DiscardedBlock(block, Caches.toHitSource(discardedMeta), snapshot, Seq.empty) // NOTE: generatorBalances
         }
 
         balancesToInvalidate.result().foreach(discardBalance)
@@ -1302,7 +1302,7 @@ class RocksDBWriter(
         .collect {
           case (m, t: TransferTransaction) if m.status == TxMeta.Status.Succeeded => t
           case (_, e @ EthereumTransaction(transfer: Transfer, _, _, _)) if tm.status == PBStatus.SUCCEEDED =>
-            val asset = transfer.tokenAddress.fold[Asset](Waves)(resolveERC20Address(_).get)
+            val asset = transfer.tokenAddress.fold[Asset](Dcc)(resolveERC20Address(_).get)
             e.toTransferLike(TxPositiveAmount.unsafeFrom(transfer.amount), transfer.recipient, asset)
         }
     } yield (height, tx)
@@ -1375,10 +1375,10 @@ class RocksDBWriter(
     .recordStats()
     .build[(Height, AddressId), LeaseBalanceNode]()
 
-  override def balanceAtHeight(address: Address, height: Int, assetId: Asset = Waves): Option[(Int, Long)] = readOnly { db =>
+  override def balanceAtHeight(address: Address, height: Int, assetId: Asset = Dcc): Option[(Int, Long)] = readOnly { db =>
     db.get(Keys.addressId(address)).flatMap { aid =>
       val key = assetId match {
-        case Waves              => Keys.wavesBalanceAt(aid, Height(height))
+        case Dcc              => Keys.dccBalanceAt(aid, Height(height))
         case asset: IssuedAsset => Keys.assetBalanceAt(aid, asset, Height(height))
       }
       Using(db.newIterator) { iter =>
@@ -1403,7 +1403,7 @@ class RocksDBWriter(
     } yield r
 
     addressId(address).fold(Seq(BalanceSnapshot(Height(1), 0, 0, 0, 0))) { addressId =>
-      val lastBalance      = balancesCache.get((address, Asset.Waves))
+      val lastBalance      = balancesCache.get((address, Asset.Dcc))
       val lastLeaseBalance = leaseBalanceCache.get(address)
 
       @tailrec
@@ -1411,7 +1411,7 @@ class RocksDBWriter(
         if (hh < Height(from) || hh <= Height(0))
           acc :+ hh
         else {
-          val bn     = balanceAtHeightCache.get((hh, addressId), () => db.get(Keys.wavesBalanceAt(addressId, hh)))
+          val bn     = balanceAtHeightCache.get((hh, addressId), () => db.get(Keys.dccBalanceAt(addressId, hh)))
           val newAcc = if (hh > toHeight) acc else acc :+ hh
           collectBalanceHistory(newAcc, bn.prevHeight)
         }
@@ -1438,7 +1438,7 @@ class RocksDBWriter(
       val lbh  = slice(clbh, Height(from), toHeight)
       for {
         (wh, lh, dh) <- merge3(wbh, lbh, slidedDepositHeights)
-        wb = balanceAtHeightCache.get((wh, addressId), () => db.get(Keys.wavesBalanceAt(addressId, wh)))
+        wb = balanceAtHeightCache.get((wh, addressId), () => db.get(Keys.dccBalanceAt(addressId, wh)))
         lb = leaseBalanceAtHeightCache.get((lh, addressId), () => db.get(Keys.leaseBalanceAt(addressId, lh)))
         d  = collectedDeposits.depositSize.getOrElse(dh, 0L)
       } yield {
@@ -1589,10 +1589,10 @@ class RocksDBWriter(
     db.get(Keys.stateHash(height))
   }
 
-  // TODO: maybe add length constraint
+  // NOTE: Length constraint could be added for validation
   def loadBalanceHistory(address: Address): Seq[(Int, Long)] = writableDB.withResource { dbResource =>
     dbResource.get(Keys.addressId(address)).fold(Seq.empty[(Int, Long)]) { aid =>
-      new WavesBalanceIterator(aid, dbResource).asScala.toSeq
+      new DccBalanceIterator(aid, dbResource).asScala.toSeq
     }
   }
 

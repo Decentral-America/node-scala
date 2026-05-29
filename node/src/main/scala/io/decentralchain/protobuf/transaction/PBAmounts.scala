@@ -3,16 +3,16 @@ package io.decentralchain.protobuf.transaction
 import com.google.protobuf.ByteString
 import io.decentralchain.protobuf.*
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 
 object PBAmounts {
   def toPBAssetId(asset: Asset): ByteString = asset match {
     case Asset.IssuedAsset(id) => id.toByteString
-    case Asset.Waves             => ByteString.EMPTY
+    case Asset.Dcc             => ByteString.EMPTY
   }
 
   def toVanillaAssetId(byteStr: ByteString): Asset = {
-    if (byteStr.isEmpty) Waves
+    if (byteStr.isEmpty) Dcc
     else IssuedAsset(byteStr.toByteStr)
   }
 

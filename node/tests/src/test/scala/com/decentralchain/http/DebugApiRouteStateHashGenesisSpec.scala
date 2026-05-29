@@ -41,7 +41,7 @@ class DebugApiRouteStateHashGenesisSpec
 
   private val richAccount = TxHelpers.signer(905)
 
-  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50_000.waves))
+  override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50_000.dcc))
 
   val block: Block = TestBlock.create(Nil).block
 
@@ -83,7 +83,7 @@ class DebugApiRouteStateHashGenesisSpec
         val genesisBlockHeader = domain.blockchain.blockHeader(genesisHeight).value
         val expectedResponse = Json.obj(
           "stateHash"         -> "79a65a809de9879bb8010d308333961c34764ff65444ff0028a982ca0cdd6732",
-          "wavesBalanceHash"  -> "a3766f502f4bba124d9f6fff49adcac44e309bdbc72c437a0607de9c315bcdfa",
+          "dccBalanceHash"  -> "a3766f502f4bba124d9f6fff49adcac44e309bdbc72c437a0607de9c315bcdfa",
           "assetBalanceHash"  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"     -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",

@@ -693,7 +693,7 @@ package object database {
 
   def toVanillaTransaction(tx: pb.TransactionData.Transaction): Transaction = tx match {
     case tx: TD.LegacyBytes         => TransactionParsers.parseBytes(tx.value.toByteArray).get
-    case tx: TD.WavesTransaction    => PBTransactions.vanilla(tx.value, unsafe = false).explicitGet()
+    case tx: TD.DccTransaction    => PBTransactions.vanilla(tx.value, unsafe = false).explicitGet()
     case tx: TD.EthereumTransaction => EthereumTransaction(tx.value.toByteArray).explicitGet()
     case _                          => throw new IllegalArgumentException("Illegal transaction data")
   }
@@ -701,7 +701,7 @@ package object database {
   def writeTransaction(v: (TxMeta, Transaction)): Array[Byte] = {
     val (m, tx) = v
     val ptx = tx match {
-      case lps: (PBSince & Versioned) if PBSince.affects(lps) => TD.WavesTransaction(PBTransactions.protobuf(tx))
+      case lps: (PBSince & Versioned) if PBSince.affects(lps) => TD.DccTransaction(PBTransactions.protobuf(tx))
       case et: EthereumTransaction                            => TD.EthereumTransaction(ByteString.copyFrom(et.bytes()))
       case _                                                  => TD.LegacyBytes(ByteString.copyFrom(tx.bytes()))
     }

@@ -1,5 +1,5 @@
 syntax = "proto3";
-package waves.api;
+package dcc.api;
 option java_package = "com.decentralchain.protobuf.api";
 
 message DataRequest {

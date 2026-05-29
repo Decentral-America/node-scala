@@ -11,7 +11,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, defaultSigner, setScript}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.utils.Signed
@@ -41,7 +41,7 @@ class EstimationSwitchTest extends PropSpec with WithDomain with TransactionGenB
     val genesis1  = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
     val genesis2  = GenesisTransaction.create(dApp.toAddress, ENOUGH_AMT, ts).explicitGet()
     val setScript = () => SetScriptTransaction.selfSigned(1.toByte, dApp, Some(dAppScript), fee, ts).explicitGet()
-    val invoke    = () => Signed.invokeScript(TxVersion.V3, invoker, dApp.toAddress, None, Nil, fee, Waves, ts)
+    val invoke    = () => Signed.invokeScript(TxVersion.V3, invoker, dApp.toAddress, None, Nil, fee, Dcc, ts)
 
     withDomain(domainSettingsWithFS(settings)) { d =>
       d.appendBlock(genesis1, genesis2)

@@ -34,7 +34,7 @@ inConfig(Compile)(
     PB.targets += scalapb.gen(flatPackage = true) -> sourceManaged.value,
     PB.protoSources += PB.externalIncludePath.value,
     PB.generate / includeFilter := { (f: File) =>
-      (** / "waves" / "*.proto").matches(f.toPath)
+      (** / "dcc" / "*.proto").matches(f.toPath)
     },
     PB.deleteTargetDirectory := false
   )
@@ -127,9 +127,9 @@ linuxPackageMappings := linuxPackageMappings.value.map { lpm =>
       val dest = (Debian / target).value / path
       IO.write(
         dest,
-        s"""-J-Dwaves.defaults.blockchain.type=${network.value}
-           |-J-Dwaves.defaults.directory=/var/lib/${(Linux / packageName).value}
-           |-J-Dwaves.defaults.config.directory=/etc/${(Linux / packageName).value}
+        s"""-J-Ddcc.defaults.blockchain.type=${network.value}
+           |-J-Ddcc.defaults.directory=/var/lib/${(Linux / packageName).value}
+           |-J-Ddcc.defaults.config.directory=/etc/${(Linux / packageName).value}
            |""".stripMargin
       )
       IO.append(dest, IO.readBytes(file))

@@ -21,7 +21,7 @@ class DbSettingsSpecification extends FlatSpec {
   }
 
   "DbSettingsSpecification" should "read values from config" in {
-    val config = loadConfig(ConfigFactory.parseString("""waves.db {
+    val config = loadConfig(ConfigFactory.parseString("""dcc.db {
                                                         |  directory = "/data"
                                                         |  store-transactions-by-address = true
                                                         |  store-lease-states-by-address = true
@@ -45,7 +45,7 @@ class DbSettingsSpecification extends FlatSpec {
                                                         |  }
                                                         |}""".stripMargin))
 
-    val actualDbSettings = ConfigSource.fromConfig(config).at("waves.db").loadOrThrow[DBSettings]
+    val actualDbSettings = ConfigSource.fromConfig(config).at("dcc.db").loadOrThrow[DBSettings]
 
     val expectedDbSettings: DBSettings = DBSettings(
       directory = "/data",

@@ -22,9 +22,9 @@ class BlockchainUpdaterMicroblockSunnyDayTest extends PropSpec with DomainScenar
     ts     <- positiveIntGen
     fee    <- smallFeeGen
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-    masterToAlice: TransferTransaction <- wavesTransferGeneratorP(ts, master, alice.toAddress)
-    aliceToBob  = createWavesTransfer(alice, bob.toAddress, masterToAlice.amount.value - fee - 1, fee, ts).explicitGet()
-    aliceToBob2 = createWavesTransfer(alice, bob.toAddress, masterToAlice.amount.value - fee - 1, fee, ts + 1).explicitGet()
+    masterToAlice: TransferTransaction <- dccTransferGeneratorP(ts, master, alice.toAddress)
+    aliceToBob  = createDccTransfer(alice, bob.toAddress, masterToAlice.amount.value - fee - 1, fee, ts).explicitGet()
+    aliceToBob2 = createDccTransfer(alice, bob.toAddress, masterToAlice.amount.value - fee - 1, fee, ts + 1).explicitGet()
   } yield (genesis, masterToAlice, aliceToBob, aliceToBob2)
 
   property("all txs in different blocks: B0 <- B1 <- B2 <- B3!") {

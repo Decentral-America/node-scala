@@ -120,7 +120,7 @@ class ProtoVersionTransactionsSpec extends FreeSpec {
         Account,
         dapp,
         Some(FUNCTION_CALL(User("hello"), List(CONST_LONG(42L)))),
-        Seq(Payment(100, Asset.Waves)),
+        Seq(Payment(100, Asset.Dcc)),
         InvokeScriptTxFee,
         IssuedAsset(feeAssetId),
         Now
@@ -152,7 +152,7 @@ class ProtoVersionTransactionsSpec extends FreeSpec {
 
       val transferTx =
         TransferTransaction
-          .selfSigned(TxVersion.V3, Account, recipient, asset, 100, Asset.Waves, MinFee, ByteStr(attachment), Now)
+          .selfSigned(TxVersion.V3, Account, recipient, asset, 100, Asset.Dcc, MinFee, ByteStr(attachment), Now)
           .explicitGet()
 
       val base64Str = Base64.encode(PBUtils.encodeDeterministic(PBTransactions.protobuf(transferTx)))
@@ -167,7 +167,7 @@ class ProtoVersionTransactionsSpec extends FreeSpec {
 
       val massTransferTx =
         MassTransferTransaction
-          .selfSigned(TxVersion.V2, Account, Asset.Waves, transfers, MassTransferTxFee, Now, ByteStr(attachment))
+          .selfSigned(TxVersion.V2, Account, Asset.Dcc, transfers, MassTransferTxFee, Now, ByteStr(attachment))
           .explicitGet()
       val base64Str = Base64.encode(PBUtils.encodeDeterministic(PBTransactions.protobuf(massTransferTx)))
 

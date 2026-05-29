@@ -11,7 +11,7 @@ class LightNodeMiningSuite extends BaseFunSuite with TransferSending {
   override def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.preactivatedFeatures(LightNode.id.toInt -> Height(2)))
-      .overrideBase(_.raw("waves.blockchain.custom.functionality.light-node-block-fields-absence-interval = 2"))
+      .overrideBase(_.raw("dcc.blockchain.custom.functionality.light-node-block-fields-absence-interval = 2"))
       .withDefault(1)
       .withSpecial(1, _.lightNode)
       .buildNonConflicting()
@@ -23,7 +23,7 @@ class LightNodeMiningSuite extends BaseFunSuite with TransferSending {
     val fullNodeAddress  = fullNode.keyPair.toAddress.toString
 
     nodes.waitForHeight(Height(5))
-    fullNode.transfer(fullNode.keyPair, lightNodeAddress, fullNode.balance(fullNodeAddress).balance - 1.waves)
+    fullNode.transfer(fullNode.keyPair, lightNodeAddress, fullNode.balance(fullNodeAddress).balance - 1.dcc)
     lightNode.blockSeq(Height(2), Height(5)).foreach(_.generator shouldBe fullNodeAddress)
 
     lightNode.waitForHeight(Height(6))

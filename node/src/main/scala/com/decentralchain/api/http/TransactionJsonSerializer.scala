@@ -39,7 +39,7 @@ import com.decentralchain.state.InvokeScriptResult.{
   SponsorFee
 }
 import com.decentralchain.state.{Height, TransactionId, Blockchain, DataEntry, InvokeScriptResult, LeaseDetails, TxMeta}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
 import com.decentralchain.transaction.serialization.impl.InvokeScriptTxSerializer
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
@@ -55,7 +55,7 @@ final case class TransactionJsonSerializer(blockchain: Blockchain) {
   val assetSerializer: JsonSerializer[Asset] =
     (value: Asset, gen: JsonGenerator, _) => {
       value match {
-        case Waves           => gen.writeNull()
+        case Dcc           => gen.writeNull()
         case IssuedAsset(id) => gen.writeString(id.toString)
       }
     }
@@ -282,7 +282,7 @@ final case class TransactionJsonSerializer(blockchain: Blockchain) {
           gen.writeNumberField("fee", tx.assetFee._2, numbersAsString)
           tx.feeAssetId match {
             case IssuedAsset(id) => gen.writeStringField("feeAssetId", id.toString)
-            case Asset.Waves     => gen.writeNullField("feeAssetId")
+            case Asset.Dcc     => gen.writeNullField("feeAssetId")
           }
           gen.writeNumberField("timestamp", tx.timestamp, numbersAsString)
           gen.writeNumberField("version", tx.version, numbersAsString)

@@ -37,7 +37,7 @@ trait BaseSuite
   // protected because https://github.com/sbt/zinc/issues/292
   protected val theNodes: Coeval[Seq[Node]] = Coeval.evalOnce {
     require(isRunning, "Do not attempt to access node instances from suite constructors")
-    Option(System.getProperty("waves.it.config.file")) match {
+    Option(System.getProperty("dcc.it.config.file")) match {
       case None =>
         AddressScheme.current = new AddressScheme {
           override val chainId: Byte = 'I'

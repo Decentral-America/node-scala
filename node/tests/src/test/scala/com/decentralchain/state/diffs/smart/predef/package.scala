@@ -69,9 +69,9 @@ package object predef {
 
   def scriptWithAllV1Functions(tx: DataTransaction, t: TransferTransaction): String =
     s"""${dropLastLine(scriptWithV1PureFunctions(tx, t))}
-       |${dropLastLine(scriptWithV1WavesFunctions(tx, t))}
+       |${dropLastLine(scriptWithV1DccFunctions(tx, t))}
        |${dropLastLine(scriptWithCryptoFunctions)}
-       |if rnd then pure && waves else crypto""".stripMargin
+       |if rnd then pure && dcc else crypto""".stripMargin
 
   def scriptWithV1PureFunctions(tx: DataTransaction, t: TransferTransaction): String =
     s"""
@@ -140,8 +140,8 @@ package object predef {
        | let pure = basic && ne && gteLong && getListSize && unary && frAction && bytesOps && strOps
        | pure""".stripMargin
 
-  def scriptWithV1WavesFunctions(tx: DataTransaction, t: TransferTransaction): String =
-    s""" # Waves context
+  def scriptWithV1DccFunctions(tx: DataTransaction, t: TransferTransaction): String =
+    s""" # Dcc context
        | let txById = match tx {
        |     case _: DataTransaction => true
        |     case _: TransferTransaction =>
@@ -187,10 +187,10 @@ package object predef {
        |   case _ => false
        | }
        |
-       | let balances = assetBalance(tx.sender, unit) > 0 && wavesBalance(tx.sender) != 0
+       | let balances = assetBalance(tx.sender, unit) > 0 && dccBalance(tx.sender) != 0
        |
-       | let waves = txById && entries && balances && aFromPK && aFromStrOrRecip && height > 0
-       | waves""".stripMargin
+       | let dcc = txById && entries && balances && aFromPK && aFromStrOrRecip && height > 0
+       | dcc""".stripMargin
 
   def scriptWithCryptoFunctions: String =
     s"""

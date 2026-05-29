@@ -3,13 +3,13 @@ package com.decentralchain.ride.runner.input
 import com.decentralchain.account.PublicKeys.EmptyPublicKey
 import com.decentralchain.account.{AddressOrAlias, PublicKey}
 import com.decentralchain.transaction.Asset
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 
 case class RideRunnerTransaction(
     amount: Long = 1,
-    assetId: Asset = Waves,
+    assetId: Asset = Dcc,
     fee: Long = 100_000,
-    feeAssetId: Asset = Waves,
+    feeAssetId: Asset = Dcc,
     recipient: AddressOrAlias,
     senderPublicKey: PublicKey = EmptyPublicKey,
     height: Option[Int] = None,

@@ -24,7 +24,7 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 
   test("able to make transfer with sponsored fee") {
     for (v <- sponsorFeeTxSupportedVersions) {
-      val minerWavesBalance  = sender.wavesBalance(ByteString.copyFrom(Base58.decode(miner.address)))
+      val minerDccBalance  = sender.dccBalance(ByteString.copyFrom(Base58.decode(miner.address)))
       val minerBalanceHeight = sender.height
 
       val sponsoredAssetId = PBTransactions
@@ -48,9 +48,9 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         waitForTx = true
       )
 
-      val aliceWavesBalance   = sender.wavesBalance(aliceAddress)
-      val bobWavesBalance     = sender.wavesBalance(bobAddress)
-      val sponsorWavesBalance = sender.wavesBalance(sponsorAddress)
+      val aliceDccBalance   = sender.dccBalance(aliceAddress)
+      val bobDccBalance     = sender.dccBalance(bobAddress)
+      val sponsorDccBalance = sender.dccBalance(sponsorAddress)
       val aliceAssetBalance   = sender.assetsBalance(aliceAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val bobAssetBalance     = sender.assetsBalance(bobAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val sponsorAssetBalance = sender.assetsBalance(sponsorAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
@@ -66,17 +66,17 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       )
 
       nodes.foreach(n => n.waitForHeight(n.height + 1))
-      sender.wavesBalance(aliceAddress).available shouldBe aliceWavesBalance.available
-      sender.wavesBalance(bobAddress).available shouldBe bobWavesBalance.available
-      sender.wavesBalance(sponsorAddress).available shouldBe sponsorWavesBalance.available - FeeValidation.FeeUnit * smallFee / minSponsorFee
+      sender.dccBalance(aliceAddress).available shouldBe aliceDccBalance.available
+      sender.dccBalance(bobAddress).available shouldBe bobDccBalance.available
+      sender.dccBalance(sponsorAddress).available shouldBe sponsorDccBalance.available - FeeValidation.FeeUnit * smallFee / minSponsorFee
       sender.assetsBalance(aliceAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L) shouldBe aliceAssetBalance - 10 * token - smallFee
       sender.assetsBalance(bobAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L) shouldBe bobAssetBalance + 10 * token
       sender.assetsBalance(sponsorAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L) shouldBe sponsorAssetBalance + smallFee
 
       val height = nodes.head.waitForHeightArise()
       val reward = (height - minerBalanceHeight) * 600000000L
-      sender.wavesBalance(ByteString.copyFrom(Base58.decode(miner.address))).available shouldBe
-        minerWavesBalance.available + reward + sponsorReducedFee + issueFee + minFee + FeeValidation.FeeUnit * smallFee / minSponsorFee
+      sender.dccBalance(ByteString.copyFrom(Base58.decode(miner.address))).available shouldBe
+        minerDccBalance.available + reward + sponsorReducedFee + issueFee + minFee + FeeValidation.FeeUnit * smallFee / minSponsorFee
     }
   }
 
@@ -173,12 +173,12 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
           feeAssetId = sponsoredAssetId,
           waitForTx = true
         ),
-        s"does not exceed minimal value of $minFee WAVES or $largeFee $sponsoredAssetId",
+        s"does not exceed minimal value of $minFee DCC or $largeFee $sponsoredAssetId",
         Code.INVALID_ARGUMENT
       )
-      val aliceWavesBalance   = sender.wavesBalance(aliceAddress)
-      val bobWavesBalance     = sender.wavesBalance(bobAddress)
-      val sponsorWavesBalance = sender.wavesBalance(sponsorAddress)
+      val aliceDccBalance   = sender.dccBalance(aliceAddress)
+      val bobDccBalance     = sender.dccBalance(bobAddress)
+      val sponsorDccBalance = sender.dccBalance(sponsorAddress)
       val aliceAssetBalance   = sender.assetsBalance(aliceAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val bobAssetBalance     = sender.assetsBalance(bobAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val sponsorAssetBalance = sender.assetsBalance(sponsorAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
@@ -193,9 +193,9 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         waitForTx = true
       )
 
-      sender.wavesBalance(aliceAddress).available shouldBe aliceWavesBalance.available
-      sender.wavesBalance(bobAddress).available shouldBe bobWavesBalance.available
-      sender.wavesBalance(sponsorAddress).available shouldBe sponsorWavesBalance.available - FeeValidation.FeeUnit * largeFee / largeFee
+      sender.dccBalance(aliceAddress).available shouldBe aliceDccBalance.available
+      sender.dccBalance(bobAddress).available shouldBe bobDccBalance.available
+      sender.dccBalance(sponsorAddress).available shouldBe sponsorDccBalance.available - FeeValidation.FeeUnit * largeFee / largeFee
       sender.assetsBalance(aliceAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L) shouldBe aliceAssetBalance - 10 * token - largeFee
       sender.assetsBalance(bobAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L) shouldBe bobAssetBalance + 10 * token
       sender.assetsBalance(sponsorAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L) shouldBe sponsorAssetBalance + largeFee

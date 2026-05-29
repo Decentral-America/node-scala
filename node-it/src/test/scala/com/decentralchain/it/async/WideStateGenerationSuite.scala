@@ -21,7 +21,7 @@ class WideStateGenerationSuite extends BaseFreeSpec with WaitForHeight2 with Tra
         |  request-timeout = 60s
         |}
         |
-        |waves {
+        |dcc {
         |  network.traffic-logger {
         |    ignore-tx-messages = [1, 2, 23, 25]
         |    ignore-rx-messages = [1, 2, 25]

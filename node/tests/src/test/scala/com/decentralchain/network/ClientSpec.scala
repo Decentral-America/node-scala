@@ -15,7 +15,7 @@ import scala.util.Random
 class ClientSpec extends FreeSpec {
 
   private val clientHandshake = new Handshake(
-    applicationName = "wavesI",
+    applicationName = "dccI",
     applicationVersion = Version.VersionTuple,
     nodeName = "test",
     nodeNonce = Random.nextInt(),

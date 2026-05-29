@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -39,7 +39,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
   private val invokerAddr = invoker.toAddress
 
   private val ethInvoker     = invoker.toEthKeyPair
-  private val ethInvokerAddr = ethInvoker.toWavesAddress
+  private val ethInvokerAddr = ethInvoker.toDccAddress
 
   private val aliceRegularAssetTx       = TxHelpers.issue(issuer = alice, amount = Long.MaxValue - 1)
   private val aliceRegularAssetId       = aliceRegularAssetTx.id()
@@ -50,7 +50,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
     dApp = aliceAddr,
     invoker = invoker,
     func = Some("foo"),
-    fee = 3.waves
+    fee = 3.dcc
   )
   private val ethAliceInvokeTx = EthTxGenerator.generateEthInvoke(
     keyPair = ethInvoker,
@@ -58,7 +58,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
     funcName = "foo",
     args = Seq.empty,
     payments = Seq.empty,
-    fee = 3.waves
+    fee = 3.dcc
   )
 
   private val bobAssetTx   = TxHelpers.issue(issuer = bob)
@@ -66,7 +66,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
   private val bobLeasingTx = TxHelpers.lease(sender = bob, recipient = aliceAddr)
   private val bobLeasingId = bobLeasingTx.id()
 
-  private val defaultInitWavesBalances = Map(
+  private val defaultInitDccBalances = Map(
     aliceAddr      -> ENOUGH_AMT,
     bobAddr        -> ENOUGH_AMT,
     invokerAddr    -> ENOUGH_AMT,
@@ -162,7 +162,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
             )
           },
           invokeTx = TxHelpers
-            .invoke(dApp = aliceAddr, invoker = invoker, func = Some("foo"), fee = 3.waves, payments = Seq(Payment(1, bobSmartAssetTx.asset))),
+            .invoke(dApp = aliceAddr, invoker = invoker, func = Some("foo"), fee = 3.dcc, payments = Seq(Payment(1, bobSmartAssetTx.asset))),
           ethInvokeTx = Some(EthTxGenerator.generateEthInvoke(ethInvoker, aliceAddr, "foo", Seq.empty, Seq(Payment(1, bobSmartAssetTx.asset)))),
           knownTxs = Seq(
             bobSmartAssetTx,
@@ -392,8 +392,8 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
               dApp = aliceAddr,
               invoker = alice,
               func = Some("foo"),
-              fee = 3.waves,
-              payments = Seq(InvokeScriptTransaction.Payment(1, Waves))
+              fee = 3.dcc,
+              payments = Seq(InvokeScriptTransaction.Payment(1, Dcc))
             ),
           ethInvokeTx = None
         ),
@@ -415,16 +415,16 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
           }
         ),
         Case(
-          "NODE-556 If an invoke leads to a Waves overflow with a ScriptTransfer (initial balances)",
-          "Waves balance sum overflow",
+          "NODE-556 If an invoke leads to a Dcc overflow with a ScriptTransfer (initial balances)",
+          "Dcc balance sum overflow",
           { targetComplexity =>
-            // 1 for strict, 1 for Address, 1 for list, 1 for ScriptTransfer, 10 for wavesBalance,
+            // 1 for strict, 1 for Address, 1 for list, 1 for ScriptTransfer, 10 for dccBalance,
             //   1 for Address(alice) and 1 for "-"
             val baseComplexity = 1 + 1 + 1 + 1 + 10 + 1 + 1
             mkFooScript(
               s""" strict complexInt = ${mkIntExprWithComplexity(targetComplexity - baseComplexity)}
                  | let to = Address(base58'$bobAddr')
-                 | [ScriptTransfer(to, wavesBalance(Address(base58'$aliceAddr')).available - ${aliceInvokeTx.fee}, unit)]
+                 | [ScriptTransfer(to, dccBalance(Address(base58'$aliceAddr')).available - ${aliceInvokeTx.fee}, unit)]
                  | """.stripMargin
             )
           },
@@ -436,16 +436,16 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
           )
         ),
         Case(
-          "NODE-556 If an invoke leads to a Waves overflow with a ScriptTransfer (multiple transfers)",
-          "negative waves balance",
+          "NODE-556 If an invoke leads to a Dcc overflow with a ScriptTransfer (multiple transfers)",
+          "negative dcc balance",
           { targetComplexity =>
-            // 1 for strict, 1 for Address, 1 for ScriptTransfer, 10 for wavesBalance, 1 for Address(alice), 1 for "-",
+            // 1 for strict, 1 for Address, 1 for ScriptTransfer, 10 for dccBalance, 1 for Address(alice), 1 for "-",
             // 2 for list
             val baseComplexity = 1 + 1 + 1 + 10 + 1 + 1 + 2
             mkFooScript(
               s""" strict complexInt = ${mkIntExprWithComplexity(targetComplexity - baseComplexity)}
                  | let to = Address(base58'$bobAddr')
-                 | let transfer = ScriptTransfer(to, wavesBalance(Address(base58'$aliceAddr')).available - ${aliceInvokeTx.fee}, unit)
+                 | let transfer = ScriptTransfer(to, dccBalance(Address(base58'$aliceAddr')).available - ${aliceInvokeTx.fee}, unit)
                  | [transfer, transfer]
                  | """.stripMargin
             )
@@ -520,7 +520,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
         Case(
           "NODE-570 If an invoke tries to overflow the amount of assets through Reissue",
           "Asset total value overflow",
-          mkScriptWithOneAction(s"Reissue(base58'$aliceRegularAssetId', ${Long.MaxValue - defaultInitWavesBalances(aliceAddr) + 1}, true)"),
+          mkScriptWithOneAction(s"Reissue(base58'$aliceRegularAssetId', ${Long.MaxValue - defaultInitDccBalances(aliceAddr) + 1}, true)"),
           knownTxs = Seq(aliceRegularAssetTx)
         ),
         Case(
@@ -606,7 +606,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
         )
       } ++ Seq(
         ("negative", -1, "Negative lease amount = -1"),
-        ("zero", 0, "NonPositiveAmount(0,waves)")
+        ("zero", 0, "NonPositiveAmount(0,dcc)")
       ).map { case (tpe, leaseAmount, rejectError) =>
         Case(
           s"NODE-584 If an invoke leases $tpe amount",
@@ -646,12 +646,12 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
           "NODE-590 If an invoke leases the nonexistent funds",
           "Cannot lease more than own",
           { targetComplexity =>
-            // 1 for strict, 1 for Address(bob), 10 for wavesBalance, 1 for Address(alice), 2 for list, 1+1 for Lease
+            // 1 for strict, 1 for Address(bob), 10 for dccBalance, 1 for Address(alice), 2 for list, 1+1 for Lease
             val baseComplexity = 1 + 1 + 10 + 1 + 2 + 1 + 1
             mkFooScript(
               s""" strict complexInt = ${mkIntExprWithComplexity(targetComplexity - baseComplexity)}
                  | let to = Address(base58'$bobAddr')
-                 | let available = wavesBalance(Address(base58'$aliceAddr')).available
+                 | let available = dccBalance(Address(base58'$aliceAddr')).available
                  | [Lease(to, available, 1), Lease(to, available, 2)]
                  | """.stripMargin
             )
@@ -723,7 +723,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
         )
       } ++ Seq(
         Case.withInnerPayment(
-          "NODE-606 If an inner invoke contains a negative Waves payment",
+          "NODE-606 If an inner invoke contains a negative Dcc payment",
           "with attached DCC amount = -1",
           "AttachedPayment(unit, -1)"
         ),
@@ -765,7 +765,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
         ),
         Case(
           "NODE-620 If a negative balance happens during the invoke",
-          "negative waves balance",
+          "negative dcc balance",
           { targetComplexity =>
             // 1+1 for strict, 75 for invoke, 1 for Address, 1 for list, 500 for bob.foo() body
             val baseComplexity = 1 + 1 + 75 + 1 + 1 + 500
@@ -779,7 +779,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
           knownTxs = Seq(
             TxHelpers.setScript(
               bob, {
-                // 1 for strict, 1 for Address(alice), 1 for list, 1 for ScriptTransfer, 10 for wavesBalance,
+                // 1 for strict, 1 for Address(alice), 1 for list, 1 for ScriptTransfer, 10 for dccBalance,
                 //   1 for Address(bob) and 1 for "+"
                 val baseComplexity = 1 + 1 + 1 + 10 + 1 + 1
                 mkScript(
@@ -787,7 +787,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
                      | func bar(n: Int) = {
                      |   strict complexInt = ${mkIntExprWithComplexity(500 - baseComplexity)}
                      |   let to = Address(base58'$aliceAddr')
-                     |   [ScriptTransfer(to, wavesBalance(Address(base58'$bobAddr')).available + 1, unit)]
+                     |   [ScriptTransfer(to, dccBalance(Address(base58'$bobAddr')).available + 1, unit)]
                      | }
                      | """.stripMargin
                 )(V5)
@@ -875,7 +875,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
                 DomainPresets.RideV6,
                 testCase.initBalances.map(Function.tupled(AddrWithBalance.apply)).toSeq
               ) { d =>
-                val setScriptTx = TxHelpers.setScript(alice, testCase.mkDApp(complexity)(v), 1.waves)
+                val setScriptTx = TxHelpers.setScript(alice, testCase.mkDApp(complexity)(v), 1.dcc)
                 d.appendBlock((testCase.knownTxs :+ setScriptTx)*)
                 f(d)
               }
@@ -914,7 +914,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
       invokeTx: InvokeScriptTransaction = aliceInvokeTx,
       ethInvokeTx: Option[EthereumTransaction] = Some(ethAliceInvokeTx),
       knownTxs: Seq[Transaction] = Seq.empty,
-      initBalances: Map[Address, Long] = defaultInitWavesBalances,
+      initBalances: Map[Address, Long] = defaultInitDccBalances,
       supportedVersions: Seq[StdLibVersion] = inV4V6
   )
 

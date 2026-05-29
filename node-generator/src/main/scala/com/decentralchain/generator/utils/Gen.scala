@@ -8,7 +8,7 @@ import com.decentralchain.generator.utils.Implicits.*
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
@@ -121,7 +121,7 @@ object Gen {
       .zip(feeGen)
       .zipWithIndex
       .map { case (((src, dst), fee), i) =>
-        TransferTransaction.selfSigned(2.toByte, src, dst, Waves, fee, Waves, fee, ByteStr.empty, now + i)
+        TransferTransaction.selfSigned(2.toByte, src, dst, Dcc, fee, Dcc, fee, ByteStr.empty, now + i)
       }
       .collect { case Right(x) => x }
   }
@@ -135,7 +135,7 @@ object Gen {
       .map { case ((sender, count), i) =>
         val transfers = List.tabulate(count)(_ => ParsedTransfer(recipientGen.next(), TxNonNegativeAmount.unsafeFrom(amountGen.next())))
         val fee       = 100000 + count * 50000
-        MassTransferTransaction.selfSigned(1.toByte, sender, Waves, transfers, fee, now + i, ByteStr.empty)
+        MassTransferTransaction.selfSigned(1.toByte, sender, Dcc, transfers, fee, now + i, ByteStr.empty)
       }
       .collect { case Right(tx) => tx }
   }

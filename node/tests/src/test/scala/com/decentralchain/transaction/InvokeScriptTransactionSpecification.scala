@@ -16,7 +16,7 @@ import io.decentralchain.protobuf.transaction.*
 import io.decentralchain.protobuf.{Amount, transaction}
 import com.decentralchain.serialization.Deser
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.TxValidationError.NonPositiveAmount
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
@@ -66,12 +66,12 @@ class InvokeScriptTransactionSpecification extends PropSpec {
     val proof = crypto.sign(
       caller.privateKey,
       PBTransactions
-        .vanilla(PBSignedTransaction(PBSignedTransaction.Transaction.WavesTransaction(unsigned)), unsafe = false)
+        .vanilla(PBSignedTransaction(PBSignedTransaction.Transaction.DccTransaction(unsigned)), unsafe = false)
         .explicitGet()
         .asInstanceOf[ProvenTransaction]
         .bodyBytes()
     )
-    val signed       = PBSignedTransaction(PBSignedTransaction.Transaction.WavesTransaction(unsigned), Seq(ByteString.copyFrom(proof.arr)))
+    val signed       = PBSignedTransaction(PBSignedTransaction.Transaction.DccTransaction(unsigned), Seq(ByteString.copyFrom(proof.arr)))
     val convTx       = PBTransactions.vanilla(signed, unsafe = false).explicitGet()
     val unsafeConvTx = PBTransactions.vanillaUnsafe(signed)
     val modTx        = tx.copy(sender = caller.publicKey, proofs = Proofs(List(proof)))
@@ -158,7 +158,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       ),
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58(publicKey).get))),
       100000,
-      Waves,
+      Dcc,
       1526910778245L
     )
 
@@ -193,7 +193,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       None,
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58(publicKey).get))),
       100000,
-      Waves,
+      Dcc,
       1526910778245L
     )
 
@@ -215,7 +215,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
           List(Terms.CONST_BYTESTR(ByteStr.decodeBase64("YWxpY2U=").get).explicitGet())
         )
       ),
-      payment = Some(Seq(Payment(1, Waves))),
+      payment = Some(Seq(Payment(1, Dcc))),
       dApp = KeyPair("test7".getBytes("UTF-8")).toAddress('D').toString,
       timestamp = 11,
       proofs =
@@ -246,7 +246,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
         ),
         Seq(),
         1,
-        Waves,
+        Dcc,
         1,
         Proofs.empty,
         AddressScheme.current.chainId
@@ -268,7 +268,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       ),
       Seq(),
       1,
-      Waves,
+      Dcc,
       1,
       Proofs.empty,
       AddressScheme.current.chainId
@@ -289,7 +289,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       ),
       Seq(),
       1,
-      Waves,
+      Dcc,
       1,
       Proofs.empty,
       AddressScheme.current.chainId
@@ -306,7 +306,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       Some(Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List(Terms.CONST_STRING(largeString).explicitGet()))),
       Seq(),
       1,
-      Waves,
+      Dcc,
       1,
       Proofs.empty,
       AddressScheme.current.chainId
@@ -326,13 +326,13 @@ class InvokeScriptTransactionSpecification extends PropSpec {
           List(Terms.CONST_BYTESTR(ByteStr.decodeBase64("YWxpY2U=").get).explicitGet())
         )
       ),
-      payment = Some(Seq(Payment(0, Waves))),
+      payment = Some(Seq(Payment(0, Dcc))),
       dApp = KeyPair("test9".getBytes("UTF-8")).toAddress('D').toString,
       timestamp = 11,
       proofs =
         Proofs(List("CC1jQ4qkuVfMvB2Kpg2Go6QKXJxUFC8UUswUxBsxwisrR8N5s3Yc8zA6dhjTwfWKfdouSTAnRXCxTXb3T6pJq3T").map(s => ByteStr.decodeBase58(s).get))
     )
-    req.toTx shouldBe Left(NonPositiveAmount(0, "Waves"))
+    req.toTx shouldBe Left(NonPositiveAmount(0, "Dcc"))
   }
 
   property("can't have negative amount") {
@@ -348,13 +348,13 @@ class InvokeScriptTransactionSpecification extends PropSpec {
           List(Terms.CONST_BYTESTR(ByteStr.decodeBase64("YWxpY2U=").get).explicitGet())
         )
       ),
-      payment = Some(Seq(Payment(-1L, Waves))),
+      payment = Some(Seq(Payment(-1L, Dcc))),
       dApp = KeyPair("test10".getBytes("UTF-8")).toAddress('D').toString,
       timestamp = 11,
       proofs =
         Proofs(List("CC1jQ4qkuVfMvB2Kpg2Go6QKXJxUFC8UUswUxBsxwisrR8N5s3Yc8zA6dhjTwfWKfdouSTAnRXCxTXb3T6pJq3T").map(s => ByteStr.decodeBase58(s).get))
     )
-    req.toTx shouldBe Left(NonPositiveAmount(-1, "Waves"))
+    req.toTx shouldBe Left(NonPositiveAmount(-1, "Dcc"))
   }
 
   private def createInvoke(func: Option[String] = Some("test")): InvokeScriptTransaction =
@@ -363,6 +363,6 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       dApp = TxHelpers.secondAddress,
       func = func,
       args = Seq(CONST_LONG(1), CONST_STRING("test_str").explicitGet(), CONST_BYTESTR(ByteStr(Base64.tryDecode("YWxpY2U=").get)).explicitGet()),
-      payments = Seq(Payment(1, Waves), Payment(2, IssuedAsset(ByteStr.decodeBase58(publicKey).get)))
+      payments = Seq(Payment(1, Dcc), Payment(2, IssuedAsset(ByteStr.decodeBase58(publicKey).get)))
     )
 }
