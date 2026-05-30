@@ -72,8 +72,6 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
   private val rdb = RDB.open(settings.dbSettings)
 
-  private lazy val upnp = new UPnP(settings.networkSettings.uPnPSettings) // don't initialize unless enabled
-
   private val wallet: Wallet = Wallet(settings.walletSettings)
 
   private val peerDatabase = new PeerDatabaseImpl(settings.networkSettings)
@@ -502,10 +500,6 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       log.info(s"REST API was bound on ${settings.restAPISettings.bindAddress}:${settings.restAPISettings.port}")
     }
 
-    for (addr <- settings.networkSettings.derivedDeclaredAddress if settings.networkSettings.uPnPSettings.enable) {
-      upnp.addPort(addr.getPort)
-    }
-
     // on unexpected shutdown
     sys.addShutdownHook {
       timer.stop()
@@ -522,8 +516,6 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       log.info("Closing REST API")
       if (settings.restAPISettings.enable)
         Try(Await.ready(serverBinding.unbind(), 2.minutes)).failed.map(e => log.error("Failed to unbind REST API port", e))
-      for (addr <- settings.networkSettings.derivedDeclaredAddress if settings.networkSettings.uPnPSettings.enable) upnp.deletePort(addr.getPort)
-
       log.debug("Closing peer database")
       peerDatabase.close()
 

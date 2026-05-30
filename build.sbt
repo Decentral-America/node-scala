@@ -18,18 +18,23 @@ ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
 
 ThisBuild / pomIncludeRepository := { _ => false }
 ThisBuild / publishMavenStyle    := true
-ThisBuild / publishTo := {
-  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
-  if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
-  else localStaging.value
-}
+ThisBuild / organization         := "io.decentralchain"
+ThisBuild / homepage             := Some(url("https://github.com/Decentral-America/DCC"))
+ThisBuild / licenses             := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
+ThisBuild / developers := List(
+  Developer("decentral-america", "Decentral America", "dev@decentralchain.io", url("https://github.com/Decentral-America"))
+)
+ThisBuild / scmInfo := Some(
+  ScmInfo(url("https://github.com/Decentral-America/DCC"), "scm:git:git@github.com:Decentral-America/DCC.git")
+)
+ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeCentralHost
+ThisBuild / publishTo := sonatypePublishToBundle.value
 
 lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
     .withoutSuffixFor(JVMPlatform)
     .crossType(CrossType.Full)
     .settings(
-      assembly / test := {},
       libraryDependencies ++= Dependencies.lang.value ++ Dependencies.test,
       inConfig(Compile)(
         Seq(
@@ -208,6 +213,9 @@ inScope(Global)(
     testOptions += Tests.Argument("-oIDOF", "-u", "target/test-reports"),
     testOptions += Tests.Setup(_ => sys.props("sbt-testing") = "true"),
     network := Network.default(),
+    // REMOVE after DCC-269 Phase 3: once all io.decentralchain artifacts are
+    // published to Maven Central, this resolver and the CI mvn install chain
+    // become unnecessary.
     resolvers ++= Resolver.sonatypeCentralSnapshots +: Seq(Resolver.mavenLocal),
     Compile / packageDoc / publishArtifact := false,
     concurrentRestrictions                 := Seq(Tags.limit(Tags.Test, math.min(EvaluateTask.SystemProcessors, 8))),
@@ -221,7 +229,7 @@ inScope(Global)(
 )
 
 commands += Command.command("packageAll"){ state =>
-  "node / assembly" :: "ride-runner / assembly" :: "buildDebPackages" :: "buildTarballsForDocker" :: state
+  "buildTarballsForDocker" :: "buildDebPackages" :: state
 }
 
 lazy val buildTarballsForDocker = taskKey[Unit]("Package node and grpc-server tarballs and copy them to docker/target")
@@ -262,7 +270,6 @@ checkPRRaw := Def
         ScopeFilter(inProjects(`lang-tests`, `repl-jvm`, `lang-tests-js`, `grpc-server`, `node-tests`, `ride-runner`), inConfigurations(Test))
       ),
       fullOptJS.all(ScopeFilter(inProjects(`lang-js`, `repl-js`), inConfigurations(Compile))),
-      assembly.all(ScopeFilter(inProjects(node, `lang-jvm`))),
       buildTarballsForDocker
     )
   )
@@ -292,10 +299,10 @@ commands += Command.command("buildDebPackages") { state =>
     state
 }
 
-lazy val buildPlatformIndependentArtifacts = taskKey[Unit]("Build fat JARs for node and ride-runner and TGZ for grpc-server")
+lazy val buildPlatformIndependentArtifacts = taskKey[Unit]("Build tarballs for node, ride-runner, and grpc-server")
 buildPlatformIndependentArtifacts := {
-  (node / assembly).value
-  (`ride-runner` / assembly).value
+  (node / Universal / packageZipTarball).value
+  (`ride-runner` / Universal / packageZipTarball).value
   (`grpc-server` / Universal / packageZipTarball).value
 }
 
