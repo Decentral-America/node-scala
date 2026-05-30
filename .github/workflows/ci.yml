@@ -92,6 +92,22 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
+      - name: Install Rust stable (for groth16 JNI native lib)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6  # v2.7.8
+        with:
+          workspaces: _dcc-monorepo/packages/jvm/groth16
+      - name: Build groth16_jni native library (linux/amd64)
+        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Stage groth16 native lib into Maven resources
+        run: |
+          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
