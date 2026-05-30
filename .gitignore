@@ -43,3 +43,7 @@ native
 
 lang/js/dist
 repl/js/dist
+
+# nektos/act (local GitHub Actions)
+.secrets
+.artifacts/

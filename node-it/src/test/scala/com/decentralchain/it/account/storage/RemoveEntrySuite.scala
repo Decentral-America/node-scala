@@ -56,7 +56,7 @@ class RemoveEntrySuite extends BaseFreeSpec {
 
       invokeScript(keyPair, s"write${data.ct}", data.k, data.v.toString)
 
-      nodes.waitForHeightArise() // NOTE: Height wait needed for state consistency (NODE-2099 Waves-era ticket)
+      nodes.waitForHeightArise() // NOTE: Height wait needed for state consistency (NODE-2099 upstream ticket)
 
       val address = keyPair.toAddress.toString
       miner.getData(address) should have size 1

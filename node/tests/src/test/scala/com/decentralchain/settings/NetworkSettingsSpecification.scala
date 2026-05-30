@@ -28,11 +28,6 @@ class NetworkSettingsSpecification extends FlatSpec {
                                                         |  peers-broadcast-interval: 2m
                                                         |  black-list-threshold: 50
                                                         |  unrequested-packets-threshold: 100
-                                                        |  upnp {
-                                                        |    enable: yes
-                                                        |    gateway-timeout: 10s
-                                                        |    discover-timeout: 10s
-                                                        |  }
                                                         |  traffic-logger {
                                                         |    ignore-tx-messages = [28]
                                                         |    ignore-rx-messages = [23]
@@ -54,9 +49,6 @@ class NetworkSettingsSpecification extends FlatSpec {
     networkSettings.connectionTimeout should be(30.seconds)
     networkSettings.maxUnverifiedPeers should be(0)
     networkSettings.peersBroadcastInterval should be(2.minutes)
-    networkSettings.uPnPSettings.enable should be(true)
-    networkSettings.uPnPSettings.gatewayTimeout should be(10.seconds)
-    networkSettings.uPnPSettings.discoverTimeout should be(10.seconds)
     networkSettings.trafficLogger.ignoreTxMessages should be(Set(28))
     networkSettings.trafficLogger.ignoreRxMessages should be(Set(23))
   }

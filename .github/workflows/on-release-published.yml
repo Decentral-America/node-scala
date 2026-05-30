@@ -65,7 +65,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - run: sbt --batch 'buildRIDERunnerForDocker'
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
       - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
@@ -110,14 +110,14 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-          gpg-private-key: ${{ secrets.OSSRH_GPG_KEY }}
-          gpg-passphrase: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
-      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Publish release jars
         env:
-          SONATYPE_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          PGP_PASSPHRASE: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           sbt --batch ";publishSigned;sonaRelease"
 

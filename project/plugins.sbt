@@ -1,15 +1,9 @@
-resolvers ++= Seq(
-  Resolver.typesafeRepo("releases"),
-  Resolver.sbtPluginRepo("releases")
-)
-
 // Should go before Scala.js
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.8")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "1.0.0-alpha.4"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "1.0.0-alpha.5"
 
 Seq(
-  "com.eed3si9n"       % "sbt-assembly"             % "2.3.1",
   "com.github.sbt"     % "sbt-git"                  % "2.1.0",
   "com.github.sbt"     % "sbt-native-packager"      % "1.11.7",
   "com.github.sbt"     % "sbt-pgp"                  % "2.3.1",
@@ -18,6 +12,9 @@ Seq(
   "org.scala-js"       % "sbt-scalajs"              % "1.21.0",
   "org.scalameta"      % "sbt-scalafmt"             % "2.6.1",
   "org.scoverage"      % "sbt-scoverage"            % "2.4.4",
+  "ch.epfl.scala"      % "sbt-scalafix"             % "0.14.6",
+  "com.github.cb372"   % "sbt-explicit-dependencies" % "0.3.1",
+  "org.xerial.sbt"     % "sbt-sonatype"             % "3.12.2",
   "pl.project13.scala" % "sbt-jmh"                  % "0.4.8"
 ).map(addSbtPlugin)
 

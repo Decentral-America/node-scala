@@ -136,7 +136,46 @@ object Tasks {
         category = path.getName(path.getNameCount - 1).toString.split('.').head
       } yield (funcs, category)
 
-      buildCategorizedFuncsStr(funcs.toSeq, version)
+      // Split into separate private lazy vals to avoid JVM 64KB method limit.
+      // Scoverage instrumentation inflates bytecode ~5x per lazy val init method.
+      val allFuncs = funcs.toSeq
+      val chunkSize = 10
+      if (allFuncs.size <= chunkSize) {
+        buildCategorizedFuncsStr(allFuncs, version)
+      } else {
+        allFuncs.grouped(chunkSize).zipWithIndex.map { case (chunk, _) =>
+          buildCategorizedFuncsStr(chunk, version)
+        }.mkString(" ++ ")
+      }
+    }
+
+    /** Produces multiple private lazy val definitions for a single RIDE version,
+      * each containing at most `chunkSize` function entries. Returns a tuple:
+      * (definitions: String, reference expression: String).
+      */
+    def readFuncsSplit(version: Int): (String, String) = {
+      val funcs = for {
+        path <- Files.list(Paths.get(s"$baseLangDir/doc/v$version/funcs")).iterator.asScala
+        json = JsonValue.readHjson(Files.newBufferedReader(path)).asObject().toString
+        funcs <- mapper.readValue[Map[String, List[FuncSourceData]]](json).head._2
+        category = path.getName(path.getNameCount - 1).toString.split('.').head
+      } yield (funcs, category)
+
+      val allFuncs = funcs.toSeq
+      val chunkSize = 10
+      val chunks = allFuncs.grouped(chunkSize).toSeq
+
+      if (chunks.size <= 1) {
+        val expr = buildCategorizedFuncsStr(allFuncs, version)
+        (s"  lazy val funcsV$version = $expr", s"funcsV$version")
+      } else {
+        val defs = chunks.zipWithIndex.map { case (chunk, idx) =>
+          s"  private lazy val funcsV${version}_$idx = ${buildCategorizedFuncsStr(chunk, version)}"
+        }.mkString("\n")
+        val refs = chunks.indices.map(idx => s"funcsV${version}_$idx").mkString(" ++ ")
+        val mainDef = s"$defs\n  lazy val funcsV$version = $refs"
+        (mainDef, s"funcsV$version")
+      }
     }
 
     def readVars(version: Int): String = {
@@ -159,11 +198,15 @@ object Tasks {
         .max
 
     val (v1V2Vars, v1V2Funcs) = readV1V2Data()
-    val fromV3FuncDefs        = (3 to currentRideVersion).map(v => s"lazy val funcsV$v = ${readFuncs(v)}").mkString("\n")
-    val fromV3VarDefs         = (3 to currentRideVersion).map(v => s"lazy val varsV$v = ${readVars(v)}").mkString("\n")
+    val funcSplits            = (3 to currentRideVersion).map(v => readFuncsSplit(v))
+    val fromV3FuncDefs        = funcSplits.map(_._1).mkString("\n")
+    val fromV3VarDefs         = (3 to currentRideVersion).map(v => s"  lazy val varsV$v = ${readVars(v)}").mkString("\n")
     val fromV3Vars            = (3 to currentRideVersion).map(v => s"varsV$v").mkString(" ++ ")
-    val fromV3Funcs           = (3 to currentRideVersion).map(v => s"funcsV$v").mkString(" ++ ")
-    val types                 = (1 to currentRideVersion).map(v => readTypeData(v.toString)).mkString(" ++ ")
+    val fromV3Funcs           = funcSplits.map(_._2).mkString(" ++ ")
+
+    // Split typeData into per-version private lazy vals to avoid 64KB method limit
+    val typeDataDefs = (1 to currentRideVersion).map(v => s"  private lazy val typeDataV$v = ${readTypeData(v.toString)}").mkString("\n")
+    val typeDataRef  = (1 to currentRideVersion).map(v => s"typeDataV$v").mkString(" ++ ")
 
     val sourceStr =
       s"""
@@ -174,8 +217,9 @@ object Tasks {
          |
          |   $fromV3FuncDefs
          |   $fromV3VarDefs
+         |   $typeDataDefs
          |
-         |   lazy val typeData = $types
+         |   lazy val typeData = $typeDataRef
          |   lazy val varData  = $v1V2Vars ++ $fromV3Vars
          |   lazy val funcData = $v1V2Funcs ++ ($fromV3Funcs).view.mapValues(v => (regex.replaceAllIn(v._1, _.group(1)), v._2, v._4))
          | }

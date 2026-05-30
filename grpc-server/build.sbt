@@ -21,6 +21,9 @@ inConfig(Compile)(
   )
 )
 
+// Matcher depends on this artifact via % Provided — must be publishable.
+publish / skip := false
+
 enablePlugins(RunApplicationSettings, ExtensionPackaging)
 Universal / maintainer := "com.decentralchain"
 Debian / debianControlFile := {
