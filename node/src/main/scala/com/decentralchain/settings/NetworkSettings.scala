@@ -8,8 +8,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 import pureconfig.*
 
-case class UPnPSettings(enable: Boolean, gatewayTimeout: FiniteDuration, discoverTimeout: FiniteDuration) derives ConfigReader
-
 case class NetworkSettings(
     file: Option[File],
     bindAddress: Option[String],
@@ -33,7 +31,6 @@ case class NetworkSettings(
     handshakeTimeout: FiniteDuration,
     suspensionResidenceTime: FiniteDuration,
     receivedTxsCacheTimeout: FiniteDuration,
-    upnp: UPnPSettings,
     trafficLogger: TrafficLogger.Settings
 ) derives ConfigReader {
 
@@ -56,8 +53,6 @@ case class NetworkSettings(
   } yield new InetSocketAddress(addr, p)
 
   val maxConnectionsPerHost: Int = maxSingleHostConnections
-
-  val uPnPSettings: UPnPSettings = upnp
 }
 
 object NetworkSettings {

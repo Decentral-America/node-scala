@@ -6,7 +6,7 @@ import scalapb.compiler.Version.scalapbVersion
 object Dependencies {
   private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.14.Final"
 
-  val gProtoVersion = "4.34.2"
+  val gProtoVersion = "4.35.0"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
   val overrides = Def.setting(
     Seq(
@@ -59,7 +59,7 @@ object Dependencies {
 
   val playJson = "org.playframework" %% "play-json" % "3.0.6"
 
-  val scalaTest   = "org.scalatest" %% "scalatest" % "3.2.19" % Test
+  val scalaTest   = "org.scalatest" %% "scalatest" % "3.2.20" % Test
   val scalaJsTest = Def.setting("com.lihaoyi" %%% "utest" % "0.9.5" % Test)
 
   private def sttp3Module(module: String) = "com.softwaremill.sttp.client3" %% module % "3.11.0"
@@ -106,18 +106,19 @@ object Dependencies {
 
   lazy val it = scalaTest +: Seq(
     logback,
-    "com.github.jnr" % "jnr-unixsocket" % "0.38.24", // To support Apple ARM
-    "com.spotify"    % "docker-client"  % "8.16.0",
+    "com.github.jnr"       % "jnr-unixsocket"                    % "0.38.24", // To support Apple ARM
+    "com.github.docker-java" % "docker-java-core"                 % "3.7.1",
+    "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
     jacksonModule("dataformat", "dataformat-properties", "2.21.3"),
     asyncHttpClient
   ).map(_ % Test)
 
   lazy val test = scalaTest +: Seq(
     logback,
-    "org.scalatestplus" %% "scalacheck-1-16" % "3.2.14.0",
+    "org.scalatestplus" %% "scalacheck-1-19" % "3.2.20.0",
     "org.scalacheck"    %% "scalacheck"      % "1.19.0",
     "org.mockito"        % "mockito-core"    % "5.23.0",
-    "org.scalamock"     %% "scalamock"       % "6.2.0"
+    "org.scalamock"     %% "scalamock"       % "7.5.5"
   ).map(_ % Test)
 
   lazy val logDeps = Seq(
@@ -125,8 +126,8 @@ object Dependencies {
     pekkoModule("slf4j") % Runtime
   )
 
-  // Check https://github.com/facebook/rocksdb/issues/13893 before bumping
-  private val rocksdb = "org.rocksdb" % "rocksdbjni" % "10.2.1"
+  // NOTE: rocksdbjni fat JAR issue (#13893) resolved in 10.5.1+; upgraded to match matcher
+  private val rocksdb = "org.rocksdb" % "rocksdbjni" % "10.10.1.1"
 
   val scalaLogging: ModuleID = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6"
   lazy val node = Def.setting(
@@ -147,7 +148,6 @@ object Dependencies {
       pekkoModule("actor"),
       pekkoModule("stream"),
       pekkoHttp,
-      "org.bitlet" % "weupnp" % "0.1.4",
       monixModule("reactive").value,
       nettyHandler,
       scalaLogging,

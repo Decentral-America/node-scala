@@ -28,7 +28,6 @@ javaAgents ++= {
 
 homepage := Some(url("https://decentralchain.io/"))
 
-
 inConfig(Compile)(
   Seq(
     PB.targets += scalapb.gen(flatPackage = true) -> sourceManaged.value,
@@ -38,16 +37,6 @@ inConfig(Compile)(
     },
     PB.deleteTargetDirectory := false
   )
-)
-
-inTask(assembly)(
-  Seq(
-    name := "decentralchain",
-    fullClasspath := {
-      val optional = (Optional / update).value.select(configurationFilter("optional")).toSet
-      (Runtime / fullClasspath).value.filterNot(item => optional.contains(item.data))
-    }
-  ) ++ CommonSettings.assemblySettings
 )
 
 // Adds "$lib_dir/*" to app_classpath in the executable file, this is needed for extensions

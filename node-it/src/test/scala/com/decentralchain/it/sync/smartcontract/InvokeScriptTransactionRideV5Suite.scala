@@ -95,7 +95,7 @@ class InvokeScriptTransactionRideV5Suite extends BaseTransactionSuite with Cance
     sender.setScript(dAppV5PK, Some(scriptV5.compiled), setScriptFee, waitForTx = true)
   }
 
-  // NOTE: Disabled pending SC-695 (Waves-era ticket)
+  // NOTE: Disabled pending SC-695 (upstream ticket)
   ignore("Can't invoke Ride V5 DApp via InvokeScriptTx V1") {
     assertApiError(
       sender.invokeScript(callerPK, dAppV5, version = TxVersion.V1)
@@ -112,7 +112,7 @@ class InvokeScriptTransactionRideV5Suite extends BaseTransactionSuite with Cance
     }
   }
 
-  // NOTE: Disabled pending SC-695 (Waves-era ticket)
+  // NOTE: Disabled pending SC-695 (upstream ticket)
   ignore("Can't invoke Ride V5 DApp via InvokeScriptTx V2") {
     assertApiError(
       sender.invokeScript(callerPK, dAppV5, version = TxVersion.V2)
@@ -129,13 +129,13 @@ class InvokeScriptTransactionRideV5Suite extends BaseTransactionSuite with Cance
     }
   }
 
-  // NOTE: Disabled pending SC-695 (Waves-era ticket)
+  // NOTE: Disabled pending SC-695 (upstream ticket)
   ignore("Can invoke Ride V5 DApp via InvokeScriptTx V3") {
     sender.invokeScript(callerPK, dAppV5, version = TxVersion.V3, waitForTx = true)
     sender.invokeScript(callerPK, alias(dAppAliasV5), version = TxVersion.V3, waitForTx = true)
   }
 
-  // NOTE: Disabled pending SC-695 (Waves-era ticket)
+  // NOTE: Disabled pending SC-695 (upstream ticket)
   ignore("Can't invoke Ride V3 DApp via InvokeScriptTx V3 if extraFeePerStep is specified") {
     // NOTE: extraFeePerStep calculation to be added in future
     assertApiError(
@@ -153,7 +153,7 @@ class InvokeScriptTransactionRideV5Suite extends BaseTransactionSuite with Cance
     }
   }
 
-  // NOTE: Disabled pending SC-695 (Waves-era ticket)
+  // NOTE: Disabled pending SC-695 (upstream ticket)
   ignore("Can't invoke Ride V4 DApp via InvokeScriptTx V3 if extraFeePerStep is specified") {
     // NOTE: extraFeePerStep calculation to be added in future
     assertApiError(

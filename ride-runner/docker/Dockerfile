@@ -1,17 +1,16 @@
 # To build: docker build -t ghcr.io/decentral-america/ride-runner:latest -f docker/Dockerfile docker
 # JDK for now, because I need jmap, e.g. ijmap -dump:format=b,file=heap-dump.hprof
-# renovate: image=eclipse-temurin tag=17-jdk-jammy
-FROM eclipse-temurin:17-jdk-jammy@sha256:beabb759e6f9653c843958d1d1f5cecb881dfb85aa6081e2bef099ab1260344e
+# renovate: image=eclipse-temurin tag=25-jdk-noble
+FROM eclipse-temurin:25-jdk-noble@sha256:29d2d8af5d12f9ee7aec18f4fb2cd8bc8e6501b748ac62631acd31c867cfa262
 
 SHELL ["/bin/bash", "-c"]
 
 # async profiler
 # /usr/local/async-profiler/build/libasyncProfiler.so
-# NOTE: v4.4 is latest (async-profiler/async-profiler) — upgrade when convenient.
-ENV ASYNCPROF_VERSION=2.9
-ENV ASYNCPROF_SHA256=b9a094bc480f233f72141b7793c098800054438e0e6cfe5b7f2fe13ef4ad11f0
+ENV ASYNCPROF_VERSION=4.4
+ENV ASYNCPROF_SHA256=1233f26fc95753e75ce32733bbcaf8f0bedc2c098b0e798af87935b08a63b24e
 RUN export ASYNCPROF_ARCHIVE="async-profiler-${ASYNCPROF_VERSION}-linux-x64.tar.gz"; \
-    wget --quiet "https://github.com/jvm-profiling-tools/async-profiler/releases/download/v${ASYNCPROF_VERSION}/${ASYNCPROF_ARCHIVE}" -P /tmp/ && \
+    wget --quiet "https://github.com/async-profiler/async-profiler/releases/download/v${ASYNCPROF_VERSION}/${ASYNCPROF_ARCHIVE}" -P /tmp/ && \
       echo "${ASYNCPROF_SHA256}  /tmp/${ASYNCPROF_ARCHIVE}" | sha256sum -c - && \
       mkdir /usr/local/async-profiler; tar -xvzf /tmp/$ASYNCPROF_ARCHIVE --strip-components=1 -C /usr/local/async-profiler || exit 1;
 

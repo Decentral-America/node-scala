@@ -26,7 +26,7 @@ jobs:
           cache: 'sbt'
           # GPG keys are NOT needed for scalafmt/compile checks.
           # Only publish-snapshots (below) requires GPG.
-      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Check PR
         run: sbt -J-Xlog:gc*=debug:file=./gc.log --batch checkPR
       - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
@@ -45,13 +45,8 @@ jobs:
               - 'project/*'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: dcc-fat-jar
-          path: node/target/dcc-all-*.jar
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: steps.filter.outputs.lang == 'true'
-        with:
-          name: file-compiler
-          path: lang/jvm/target/file-compiler.jar
+          name: dcc-node-tarball
+          path: docker/target/dcc.tgz
       - name: Save debug data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: always()
@@ -78,8 +73,12 @@ jobs:
           java-version: '25'
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
-          name: dcc-fat-jar
-      - run: java -cp '*' com.decentralchain.utils.UtilApp smoke
+          name: dcc-node-tarball
+      - name: Smoke test
+        run: |
+          mkdir -p dcc-node
+          tar xzf dcc.tgz -C dcc-node --strip-components=1
+          java -cp 'dcc-node/lib/*' com.decentralchain.utils.UtilApp smoke
 
   run-integration-tests:
     name: Run integration tests
@@ -93,7 +92,7 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Run Integration Tests
         run: sbt --batch "node-it/docker;node-it/test"
         env:
@@ -131,11 +130,11 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-          gpg-private-key: ${{ secrets.OSSRH_GPG_KEY }}
-          gpg-passphrase: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
-      - uses: sbt/setup-sbt@4ed7b7ec4bfa2074fe48554c09e341267397247c  # v1.2.0
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - run: sbt -Dproject.version=$(awk -F '[".]' '{print $3"."$4"."$5+1}' version.sbt)-$PR_NUMBER-SNAPSHOT --batch publish
         env:
-          SONATYPE_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          PGP_PASSPHRASE: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

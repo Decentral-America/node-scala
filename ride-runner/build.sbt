@@ -83,11 +83,3 @@ inConfig(Debian)(
     maintainerScripts := maintainerScriptsFromDirectory(packageSource.value / "debian", Seq("postinst", "postrm", "prerm"))
   )
 )
-
-// Fat JAR settings
-inTask(assembly)(
-  CommonSettings.assemblySettings ++
-    Seq(
-      mainClass := Some("com.decentralchain.ride.runner.entrypoints.DCCRideRunnerWithPreparedStateApp")
-    )
-)
