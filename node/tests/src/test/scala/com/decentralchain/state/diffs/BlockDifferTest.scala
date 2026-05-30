@@ -243,7 +243,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
 
           val snapshotApplyResult = BlockDiffer.fromBlock(refBlockchain, Some(refBlock), block, Some(blockSnapshot), MiningConstraint.Unlimited, hs)
 
-          // NOTE: Retained for NODE-2610 compatibility (Waves-era ticket)
+          // NOTE: Retained for NODE-2610 compatibility (upstream ticket)
           def clearAffected(r: Result): Result = {
             r.copy(
               snapshot = r.snapshot.copy(transactions = r.snapshot.transactions.map { case (id, info) => id -> info.copy(affected = Set.empty) }),

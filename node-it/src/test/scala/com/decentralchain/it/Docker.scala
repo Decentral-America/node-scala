@@ -2,10 +2,11 @@ package com.decentralchain.it
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper
+import com.github.dockerjava.api.command.WaitContainerResultCallback
+import com.github.dockerjava.api.model.*
+import com.github.dockerjava.core.{DefaultDockerClientConfig, DockerClientImpl}
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.google.common.primitives.Ints.*
-import com.spotify.docker.client.messages.*
-import com.spotify.docker.client.messages.EndpointConfig.EndpointIpamConfig
-import com.spotify.docker.client.{DefaultDockerClient, DockerClient}
 import com.typesafe.config.ConfigFactory.*
 import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions}
 import com.decentralchain.account.AddressScheme
@@ -62,12 +63,16 @@ class Docker(
       .setRequestTimeout(JDuration.ofSeconds(10))
   )
 
-  private val client = DefaultDockerClient.fromEnv().build()
+  private val dockerConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()
+  private val dockerHttpClient = new ApacheDockerHttpClient.Builder()
+    .dockerHost(dockerConfig.getDockerHost)
+    .build()
+  private val client = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
 
   private val nodes     = ConcurrentHashMap.newKeySet[DockerNode]()
   private val isStopped = new AtomicBoolean(false)
 
-  dumpContainers(client.listContainers())
+  dumpContainers(client.listContainersCmd().exec())
   sys.addShutdownHook {
     log.debug("Shutdown hook")
     close()
@@ -97,7 +102,7 @@ class Docker(
 
     def network: Option[Network] =
       try {
-        val networks = client.listNetworks(DockerClient.ListNetworksParam.byNetworkName(networkName))
+        val networks = client.listNetworksCmd().withNameFilter(networkName).exec()
         if (networks.isEmpty) None else Some(networks.get(0))
       } catch {
         case NonFatal(_) => network
@@ -108,31 +113,29 @@ class Docker(
         network match {
           case Some(n) =>
             val ipam = n
-              .ipam()
-              .config()
+              .getIpam
+              .getConfig
               .asScala
-              .map(n => s"subnet=${n.subnet()}, ip range=${n.ipRange()}")
+              .map(n => s"subnet=${n.getSubnet}, ip range=${n.getIpRange}")
               .mkString(", ")
-            log.info(s"Network ${n.name()} (id: ${n.id()}) is created for $tag, ipam: $ipam")
+            log.info(s"Network ${n.getName} (id: ${n.getId}) is created for $tag, ipam: $ipam")
             n
           case None =>
             log.debug(s"Creating network $networkName for $tag")
             // Specify the network manually because of race conditions: https://github.com/moby/moby/issues/20648
-            val r = client.createNetwork(
-              NetworkConfig
-                .builder()
-                .name(networkName)
-                .ipam(
-                  Ipam
-                    .builder()
-                    .driver("default")
-                    .config(singletonList(IpamConfig.create(networkPrefix, networkPrefix, ipForNode(0xe))))
-                    .build()
-                )
-                .checkDuplicate(true)
-                .build()
-            )
-            Option(r.warnings()).foreach(log.warn(_))
+            val ipamConfig = new Network.Ipam.Config()
+              .withSubnet(networkPrefix)
+              .withIpRange(networkPrefix)
+              .withGateway(ipForNode(0xe))
+            val ipam = new Network.Ipam()
+              .withDriver("default")
+              .withConfig(ipamConfig)
+            val r = client.createNetworkCmd()
+              .withName(networkName)
+              .withIpam(ipam)
+              .withCheckDuplicate(true)
+              .exec()
+            Option(r.getWarnings).foreach(_.foreach(log.warn(_)))
             attempt(rest - 1)
         }
       } catch {
@@ -167,7 +170,7 @@ class Docker(
       .filterNot(_.name == nodeName)
       .filterNot { node =>
         // Exclude disconnected
-        client.inspectContainer(node.containerId).networkSettings().networks().isEmpty
+        client.inspectContainerCmd(node.containerId).exec().getNetworkSettings.getNetworks.isEmpty
       }
       .map(_.networkAddress)
       .toSeq
@@ -249,47 +252,60 @@ class Docker(
 
       val debuggerPort = if (enableDebugger) Docker.freeDebuggerPort() else 0
 
-      val hostConfig = HostConfig
-        .builder()
-        .portBindings(if (enableDebugger) Map(s"$internalDebuggerPort" -> Seq(PortBinding.of("0.0.0.0", debuggerPort)).asJava).asJava else null)
-        .publishAllPorts(true)
-        .build()
+      val portBindings = new Ports()
+      if (enableDebugger) {
+        portBindings.bind(ExposedPort.tcp(internalDebuggerPort), Ports.Binding.bindPort(debuggerPort))
+      }
+
+      val hostConfig = HostConfig.newHostConfig()
+        .withPortBindings(portBindings)
+        .withPublishAllPorts(true)
+        .withNetworkMode(dccNetwork.getName)
 
       val envs = Seq(
         s"JAVA_OPTS=$configOverrides",
         profilerConfigEnv
       ).filter(_.nonEmpty)
 
-      val exposedPorts = new java.util.HashSet[String]()
-      exposedPorts.add(s"$internalDebuggerPort")
+      val exposedPorts = new java.util.ArrayList[ExposedPort]()
+      exposedPorts.add(ExposedPort.tcp(internalDebuggerPort))
       if (Try(nodeConfig.getStringList("dcc.extensions").contains("com.decentralchain.events.BlockchainUpdates")).getOrElse(false)) {
-        exposedPorts.add("6881")
+        exposedPorts.add(ExposedPort.tcp(6881))
       }
-
-      val containerConfig = ContainerConfig
-        .builder()
-        .image(imageName)
-        .exposedPorts(exposedPorts)
-        .networkingConfig(ContainerConfig.NetworkingConfig.create(Map(dccNetwork.name() -> endpointConfigFor(nodeName)).asJava))
-        .hostConfig(hostConfig)
-        .env(envs*)
-        .build()
 
       val containerId = {
         val jenkinsJobIdFromEnv = sys.env.get("JENKINS_JOB_ID").fold("")(s => s"-$s")
-        val containerName       = s"${dccNetwork.name()}-$nodeName$jenkinsJobIdFromEnv"
+        val containerName       = s"${dccNetwork.getName}-$nodeName$jenkinsJobIdFromEnv"
         dumpContainers(
-          client.listContainers(DockerClient.ListContainersParam.filter("name", containerName)),
+          client.listContainersCmd().withNameFilter(java.util.List.of(containerName)).exec(),
           "Containers with same name"
         )
 
         log.debug(s"Creating container $containerName at $ip with options: $javaOptions")
-        val r = client.createContainer(containerConfig, containerName)
-        Option(r.warnings().asScala).toSeq.flatten.foreach(log.warn(_))
-        r.id()
+        val r = client.createContainerCmd(imageName)
+          .withName(containerName)
+          .withExposedPorts(exposedPorts)
+          .withHostConfig(hostConfig)
+          .withEnv(envs.asJava)
+          .exec()
+        Option(r.getWarnings).toSeq.flatMap(_.toSeq).foreach(log.warn(_))
+        r.getId
       }
 
-      client.startContainer(containerId)
+      // Reassign to specific IP (docker-java doesn't support NetworkingConfig on create)
+      client.disconnectFromNetworkCmd()
+        .withContainerId(containerId)
+        .withNetworkId(dccNetwork.getId)
+        .exec()
+      client.connectToNetworkCmd()
+        .withContainerId(containerId)
+        .withNetworkId(dccNetwork.getId)
+        .withContainerNetwork(new ContainerNetwork()
+          .withIpv4Address(ip)
+          .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip)))
+        .exec()
+
+      client.startContainerCmd(containerId).exec()
 
       val node = new DockerNode(actualConfig, containerId, getNodeInfo(containerId, DCCSettings.fromRootConfig(actualConfig)))
       nodes.add(node)
@@ -298,7 +314,7 @@ class Docker(
     } catch {
       case NonFatal(e) =>
         log.error("Can't start a container", e)
-        dumpContainers(client.listContainers())
+        dumpContainers(client.listContainersCmd().exec())
         throw e
     }
 
@@ -308,17 +324,17 @@ class Docker(
     val networkPort = settings.networkSettings.derivedBindAddress.get.getPort
 
     val containerInfo  = inspectContainer(containerId)
-    val dccIpAddress = containerInfo.networkSettings().networks().get(dccNetwork.name()).ipAddress()
+    val dccIpAddress = containerInfo.getNetworkSettings.getNetworks.get(dccNetwork.getName).getIpAddress
 
-    NodeInfo(restApiPort, networkPort, dccIpAddress, containerInfo.networkSettings().ports())
+    NodeInfo(restApiPort, networkPort, dccIpAddress, containerInfo.getNetworkSettings.getPorts)
   }
 
   @tailrec
-  private def inspectContainer(containerId: String): ContainerInfo = {
-    val containerInfo = client.inspectContainer(containerId)
-    if (containerInfo.networkSettings().networks().asScala.contains(dccNetwork.name())) containerInfo
+  private def inspectContainer(containerId: String): com.github.dockerjava.api.command.InspectContainerResponse = {
+    val containerInfo = client.inspectContainerCmd(containerId).exec()
+    if (containerInfo.getNetworkSettings.getNetworks.asScala.contains(dccNetwork.getName)) containerInfo
     else {
-      log.debug(s"Container $containerId has not connected to the network ${dccNetwork.name()} yet, retry")
+      log.debug(s"Container $containerId has not connected to the network ${dccNetwork.getName} yet, retry")
       Thread.sleep(1000)
       inspectContainer(containerId)
     }
@@ -327,26 +343,26 @@ class Docker(
   def stopContainer(node: DockerNode): String = {
     val id = node.containerId
     log.info(s"Stopping container with id: $id")
-    client.stopContainer(node.containerId, 10)
+    client.stopContainerCmd(node.containerId).withTimeout(10).exec()
     saveProfile(node)
     saveLog(node)
-    val containerInfo = client.inspectContainer(node.containerId)
+    val containerInfo = client.inspectContainerCmd(node.containerId).exec()
     log.debug(s"""Container information for ${node.name}:
-                 |Exit code: ${containerInfo.state().exitCode()}
-                 |Error: ${containerInfo.state().error()}
-                 |Status: ${containerInfo.state().status()}
-                 |OOM killed: ${containerInfo.state().oomKilled()}""".stripMargin)
+                 |Exit code: ${containerInfo.getState.getExitCodeLong}
+                 |Error: ${containerInfo.getState.getError}
+                 |Status: ${containerInfo.getState.getStatus}
+                 |OOM killed: ${containerInfo.getState.getOOMKilled}""".stripMargin)
     id
   }
 
   def printThreadDump(node: DockerNode): Unit = {
     val id = node.containerId
     log.info(s"Saving thread dump for: $id")
-    client.killContainer(id, DockerClient.Signal.SIGQUIT)
+    client.killContainerCmd(id).withSignal("SIGQUIT").exec()
   }
 
   def startContainer(id: String): Unit = {
-    client.startContainer(id)
+    client.startContainerCmd(id).exec()
     nodes.asScala.find(_.containerId == id).foreach { node =>
       node.nodeInfo = getNodeInfo(node.containerId, node.settings)
       Await.result(node.waitForStartup(), 3.minutes)
@@ -356,10 +372,10 @@ class Docker(
   def killAndStartContainer(node: DockerNode): DockerNode = {
     val id = node.containerId
     log.info(s"Killing container with id: $id")
-    client.killContainer(id, DockerClient.Signal.SIGINT)
+    client.killContainerCmd(id).withSignal("SIGINT").exec()
     saveProfile(node)
     saveLog(node)
-    client.startContainer(id)
+    client.startContainerCmd(id).exec()
     node.nodeInfo = getNodeInfo(node.containerId, node.settings)
     Await.result(
       node.waitForStartup().flatMap(_ => connectToAll(node)),
@@ -380,8 +396,8 @@ class Docker(
       val scriptCmd: Array[String] =
         Array("sh", "-c", s"sed -i 's|$${JAVA_OPTS}|$${JAVA_OPTS} $renderedConfig|' $shPath && cat $shPath")
 
-      val execScriptCmd = client.execCreate(node.containerId, scriptCmd).id()
-      client.execStart(execScriptCmd)
+      val execId = client.execCreateCmd(node.containerId).withCmd(scriptCmd*).exec().getId
+      client.execStartCmd(execId).exec(new com.github.dockerjava.api.async.ResultCallback.Adapter[Frame]()).awaitCompletion()
     }
 
     restartContainer(node)
@@ -393,8 +409,9 @@ class Docker(
 
       nodes.asScala.foreach { node =>
         try {
-          client.stopContainer(node.containerId, if (enableProfiling) 60 else 0)
-          log.debug(s"Container ${node.name} stopped with exit status: ${client.waitContainer(node.containerId).statusCode()}")
+          client.stopContainerCmd(node.containerId).withTimeout(if (enableProfiling) 60 else 0).exec()
+          val exitCode = client.waitContainerCmd(node.containerId).start().awaitStatusCode()
+          log.debug(s"Container ${node.name} stopped with exit status: $exitCode")
         } catch {
           case NonFatal(e) =>
             log.warn(s"Can't stop the container of ${node.name}", e)
@@ -404,32 +421,33 @@ class Docker(
           saveLog(node)
           saveProfile(node)
 
-          val containerInfo = client.inspectContainer(node.containerId)
+          val containerInfo = client.inspectContainerCmd(node.containerId).exec()
           log.debug(s"""Container information for ${node.name}:
-                       |Exit code: ${containerInfo.state().exitCode()}
-                       |Error: ${containerInfo.state().error()}
-                       |Status: ${containerInfo.state().status()}
-                       |OOM killed: ${containerInfo.state().oomKilled()}""".stripMargin)
+                       |Exit code: ${containerInfo.getState.getExitCodeLong}
+                       |Error: ${containerInfo.getState.getError}
+                       |Status: ${containerInfo.getState.getStatus}
+                       |OOM killed: ${containerInfo.getState.getOOMKilled}""".stripMargin)
         } catch {
           case NonFatal(e) => log.warn(s"Can't save node logs: ${node.name}", e)
         }
 
         try {
-          client.removeContainer(node.containerId)
+          client.removeContainerCmd(node.containerId).exec()
         } catch {
           case NonFatal(e) => log.warn(s"Can't remove the container of ${node.name}", e)
         }
       }
 
       try {
-        client.removeNetwork(dccNetwork.id)
+        client.removeNetworkCmd(dccNetwork.getId).exec()
       } catch {
         case NonFatal(e) =>
           // https://github.com/moby/moby/issues/17217
-          log.warn(s"Can not remove network ${dccNetwork.name()}", e)
+          log.warn(s"Can not remove network ${dccNetwork.getName}", e)
       }
 
       http.close()
+      dockerHttpClient.close()
       client.close()
     }
   }
@@ -442,13 +460,20 @@ class Docker(
     val fileStream = new FileOutputStream(logFile, false)
     try {
       client
-        .logs(
-          containerId,
-          DockerClient.LogsParam.follow(),
-          DockerClient.LogsParam.stdout(),
-          DockerClient.LogsParam.stderr()
-        )
-        .attach(fileStream, fileStream)
+        .logContainerCmd(containerId)
+        .withFollowStream(true)
+        .withStdOut(true)
+        .withStdErr(true)
+        .exec(new com.github.dockerjava.api.async.ResultCallback.Adapter[Frame]() {
+          override def onNext(frame: Frame): Unit = {
+            try {
+              fileStream.write(frame.getPayload)
+            } catch {
+              case _: IOException => // ignore write errors during log collection
+            }
+          }
+        })
+        .awaitCompletion()
     } finally {
       fileStream.close()
     }
@@ -456,7 +481,7 @@ class Docker(
 
   private def saveProfile(node: DockerNode): Unit = if (enableProfiling) {
     try {
-      val profilerDirStream = client.archiveContainer(node.containerId, ContainerRoot.resolve("profiler").toString)
+      val profilerDirStream = client.copyArchiveFromContainerCmd(node.containerId, ContainerRoot.resolve("profiler").toString).exec()
 
       try {
         val archiveStream = new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.TAR, profilerDirStream)
@@ -481,8 +506,6 @@ class Docker(
       } catch {
         case e: Throwable => throw new IOException(s"Can't read a profiler directory stream of ${node.name}", e)
       } finally {
-        // Some kind of https://github.com/spotify/docker-client/issues/745
-        // But we have to close this stream, otherwise the thread will be blocked
         Try(profilerDirStream.close())
       }
     } catch {
@@ -494,22 +517,25 @@ class Docker(
 
   private def disconnectFromNetwork(containerId: String): Unit = {
     log.info(s"Trying to disconnect container $containerId from network ...")
-    client.disconnectFromNetwork(containerId, dccNetwork.id())
+    client.disconnectFromNetworkCmd()
+      .withContainerId(containerId)
+      .withNetworkId(dccNetwork.getId)
+      .exec()
   }
 
   def restartContainer(node: DockerNode): DockerNode = {
     val id            = node.containerId
     val containerInfo = inspectContainer(id)
-    val ports         = containerInfo.networkSettings().ports()
+    val ports         = containerInfo.getNetworkSettings.getPorts
     log.info(s"New ports: ${ports.toString}")
-    client.restartContainer(id, 10)
+    client.restartContainerCmd(id).withTimeout(10).exec()
 
     node.nodeInfo = Iterator
       .continually {
         Thread.sleep(1.second.toMillis)
         getNodeInfo(node.containerId, node.settings)
       }
-      .dropWhile(_.ports.isEmpty)
+      .dropWhile(_.ports.getBindings.isEmpty)
       .next()
 
     node.nodeInfo = getNodeInfo(node.containerId, node.settings)
@@ -527,28 +553,18 @@ class Docker(
 
   private def connectToNetwork(node: DockerNode): Unit = {
     log.info(s"Trying to connect node $node to network ...")
-    client.connectToNetwork(
-      dccNetwork.id(),
-      NetworkConnection
-        .builder()
-        .containerId(node.containerId)
-        .endpointConfig(endpointConfigFor(node.name))
-        .build()
-    )
+    val nodeNumber = node.name.replace("node", "").toInt
+    val ip = ipForNode(nodeNumber)
+    client.connectToNetworkCmd()
+      .withContainerId(node.containerId)
+      .withNetworkId(dccNetwork.getId)
+      .withContainerNetwork(new ContainerNetwork()
+        .withIpv4Address(ip)
+        .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip)))
+      .exec()
 
     node.nodeInfo = getNodeInfo(node.containerId, node.settings)
     log.debug(s"New ${node.name} settings: ${node.nodeInfo}")
-  }
-
-  private def endpointConfigFor(nodeName: String): EndpointConfig = {
-    val nodeNumber = nodeName.replace("node", "").toInt
-    val ip         = ipForNode(nodeNumber)
-
-    EndpointConfig
-      .builder()
-      .ipAddress(ip)
-      .ipamConfig(EndpointIpamConfig.builder().ipv4Address(ip).build())
-      .build()
   }
 
   private def dumpContainers(containers: java.util.List[Container], label: String = "Containers"): Unit = {
@@ -557,7 +573,7 @@ class Docker(
       else
         "\n" + containers.asScala
           .map { x =>
-            s"Container(${x.id()}, status: ${x.status()}, names: ${x.names().asScala.mkString(", ")})"
+            s"Container(${x.getId}, status: ${x.getStatus}, names: ${x.getNames.mkString(", ")})"
           }
           .mkString("\n")
 
@@ -642,12 +658,15 @@ object Docker {
       .map { case (k, v) => s"-D$k=$v" }
       .mkString(" ")
 
-  case class NodeInfo(restApiPort: Int, networkPort: Int, dccIpAddress: String, ports: JMap[String, JList[PortBinding]]) {
+  case class NodeInfo(restApiPort: Int, networkPort: Int, dccIpAddress: String, ports: Ports) {
     val nodeApiEndpoint: URL                       = URI.create(s"http://localhost:${externalPort(restApiPort)}").toURL
     val hostNetworkAddress: InetSocketAddress      = new InetSocketAddress("localhost", externalPort(networkPort))
     val containerNetworkAddress: InetSocketAddress = new InetSocketAddress(dccIpAddress, networkPort)
 
-    def externalPort(internalPort: Int): Int = ports.get(s"$internalPort/tcp").get(0).hostPort().toInt
+    def externalPort(internalPort: Int): Int = {
+      val bindings = ports.getBindings.get(ExposedPort.tcp(internalPort))
+      bindings(0).getHostPortSpec.toInt
+    }
   }
 
   class DockerNode(config: Config, val containerId: String, private[Docker] var nodeInfo: NodeInfo) extends Node(config) {
