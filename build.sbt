@@ -29,6 +29,12 @@ ThisBuild / scmInfo := Some(
 )
 ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeCentralHost
 ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / credentials ++= {
+  for {
+    username <- sys.env.get("SONATYPE_USERNAME")
+    password <- sys.env.get("SONATYPE_PASSWORD")
+  } yield Credentials("Sonatype Nexus Repository Manager", "central.sonatype.com", username, password)
+}.toSeq
 
 lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
