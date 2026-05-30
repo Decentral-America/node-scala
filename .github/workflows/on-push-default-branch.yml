@@ -51,6 +51,9 @@ jobs:
 
   publish-snapshot:
     name: Publish Snapshots to Sonatype
+    # Only run when Sonatype credentials are configured as repository secrets.
+    # Without these, sbt publish will fail with "Repository for publishing is not specified."
+    if: ${{ secrets.SONATYPE_USERNAME != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
