@@ -16,8 +16,6 @@ JAVA_OPTS="-javaagent:${RIDE_INSTALL_PATH}/kanela-agent/kanela-agent-1.0.18.jar
   -XX:+UseG1GC
   -XX:+ParallelRefProcEnabled
   -XX:+UseStringDeduplication
-  -XX:+UnlockDiagnosticVMOptions
-  -XX:GCLockerRetryAllocationCount=100
   -XX:MaxMetaspaceSize=152m
   -XX:ThreadStackSize=1024
   -Djdk.attach.allowAttachSelf=true
