@@ -28,11 +28,6 @@ def mkJavaOptions(forPackager: Boolean = false, extraOptions: Seq[String] = Seq.
       "-XX:+UseG1GC",
       "-XX:+ParallelRefProcEnabled",
       "-XX:+UseStringDeduplication",
-      // Required for GCLockerRetryAllocationCount, otherwise we get:
-      //   Error: VM option 'GCLockerRetryAllocationCount' is diagnostic and must be enabled via -XX:+UnlockDiagnosticVMOptions.
-      //   Error: The unlock option must precede 'GCLockerRetryAllocationCount'.
-      "-XX:+UnlockDiagnosticVMOptions",
-      "-XX:GCLockerRetryAllocationCount=100", // prevents false OOM during native calls
       "-Djdk.attach.allowAttachSelf=true",    // for ehcache/sizeoOf
       // JVM default charset for proper and deterministic getBytes behaviour
       "-Dfile.encoding=UTF-8"
