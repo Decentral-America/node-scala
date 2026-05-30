@@ -49,11 +49,20 @@ jobs:
           sbt "set ThisBuild / version := \"$LANG_VERSION\"" lang/publishM2
           (cd _dcc-monorepo/packages/jvm/java-sdk              && ./mvnw $MVN_OPTS install)
 
+  check-sonatype:
+    name: Check Sonatype Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        run: echo "configured=${{ secrets.SONATYPE_USERNAME != '' }}" >> "$GITHUB_OUTPUT"
+
   publish-snapshot:
     name: Publish Snapshots to Sonatype
-    # Only run when Sonatype credentials are configured as repository secrets.
-    # Without these, sbt publish will fail with "Repository for publishing is not specified."
-    if: ${{ secrets.SONATYPE_USERNAME != '' }}
+    needs: check-sonatype
+    if: needs.check-sonatype.outputs.configured == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
