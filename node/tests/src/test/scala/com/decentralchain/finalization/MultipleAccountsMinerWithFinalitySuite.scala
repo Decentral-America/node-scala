@@ -87,7 +87,7 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
         TxHelpers.transfer(
           minerAcc,
           otherNodeAcc2Addr,
-          amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+          amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
           fee = 1.dcc,
           timestamp = time.getTimestamp()
         )
@@ -173,7 +173,7 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
           TxHelpers.transfer(
             minerAcc,
             otherNodeAcc2Addr,
-            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
             fee = 1.dcc,
             timestamp = time.getTimestamp()
           )
@@ -274,7 +274,7 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
           TxHelpers.transfer(
             minerAcc,
             otherNodeAcc2Addr,
-            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            amount = d.blockchain.balance(minerAcc.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
             fee = 1.dcc,
             timestamp = time.getTimestamp()
           )
@@ -299,7 +299,7 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
           TxHelpers.transfer(
             otherNodeCommittedAcc1,
             otherNodeAcc2Addr,
-            amount = d.blockchain.balance(otherNodeCommittedAcc1.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            amount = d.blockchain.balance(otherNodeCommittedAcc1.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
             fee = 1.dcc,
             timestamp = time.getTimestamp()
           )

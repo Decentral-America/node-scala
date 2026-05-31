@@ -40,7 +40,7 @@ final case class CommitToGenerationTransaction(
 }
 
 object CommitToGenerationTransaction {
-  val DepositInWavelets = 100_00000000L
+  val DepositInDcclets = 100_00000000L
 
   implicit val validator: TxValidator[CommitToGenerationTransaction] = CommitToGenerationTxValidator
 

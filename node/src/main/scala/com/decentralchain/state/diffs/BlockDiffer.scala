@@ -330,7 +330,7 @@ object BlockDiffer {
           case None => Left(s"Invalid endorsement index in $endorsement, valid: [0; ${committed.size}]")
           case Some((addr, _)) =>
             val orig    = r.getOrElse(addr, Portfolio.empty)
-            val updated = orig.combine(Portfolio.dcc(-CommitToGenerationTransaction.DepositInWavelets))
+            val updated = orig.combine(Portfolio.dcc(-CommitToGenerationTransaction.DepositInDcclets))
             updated.map(r.updated(addr, _))
         }
     }

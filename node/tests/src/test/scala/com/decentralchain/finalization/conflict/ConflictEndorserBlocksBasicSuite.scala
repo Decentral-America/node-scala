@@ -10,7 +10,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{BalanceSnapshot, Blockchain, GeneratorIndex, Height, Portfolio}
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{FreeSpec, NumericExt}
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.TxHelpers
 import org.scalactic.source.Position
 import org.scalatest.Assertion
@@ -58,8 +58,8 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
 
     override def after2WithCommitmentsCheck              = _ shouldBe base(2)
     override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe base(3)
-    override def after4WithPunishmentCheck               = _ shouldBe (base(4) - DepositInWavelets)
-    override def after5WithNewPeriodCheck                = _ shouldBe (base(5) - DepositInWavelets)
+    override def after4WithPunishmentCheck               = _ shouldBe (base(4) - DepositInDcclets)
+    override def after5WithNewPeriodCheck                = _ shouldBe (base(5) - DepositInDcclets)
   }.run()
 
   "dcc portfolio" in new Scenario[Portfolio] {
@@ -67,12 +67,12 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
 
     val after1          = ENOUGH_AMT
     val after2          = after1 - TestValues.commitToGenerationFee
-    val portfolioAfter2 = Portfolio(balance = after2, generationDeposit = DepositInWavelets)
+    val portfolioAfter2 = Portfolio(balance = after2, generationDeposit = DepositInDcclets)
 
     override def after2WithCommitmentsCheck              = _ shouldBe portfolioAfter2
     override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe portfolioAfter2
-    override def after4WithPunishmentCheck               = _ shouldBe Portfolio(balance = after2 - DepositInWavelets)
-    override def after5WithNewPeriodCheck                = _ shouldBe Portfolio(balance = after2 - DepositInWavelets)
+    override def after4WithPunishmentCheck               = _ shouldBe Portfolio(balance = after2 - DepositInDcclets)
+    override def after5WithNewPeriodCheck                = _ shouldBe Portfolio(balance = after2 - DepositInDcclets)
   }.run()
 
   "balance at height" in new Scenario[(Int, Long)] {
@@ -83,8 +83,8 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
 
     override def after2WithCommitmentsCheck              = _ shouldBe (2, after2)
     override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe (2, after2)
-    override def after4WithPunishmentCheck               = _ shouldBe (4, after2 - DepositInWavelets)
-    override def after5WithNewPeriodCheck                = _ shouldBe (4, after2 - DepositInWavelets)
+    override def after4WithPunishmentCheck               = _ shouldBe (4, after2 - DepositInDcclets)
+    override def after5WithNewPeriodCheck                = _ shouldBe (4, after2 - DepositInDcclets)
   }.run()
 
   "generator balance from API" in new Scenario[Long] { // Collected before applying block
@@ -104,7 +104,7 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
     override def getData = d => d.blockchain.generatingBalance(conflictGeneratorAddr)
 
     val after1 = ENOUGH_AMT
-    val after2 = after1 - TestValues.commitToGenerationFee - DepositInWavelets
+    val after2 = after1 - TestValues.commitToGenerationFee - DepositInDcclets
 
     override def after2WithCommitmentsCheck              = _ shouldBe after2
     override def after3WithNewPeriodAndEndorsementsCheck = _ shouldBe after2
@@ -117,7 +117,7 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
 
     val after1 = ENOUGH_AMT
     val after2 = after1 - TestValues.commitToGenerationFee
-    val after4 = after2 - DepositInWavelets
+    val after4 = after2 - DepositInDcclets
 
     override def after2WithCommitmentsCheck = _ should contain theSameElementsInOrderAs Seq(
       bs(height = 2, regularBalance = after2, deposits = 1) // Sent CommitToGeneration

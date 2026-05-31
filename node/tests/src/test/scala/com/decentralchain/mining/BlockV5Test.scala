@@ -325,7 +325,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
 
   private def createTx(sender: KeyPair, recipient: AddressOrAlias): Transaction =
     TransferTransaction
-      .selfSigned(TxVersion.V1, sender, recipient, Dcc, 10 * Constants.UnitsInWave, Dcc, 100000, ByteStr.empty, ntpTime.getTimestamp())
+      .selfSigned(TxVersion.V1, sender, recipient, Dcc, 10 * Constants.UnitsInDcc, Dcc, 100000, ByteStr.empty, ntpTime.getTimestamp())
       .explicitGet()
 
   private val updaterScenario = for {
@@ -431,8 +431,8 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
           ref = TestBlock.randomSignature(),
           signer = TestBlock.defaultSigner,
           txs = Seq(
-            GenesisTransaction.create(miner1.toAddress, Constants.TotalDcc / 2 * Constants.UnitsInWave, ntpNow).explicitGet(),
-            GenesisTransaction.create(miner2.toAddress, Constants.TotalDcc / 2 * Constants.UnitsInWave, ntpNow).explicitGet()
+            GenesisTransaction.create(miner1.toAddress, Constants.TotalDcc / 2 * Constants.UnitsInDcc, ntpNow).explicitGet(),
+            GenesisTransaction.create(miner2.toAddress, Constants.TotalDcc / 2 * Constants.UnitsInDcc, ntpNow).explicitGet()
           ),
           version = Block.GenesisBlockVersion
         )

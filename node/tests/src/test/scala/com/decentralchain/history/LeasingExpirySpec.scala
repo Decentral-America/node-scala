@@ -39,7 +39,7 @@ class LeasingExpirySpec extends FreeSpec with WithDomain {
     lessor         <- accountGen
     aliasRecipient <- accountGen
     ts = ntpTime.getTimestamp()
-    maxFeeAmount <- Gen.choose(100000L, 1 * Constants.UnitsInWave)
+    maxFeeAmount <- Gen.choose(100000L, 1 * Constants.UnitsInDcc)
     transfer     <- transferGeneratorP(ntpTime.getTimestamp(), lessor, aliasRecipient.toAddress, maxFeeAmount)
     alias        <- aliasGen
     createAlias  <- createAliasGen(aliasRecipient, alias, transfer.amount.value, ntpTime.getTimestamp())
@@ -47,7 +47,7 @@ class LeasingExpirySpec extends FreeSpec with WithDomain {
       .create(
         ts,
         Seq(
-          GenesisTransaction.create(lessor.toAddress, Constants.TotalDcc * Constants.UnitsInWave, ntpTime.getTimestamp()).explicitGet(),
+          GenesisTransaction.create(lessor.toAddress, Constants.TotalDcc * Constants.UnitsInDcc, ntpTime.getTimestamp()).explicitGet(),
           transfer,
           createAlias
         )
@@ -58,7 +58,7 @@ class LeasingExpirySpec extends FreeSpec with WithDomain {
 
   private def lease(sender: KeyPair, recipient: AddressOrAlias): Gen[LeaseTransaction] =
     for {
-      amount <- Gen.choose(1 * Constants.UnitsInWave, 1000 * Constants.UnitsInWave)
+      amount <- Gen.choose(1 * Constants.UnitsInDcc, 1000 * Constants.UnitsInDcc)
       fee    <- smallFeeGen
       l      <- createLease(sender, amount, fee, ntpTime.getTimestamp(), recipient)
     } yield l
@@ -173,7 +173,7 @@ class LeasingExpirySpec extends FreeSpec with WithDomain {
   }
 
   "Leasing cancellation" - {
-    val amount     = 1000 * Constants.UnitsInWave
+    val amount     = 1000 * Constants.UnitsInDcc
     val halfAmount = amount / 2
 
     val manyLeases = for {
@@ -217,7 +217,7 @@ class LeasingExpirySpec extends FreeSpec with WithDomain {
   }
 
   "Miner" - {
-    val amount = 1000 * Constants.UnitsInWave
+    val amount = 1000 * Constants.UnitsInDcc
 
     val leaseInTheCancelBlock = for {
       (lessor, _, genesisBlock) <- genesis

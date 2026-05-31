@@ -276,7 +276,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
             TxHelpers.transfer(
               node1Acc,
               node2Acc.toAddress,
-              amount = d.blockchain.balance(node1Acc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+              amount = d.blockchain.balance(node1Acc.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
               fee = 1.dcc
             )
           ),
