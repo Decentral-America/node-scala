@@ -249,3 +249,9 @@ jobs:
           subject-name:   ghcr.io/decentral-america/node-scala-private
           subject-digest: ${{ steps.push-private.outputs.digest }}
           push-to-registry: true
+      - name: Make package public (for cross-repo access)
+        run: |
+          gh api --method PATCH /orgs/Decentral-America/packages/container/node-scala-private \
+            -f visibility=public || echo "::warning::Could not set package visibility to public"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
