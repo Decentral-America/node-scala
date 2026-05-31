@@ -25,6 +25,7 @@ target
 # local settings
 localsettings.json
 *local.conf
+!docker/private/local.conf
 dcc_logback.xml
 
 # Text files
