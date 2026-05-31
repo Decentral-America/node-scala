@@ -165,7 +165,7 @@ jobs:
           context: ./docker
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: baseImage=${{ steps.versions.outputs.base-image }}@${{ steps.versions.outputs.base-image-digest }}
+          build-args: baseImage=${{ steps.versions.outputs.base-image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
