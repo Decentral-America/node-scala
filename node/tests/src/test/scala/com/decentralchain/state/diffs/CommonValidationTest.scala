@@ -113,22 +113,22 @@ class CommonValidationTest extends PropSpec with WithState {
 
     val genesis = TxHelpers.genesis(richAcc.toAddress)
     val issue = if (smartToken) {
-      TxHelpers.issue(richAcc, Long.MaxValue, 2, script = Some(script), reissuable = false, fee = Constants.UnitsInWave)
+      TxHelpers.issue(richAcc, Long.MaxValue, 2, script = Some(script), reissuable = false, fee = Constants.UnitsInDcc)
     } else {
-      TxHelpers.issue(richAcc, Long.MaxValue, 2, script = None, reissuable = false, fee = Constants.UnitsInWave, version = TxVersion.V1)
+      TxHelpers.issue(richAcc, Long.MaxValue, 2, script = None, reissuable = false, fee = Constants.UnitsInDcc, version = TxVersion.V1)
     }
     val transferDcc =
-      TxHelpers.transfer(richAcc, recipientAcc.toAddress, 10 * Constants.UnitsInWave, fee = Constants.UnitsInWave, version = TxVersion.V1)
+      TxHelpers.transfer(richAcc, recipientAcc.toAddress, 10 * Constants.UnitsInDcc, fee = Constants.UnitsInDcc, version = TxVersion.V1)
     val transferAssetFee = if (smartToken) {
-      1 * Constants.UnitsInWave + ScriptExtraFee
+      1 * Constants.UnitsInDcc + ScriptExtraFee
     } else {
-      1 * Constants.UnitsInWave
+      1 * Constants.UnitsInDcc
     }
     val transferAsset = TxHelpers.transfer(richAcc, recipientAcc.toAddress, 100, issue.asset, fee = transferAssetFee, version = TxVersion.V1)
     val sponsorTxFee = if (smartToken) {
-      Constants.UnitsInWave + ScriptExtraFee
+      Constants.UnitsInDcc + ScriptExtraFee
     } else {
-      Constants.UnitsInWave
+      Constants.UnitsInDcc
     }
     val sponsor =
       if (sponsorship) {
@@ -138,7 +138,7 @@ class CommonValidationTest extends PropSpec with WithState {
       }
     val setScript =
       if (smartAccount) {
-        Seq(TxHelpers.setScript(recipientAcc, script, fee = Constants.UnitsInWave))
+        Seq(TxHelpers.setScript(recipientAcc, script, fee = Constants.UnitsInDcc))
       } else {
         Seq.empty
       }

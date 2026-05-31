@@ -24,12 +24,12 @@ import org.scalacheck.Gen
 
 class ProtoVersionTransactionsSpec extends FreeSpec {
 
-  val MinFee: Long            = (0.001 * Constants.UnitsInWave).toLong
+  val MinFee: Long            = (0.001 * Constants.UnitsInDcc).toLong
   val DataTxFee: Long         = 15000000
   val InvokeScriptTxFee: Long = 15000000
   val MassTransferTxFee: Long = 15000000
-  val SetScriptFee: Long      = (0.01 * Constants.UnitsInWave).toLong
-  val SetAssetScriptFee: Long = Constants.UnitsInWave
+  val SetScriptFee: Long      = (0.01 * Constants.UnitsInDcc).toLong
+  val SetAssetScriptFee: Long = Constants.UnitsInDcc
 
   val Now: Long = ntpNow
 

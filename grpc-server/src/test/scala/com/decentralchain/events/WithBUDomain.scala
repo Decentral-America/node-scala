@@ -56,7 +56,7 @@ trait WithBUDomain extends WithDomain { suite: Suite =>
   def withGenerateSubscription(
       request: SubscribeRequest = SubscribeRequest.of(1, Int.MaxValue),
       settings: DCCSettings,
-      balances: Seq[AddrWithBalance] = Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInWave))
+      balances: Seq[AddrWithBalance] = Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInDcc))
   )(generateBlocks: Domain => Unit)(f: Seq[PBBlockchainUpdated] => Unit): Unit = {
     withDomainAndRepo(settings) { (d, repo) =>
       d.appendBlock(balances.map(awb => TxHelpers.genesis(awb.address, awb.balance))*)
@@ -72,7 +72,7 @@ trait WithBUDomain extends WithDomain { suite: Suite =>
   def withGenerateGetBlockUpdate(
       height: Int = 1,
       settings: DCCSettings,
-      balances: Seq[AddrWithBalance] = Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInWave))
+      balances: Seq[AddrWithBalance] = Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInDcc))
   )(generateBlocks: Domain => Unit)(f: GetBlockUpdateResponse => Unit): Unit = {
     withDomainAndRepo(settings) { (d, repo) =>
       d.appendBlock(balances.map(awb => TxHelpers.genesis(awb.address, awb.balance))*)
@@ -85,7 +85,7 @@ trait WithBUDomain extends WithDomain { suite: Suite =>
   def withGenerateGetBlockUpdateRange(
       request: GetBlockUpdatesRangeRequest,
       settings: DCCSettings,
-      balances: Seq[AddrWithBalance] = Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInWave))
+      balances: Seq[AddrWithBalance] = Seq(AddrWithBalance(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInDcc))
   )(generateBlocks: Domain => Unit)(f: Seq[PBBlockchainUpdated] => Unit): Unit = {
     withDomainAndRepo(settings) { (d, repo) =>
       d.appendBlock(balances.map(awb => TxHelpers.genesis(awb.address, awb.balance))*)

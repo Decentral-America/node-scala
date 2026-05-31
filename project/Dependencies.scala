@@ -42,7 +42,7 @@ object Dependencies {
 
   private def jacksonModule(group: String, module: String, version: String = "2.21.3") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
-  private def web3jModule(module: String) = "org.web3j" % module % "5.0.2" // requires Java 21+; safe on JDK 25 (was 4.13.0)
+  private def web3jModule(module: String) = "org.web3j" % module % "5.0.3" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
@@ -187,7 +187,7 @@ object Dependencies {
   lazy val rideRunner = Def.setting(
     Seq(
       rocksdb,
-      "com.github.ben-manes.caffeine" % "caffeine"                 % "3.2.3",
+      "com.github.ben-manes.caffeine" % "caffeine"                 % "3.2.4",
       "net.logstash.logback"          % "logstash-logback-encoder" % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
       kamonModule("caffeine"),
       kamonModule("prometheus"),

@@ -16,6 +16,6 @@ object Implicits {
     }
   }
   final implicit class DoubleExt(val d: Double) extends AnyVal {
-    def dcc: Long = (BigDecimal(d) * Constants.UnitsInWave).toLong
+    def dcc: Long = (BigDecimal(d) * Constants.UnitsInDcc).toLong
   }
 }

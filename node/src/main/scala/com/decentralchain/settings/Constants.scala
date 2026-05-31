@@ -8,7 +8,7 @@ object Constants {
   val ApplicationName = "DCC"
   val AgentName       = s"DecentralChain v${Version.VersionString}"
 
-  val UnitsInWave = 100000000L
+  val UnitsInDcc = 100000000L
   val TotalDcc  = 100000000L
 
   lazy val TransactionNames: Map[Byte, String] =

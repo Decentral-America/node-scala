@@ -114,7 +114,7 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
         TestBlock.create(Seq(ci)),
         features
       ) {
-        val expectedFee = (0.005 + 0.004 + 0.004 * (ContractLimits.MaxAttachedPaymentAmount - 1)) * Constants.UnitsInWave
+        val expectedFee = (0.005 + 0.004 + 0.004 * (ContractLimits.MaxAttachedPaymentAmount - 1)) * Constants.UnitsInDcc
         _ should produceRejectOrFailedDiff(
           s"Fee in DCC for InvokeScriptTransaction (${ci.fee} in DCC) " +
             s"with ${ContractLimits.MaxAttachedPaymentAmount} total scripts invoked " +

@@ -42,7 +42,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         AddrWithBalance.enoughBalances(otherNodeAcc) ++ Seq(
           AddrWithBalance(
             thisNodeAcc.toAddress,
-            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInWavelets
+            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInDcclets
           )
         ),
         miner = Miner.forwardTo(miner)
@@ -96,7 +96,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         AddrWithBalance.enoughBalances(otherNodeAcc) ++ Seq(
           AddrWithBalance(
             thisNodeAcc.toAddress,
-            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInWavelets
+            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInDcclets
           )
         ),
         miner = Miner.forwardTo(miner)
@@ -195,7 +195,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
             TxHelpers.transfer(
               otherNodeAcc,
               thisNodeAcc.toAddress,
-              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
               fee = 1.dcc
             )
           ),
@@ -259,7 +259,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
             TxHelpers.transfer(
               otherNodeAcc,
               thisNodeAcc.toAddress,
-              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+              amount = d.blockchain.balance(thisNodeAcc.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
               fee = 1.dcc
             )
           )
@@ -288,7 +288,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         AddrWithBalance.enoughBalances(otherNodeAcc) ++ Seq(
           AddrWithBalance(
             thisNodeAcc.toAddress,
-            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInWavelets
+            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInDcclets
           )
         ),
         miner = Miner.forwardTo(miner)
@@ -348,7 +348,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         AddrWithBalance.enoughBalances(otherNodeAcc) ++ Seq(
           AddrWithBalance(
             thisNodeAcc.toAddress,
-            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInWavelets
+            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInDcclets
           )
         ),
         miner = Miner.forwardTo(miner)
@@ -402,7 +402,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
       AddrWithBalance(generator2.toAddress, 3000.dcc),
       AddrWithBalance(generator3.toAddress, 5000.dcc), // endorser
       AddrWithBalance(otherAcc1.toAddress, 2000.dcc)
-    ).map(x => x.copy(balance = x.balance + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee))
+    ).map(x => x.copy(balance = x.balance + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee))
 
     val minerScheduler    = TestScheduler()
     val appenderScheduler = TestScheduler()
