@@ -51,6 +51,15 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ inputs.ref }}
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-serialization
       - uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc  # v0.1.0
       - uses: proudust/gh-describe@80412be8ce0e77d8afba6b340e34790bc772aa45  # v2.2.0
         id: ghd
@@ -70,6 +79,29 @@ jobs:
           java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - name: Install Rust stable (for groth16 JNI native lib)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6  # v2.7.8
+        with:
+          workspaces: _dcc-monorepo/packages/jvm/groth16
+      - name: Build groth16_jni native library (linux/amd64)
+        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Stage groth16 native lib into Maven resources
+        run: |
+          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Build tarballs for docker
         run: sbt --batch -Dproject.version=${{ steps.versions.outputs.node-version }} buildTarballsForDocker
       - name: Extract image name and tags from workflow_call inputs
