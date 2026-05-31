@@ -37,7 +37,7 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
   )
 
   protected def bs(height: Int, regularBalance: Long, deposits: Int = 0): BalanceSnapshot =
-    BalanceSnapshot(Height(height), regularBalance, 0L, 0L, CommitToGenerationTransaction.DepositInWavelets * deposits)
+    BalanceSnapshot(Height(height), regularBalance, 0L, 0L, CommitToGenerationTransaction.DepositInDcclets * deposits)
 
   extension (self: FinalizationVoting) {
     def withConflict(

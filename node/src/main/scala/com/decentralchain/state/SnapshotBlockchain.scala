@@ -236,7 +236,7 @@ case class SnapshotBlockchain(
 
     inner.dccAmount(height) +
       BigInt(reward.getOrElse(0L)) -
-      parentConflictEndorsements.getOrElse(0) * CommitToGenerationTransaction.DepositInWavelets
+      parentConflictEndorsements.getOrElse(0) * CommitToGenerationTransaction.DepositInDcclets
   }
 
   override def hitSource(height: Int): Option[ByteStr] =

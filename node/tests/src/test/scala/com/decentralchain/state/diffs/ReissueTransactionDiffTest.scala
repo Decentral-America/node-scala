@@ -111,7 +111,7 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
     val block = TestBlock
       .create(
         ntpNow,
-        Seq(GenesisTransaction.create(issuer.toAddress, Constants.TotalDcc * Constants.UnitsInWave, ntpNow).explicitGet())
+        Seq(GenesisTransaction.create(issuer.toAddress, Constants.TotalDcc * Constants.UnitsInDcc, ntpNow).explicitGet())
       )
       .block
 
@@ -150,6 +150,6 @@ object ReissueTransactionDiffTest {
       )
     )
 
-  val BeforeActivationFee: Long = 1 * Constants.UnitsInWave
+  val BeforeActivationFee: Long = 1 * Constants.UnitsInDcc
   val AfterActivationFee: Long  = 100000
 }

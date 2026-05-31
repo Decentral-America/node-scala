@@ -69,7 +69,7 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
     val settings = DomainPresets.DeterministicFinality.blockchainSettings.functionalitySettings.copy(generationPeriodLength = 3)
 
     val notBlockedAmount = 100_000.dcc
-    val initBalance      = notBlockedAmount + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
+    val initBalance      = notBlockedAmount + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
 
     assertDiffEiTraced(
       Seq(TestBlock.create(Seq(TxHelpers.genesis(TxHelpers.defaultAddress, amount = initBalance)))),
@@ -85,7 +85,7 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
 
     val notBlockedAmount = 100_000.dcc
     val initBalance =
-      notBlockedAmount + CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee + TestValues.fee // for transfer
+      notBlockedAmount + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee + TestValues.fee // for transfer
 
     val transferAmount = notBlockedAmount + 1
     assertDiffEiTraced(

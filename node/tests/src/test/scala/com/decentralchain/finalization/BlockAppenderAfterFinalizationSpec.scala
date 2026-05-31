@@ -8,7 +8,7 @@ import com.decentralchain.history.Domain
 import com.decentralchain.state.*
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{FreeSpec, NumericExt, produce}
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 
 class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
@@ -80,7 +80,7 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
           val block3WithSpending = d.createBlock(
             version = Block.ProtoBlockVersion,
             txs = Seq(committedGenerator1, committedGenerator2).map { kp =>
-              TxHelpers.transfer(kp, notCommittedGeneratorAddr, amount = d.balance(kp.toAddress) - TestValues.fee - DepositInWavelets)
+              TxHelpers.transfer(kp, notCommittedGeneratorAddr, amount = d.balance(kp.toAddress) - TestValues.fee - DepositInDcclets)
             },
             generator = committedGenerator1,
             strictTime = true
@@ -102,7 +102,7 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
               TxHelpers.transfer(
                 committedGenerator1,
                 notCommittedGeneratorAddr,
-                amount = d.balance(committedGenerator1Addr) - TestValues.fee - DepositInWavelets
+                amount = d.balance(committedGenerator1Addr) - TestValues.fee - DepositInDcclets
               )
             ),
             generator = committedGenerator1,
@@ -197,7 +197,7 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
         TxHelpers.transfer(
           from = committedGenerator1,
           to = notCommittedGeneratorAddr,
-          amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+          amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
           fee = 1.dcc
         )
       )

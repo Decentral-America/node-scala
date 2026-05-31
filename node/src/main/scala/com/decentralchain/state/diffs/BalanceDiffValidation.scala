@@ -5,7 +5,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.state.{Blockchain, LeaseBalance, StateSnapshot}
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.TxValidationError.AccountBalanceError
 
 import scala.util.{Left, Right}
@@ -53,7 +53,7 @@ object BalanceDiffValidation {
         .flatMap {
           case ((address, Dcc), balance) =>
             val currentLeaseBalance = snapshot.leaseBalances.getOrElse(address, b.leaseBalance(address))
-            val depositedOnNext = DepositInWavelets *
+            val depositedOnNext = DepositInDcclets *
               snapshot.nextCommittedGenerators.find { case (pk, _) => pk.toAddress == address }.size
             checkDcc(address, balance, currentLeaseBalance, depositedOnNext).fold(error => List(error), _ => Nil)
           case _ =>

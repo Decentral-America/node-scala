@@ -289,7 +289,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
 
     val totalDccAmount = current.meta.fold(settings.genesisSettings.initialBalance)(_.totalDccAmount) +
       reward.getOrElse(0L) * this.blockRewardBoost(newHeight) -
-      conflictEndorsersInPrevBlock.getOrElse(0) * CommitToGenerationTransaction.DepositInWavelets
+      conflictEndorsersInPrevBlock.getOrElse(0) * CommitToGenerationTransaction.DepositInDcclets
 
     val newMeta = PBBlockMeta(
       Some(PBBlocks.protobuf(block.header)),

@@ -108,7 +108,7 @@ class BlockChallengeTest
       val challengingMiner     = d.wallet.generateNewAccount().get
       val challengingMinerAddr = challengingMiner.toAddress
 
-      val extraForDeposit = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
+      val extraForDeposit = CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
       d.appendBlock(
         TxHelpers.transfer(TxHelpers.defaultSigner, challengingMinerAddr, 1000.dcc + extraForDeposit),
         TxHelpers.transfer(TxHelpers.defaultSigner, challengedMiner.toAddress, 2000.dcc + extraForDeposit)
@@ -326,7 +326,7 @@ class BlockChallengeTest
       AddrWithBalance(challengingMiner.toAddress, ENOUGH_AMT),
       AddrWithBalance(
         challengedMiner.toAddress,
-        GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets + 1.dcc
+        GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInDcclets + 1.dcc
       )
     )
 
@@ -530,7 +530,7 @@ class BlockChallengeTest
       val challengingMiner    = d.wallet.generateNewAccount().get
       val challengedMinerAddr = challengedMiner.toAddress
 
-      val extraForDeposit = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
+      val extraForDeposit = CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
       d.appendBlock(
         TxHelpers.transfer(TxHelpers.defaultSigner, challengingMiner.toAddress, 2000.dcc + extraForDeposit),
         TxHelpers.transfer(TxHelpers.defaultSigner, challengedMinerAddr, 3000.dcc + extraForDeposit)

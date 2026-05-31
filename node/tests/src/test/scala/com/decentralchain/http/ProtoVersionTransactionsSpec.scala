@@ -35,12 +35,12 @@ class ProtoVersionTransactionsSpec
     with OptionValues
     with SharedSchedulerMixin {
 
-  private val MinFee: Long            = (0.001 * Constants.UnitsInWave).toLong
+  private val MinFee: Long            = (0.001 * Constants.UnitsInDcc).toLong
   private val DataTxFee: Long         = 15000000
   private val InvokeScriptTxFee: Long = 15000000
   private val MassTransferTxFee: Long = 15000000
-  private val SetScriptFee: Long      = (0.01 * Constants.UnitsInWave).toLong
-  private val SetAssetScriptFee: Long = Constants.UnitsInWave
+  private val SetScriptFee: Long      = (0.01 * Constants.UnitsInDcc).toLong
+  private val SetAssetScriptFee: Long = Constants.UnitsInDcc
 
   private val now: Long        = ntpNow
   private val account: KeyPair = domain.wallet.generateNewAccount().get

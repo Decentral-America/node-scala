@@ -19,9 +19,9 @@ object BlockRewardCalculator {
   val CurrentBlockRewardPart: Fraction   = Fraction(1, 3)
   val RemaindRewardAddressPart: Fraction = Fraction(1, 2)
 
-  val FullRewardInit: Long        = 6 * Constants.UnitsInWave
-  val MaxAddressReward: Long      = 2 * Constants.UnitsInWave
-  val GuaranteedMinerReward: Long = 2 * Constants.UnitsInWave
+  val FullRewardInit: Long        = 6 * Constants.UnitsInDcc
+  val MaxAddressReward: Long      = 2 * Constants.UnitsInDcc
+  val GuaranteedMinerReward: Long = 2 * Constants.UnitsInDcc
   val RewardBoost                 = 10
 
   def getBlockRewardShares(
