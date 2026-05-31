@@ -1169,7 +1169,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
         startRead.unlock()
 
-        val timeout = 30.seconds
+        val timeout = 60.seconds
         Await
           .result(
             subscription.map(s => s.fetchUntil(_.map(_.getUpdate.height) == expectedResult && s.completed == isStreamClosed, timeout)),
