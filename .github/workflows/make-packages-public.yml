@@ -1,0 +1,28 @@
+name: Make GHCR packages public
+
+on:
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  make-public:
+    name: Set package visibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make node-scala package public
+        run: |
+          gh api --method PATCH /orgs/Decentral-America/packages/container/node-scala \
+            -f visibility=public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Make node-scala-private package public
+        run: |
+          gh api --method PATCH /orgs/Decentral-America/packages/container/node-scala-private \
+            -f visibility=public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
