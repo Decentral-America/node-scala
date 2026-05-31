@@ -186,7 +186,7 @@ object Blockchain {
       val hasOnNext = blockchain.committedGenerators(period.next).exists { case (currentAddress, _) => currentAddress == address }
 
       val committedTimes = idxOnCurrent.size + Numbers.when(hasOnNext)(1)
-      committedTimes * CommitToGenerationTransaction.DepositInWavelets
+      committedTimes * CommitToGenerationTransaction.DepositInDcclets
     }
 
     def isGeneratingBalanceValid(height: Height, blockHeader: BlockHeader, balance: Long): Boolean =

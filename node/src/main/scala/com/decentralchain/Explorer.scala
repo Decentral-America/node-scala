@@ -116,7 +116,7 @@ object Explorer extends ScorexLogging {
           log.info(s"Found $dccBalanceRecords dcc balance records and $blocksRecords block records")
 
           val actualTotalBalance   = accountsBaseTotalBalance + reader.carryFee(None)
-          val expectedTotalBalance = Constants.UnitsInWave * Constants.TotalDcc + actualTotalReward
+          val expectedTotalBalance = Constants.UnitsInDcc * Constants.TotalDcc + actualTotalReward
           val byKeyTotalBalance    = reader.dccAmount(blockchainHeight)
 
           if (actualTotalBalance != expectedTotalBalance || expectedTotalBalance != byKeyTotalBalance)

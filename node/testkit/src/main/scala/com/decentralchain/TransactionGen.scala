@@ -154,7 +154,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
         )
         .explicitGet()
       setAssetScript = SetAssetScriptTransaction
-        .selfSigned(1.toByte, sender, IssuedAsset(issue.id()), Some(script2), 1 * Constants.UnitsInWave + ScriptExtraFee, timestamp)
+        .selfSigned(1.toByte, sender, IssuedAsset(issue.id()), Some(script2), 1 * Constants.UnitsInDcc + ScriptExtraFee, timestamp)
         .explicitGet()
     } yield (issue, setAssetScript)
 
@@ -392,7 +392,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
       minFee  <- smallFeeGen
       minFee1 <- smallFeeGen
       assetId = issue.asset
-      fee     = (if (reducedFee) 0.001 * Constants.UnitsInWave else 1 * Constants.UnitsInWave.toDouble).toLong
+      fee     = (if (reducedFee) 0.001 * Constants.UnitsInDcc else 1 * Constants.UnitsInDcc.toDouble).toLong
     } yield (
       issue,
       SponsorFeeTransaction.selfSigned(1.toByte, sender, assetId, Some(minFee), fee, timestamp).explicitGet(),

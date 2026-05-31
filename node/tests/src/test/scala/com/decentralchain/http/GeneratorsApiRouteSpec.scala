@@ -32,7 +32,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
 
   private val wallet                      = Wallet(WalletSettings(file = None, password = None, Some(ByteStr("seed".getBytes()))))
   private val Seq(generator1, generator2) = wallet.generateNewAccounts(2)
-  private val depositAndFee               = CommitToGenerationTransaction.DepositInWavelets + TestValues.commitToGenerationFee
+  private val depositAndFee               = CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
   private val initBalance                 = diffs.ENOUGH_AMT + depositAndFee
 
   override def genesisBalances: Seq[WithState.AddrWithBalance] =

@@ -26,12 +26,12 @@ import com.decentralchain.transaction.Asset.*
 
 class BalancesV4Test extends PropSpec with WithState {
 
-  val MinFee: Long            = Constants.UnitsInWave / 1000L
+  val MinFee: Long            = Constants.UnitsInDcc / 1000L
   val DataTxFee: Long         = 15000000L
   val InvokeScriptTxFee: Long = 15000000L
   val MassTransferTxFee: Long = 15000000L
-  val SetScriptFee: Long      = Constants.UnitsInWave / 1000L
-  val SetAssetScriptFee: Long = Constants.UnitsInWave
+  val SetScriptFee: Long      = Constants.UnitsInDcc / 1000L
+  val SetAssetScriptFee: Long = Constants.UnitsInDcc
 
   val rideV4Activated: FunctionalitySettings = TestFunctionalitySettings.Enabled.copy(preActivatedFeatures =
     Map(
@@ -48,18 +48,18 @@ class BalancesV4Test extends PropSpec with WithState {
 
     val genesis = Seq(
       TxHelpers.genesis(master.toAddress),
-      TxHelpers.genesis(acc1.toAddress, 25 * Constants.UnitsInWave + 3 * MinFee),
-      TxHelpers.genesis(dapp.toAddress, 10 * Constants.UnitsInWave + SetScriptFee + 2 * InvokeScriptTxFee + 1 * Constants.UnitsInWave)
+      TxHelpers.genesis(acc1.toAddress, 25 * Constants.UnitsInDcc + 3 * MinFee),
+      TxHelpers.genesis(dapp.toAddress, 10 * Constants.UnitsInDcc + SetScriptFee + 2 * InvokeScriptTxFee + 1 * Constants.UnitsInDcc)
     )
     val alias       = "alias"
     val createAlias = TxHelpers.createAlias(alias, acc1, MinFee)
     val setScript   = TxHelpers.setScript(dapp, script(alias), SetScriptFee)
     val invoke      = TxHelpers.invoke(dapp.toAddress, func = Some("bar"), invoker = master, fee = InvokeScriptTxFee)
-    val lease1      = TxHelpers.lease(acc1, dapp.toAddress, 10 * Constants.UnitsInWave, MinFee)
-    val lease2      = TxHelpers.lease(acc1, dapp.toAddress, 10 * Constants.UnitsInWave, MinFee)
-    val leaseD      = TxHelpers.lease(dapp, acc1.toAddress, 1 * Constants.UnitsInWave, MinFee)
+    val lease1      = TxHelpers.lease(acc1, dapp.toAddress, 10 * Constants.UnitsInDcc, MinFee)
+    val lease2      = TxHelpers.lease(acc1, dapp.toAddress, 10 * Constants.UnitsInDcc, MinFee)
+    val leaseD      = TxHelpers.lease(dapp, acc1.toAddress, 1 * Constants.UnitsInDcc, MinFee)
     val cancel1     = TxHelpers.leaseCancel(lease1.id(), acc1, MinFee)
-    val transfer    = TxHelpers.transfer(dapp, acc1.toAddress, 1 * Constants.UnitsInWave + MinFee, fee = InvokeScriptTxFee)
+    val transfer    = TxHelpers.transfer(dapp, acc1.toAddress, 1 * Constants.UnitsInDcc + MinFee, fee = InvokeScriptTxFee)
 
     ((genesis :+ createAlias) ++ Seq(setScript, lease1, lease2), Seq(cancel1, leaseD, transfer), acc1, dapp, invoke)
   }
@@ -100,13 +100,13 @@ class BalancesV4Test extends PropSpec with WithState {
           .explicitGet()
       val data = snapshot.accountData(dapp.toAddress)
       data("available") shouldBe IntegerDataEntry("available", apiBalance.available)
-      apiBalance.available shouldBe 16 * Constants.UnitsInWave
+      apiBalance.available shouldBe 16 * Constants.UnitsInDcc
       data("regular") shouldBe IntegerDataEntry("regular", apiBalance.regular)
-      apiBalance.regular shouldBe 26 * Constants.UnitsInWave
+      apiBalance.regular shouldBe 26 * Constants.UnitsInDcc
       data("generating") shouldBe IntegerDataEntry("generating", apiBalance.generating)
-      apiBalance.generating shouldBe 5 * Constants.UnitsInWave
+      apiBalance.generating shouldBe 5 * Constants.UnitsInDcc
       data("effective") shouldBe IntegerDataEntry("effective", apiBalance.effective)
-      apiBalance.effective shouldBe 17 * Constants.UnitsInWave
+      apiBalance.effective shouldBe 17 * Constants.UnitsInDcc
 
     }
   }

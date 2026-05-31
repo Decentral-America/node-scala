@@ -216,5 +216,5 @@ class StateReaderEffectiveBalancePropertyTest extends PropSpec with WithDomain {
   }
 
   private def bs(height: Height, regularBalance: Long, leaseIn: Long = 0, leaseOut: Long = 0, deposits: Int = 0): BalanceSnapshot =
-    BalanceSnapshot(height, regularBalance, leaseIn, leaseOut, CommitToGenerationTransaction.DepositInWavelets * deposits)
+    BalanceSnapshot(height, regularBalance, leaseIn, leaseOut, CommitToGenerationTransaction.DepositInDcclets * deposits)
 }

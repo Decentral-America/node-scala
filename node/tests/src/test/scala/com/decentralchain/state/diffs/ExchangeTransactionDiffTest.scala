@@ -725,7 +725,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       val matcher = TxHelpers.signer(3)
 
       val genesis = Seq(
-        TxHelpers.genesis(buyer.toAddress, 1 * Constants.UnitsInWave),
+        TxHelpers.genesis(buyer.toAddress, 1 * Constants.UnitsInDcc),
         TxHelpers.genesis(seller.toAddress)
       )
       val issue = TxHelpers.issue(buyer)

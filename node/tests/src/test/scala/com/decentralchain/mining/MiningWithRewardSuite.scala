@@ -74,10 +74,10 @@ class MiningWithRewardSuite extends AsyncFlatSpec with Matchers with WithNewDBFo
       val recipient1 = createAccount.toAddress
       val recipient2 = createAccount.toAddress
       val tx1 = TransferTransaction
-        .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInWave, Dcc, 400000, ByteStr.empty, ts)
+        .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
         .explicitGet()
       val tx2 = TransferTransaction
-        .selfSigned(2.toByte, account, recipient2, Dcc, 5 * Constants.UnitsInWave, Dcc, 400000, ByteStr.empty, ts)
+        .selfSigned(2.toByte, account, recipient2, Dcc, 5 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
         .explicitGet()
       TestBlock.create(time = ts, ref = reference, txs = Seq(tx1, tx2), version = Block.NgBlockVersion).block
     })
@@ -85,14 +85,14 @@ class MiningWithRewardSuite extends AsyncFlatSpec with Matchers with WithNewDBFo
     val txs: Seq[TransactionProducer] = Seq((ts, account) => {
       val recipient1 = createAccount.toAddress
       TransferTransaction
-        .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInWave, Dcc, 400000, ByteStr.empty, ts)
+        .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
         .explicitGet()
     })
 
     withEnv(bps, txs) { case Env(_, account, miner, blockchain) =>
       val generateBlock = generateBlockTask(miner)(account)
       val oldBalance    = blockchain.balance(account.toAddress)
-      val newBalance    = oldBalance + settings.blockchainSettings.rewardsSettings.initial - 10 * Constants.UnitsInWave
+      val newBalance    = oldBalance + settings.blockchainSettings.rewardsSettings.initial - 10 * Constants.UnitsInDcc
 
       generateBlock.map { _ =>
         blockchain.balance(account.toAddress) should be(newBalance)

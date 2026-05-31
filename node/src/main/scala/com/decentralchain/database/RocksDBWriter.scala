@@ -26,7 +26,7 @@ import io.decentralchain.protobuf.{PBSnapshots, toByteStr, toByteString, toPubli
 import com.decentralchain.settings.{BlockchainSettings, DBSettings}
 import com.decentralchain.state.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.EthereumTransaction.Transfer
 import com.decentralchain.transaction.TxValidationError.{AliasDoesNotExist, AliasIsDisabled}
 import com.decentralchain.transaction.assets.*
@@ -1470,7 +1470,7 @@ class RocksDBWriter(
       val sortedDiffHeights = depositDiffHeights.toList.sortBy { case (h, _) => h }
       val (_, changedHeights, depositSize) = sortedDiffHeights.foldLeft((0L, List.empty[Height], Map.empty[Height, Long])) {
         case ((currentDeposit, changedHeights, depositSize), (depositHeight, diffN)) =>
-          val updatedDeposit = currentDeposit + diffN * DepositInWavelets
+          val updatedDeposit = currentDeposit + diffN * DepositInDcclets
           (updatedDeposit, depositHeight :: changedHeights, depositSize.updated(depositHeight, updatedDeposit))
       }
 

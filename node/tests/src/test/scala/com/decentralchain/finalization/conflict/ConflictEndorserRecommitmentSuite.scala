@@ -9,7 +9,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{Blockchain, GeneratorIndex, Height, Portfolio}
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.FreeSpec
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.TxHelpers
 import org.scalactic.source.Position
 import org.scalatest.Assertion
@@ -55,7 +55,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
     val block4WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = block4Txs, generator = validGenerator, strictTime = true)
     d.appender.appendBlock(block4WithCommitments)
 
-    val balanceAfter4 = ENOUGH_AMT - 2 * TestValues.commitToGenerationFee - DepositInWavelets
+    val balanceAfter4 = ENOUGH_AMT - 2 * TestValues.commitToGenerationFee - DepositInDcclets
 
     log.debug("Append block 5 of new period")
     d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = validGenerator, strictTime = true))
@@ -64,18 +64,18 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
       d.blockchain.committedGenerators(d.blockchain.currentGenerationPeriod.value).map(_._1) should contain theSameElementsInOrderAs generatorAddrs
     }
 
-    d.blockchain.dccPortfolio(conflictGeneratorAddr) shouldBe Portfolio(balance = balanceAfter4, generationDeposit = DepositInWavelets)
+    d.blockchain.dccPortfolio(conflictGeneratorAddr) shouldBe Portfolio(balance = balanceAfter4, generationDeposit = DepositInDcclets)
     d.blockchain.balanceAtHeight(conflictGeneratorAddr, d.blockchain.height).value shouldBe (4, balanceAfter4)
 
     withClue(s"checkGeneratingBalance: ") {
-      d.blockchain.generatingBalance(conflictGeneratorAddr) shouldBe balanceAfter4 - DepositInWavelets
+      d.blockchain.generatingBalance(conflictGeneratorAddr) shouldBe balanceAfter4 - DepositInDcclets
     }
 
     withClue(s"checkGeneratorBalanceFromApi: ") {
       d.generatorsApi
         .generators(Height(d.blockchain.height))
         .collectFirst { case x if x.address == conflictGeneratorAddr => x.balance }
-        .getOrElse(0L) shouldBe balanceAfter4 - DepositInWavelets
+        .getOrElse(0L) shouldBe balanceAfter4 - DepositInDcclets
     }
 
     d.blockchain.balanceSnapshots(conflictGeneratorAddr, from = 2, to = None) should contain theSameElementsInOrderAs Seq(

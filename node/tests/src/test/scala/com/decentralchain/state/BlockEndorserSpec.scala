@@ -100,7 +100,7 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
                 TxHelpers.transfer(
                   from = generator2,
                   to = generator1.toAddress,
-                  amount = d.blockchain.balance(generator2.toAddress) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+                  amount = d.blockchain.balance(generator2.toAddress) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
                   fee = 1.dcc
                 )
               ),

@@ -147,7 +147,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
   private val invalidFee =
     Table(
       "fee",
-      -1 * Constants.UnitsInWave,
+      -1 * Constants.UnitsInDcc,
       0
     )
 

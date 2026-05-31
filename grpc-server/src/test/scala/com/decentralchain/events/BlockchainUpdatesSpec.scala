@@ -454,7 +454,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
     }
 
     "should handle stream from arbitrary height" in withDomainAndRepo(currentSettings) { (d, repo) =>
-      d.appendBlock(TxHelpers.genesis(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInWave))
+      d.appendBlock(TxHelpers.genesis(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInDcc))
 
       (2 to 10).foreach(_ => d.appendBlock())
       val subscription = repo.createFakeObserver(SubscribeRequest.of(8, 15))
@@ -470,7 +470,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
       d.appendBlock(tx)
     } { results =>
       val reward        = 600000000
-      val genesisAmount = Constants.TotalDcc * Constants.UnitsInWave + reward
+      val genesisAmount = Constants.TotalDcc * Constants.UnitsInDcc + reward
       val genesis       = results.head.getAppend.transactionStateUpdates.head.balances.head
       genesis.address.toAddress() shouldBe TxHelpers.defaultAddress
       genesis.getAmountAfter.amount shouldBe genesisAmount
@@ -523,7 +523,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
     "should return correct content of block rollback" in {
       var sendUpdate: () => Unit = null
       withManualHandle(currentSettings.setFeaturesHeight(BlockchainFeatures.RideV6 -> 2), sendUpdate = _) { case (d, repo) =>
-        d.appendBlock(TxHelpers.genesis(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInWave))
+        d.appendBlock(TxHelpers.genesis(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInDcc))
         d.appendKeyBlock()
 
         val subscription = repo.createFakeObserver(SubscribeRequest.of(1, 0))
@@ -557,7 +557,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
     "should return correct content of microblock rollback" in {
       var sendUpdate: () => Unit = null
       withManualHandle(currentSettings.setFeaturesHeight(BlockchainFeatures.RideV6 -> 2), sendUpdate = _) { case (d, repo) =>
-        d.appendBlock(TxHelpers.genesis(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInWave))
+        d.appendBlock(TxHelpers.genesis(TxHelpers.defaultSigner.toAddress, Constants.TotalDcc * Constants.UnitsInDcc))
         d.appendKeyBlock()
 
         val subscription = repo.createFakeObserver(SubscribeRequest.of(1, 0))

@@ -29,7 +29,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
   private val BlockRewardActivationHeight = 5
   private val NGActivationHeight          = 0
-  private val InitialReward               = 6 * Constants.UnitsInWave
+  private val InitialReward               = 6 * Constants.UnitsInDcc
   private val rewardSettings = settings.copy(
     blockchainSettings = DefaultBlockchainSettings.copy(
       functionalitySettings = FunctionalitySettings(
@@ -46,7 +46,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         10,
         5,
         InitialReward,
-        1 * Constants.UnitsInWave,
+        1 * Constants.UnitsInDcc,
         4
       )
     )
@@ -55,15 +55,15 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   private def mkEmptyBlock(ref: ByteStr, signer: KeyPair): Block = TestBlock.create(ntpNow, ref, Seq.empty, signer).block
 
   private def mkEmptyBlockIncReward(ref: ByteStr, signer: KeyPair): Block =
-    TestBlock.create(ntpNow, ref, Seq.empty, signer, rewardVote = InitialReward + 1 * Constants.UnitsInWave, version = Block.RewardBlockVersion).block
+    TestBlock.create(ntpNow, ref, Seq.empty, signer, rewardVote = InitialReward + 1 * Constants.UnitsInDcc, version = Block.RewardBlockVersion).block
 
   private def mkEmptyBlockDecReward(ref: ByteStr, signer: KeyPair): Block =
-    TestBlock.create(ntpNow, ref, Seq.empty, signer, rewardVote = InitialReward - 1 * Constants.UnitsInWave, version = Block.RewardBlockVersion).block
+    TestBlock.create(ntpNow, ref, Seq.empty, signer, rewardVote = InitialReward - 1 * Constants.UnitsInDcc, version = Block.RewardBlockVersion).block
 
   private def mkEmptyBlockReward(ref: ByteStr, signer: KeyPair, vote: Long): Block =
     TestBlock.create(ntpNow, ref, Seq.empty, signer, rewardVote = vote, version = Block.RewardBlockVersion).block
 
-  private val InitialMinerBalance = 10000 * Constants.UnitsInWave
+  private val InitialMinerBalance = 10000 * Constants.UnitsInDcc
   private val OneTotalFee         = 100000
   private val OneCarryFee         = (OneTotalFee * 0.6).toLong
   private val OneFee              = (OneTotalFee * 0.4).toLong
@@ -78,9 +78,9 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         ntpTime.getTimestamp(),
         Seq(
           GenesisTransaction
-            .create(sourceAddress.toAddress, (Constants.TotalDcc - 60000) * Constants.UnitsInWave, ntpTime.getTimestamp())
+            .create(sourceAddress.toAddress, (Constants.TotalDcc - 60000) * Constants.UnitsInDcc, ntpTime.getTimestamp())
             .explicitGet(),
-          GenesisTransaction.create(issuer.toAddress, 40000 * Constants.UnitsInWave, ntpTime.getTimestamp()).explicitGet(),
+          GenesisTransaction.create(issuer.toAddress, 40000 * Constants.UnitsInDcc, ntpTime.getTimestamp()).explicitGet(),
           GenesisTransaction.create(miner1.toAddress, InitialMinerBalance, ntpTime.getTimestamp()).explicitGet(),
           GenesisTransaction.create(miner2.toAddress, InitialMinerBalance, ntpTime.getTimestamp()).explicitGet()
         )
@@ -92,7 +92,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   private val activationScenario = for {
     (sourceAddress, _, miner, _, genesisBlock) <- genesis
     recipient                                  <- accountGen
-    transfers <- Gen.listOfN(10, transferGeneratorP(ntpNow, sourceAddress, recipient.toAddress, 1000 * Constants.UnitsInWave))
+    transfers <- Gen.listOfN(10, transferGeneratorP(ntpNow, sourceAddress, recipient.toAddress, 1000 * Constants.UnitsInDcc))
     b2              = TestBlock.create(ntpNow, genesisBlock.id(), transfers, miner).block
     b3              = mkEmptyBlock(b2.id(), miner)
     b4              = mkEmptyBlock(b3.id(), miner)
@@ -170,7 +170,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         d.blockchainUpdater.blockReward(BlockRewardActivationHeight + 9) shouldBe InitialReward.some
         d.blockchainUpdater.balance(miner.toAddress) shouldBe 10 * InitialReward + InitialMinerBalance + totalFee
 
-        val NextReward = InitialReward + 1 * Constants.UnitsInWave
+        val NextReward = InitialReward + 1 * Constants.UnitsInDcc
 
         d.blockchainUpdater.processBlock(newTermBlock) should beRight
         d.blockchainUpdater.height shouldEqual BlockRewardActivationHeight + 10
@@ -216,7 +216,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           miner.toAddress
         ) shouldBe 10 * InitialReward + 10 * NextReward + 20 * InitialReward + InitialMinerBalance + totalFee
 
-        val DecreasedReward = InitialReward - 1 * Constants.UnitsInWave
+        val DecreasedReward = InitialReward - 1 * Constants.UnitsInDcc
 
         d.blockchainUpdater.processBlock(b7s.last) should beRight
 
@@ -238,7 +238,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           issuer,
           sourceAddress.toAddress,
           Dcc,
-          10 * Constants.UnitsInWave,
+          10 * Constants.UnitsInDcc,
           Dcc,
           OneTotalFee,
           ByteStr.empty,
@@ -251,7 +251,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           issuer,
           sourceAddress.toAddress,
           Dcc,
-          10 * Constants.UnitsInWave,
+          10 * Constants.UnitsInDcc,
           Dcc,
           OneTotalFee,
           ByteStr.empty,
@@ -312,7 +312,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           issuer,
           sourceAddress.toAddress,
           Dcc,
-          10 * Constants.UnitsInWave,
+          10 * Constants.UnitsInDcc,
           Dcc,
           OneTotalFee,
           ByteStr.empty,
@@ -369,7 +369,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
     "when all blocks without fees" in forAll(blockWithoutFeesScenario) { case (miner1, miner2, b1s, b2, b3s, b4) =>
       withDomain(rewardSettings) { d =>
-        val initialDccAmount = BigInt(Constants.TotalDcc) * BigInt(Constants.UnitsInWave)
+        val initialDccAmount = BigInt(Constants.TotalDcc) * BigInt(Constants.UnitsInDcc)
         val term               = rewardSettings.blockchainSettings.rewardsSettings.term
         val minIncrement       = rewardSettings.blockchainSettings.rewardsSettings.minIncrement
         b1s.foreach(b => d.blockchainUpdater.processBlock(b) should beRight)
@@ -412,7 +412,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         ),
         doubleFeaturesPeriodsAfterHeight = Int.MaxValue
       ),
-      rewardsSettings = RewardsSettings(12, 6, 6 * Constants.UnitsInWave, 1 * Constants.UnitsInWave, 6)
+      rewardsSettings = RewardsSettings(12, 6, 6 * Constants.UnitsInDcc, 1 * Constants.UnitsInDcc, 6)
     )
   )
 
@@ -451,11 +451,11 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
       val route = RewardApiRoute(d.blockchainUpdater)
 
-      d.blockchainUpdater.blockReward(9) shouldBe (6 * Constants.UnitsInWave).some
-      d.blockchainUpdater.blockReward(15) shouldBe (6 * Constants.UnitsInWave).some
+      d.blockchainUpdater.blockReward(9) shouldBe (6 * Constants.UnitsInDcc).some
+      d.blockchainUpdater.blockReward(15) shouldBe (6 * Constants.UnitsInDcc).some
 
       d.blockchainUpdater.processBlock(b4) should beRight
-      d.blockchainUpdater.blockReward(16) shouldBe (7 * Constants.UnitsInWave).some
+      d.blockchainUpdater.blockReward(16) shouldBe (7 * Constants.UnitsInDcc).some
 
       route.getRewards(Height(9)).explicitGet().votes.increase shouldBe 0
       route.getRewards(Height(10)).explicitGet().votes.increase shouldBe 1
@@ -475,7 +475,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         ),
         doubleFeaturesPeriodsAfterHeight = Int.MaxValue
       ),
-      rewardsSettings = RewardsSettings(3, 2, 6 * Constants.UnitsInWave, 1 * Constants.UnitsInWave, 2)
+      rewardsSettings = RewardsSettings(3, 2, 6 * Constants.UnitsInDcc, 1 * Constants.UnitsInDcc, 2)
     )
   )
 
@@ -499,7 +499,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
 
       d.blockchainUpdater.height shouldBe 7
 
-      d.blockchainUpdater.blockReward(7) shouldBe (7 * Constants.UnitsInWave).some
+      d.blockchainUpdater.blockReward(7) shouldBe (7 * Constants.UnitsInDcc).some
     }
   }
 
