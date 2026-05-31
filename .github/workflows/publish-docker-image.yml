@@ -68,7 +68,7 @@ jobs:
       - name: Prepare base image and node version
         run: |
           BASE_IMAGE=${{ inputs.base-image }}
-          BASE_IMAGE=${BASE_IMAGE:-$(head -n1 docker/Dockerfile | cut -d= -f2-)}
+          BASE_IMAGE=${BASE_IMAGE:-$(grep '^ARG baseImage=' docker/Dockerfile | cut -d= -f2-)}
           echo "base-image=$BASE_IMAGE" >> "$GITHUB_OUTPUT"
           echo "base-image-digest=$(regctl manifest digest $BASE_IMAGE)" >> "$GITHUB_OUTPUT"
           echo "node-version=$(echo ${{ steps.ghd.outputs.describe }} | cut -c 2-)" >> "$GITHUB_OUTPUT"
