@@ -24,36 +24,6 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  push-private-node-image:
-    name: Publish Private Node to Docker Hub
-    environment: Docker Hub
-    needs: publish-node-image
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - id: meta-private
-        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
-        with:
-          images: ghcr.io/decentral-america/node-scala-private
-          flavor: latest=false
-          tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
-      - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
-        with:
-          platforms: linux/amd64,linux/arm64
-          context: ./docker/private
-          push: ${{ github.event_name == 'release' }}
-          pull: true
-          tags: ${{ steps.meta-private.outputs.tags }}
-          build-args: |
-            baseImage=ghcr.io/decentral-america/node-scala@${{ needs.publish-node-image.outputs.digest }}
-
   publish-ride-runner-image:
     name: Publish RIDE Runner to Docker Hub
     environment: Docker Hub
@@ -110,14 +80,14 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Publish release jars
         env:
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          SONATYPE_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          PGP_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: |
           sbt --batch ";publishSigned;sonaRelease"
 
