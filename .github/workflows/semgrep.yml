@@ -1,0 +1,42 @@
+name: Semgrep SAST
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '15 5 * * 1'  # Weekly on Monday at 05:15 UTC
+
+jobs:
+  semgrep:
+    name: Semgrep Scan (Scala)
+    # Skip Dependabot-generated PRs — Semgrep cannot access the token in that context
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    # Run inside the official Semgrep container (pinned to a specific release).
+    # semgrep/semgrep-action is DEPRECATED (archived April 2024); use container directly.
+    container:
+      image: semgrep/semgrep:1.164.0@sha256:5ac65e5366465438a5408699584c605b77f125908adaa5620d8c3e56cfa36e5b
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Run Semgrep SAST scan
+        # --config auto  : auto-detects language and selects appropriate rule sets
+        #                  (includes p/scala for Scala source files)
+        # || true        : exit code 1 = findings present (not an error); let the
+        #                  SARIF upload step always run so results reach the
+        #                  Security tab regardless of findings count
+        run: semgrep scan --config auto --sarif --output semgrep.sarif . || true
+
+      - name: Upload Semgrep results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa  # v4.36.0
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
