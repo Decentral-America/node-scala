@@ -1,18 +1,19 @@
 package com.decentralchain.state.diffs
 
-import cats.implicits.catsSyntaxSemigroup
+import cats.implicits.{catsSyntaxEither, catsSyntaxEitherObject, catsSyntaxSemigroup}
 import com.google.protobuf.ByteString
-import com.decentralchain.crypto.EthereumKeyLength
-import com.decentralchain.database.protobuf.EthereumTransactionMeta
-import com.decentralchain.features.BlockchainFeatures
-import com.decentralchain.lang.ValidationError
-import com.decentralchain.lang.v1.serialization.SerdeV1
-import io.decentralchain.protobuf.transaction.{PBAmounts, PBRecipients}
-import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionDiff}
-import com.decentralchain.state.{Blockchain, StateSnapshot}
-import com.decentralchain.transaction.EthereumTransaction
-import com.decentralchain.transaction.TxValidationError.GenericError
-import com.decentralchain.transaction.smart.script.trace.TracedResult
+import com.wavesplatform.account.AddressScheme
+import com.wavesplatform.crypto.EthereumKeyLength
+import com.wavesplatform.database.protobuf.EthereumTransactionMeta
+import com.wavesplatform.features.BlockchainFeatures
+import com.wavesplatform.lang.ValidationError
+import com.wavesplatform.lang.v1.serialization.SerdeV1
+import com.wavesplatform.protobuf.transaction.{PBAmounts, PBRecipients}
+import com.wavesplatform.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionDiff}
+import com.wavesplatform.state.{Blockchain, StateSnapshot}
+import com.wavesplatform.transaction.EthereumTransaction
+import com.wavesplatform.transaction.TxValidationError.GenericError
+import com.wavesplatform.transaction.smart.script.trace.TracedResult
 
 object EthereumTransactionDiff {
   def meta(blockchain: Blockchain)(tx: EthereumTransaction): StateSnapshot = {
@@ -59,7 +60,7 @@ object EthereumTransactionDiff {
     val baseDiff = tx.payload match {
       case et: EthereumTransaction.Transfer =>
         for {
-          _        <- checkLeadingZeros(tx, blockchain)
+          _        <- checkCommonFields(tx, blockchain)
           _        <- TracedResult(et.checkTransferDataSize(blockchain, tx.underlying.getData))
           asset    <- TracedResult(et.tryResolveAsset(blockchain))
           transfer <- TracedResult(et.toTransferLike(tx, blockchain))
@@ -76,7 +77,7 @@ object EthereumTransactionDiff {
 
       case ei: EthereumTransaction.Invocation =>
         for {
-          _          <- checkLeadingZeros(tx, blockchain)
+          _          <- checkCommonFields(tx, blockchain)
           invocation <- TracedResult(ei.toInvokeScriptLike(tx, blockchain))
           _          <- TracedResult(InvokeDiffsCommon.checkPayments(blockchain, invocation.payments))
           snapshot   <- InvokeScriptTransactionDiff(blockchain, currentBlockTs, limitedExecution, enableExecutionLog)(invocation)
@@ -94,13 +95,17 @@ object EthereumTransactionDiff {
     baseDiff.map(_ |+| meta(blockchain)(tx))
   }
 
-  private def checkLeadingZeros(tx: EthereumTransaction, blockchain: Blockchain): TracedResult[ValidationError, Unit] = {
-    TracedResult(
-      Either.cond(
-        !(tx.signerKeyBigInt().toByteArray.length < EthereumKeyLength) || blockchain.isFeatureActivated(BlockchainFeatures.ConsensusImprovements),
-        (),
-        GenericError("Invalid public key")
-      )
-    )
-  }
+  private def checkCommonFields(tx: EthereumTransaction, blockchain: Blockchain): TracedResult[ValidationError, Unit] =
+    (for {
+      _ <- Either.raiseUnless(
+        !(tx.signerKeyBigInt().toByteArray.length < EthereumKeyLength) || blockchain.isFeatureActivated(BlockchainFeatures.ConsensusImprovements)
+      )("Invalid public key")
+      _ <- Either.raiseWhen(
+        tx.longChainId()
+          .exists(_ != AddressScheme.current.chainId) && blockchain.isFeatureActivated(BlockchainFeatures.DeterministicFinality)
+      )(s"Transaction chain ID ${tx.longChainId()} does not match current chain ID ${AddressScheme.current.chainId}")
+      _ <- Either.raiseWhen(
+        !tx.ecdsaSignature().isCanonical && blockchain.isFeatureActivated(BlockchainFeatures.DeterministicFinality)
+      )("Non-canonical ECDSA signature")
+    } yield ()).leftMap(GenericError.apply)
 }

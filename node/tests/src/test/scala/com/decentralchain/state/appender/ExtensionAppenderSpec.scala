@@ -1,14 +1,15 @@
 package com.decentralchain.state.appender
 
-import com.decentralchain.block.Block
-import com.decentralchain.common.utils.EitherExt2.*
-import com.decentralchain.db.WithDomain
-import com.decentralchain.db.WithState.AddrWithBalance
-import com.decentralchain.network.{ExtensionBlocks, InvalidBlockStorage, PeerDatabase}
-import com.decentralchain.test.*
-import com.decentralchain.transaction.TxHelpers
-import com.decentralchain.utils.SystemTime
-import com.decentralchain.utx.UtxPoolImpl
+import com.wavesplatform.block.Block
+import com.wavesplatform.common.utils.EitherExt2.*
+import com.wavesplatform.db.WithDomain
+import com.wavesplatform.db.WithState.AddrWithBalance
+import com.wavesplatform.network.{ExtensionBlocks, InvalidBlockStorage, PeerDatabase}
+import com.wavesplatform.test.*
+import com.wavesplatform.transaction.TxHelpers
+import com.wavesplatform.utils.SystemTime
+import com.wavesplatform.utx.UtxPoolImpl
+import io.netty.channel.embedded.EmbeddedChannel
 import monix.execution.Scheduler.Implicits.global
 
 class ExtensionAppenderSpec extends FlatSpec with WithDomain {
@@ -25,7 +26,7 @@ class ExtensionAppenderSpec extends FlatSpec with WithDomain {
       utx.all shouldBe Seq(tx)
 
       time.setTime(block1.header.timestamp)
-      extensionAppender(ExtensionBlocks(d.blockchain.score + block1.blockScore(), Seq(block1), Map.empty)).runSyncUnsafe().explicitGet()
+      extensionAppender(ExtensionBlocks(d.blockchain.score + block1.blockScore(), Seq(block1), Map.empty, new EmbeddedChannel())).runSyncUnsafe().explicitGet()
       d.blockchain.height shouldBe 2
       utx.all shouldBe Nil
       utx.close()
