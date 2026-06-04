@@ -30,18 +30,25 @@ ThisBuild / scmInfo := Some(
 ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeCentralHost
 ThisBuild / publishTo := {
   if (isSnapshot.value)
-    // Central Portal snapshot repository — SNAPSHOT versions publish here directly
-    // (staging bundle workflow is release-only and returns None for snapshots)
-    Some("Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/")
+    // GitHub Packages Maven registry for SNAPSHOT builds.
+    // Central Portal uses Bearer token auth (incompatible with sbt Ivy Basic auth).
+    // GitHub Packages uses GITHUB_TOKEN Basic auth — simple and free.
+    Some("GitHub Packages" at "https://maven.pkg.github.com/Decentral-America/node-scala")
   else
     sonatypePublishToBundle.value
 }
 ThisBuild / credentials ++= {
-  for {
+  // Release credentials: Central Portal API token
+  val central = for {
     username <- sys.env.get("MAVEN_CENTRAL_USERNAME")
     password <- sys.env.get("MAVEN_CENTRAL_PASSWORD")
   } yield Credentials("Sonatype Nexus Repository Manager", "central.sonatype.com", username, password)
-}.toSeq
+  // Snapshot credentials: GitHub token (Basic auth, username can be any non-empty string)
+  val ghPackages = for {
+    token <- sys.env.get("GITHUB_TOKEN")
+  } yield Credentials("GitHub Package Registry", "maven.pkg.github.com", "Decentral-America", token)
+  central.toSeq ++ ghPackages.toSeq
+}
 
 lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
