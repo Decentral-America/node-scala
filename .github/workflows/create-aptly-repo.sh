@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-echo "$GPG_PRIVATE_KEY" > private-key.asc
+PASSPHRASE_FILE=$(mktemp)
+trap 'rm -f private-key.asc "$PASSPHRASE_FILE"' EXIT
+
+echo "$MAVEN_GPG_PRIVATE_KEY" > private-key.asc
 gpg --batch --import-options import-show --import private-key.asc
-rm -f private-key.asc
+
+printf '%s' "$MAVEN_GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
+chmod 600 "$PASSPHRASE_FILE"
 
 all_deb_packages=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
   https://api.github.com/repos/Decentral-America/node-scala/releases |\
@@ -14,17 +19,17 @@ mkdir -p packages
 
 for deb_package in ${all_deb_packages} ; do
   IFS="," read -r deb_file_name deb_url digest <<< "$deb_package"
-  wget -nv -O "packages/$deb_file_name" $deb_url
+  wget -nv -O "packages/$deb_file_name" "$deb_url"
   if [[ "$digest" != "null" ]] ; then
-    echo "$(echo $digest | cut -d: -f2) packages/$deb_file_name" | sha256sum --check --status - && echo CHECKSUM OK
+    echo "$(echo "$digest" | cut -d: -f2) packages/$deb_file_name" | sha256sum --check --status - && echo CHECKSUM OK
   fi
 done
 
 aptly repo create main
 aptly repo add main packages/
-aptly publish repo -batch -architectures="arm64,amd64,all" -distribution=stable -gpg-key=$GPG_KEY_ID -passphrase=$GPG_PASSPHRASE main
+aptly publish repo -batch -architectures="arm64,amd64,all" -distribution=stable -gpg-key="$MAVEN_GPG_KEY_ID" -passphrase-file="$PASSPHRASE_FILE" main
 
-gpg --armor --export $GPG_KEY_ID > /home/runner/.aptly/public/pubkey.txt
+gpg --armor --export "$MAVEN_GPG_KEY_ID" > /home/runner/.aptly/public/pubkey.txt
 
 rm -rf .gnupg
 current_date=$(date)

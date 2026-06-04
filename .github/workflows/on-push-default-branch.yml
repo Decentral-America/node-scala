@@ -22,6 +22,7 @@ jobs:
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -38,6 +39,7 @@ jobs:
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -57,7 +59,15 @@ jobs:
       configured: ${{ steps.check.outputs.configured }}
     steps:
       - id: check
-        run: echo "configured=${{ secrets.SONATYPE_USERNAME != '' }}" >> "$GITHUB_OUTPUT"
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        run: |
+          set -euo pipefail
+          if [ -n "$MAVEN_CENTRAL_USERNAME" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
 
   publish-snapshot:
     name: Publish Snapshots to Sonatype
@@ -74,6 +84,7 @@ jobs:
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -87,11 +98,12 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -104,9 +116,10 @@ jobs:
           (cd _dcc-monorepo/packages/jvm/java-sdk              && ./mvnw $MVN_OPTS install)
       - name: Publish snapshots
         env:
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          SONATYPE_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          PGP_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: |
+          set -euo pipefail
           version=$(awk -F '[".]' '{print $3"."$4"."$5+1}' version.sbt)-SNAPSHOT
-          sbt -Dproject.version=$version --batch publish
+          sbt -Dproject.version="$version" --batch publish

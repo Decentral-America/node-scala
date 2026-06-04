@@ -21,6 +21,7 @@ jobs:
     env:
       APTLY_VERSION: 1.6.2
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Set up cache path
         id: cache-aptly-path
@@ -40,23 +41,28 @@ jobs:
           APTLY_DOWNLOADPATH: ${{ steps.cache-aptly-path.outputs.aptly_downloadpath }}
           APTLY_TOOLPATH: ${{ steps.cache-aptly-path.outputs.aptly_toolpath }}
         run: |
+          set -euo pipefail
           mkdir -p "$APTLY_DOWNLOADPATH" "$APTLY_TOOLPATH"
           wget -nv "https://github.com/aptly-dev/aptly/releases/download/v$APTLY_VERSION/aptly_${APTLY_VERSION}_linux_amd64.zip" -O "$APTLY_DOWNLOADPATH/aptly_${APTLY_VERSION}_linux_amd64.zip"
+          # TODO: add sha256sum verification for aptly_${APTLY_VERSION}_linux_amd64.zip
           unzip "$APTLY_DOWNLOADPATH/aptly_${APTLY_VERSION}_linux_amd64.zip" -d "$APTLY_TOOLPATH"
       - name: Setup PATH
         env:
           APTLY_TOOLPATH: ${{ steps.cache-aptly-path.outputs.aptly_toolpath }}
         run: |
+          set -euo pipefail
           cd "$APTLY_TOOLPATH"
           ls -la aptly_${APTLY_VERSION}_linux_amd64/aptly
           echo "$PWD/aptly_${APTLY_VERSION}_linux_amd64" >> "$GITHUB_PATH"
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
       - run: ./.github/workflows/create-aptly-repo.sh
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          MAVEN_GPG_KEY_ID: ${{ secrets.MAVEN_GPG_KEY_ID }}
+          MAVEN_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:
           path: /home/runner/.aptly/public

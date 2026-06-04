@@ -1,0 +1,66 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":semanticCommitTypeAll(chore)"],
+  "labels": ["dependencies"],
+  "osvVulnerabilityAlerts": true,
+  "schedule": ["before 4am on monday"],
+  "timezone": "America/Costa_Rica",
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 5,
+  "prCreation": "not-pending",
+  "platformAutomerge": true,
+  "packageRules": [
+    {
+      "description": "Pin GitHub Actions to full SHA — Renovate keeps them current",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    },
+    {
+      "description": "Pin Dockerfile base images to SHA256 digests — Renovate keeps them current",
+      "matchManagers": ["dockerfile"],
+      "pinDigests": true
+    },
+    {
+      "automerge": true,
+      "automergeType": "pr",
+      "description": "Automerge GitHub Actions minor/patch/digest updates — CI gates the merge",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"]
+    },
+    {
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "description": "Require dashboard approval for Dockerfile major/minor base-image updates",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["major", "minor"]
+    },
+    {
+      "automerge": true,
+      "automergeType": "pr",
+      "description": "Automerge Dockerfile patch/digest updates (low risk)",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["patch", "digest"]
+    },
+    {
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "description": "Require approval for all sbt major updates — may require source changes",
+      "matchManagers": ["sbt"],
+      "matchUpdateTypes": ["major"]
+    },
+    {
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "description": "Require approval for all major updates across all managers",
+      "matchUpdateTypes": ["major"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "automerge": true,
+    "description": "Security vulnerability fixes — automerge immediately after CI passes",
+    "enabled": true,
+    "labels": ["security", "dependencies"],
+    "prCreation": "immediate",
+    "prPriority": 10
+  }
+}

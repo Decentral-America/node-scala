@@ -14,9 +14,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     name: Build
@@ -28,6 +25,7 @@ jobs:
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -50,6 +48,7 @@ jobs:
             ${{ runner.os }}-sbt-
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -72,6 +71,7 @@ jobs:
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -105,11 +105,13 @@ jobs:
         run: cargo build --release --target x86_64-unknown-linux-gnu
       - name: Stage groth16 native lib into Maven resources
         run: |
+          set -euo pipefail
           mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
           cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
              _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -122,6 +124,7 @@ jobs:
         # BoxedUnit ClassCastException in the evaluator's function call runtime
         # (Scala 3 + scoverage interop issue with boxed unit returns).
         run: |
+          set -euo pipefail
           sbt --batch \
             "lang-tests/test" \
             "lang-tests-js/test" \
@@ -150,6 +153,7 @@ jobs:
         with:
           if-no-files-found: ignore
           name: test-debug-data
+          retention-days: 7
           path: |
             gc.log*
             hs*.log
@@ -166,6 +170,7 @@ jobs:
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -188,6 +193,7 @@ jobs:
             ${{ runner.os }}-sbt-
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -198,6 +204,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dcc-node-tarball
+          retention-days: 7
           path: docker/target/dcc.tgz
 
   docker:
@@ -218,6 +225,7 @@ jobs:
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -240,6 +248,7 @@ jobs:
             ${{ runner.os }}-sbt-
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -280,6 +289,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
