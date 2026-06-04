@@ -146,7 +146,8 @@ object UtilsEvaluator {
         fixUnicodeFunctions = true,
         useNewPowPrecision = true,
         fixBigScriptField = true,
-        fixEcrecover = true
+        fixEcrecover = true,
+        fixGroth16 = false
       )
       dApp = ContractScriptCompactor.decompact(script.expr.asInstanceOf[DApp])
       expr <- dAppToExpr(dApp)
