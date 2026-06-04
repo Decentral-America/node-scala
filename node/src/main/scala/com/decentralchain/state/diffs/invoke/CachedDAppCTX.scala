@@ -2,7 +2,7 @@ package com.decentralchain.state.diffs.invoke
 
 import cats.syntax.semigroup.*
 import com.decentralchain.common.utils.EitherExt2.*
-import com.decentralchain.features.BlockchainFeatures.{ConsensusImprovements, EcrecoverFix, SynchronousCalls}
+import com.decentralchain.features.BlockchainFeatures.{ConsensusImprovements, EcrecoverFix, ModernGroth16Verifier, SynchronousCalls}
 import com.decentralchain.lang.Global
 import com.decentralchain.lang.directives.values.{Account, DApp, StdLibVersion, V3}
 import com.decentralchain.lang.directives.{DirectiveDictionary, DirectiveSet}
@@ -13,17 +13,18 @@ import com.decentralchain.lang.v1.traits.Environment
 import com.decentralchain.state.Blockchain
 
 object CachedDAppCTX {
-  private val cache: Map[(StdLibVersion, Boolean, Boolean, Boolean), InvariableContext] =
+  private val cache: Map[(StdLibVersion, Boolean, Boolean, Boolean, Boolean), InvariableContext] =
     (for {
       version            <- DirectiveDictionary[StdLibVersion].all.filter(_ >= V3)
       useNewPowPrecision <- Seq(true, false)
       fixBigScriptField  <- Seq(true, false)
       fixEcrecover       <- Seq(true, false)
+      fixGroth16         <- Seq(true, false)
     } yield {
       val ctx = PureContext.build(version, useNewPowPrecision).withEnvironment[Environment] |+|
-        CryptoContext.build(Global, version, fixEcrecover).withEnvironment[Environment] |+|
+        CryptoContext.build(Global, version, fixEcrecover, fixGroth16).withEnvironment[Environment] |+|
         DccContext.build(Global, DirectiveSet(version, Account, DApp).explicitGet(), fixBigScriptField)
-      ((version, useNewPowPrecision, fixBigScriptField, fixEcrecover), InvariableContext(ctx))
+      ((version, useNewPowPrecision, fixBigScriptField, fixEcrecover, fixGroth16), InvariableContext(ctx))
     }).toMap
 
   def get(version: StdLibVersion, b: Blockchain): InvariableContext =
@@ -32,7 +33,8 @@ object CachedDAppCTX {
         version,
         b.isFeatureActivated(SynchronousCalls) && b.height > b.settings.functionalitySettings.enforceTransferValidationAfter,
         b.isFeatureActivated(ConsensusImprovements),
-        b.isFeatureActivated(EcrecoverFix)
+        b.isFeatureActivated(EcrecoverFix),
+        b.isFeatureActivated(ModernGroth16Verifier)
       )
     )
 }

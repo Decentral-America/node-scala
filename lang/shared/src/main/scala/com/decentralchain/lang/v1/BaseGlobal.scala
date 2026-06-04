@@ -339,6 +339,12 @@ trait BaseGlobal {
 
   def bn256Groth16Verify(verifyingKey: Array[Byte], proof: Array[Byte], inputs: Array[Byte]): Boolean
 
+  // Feature-28: modern BLS12-381 Groth16 verifier backed by fastcrypto-zkp.
+  // Accepts arkworks compressed wire format (snarkjs/circom native output).
+  // Activated at BlockchainFeature(28). Below the activation height, the legacy
+  // bellman-0.1 groth16Verify path is used unchanged.
+  def groth16VerifyV2(verifyingKey: Array[Byte], proof: Array[Byte], inputs: Array[Byte]): Boolean
+
   def ecrecover(messageHash: Array[Byte], signature: Array[Byte], handleLeadingZerosInPublicKey: Boolean): Array[Byte]
 
   def p256verify(
