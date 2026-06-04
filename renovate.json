@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "baseBranches": ["dev"],
+  "baseBranchPatterns": ["dev"],
   "extends": ["config:best-practices", ":semanticCommitTypeAll(chore)"],
   "labels": ["dependencies"],
   "osvVulnerabilityAlerts": true,
