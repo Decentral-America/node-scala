@@ -38,8 +38,8 @@ ThisBuild / publishTo := {
 }
 ThisBuild / credentials ++= {
   for {
-    username <- sys.env.get("SONATYPE_USERNAME")
-    password <- sys.env.get("SONATYPE_PASSWORD")
+    username <- sys.env.get("MAVEN_CENTRAL_USERNAME")
+    password <- sys.env.get("MAVEN_CENTRAL_PASSWORD")
   } yield Credentials("Sonatype Nexus Repository Manager", "central.sonatype.com", username, password)
 }.toSeq
 
