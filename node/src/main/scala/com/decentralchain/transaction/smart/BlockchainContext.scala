@@ -54,7 +54,7 @@ object BlockchainContext {
       useNewPowPrecision: Boolean,
       fixBigScriptField: Boolean,
       fixEcrecover: Boolean,
-      fixGroth16: Boolean = false
+      fixGroth16: Boolean
   ): EvaluationContext[Environment, Id] =
     cache
       .synchronized(
