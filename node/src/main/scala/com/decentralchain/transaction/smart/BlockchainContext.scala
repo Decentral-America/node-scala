@@ -35,7 +35,8 @@ object BlockchainContext {
       fixUnicodeFunctions: Boolean,
       useNewPowPrecision: Boolean,
       fixBigScriptField: Boolean,
-      fixEcrecover: Boolean
+      fixEcrecover: Boolean,
+      fixGroth16: Boolean = false
   ): Either[String, EvaluationContext[Environment, Id]] =
     DirectiveSet(
       version,
@@ -43,7 +44,7 @@ object BlockchainContext {
       ContentType.isDApp(isContract)
     ).map { ds =>
       val environment = DCCEnvironment(nByte, in, h, blockchain, address, ds, txId)
-      build(ds, environment, fixUnicodeFunctions, useNewPowPrecision, fixBigScriptField, fixEcrecover)
+      build(ds, environment, fixUnicodeFunctions, useNewPowPrecision, fixBigScriptField, fixEcrecover, fixGroth16)
     }
 
   def build(
@@ -52,7 +53,8 @@ object BlockchainContext {
       fixUnicodeFunctions: Boolean,
       useNewPowPrecision: Boolean,
       fixBigScriptField: Boolean,
-      fixEcrecover: Boolean
+      fixEcrecover: Boolean,
+      fixGroth16: Boolean = false
   ): EvaluationContext[Environment, Id] =
     cache
       .synchronized(
@@ -60,7 +62,7 @@ object BlockchainContext {
           (ds.stdLibVersion, fixUnicodeFunctions, useNewPowPrecision, fixBigScriptField, ds),
           { _ =>
             PureContext.build(ds.stdLibVersion, useNewPowPrecision).withEnvironment[Environment] |+|
-              CryptoContext.build(Global, ds.stdLibVersion, fixEcrecover).withEnvironment[Environment] |+|
+              CryptoContext.build(Global, ds.stdLibVersion, fixEcrecover, fixGroth16).withEnvironment[Environment] |+|
               DccContext.build(Global, ds, fixBigScriptField)
           }
         )

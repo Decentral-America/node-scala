@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 sbt -Dproject.version=${RELEASE_VERSION} --batch "buildReleaseArtifacts $RELEASE_NETWORKS"
 
@@ -62,7 +62,7 @@ curl_headers=(
   -H "Authorization: Bearer ${GITHUB_TOKEN}"
 )
 
-release_resp=$(echo $release_body |\
+release_resp=$(echo "$release_body" |\
   jq --arg text "$release_text" '.body = $text' |\
   curl "${curl_headers[@]}" -H 'Content-type: application/json' https://api.github.com/repos/${GITHUB_REPO}/releases -d @-)
 

@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '15 5 * * 1'  # Weekly on Monday at 05:15 UTC
 
+concurrency:
+  group: semgrep-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   semgrep:
     name: Semgrep Scan (Scala)
@@ -26,14 +30,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Run Semgrep SAST scan
         # --config auto  : auto-detects language and selects appropriate rule sets
         #                  (includes p/scala for Scala source files)
-        # || true        : exit code 1 = findings present (not an error); let the
-        #                  SARIF upload step always run so results reach the
-        #                  Security tab regardless of findings count
-        run: semgrep scan --config auto --sarif --output semgrep.sarif . || true
+        # exit code 0    : no findings
+        # exit code 1    : findings present (not a crash); SARIF upload still runs
+        # exit code >1   : semgrep itself failed; propagate as error
+        run: |
+          set +e
+          semgrep scan --config auto --sarif --output semgrep.sarif .
+          EXIT_CODE=$?
+          set -e
+          if [ "$EXIT_CODE" -ne 0 ] && [ "$EXIT_CODE" -ne 1 ]; then
+            echo "::error::Semgrep failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
+          fi
 
       - name: Upload Semgrep results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa  # v4.36.0
