@@ -25,9 +25,12 @@ on:
       digest:
         value: ${{ jobs.publish.outputs.digest }}
 
+concurrency:
+  group: publish-docker-image-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: ghcr.io/decentral-america/node-scala
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   publish:
@@ -47,10 +50,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ inputs.ref }}
+          persist-credentials: false
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: Decentral-America/DecentralChain
           path: _dcc-monorepo
+          persist-credentials: false
           sparse-checkout: |
             packages/jvm/curve25519
             packages/jvm/blst
@@ -62,11 +67,13 @@ jobs:
         with:
           commit-ish: ${{ inputs.ref || github.sha}}
       - name: Prepare base image and node version
+        env:
+          BASE_IMAGE_INPUT: ${{ inputs.base-image }}
         run: |
-          BASE_IMAGE=${{ inputs.base-image }}
-          BASE_IMAGE=${BASE_IMAGE:-$(grep '^ARG baseImage=' docker/Dockerfile | cut -d= -f2-)}
+          set -euo pipefail
+          BASE_IMAGE="${BASE_IMAGE_INPUT:-$(grep '^ARG baseImage=' docker/Dockerfile | cut -d= -f2-)}"
           echo "base-image=$BASE_IMAGE" >> "$GITHUB_OUTPUT"
-          echo "base-image-digest=$(regctl manifest digest $BASE_IMAGE)" >> "$GITHUB_OUTPUT"
+          echo "base-image-digest=$(regctl manifest digest "$BASE_IMAGE")" >> "$GITHUB_OUTPUT"
           echo "node-version=$(echo ${{ steps.ghd.outputs.describe }} | cut -c 2-)" >> "$GITHUB_OUTPUT"
         id: versions
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
@@ -88,11 +95,13 @@ jobs:
         run: cargo build --release --target x86_64-unknown-linux-gnu
       - name: Stage groth16 native lib into Maven resources
         run: |
+          set -euo pipefail
           mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
           cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
              _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
       - name: Install JVM dependencies from DecentralChain monorepo
         run: |
+          set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true"
           (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
@@ -114,13 +123,17 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Extract image name and tags from workflow_dispatch inputs
         if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_DOCKER_TAGS: ${{ inputs.docker-tags }}
+          IMAGE_NAME_ENV: ${{ env.IMAGE_NAME }}
         run: |
+          set -euo pipefail
           {
             echo 'TAGS<<EOF'
-            echo ${{ inputs.docker-tags }} | tr ',' '\n' | sed -e 's/^/type=raw,value=/'
+            echo "${INPUT_DOCKER_TAGS}" | tr ',' '\n' | sed -e 's/^/type=raw,value=/'
             echo EOF
           } >> "$GITHUB_ENV"
-          echo "IMAGES=${{ env.IMAGE_NAME }}" >> "$GITHUB_ENV"
+          echo "IMAGES=${IMAGE_NAME_ENV}" >> "$GITHUB_ENV"
       - name: Prepare annotations
         run: |
           {
