@@ -1,5 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "baseBranches": ["dev"],
   "extends": ["config:best-practices", ":semanticCommitTypeAll(chore)"],
   "labels": ["dependencies"],
   "osvVulnerabilityAlerts": true,
@@ -10,6 +11,26 @@
   "prCreation": "not-pending",
   "platformAutomerge": true,
   "packageRules": [
+    {
+      "description": "Group Akka ecosystem",
+      "groupName": "Akka",
+      "matchPackageNames": ["com.typesafe.akka:*"]
+    },
+    {
+      "description": "Group Cats ecosystem",
+      "groupName": "Cats",
+      "matchPackageNames": ["org.typelevel:cats-*"]
+    },
+    {
+      "description": "Group ScalaPB + protoc",
+      "groupName": "ScalaPB",
+      "matchPackageNames": ["com.thesamet.scalapb:*", "com.thesamet:sbt-protoc"]
+    },
+    {
+      "description": "Group testing libs",
+      "groupName": "Testing",
+      "matchPackageNames": ["org.scalatest:*", "org.scalacheck:*", "org.scalamock:*"]
+    },
     {
       "description": "Pin GitHub Actions to full SHA — Renovate keeps them current",
       "matchManagers": ["github-actions"],
