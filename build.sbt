@@ -28,7 +28,14 @@ ThisBuild / scmInfo := Some(
   ScmInfo(url("https://github.com/Decentral-America/DCC"), "scm:git:git@github.com:Decentral-America/DCC.git")
 )
 ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeCentralHost
-ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / publishTo := {
+  if (isSnapshot.value)
+    // Central Portal snapshot repository — SNAPSHOT versions publish here directly
+    // (staging bundle workflow is release-only and returns None for snapshots)
+    Some("Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/")
+  else
+    sonatypePublishToBundle.value
+}
 ThisBuild / credentials ++= {
   for {
     username <- sys.env.get("SONATYPE_USERNAME")
