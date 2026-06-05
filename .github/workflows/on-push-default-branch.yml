@@ -123,4 +123,13 @@ jobs:
         run: |
           set -euo pipefail
           version=$(awk -F '[".]' '{print $3"."$4"."$5+1}' version.sbt)-SNAPSHOT
+          # Skip publish if this SNAPSHOT version already exists in GitHub Packages.
+          # Multiple pushes in the same minor version cycle produce identical SNAPSHOT
+          # versions — only the first publish needs to succeed.
+          existing=$(gh api "repos/Decentral-America/node-scala/packages/maven/io.decentralchain%2Flang/versions" \
+            --jq '.[].name' 2>/dev/null || true)
+          if echo "$existing" | grep -qF "$version"; then
+            echo "::notice::$version already published to GitHub Packages — skipping"
+            exit 0
+          fi
           sbt -Dproject.version="$version" --batch publish
