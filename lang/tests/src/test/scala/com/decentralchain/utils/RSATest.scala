@@ -25,7 +25,7 @@ import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.*
 
 import java.security.{KeyPair, KeyPairGenerator, SecureRandom, Signature}
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class RSATest extends PropSpec with BeforeAndAfterAll {
 
@@ -371,7 +371,7 @@ class RSATest extends PropSpec with BeforeAndAfterAll {
       val xpub = keyPair.getPublic
 
       val signature = new Array[Byte](256)
-      Random.nextBytes(signature)
+      ThreadLocalRandom.current().nextBytes(signature)
 
       algs foreach { alg =>
         eval(

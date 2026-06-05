@@ -9,7 +9,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.concurrent.Await
 import scala.concurrent.duration.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 @LoadTest
 class RollbackSuite extends BaseFunSuite with TransferSending with TableDrivenPropertyChecks {
@@ -167,7 +167,7 @@ class RollbackSuite extends BaseFunSuite with TransferSending with TableDrivenPr
     test(s"generate more blocks and resynchronise after rollback $name") {
       val baseHeight = nodes.map(_.height).max + 5
       nodes.waitForHeight(baseHeight)
-      val rollbackNodes = Random.shuffle(nodes).take(num)
+      val rollbackNodes = new scala.util.Random(ThreadLocalRandom.current()).shuffle(nodes).take(num)
       rollbackNodes.foreach(_.rollback(baseHeight - 1))
       nodes.waitForHeightArise()
       nodes.waitForSameBlockHeadersAt(baseHeight)

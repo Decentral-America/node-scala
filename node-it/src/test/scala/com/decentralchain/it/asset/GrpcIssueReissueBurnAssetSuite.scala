@@ -19,7 +19,7 @@ import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.freespec.AnyFreeSpec
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactionSuiteLike {
   private val initialDccBalance = 100.dcc
@@ -243,9 +243,11 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
     }
   }
 
+  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+
   def createDapp(scriptParts: String*): KeyPair = {
     val script  = scriptParts.mkString(" ")
-    val address = KeyPair.fromSeed(Base58.encode(Random.nextString(10).getBytes())).explicitGet()
+    val address = KeyPair.fromSeed(Base58.encode(randomString(10).getBytes())).explicitGet()
     val compiledScript = ScriptCompiler
       .compile(
         script,

@@ -1,14 +1,13 @@
 package com.decentralchain.common
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ThreadLocalRandom
 
 import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.common.AddressBenchmark.{CachedAddress, PublicKeySt, UncachedAddress}
 import com.decentralchain.crypto.Curve25519
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-
-import scala.util.Random
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -39,7 +38,7 @@ object AddressBenchmark {
   @State(Scope.Benchmark)
   class PublicKeySt {
     val publicKey = new Array[Byte](Curve25519.KeyLength)
-    Random.nextBytes(publicKey)
+    ThreadLocalRandom.current().nextBytes(publicKey)
   }
 
   class UncachedAddress(publicKey: Array[Byte]) {

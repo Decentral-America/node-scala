@@ -12,13 +12,15 @@ import com.decentralchain.state.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import org.scalatest.CancelAfterFailure
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class InvokeListForCallable extends BaseTransactionSuite with CancelAfterFailure {
   private def dApp   = firstKeyPair
   private def caller = secondKeyPair
 
   private lazy val dAppAddress: String = dApp.toAddress.toString
+
+  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
 
   test("prerequisite: set contract and issue asset") {
     val source =
@@ -60,7 +62,7 @@ class InvokeListForCallable extends BaseTransactionSuite with CancelAfterFailure
   }
 
   test("check list for all data types except union. Write first element of list of each type to acc data") {
-    val rndString = Random.nextString(10)
+    val rndString = randomString(10)
     val intList   = ARR(IndexedSeq(CONST_LONG(Long.MaxValue)), limited = false).explicitGet()
     val strList   = ARR(IndexedSeq(CONST_STRING(rndString).explicitGet()), limited = false).explicitGet()
     val byteList  = ARR(IndexedSeq(CONST_BYTESTR(ByteStr(rndString.getBytes())).explicitGet()), limited = false).explicitGet()
@@ -82,7 +84,7 @@ class InvokeListForCallable extends BaseTransactionSuite with CancelAfterFailure
   }
 
   test("List can contain union data type") {
-    val rndString = Random.nextString(10)
+    val rndString = randomString(10)
     val intEl     = CONST_LONG(Long.MaxValue)
     val strEl     = CONST_STRING(rndString).explicitGet()
     val byteEl    = CONST_BYTESTR(ByteStr(rndString.getBytes())).explicitGet()
@@ -105,7 +107,7 @@ class InvokeListForCallable extends BaseTransactionSuite with CancelAfterFailure
   }
 
   test("can set different data types from first list el") {
-    val rndString = Random.nextString(10)
+    val rndString = randomString(10)
     val intList   = ARR(IndexedSeq(CONST_LONG(Long.MaxValue)), limited = false).explicitGet()
     val strList   = ARR(IndexedSeq(CONST_STRING(rndString).explicitGet()), limited = false).explicitGet()
     val byteList  = ARR(IndexedSeq(CONST_BYTESTR(ByteStr(rndString.getBytes())).explicitGet()), limited = false).explicitGet()

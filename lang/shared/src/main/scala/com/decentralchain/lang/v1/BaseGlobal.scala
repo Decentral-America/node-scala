@@ -27,8 +27,8 @@ import com.decentralchain.lang.v1.parser.Expressions.Pos.AnyPos
 import com.decentralchain.lang.v1.parser.Parser.LibrariesOffset
 import com.decentralchain.lang.v1.serialization.{SerdeV1, SerdeV2}
 
+import java.util.concurrent.ThreadLocalRandom
 import scala.annotation.tailrec
-import scala.util.Random
 
 /** This is a hack class for IDEA. The Global class is in JS/JVM modules. And IDEA can't find the Global class in the "shared" module, but it should!
   */
@@ -376,7 +376,7 @@ trait BaseGlobal {
     }
 
     val pivot =
-      (arr: ArrayView[T]) => arr(Random.nextInt(arr.size))
+      (arr: ArrayView[T]) => arr(ThreadLocalRandom.current().nextInt(arr.size))
 
     if (seq.length % 2 == 1)
       findKMedianInPlace(ArrayView[T](seq), (seq.size - 1) / 2)(using pivot)
@@ -409,7 +409,7 @@ object BaseGlobal {
     def apply(n: Int): T =
       if (from + n < until) arr(from + n)
       else throw new ArrayIndexOutOfBoundsException(n)
-      // should be never thrown due to passing Random.nextInt(arr.size) at the single point of call
+      // should be never thrown due to passing ThreadLocalRandom.current().nextInt(arr.size) at the single point of call
 
     def partitionInPlace(p: T => Boolean): (ArrayView[T], ArrayView[T]) = {
       var upper = until - 1

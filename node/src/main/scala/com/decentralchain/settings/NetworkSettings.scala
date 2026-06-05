@@ -4,8 +4,8 @@ import com.decentralchain.network.TrafficLogger
 import com.decentralchain.utils.*
 import java.io.File
 import java.net.{InetSocketAddress, URI}
+import java.util.concurrent.ThreadLocalRandom
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Random
 import pureconfig.*
 
 case class NetworkSettings(
@@ -60,6 +60,7 @@ object NetworkSettings {
 
   def randomNonce: Long = {
     val base = 1000
-    (Random.nextInt(base) + base) * Random.nextInt(base) + Random.nextInt(base)
+    val rng  = ThreadLocalRandom.current()
+    (rng.nextInt(base) + base) * rng.nextInt(base) + rng.nextInt(base)
   }
 }

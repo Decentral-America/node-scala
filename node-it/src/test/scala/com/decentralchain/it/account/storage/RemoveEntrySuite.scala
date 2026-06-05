@@ -12,6 +12,7 @@ import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
+import java.util.concurrent.ThreadLocalRandom
 
 case class WriteEntry(ct: String, t: String, v: Any, k: String = "somekey")
 
@@ -111,7 +112,7 @@ class RemoveEntrySuite extends BaseFreeSpec {
 
     "Trying of writing key longer than 400 bytes and removing it should produce an error" in {
       val address    = createDapp(script)
-      val tooLongKey = new scala.util.Random().nextPrintableChar().toString * 401
+      val tooLongKey = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * 401
 
       assertBadRequestAndMessage(invokeScript(address, s"write", tooLongKey, "value"), "Data entry key size = 401 bytes must be less than 400")
     }

@@ -35,8 +35,6 @@ import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 import scala.concurrent.duration.*
 import scala.reflect.ClassTag
-import scala.util.Random
-import scala.util.Random.*
 
 //noinspection ScalaStyle, TypeAnnotation
 class NarrowTransactionGenerator(
@@ -78,7 +76,7 @@ class NarrowTransactionGenerator(
           val name        = random.nextString(5)
           val description = random.nextString(5)
           val reissuable  = random.nextBoolean()
-          val amount      = 100000000L + Random.nextInt(Int.MaxValue)
+          val amount      = 100000000L + random.nextInt(Int.MaxValue)
           logOption(
             IssueTransaction
               .selfSigned(
@@ -87,7 +85,7 @@ class NarrowTransactionGenerator(
                 name,
                 description,
                 amount,
-                Random.nextInt(9).toByte,
+                random.nextInt(9).toByte,
                 reissuable,
                 None,
                 100400000L,
@@ -108,7 +106,7 @@ class NarrowTransactionGenerator(
                     sender,
                     recipient,
                     Asset.fromCompatId(asset),
-                    Random.nextInt(100),
+                    random.nextInt(100),
                     Dcc,
                     500000L,
                     createAttachment(),
@@ -129,7 +127,7 @@ class NarrowTransactionGenerator(
                     correctVersion(TxVersion.V2),
                     sender,
                     IssuedAsset(assetTx.id()),
-                    Random.nextInt(Int.MaxValue),
+                    random.nextInt(Int.MaxValue),
                     true,
                     100400000L,
                     timestamp
@@ -148,7 +146,7 @@ class NarrowTransactionGenerator(
                   correctVersion(TxVersion.V2),
                   sender,
                   IssuedAsset(assetTx.id()),
-                  Random.nextInt(1000),
+                  random.nextInt(1000),
                   500000L,
                   timestamp
                 )
@@ -270,14 +268,14 @@ class NarrowTransactionGenerator(
             _ <- 0 until count
             etype = random.nextInt(Type.maxId)
           } yield etype match {
-            case t if t == Type.Integer.id => IntegerDataEntry(Random.nextString(10), random.nextLong)
-            case t if t == Type.Boolean.id => BooleanDataEntry(Random.nextString(10), random.nextBoolean)
-            case t if t == Type.String.id  => StringDataEntry(Random.nextString(10), random.nextLong.toString)
+            case t if t == Type.Integer.id => IntegerDataEntry(randomString(10), random.nextLong)
+            case t if t == Type.Boolean.id => BooleanDataEntry(randomString(10), random.nextBoolean)
+            case t if t == Type.String.id  => StringDataEntry(randomString(10), random.nextLong.toString)
             case t if t == Type.Binary.id =>
               val size = random.nextInt(MaxValueSize + 1)
               val b    = new Array[Byte](size)
               random.nextBytes(b)
-              BinaryDataEntry(Random.nextString(10), ByteStr(b))
+              BinaryDataEntry(randomString(10), ByteStr(b))
           }
           val size = 128 + data.map(_.toBytes.length).sum
           val fee  = 500000L * (size / 1024 + 1)
@@ -293,7 +291,7 @@ class NarrowTransactionGenerator(
                   correctVersion(TxVersion.V1),
                   sender,
                   IssuedAsset(assetTx.id()),
-                  Some(Random.nextInt(1000)),
+                  Some(random.nextInt(1000)),
                   100400000L,
                   timestamp
                 )
@@ -515,11 +513,23 @@ object NarrowTransactionGenerator extends ConfigReaders {
   private val aliasAlphabet  = "-.0123456789@_abcdefghijklmnopqrstuvwxyz".toVector
 
   def generateAlias(): String = {
-    val len = Random.nextInt(maxAliasLength - minAliasLength) + minAliasLength
-    Random.shuffle(aliasAlphabet).take(len).mkString
+    val len = random.nextInt(maxAliasLength - minAliasLength) + minAliasLength
+    shuffled(aliasAlphabet).take(len).mkString
   }
 
   private def random = ThreadLocalRandom.current
+
+  private def randomString(n: Int): String = {
+    val alpha = "abcdefghijklmnopqrstuvwxyz0123456789"
+    (0 until n).map(_ => alpha.charAt(random.nextInt(alpha.length))).mkString
+  }
+
+  private def shuffled(v: Vector[Char]): Vector[Char] = {
+    val buf = v.toArray
+    var i   = buf.length - 1
+    while (i > 0) { val j = random.nextInt(i + 1); val t = buf(i); buf(i) = buf(j); buf(j) = t; i -= 1 }
+    buf.toVector
+  }
 
   private def randomFrom[T](c: Seq[T]): Option[T] = if (c.nonEmpty) Some(c(random.nextInt(c.size))) else None
 

@@ -20,8 +20,8 @@ import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.test.*
 import org.scalacheck.{Arbitrary, Gen}
 
+import java.util.concurrent.ThreadLocalRandom
 import scala.annotation.tailrec
-import scala.util.Random
 
 class MerkleTest extends PropSpec {
   private val EmptyNodeHash = hash(Array[Byte](0))
@@ -48,7 +48,7 @@ class MerkleTest extends PropSpec {
 
   private def testData() =
     List
-      .fill(10)(Random.nextInt(10000))
+      .fill(10)(ThreadLocalRandom.current().nextInt(10000))
       .distinct
       .map(Ints.toByteArray)
 

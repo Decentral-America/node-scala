@@ -21,7 +21,7 @@ import org.scalacheck.{Arbitrary, Gen}
 
 import java.nio.file.Files
 import scala.concurrent.duration.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheSettings {
   import FPPoSSelectorTest.*
@@ -182,7 +182,7 @@ class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheS
     "failed when GS is incorrect" in forAll(generationSignatureMethods) { case (_, blockVersion: Byte, vrfActivated: Boolean) =>
       withEnv(chainGen(List(ENOUGH_AMT), 100, blockVersion), vrfActivated) { case Env(pos, blockchain, miners, _) =>
         val miner = miners.head
-        val block = forgeBlock(miner, blockchain, pos, blockVersion)(updateGS = gs => ByteStr(gs.arr |< Random.nextBytes))
+        val block = forgeBlock(miner, blockchain, pos, blockVersion)(updateGS = gs => ByteStr(gs.arr |< ThreadLocalRandom.current().nextBytes))
 
         pos
           .validateGenerationSignature(

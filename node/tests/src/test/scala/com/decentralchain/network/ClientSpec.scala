@@ -1,6 +1,7 @@
 package com.decentralchain.network
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 
 import com.decentralchain.Version
 import com.decentralchain.test.FreeSpec
@@ -10,7 +11,6 @@ import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.util.concurrent.GlobalEventExecutor
 
 import scala.concurrent.duration.DurationInt
-import scala.util.Random
 
 class ClientSpec extends FreeSpec {
 
@@ -18,11 +18,11 @@ class ClientSpec extends FreeSpec {
     applicationName = "dccI",
     applicationVersion = Version.VersionTuple,
     nodeName = "test",
-    nodeNonce = Random.nextInt(),
+    nodeNonce = ThreadLocalRandom.current().nextInt(),
     declaredAddress = None
   )
 
-  private val serverHandshake = clientHandshake.copy(nodeNonce = Random.nextInt())
+  private val serverHandshake = clientHandshake.copy(nodeNonce = ThreadLocalRandom.current().nextInt())
 
   "should send only a local handshake on connection" in {
     val channel = createEmbeddedChannel(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))

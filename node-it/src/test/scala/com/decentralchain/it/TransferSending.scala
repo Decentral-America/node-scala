@@ -20,7 +20,6 @@ import play.api.libs.json.Json.toJson
 import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.Future
-import scala.util.Random
 
 object TransferSending {
   case class Req(senderSeed: String, targetAddress: String, amount: Long, fee: Long)
@@ -42,7 +41,7 @@ trait TransferSending extends ScorexLogging {
       .getOrElse(throw new RuntimeException(s"Can't find address '$accountAddress' in nodes.conf"))
 
     val sourceAndDest = (1 to n).map { _ =>
-      val destPk = Array.fill[Byte](seedSize)(Random.nextInt(Byte.MaxValue).toByte)
+      val destPk = Array.fill[Byte](seedSize)(ThreadLocalRandom.current().nextInt(Byte.MaxValue).toByte)
       Address.fromPublicKey(PublicKey(destPk)).toString
     }
 
@@ -62,12 +61,12 @@ trait TransferSending extends ScorexLogging {
       }
 
     val sourceAndDest = (1 to n).map { _ =>
-      val Seq((srcConfig, _), (_, destPrivateKey)) = (Random.shuffle(srcDest).take(2): @unchecked)
+      val Seq((srcConfig, _), (_, destPrivateKey)) = (new scala.util.Random(ThreadLocalRandom.current()).shuffle(srcDest).take(2): @unchecked)
       (srcConfig, destPrivateKey.toAddress.toString)
     }
 
     val requests = sourceAndDest.foldLeft(List.empty[Req]) { case (rs, (srcConfig, destAddr)) =>
-      val a              = Random.nextDouble()
+      val a              = ThreadLocalRandom.current().nextDouble()
       val b              = balances(srcConfig)
       val transferAmount = (1e-8 + a * 1e-9 * b).toLong
       if (transferAmount < 0) log.warn(s"Negative amount: (1e-8 + $a * 1e-8 * $b) = $transferAmount")
@@ -84,10 +83,10 @@ trait TransferSending extends ScorexLogging {
       case config if !excludeSrcAddresses.contains(config.getString("address")) => config.getString("account-seed")
     }
 
-    val prefix = Ints.toByteArray(Random.nextInt())
+    val prefix = Ints.toByteArray(ThreadLocalRandom.current().nextInt())
 
     val sourceAndDest = (1 to n).map { id =>
-      val srcSeed  = Random.shuffle(seeds).head
+      val srcSeed  = new scala.util.Random(ThreadLocalRandom.current()).shuffle(seeds).head
       val destPk   = prefix ++ Ints.toByteArray(id) ++ new Array[Byte](24)
       val destAddr = Address.fromPublicKey(PublicKey(destPk)).toString
 

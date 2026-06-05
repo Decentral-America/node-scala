@@ -60,7 +60,7 @@ import org.scalatest.concurrent.ScalaFutures
 import java.util.concurrent.locks.ReentrantLock
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures {
   private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
@@ -698,8 +698,8 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
     }
 
     "should return correct ids for assets and leases from invoke" in withDomainAndRepo(currentSettings) { (d, repo) =>
-      val issuer        = KeyPair(Longs.toByteArray(Random.nextLong()))
-      val invoker       = KeyPair(Longs.toByteArray(Random.nextLong()))
+      val issuer        = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
+      val invoker       = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
       val issuerAddress = issuer.toAddress
       val dAppScript = TestCompiler(V5).compileContract(
         s"""

@@ -13,8 +13,8 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.PureContext
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
-import scala.util.Random
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -46,7 +46,7 @@ class ScriptEvaluatorBenchmark {
 
   @Benchmark
   def listMedianRandomElements(st: Median, bh: Blackhole): Unit =
-    bh.consume(eval(st.randomElements(Random.nextInt(10000))))
+    bh.consume(eval(st.randomElements(ThreadLocalRandom.current().nextInt(10000))))
 
   @Benchmark
   def listMedianSortedElements(st: Median, bh: Blackhole): Unit =
@@ -99,7 +99,7 @@ class Base58Perf {
     (1 to base58Count)
       .map { i =>
         val b = new Array[Byte](64)
-        Random.nextBytes(b)
+        ThreadLocalRandom.current().nextBytes(b)
         LET(
           "v" + i,
           FUNCTION_CALL(
@@ -119,7 +119,7 @@ class Base58Perf {
     (1 to base58Count)
       .map { i =>
         val b = new Array[Byte](64)
-        Random.nextBytes(b)
+        ThreadLocalRandom.current().nextBytes(b)
         LET(
           "v" + i,
           FUNCTION_CALL(PureContext.sizeBytes, List(FUNCTION_CALL(Native(FROMBASE58), List(CONST_STRING(Base58.encode(b)).explicitGet()))))
@@ -139,9 +139,9 @@ class Signatures {
     (1 to sigCount)
       .map { i =>
         val msg = new Array[Byte](1024)
-        Random.nextBytes(msg)
+        ThreadLocalRandom.current().nextBytes(msg)
         val seed = new Array[Byte](256)
-        Random.nextBytes(seed)
+        ThreadLocalRandom.current().nextBytes(seed)
         val (sk, pk) = Curve25519.createKeyPair(seed)
         val sig      = Curve25519.sign(sk, msg)
 
@@ -196,7 +196,7 @@ class Concat {
 class Median {
   val randomElements: Array[EXPR] =
     (1 to 10000).map { _ =>
-      val listOfLong = (1 to 1000).map(_ => CONST_LONG(Random.nextLong()))
+      val listOfLong = (1 to 1000).map(_ => CONST_LONG(ThreadLocalRandom.current().nextLong()))
 
       FUNCTION_CALL(
         Native(FunctionIds.MEDIAN_LIST),
@@ -205,7 +205,7 @@ class Median {
     }.toArray
 
   val sortedElements: EXPR = {
-    val listOfLong = (1 to 1000).map(_ => CONST_LONG(Random.nextLong())).sorted
+    val listOfLong = (1 to 1000).map(_ => CONST_LONG(ThreadLocalRandom.current().nextLong())).sorted
 
     FUNCTION_CALL(
       Native(FunctionIds.MEDIAN_LIST),
@@ -214,7 +214,7 @@ class Median {
   }
 
   val sortedReverseElements: EXPR = {
-    val listOfLong = (1 to 1000).map(_ => CONST_LONG(Random.nextLong())).sorted.reverse
+    val listOfLong = (1 to 1000).map(_ => CONST_LONG(ThreadLocalRandom.current().nextLong())).sorted.reverse
 
     FUNCTION_CALL(
       Native(FunctionIds.MEDIAN_LIST),

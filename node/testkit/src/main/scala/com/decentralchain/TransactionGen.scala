@@ -28,7 +28,6 @@ import org.scalatest.Suite
 import org.web3j.crypto.ECKeyPair
 
 import scala.concurrent.duration.*
-import scala.util.Random
 
 trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { suite: Suite =>
 
@@ -628,13 +627,11 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
 
   import DataEntry.MaxKeySize
 
-  val dataKeyGen: Gen[String] = for {
-    size <- Gen.choose(1, MaxKeySize)
-  } yield Random.nextString(size)
+  val dataKeyGen: Gen[String] =
+    Gen.choose(1, MaxKeySize).flatMap(Gen.stringOfN(_, Gen.alphaNumChar))
 
-  val dataScriptsKeyGen: Gen[String] = for {
-    size <- Gen.choose(1, 10)
-  } yield Random.nextString(size)
+  val dataScriptsKeyGen: Gen[String] =
+    Gen.choose(1, 10).flatMap(Gen.stringOfN(_, Gen.alphaNumChar))
 
   def longEntryGen(keyGen: Gen[String] = dataKeyGen): Gen[IntegerDataEntry] =
     for {

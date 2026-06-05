@@ -22,7 +22,8 @@ import org.scalatest.{Assertion, Assertions, EitherValues}
 import play.api.libs.json.*
 
 import scala.concurrent.duration.*
-import scala.util.{Failure, Random, Try}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.{Failure, Try}
 
 class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
   override def nodeConfigs: Seq[Config] =
@@ -373,7 +374,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
       assertBadRequestAndResponse(sender.postJson("/transactions/broadcast", noProof), s"${WrongJson.WrongJsonDataMessage}.*proofs.*missing")
       nodes.foreach(_.ensureTxDoesntExist(id(noProof)))
 
-      val badProof = request ++ Json.obj("proofs" -> Seq(Base58.encode(Array.fill(64)(Random.nextInt().toByte))))
+      val badProof = request ++ Json.obj("proofs" -> Seq(Base58.encode(Array.fill(64)(ThreadLocalRandom.current().nextInt().toByte))))
       assertBadRequestAndResponse(sender.postJson("/transactions/broadcast", badProof), "Proof doesn't validate as signature")
       nodes.foreach(_.ensureTxDoesntExist(id(badProof)))
 
@@ -451,7 +452,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
       val txIds = dataSet.grouped(100).map(_.toList).map(data => sender.putData(fourthKeyPair, data, calcDataFee(data, v), version = v).id)
       txIds foreach nodes.waitForTransaction
 
-      val r = scala.util.Random.nextInt(199)
+      val r = ThreadLocalRandom.current().nextInt(199)
       sender.getDataByKey(fourthAddress, s"int$r") shouldBe IntegerDataEntry(s"int$r", 1000 + r)
       sender.getDataByKey(fourthAddress, s"bool$r") shouldBe BooleanDataEntry(s"bool$r", false)
       sender.getDataByKey(fourthAddress, s"blob$r") shouldBe BinaryDataEntry(s"blob$r", ByteStr(Array[Byte](127.toByte, 0, 1, 1)))

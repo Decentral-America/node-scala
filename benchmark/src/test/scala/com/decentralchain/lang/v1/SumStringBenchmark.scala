@@ -8,7 +8,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
 import java.util.concurrent.TimeUnit
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -44,8 +44,8 @@ class SumStringBenchmark {
 
 object SumStringBenchmark {
   abstract class SumString(size1: Int, size2: Int) {
-    val string1 = Random.nextPrintableChar().toString * size1
-    val string2 = Random.nextPrintableChar().toString * size2
+    val string1 = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * size1
+    val string2 = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * size2
     val expr =
       FUNCTION_CALL(
         Native(FunctionIds.SUM_STRING),

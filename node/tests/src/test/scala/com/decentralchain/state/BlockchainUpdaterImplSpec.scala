@@ -27,7 +27,7 @@ import monix.execution.Scheduler.Implicits.global
 import org.scalamock.scalatest.MockFactory
 
 import scala.concurrent.duration.DurationInt
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDomain with NTPTime with DBCacheSettings with MockFactory {
   import DomainPresets.*
@@ -246,8 +246,8 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
     }
 
     "VRF" in {
-      val dapp   = KeyPair(Longs.toByteArray(Random.nextLong()))
-      val sender = KeyPair(Longs.toByteArray(Random.nextLong()))
+      val dapp   = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
+      val sender = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
 
       withDomain(
         RideV4,

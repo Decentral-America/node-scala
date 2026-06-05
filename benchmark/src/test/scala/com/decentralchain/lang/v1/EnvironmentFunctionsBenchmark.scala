@@ -2,6 +2,7 @@ package com.decentralchain.lang.v1
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ThreadLocalRandom
 
 import cats.Id
 import cats.syntax.bifunctor.*
@@ -27,8 +28,6 @@ import com.decentralchain.wallet.Wallet
 import monix.eval.Coeval
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-
-import scala.util.Random
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -88,7 +87,7 @@ class EnvironmentFunctionsBenchmark {
 
   @Benchmark
   def addressFromString(st: AddressFromString, bh: Blackhole): Unit = {
-    val i = Random.nextInt(100)
+    val i = ThreadLocalRandom.current().nextInt(100)
     bh.consume(eval(st.ctx, st.expr(i), V4))
   }
 }
@@ -172,7 +171,7 @@ class AddressFromString {
     (1 to 100).map { _ =>
       val address =
         Wallet
-          .generateNewAccount(Random.nextBytes(8), 1)
+          .generateNewAccount({ val _b = new Array[Byte](8); ThreadLocalRandom.current().nextBytes(_b); _b }, 1)
           .publicKey
           .toAddress(ChainId)
           .toString

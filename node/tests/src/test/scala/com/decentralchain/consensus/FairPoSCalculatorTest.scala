@@ -1,7 +1,8 @@
 package com.decentralchain.consensus
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.io.Source
-import scala.util.Random
 
 import cats.data.NonEmptyList
 import com.decentralchain.account.{KeyPair, PrivateKey, PublicKey}
@@ -21,7 +22,7 @@ class FairPoSCalculatorTest extends PropSpec {
 
   def genSig: Array[Byte] = {
     val arr = new Array[Byte](32)
-    Random.nextBytes(arr)
+    ThreadLocalRandom.current().nextBytes(arr)
     arr
   }
 

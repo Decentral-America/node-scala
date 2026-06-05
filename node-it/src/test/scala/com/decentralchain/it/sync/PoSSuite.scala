@@ -17,7 +17,7 @@ import com.decentralchain.network.RawBytes
 import com.decentralchain.state.Height
 import play.api.libs.json.{JsSuccess, Json, Reads}
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class PoSSuite extends BaseFunSuite with WaitForHeight2 {
 
@@ -98,7 +98,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
     block.copy(header = block.header.copy(generationSignature = {
       val arr  = block.header.generationSignature.arr
       val init = arr.init
-      Random.nextBytes(arr)
+      ThreadLocalRandom.current().nextBytes(arr)
       ByteStr(init :+ arr.last)
     }))
 
@@ -205,7 +205,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
     block.copy(header = block.header.copy(generationSignature = {
       val arr  = block.header.generationSignature.arr
       val init = arr.init
-      Random.nextBytes(arr)
+      ThreadLocalRandom.current().nextBytes(arr)
       ByteStr(init :+ arr.last)
     }))
 

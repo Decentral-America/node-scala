@@ -12,15 +12,19 @@ import com.decentralchain.transaction.assets.IssueTransaction
 import io.grpc.Status.Code
 import org.scalatest.prop.TableDrivenPropertyChecks
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime with TableDrivenPropertyChecks {
 
   val (issuer, issuerAddress) = (firstAcc, firstAddress)
 
+  private def alphanumericStream: LazyList[Char] = { val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62))) }
+
+  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+
   test("asset issue changes issuer's asset balance") {
     for (v <- issueTxSupportedVersions) {
-      val assetName        = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength).mkString
+      val assetName        = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength).mkString
       val assetDescription = "my asset description"
       val issuerBalance    = sender.dccBalance(issuerAddress).available
       val issuerEffBalance = sender.dccBalance(issuerAddress).effective
@@ -55,7 +59,7 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
 
   test("not able to issue asset with fee less then issueFee (minFee for NFT)") {
     for (v <- issueTxSupportedVersions) {
-      val assetName                                 = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength + 1).mkString
+      val assetName                                 = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength + 1).mkString
       val assetDescription                          = "nft asset"
       val issuerBalance                             = sender.dccBalance(issuerAddress).available
       val issuerEffBalance                          = sender.dccBalance(issuerAddress).effective
@@ -80,7 +84,7 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
 
   test("Able to create asset with the same name") {
     for (v <- issueTxSupportedVersions) {
-      val assetName        = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MaxAssetNameLength).mkString
+      val assetName        = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MaxAssetNameLength).mkString
       val assetDescription = "my asset description 2"
 
       val issuedAssetTx = sender.broadcastIssue(
@@ -175,8 +179,8 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
     }
   }
 
-  val tooSmallAssetName = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength - 1).mkString
-  val tooBigAssetName   = Random.alphanumeric.filter(_.isLetter).take(IssueTransaction.MaxAssetNameLength + 1).mkString
+  val tooSmallAssetName = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength - 1).mkString
+  val tooBigAssetName   = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MaxAssetNameLength + 1).mkString
   val invalid_assets_names =
     Table(
       tooSmallAssetName,
@@ -195,7 +199,7 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
   }
 
   test("Not able to create asset with too big description") {
-    val tooBigDescription = Random.nextString(1000 + 1)
+    val tooBigDescription = randomString(1000 + 1)
     assertGrpcError(
       sender.broadcastIssue(issuer, "assetName", someAssetAmount, 2, description = tooBigDescription, reissuable = false, fee = issueFee),
       "Too big sequence requested",
