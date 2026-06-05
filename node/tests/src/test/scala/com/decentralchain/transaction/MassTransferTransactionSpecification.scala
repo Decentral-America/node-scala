@@ -14,7 +14,8 @@ import com.decentralchain.transaction.transfer.MassTransferTransaction.{MaxTrans
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets
-import scala.util.{Random, Success}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Success
 
 class MassTransferTransactionSpecification extends PropSpec {
 
@@ -28,9 +29,9 @@ class MassTransferTransactionSpecification extends PropSpec {
   private val proofs = Seq(
     Seq.empty,
     Seq(ByteStr.empty),
-    Seq(ByteStr(Random.nextBytes(Proofs.MaxProofSize))),
+    Seq(ByteStr({ val _b = new Array[Byte](Proofs.MaxProofSize); ThreadLocalRandom.current().nextBytes(_b); _b })),
     (1 to Proofs.MaxProofs).map(_ => ByteStr.empty),
-    (1 to Proofs.MaxProofs).map(_ => ByteStr(Random.nextBytes(Proofs.MaxProofSize)))
+    (1 to Proofs.MaxProofs).map(_ => ByteStr({ val _b = new Array[Byte](Proofs.MaxProofSize); ThreadLocalRandom.current().nextBytes(_b); _b }))
   )
 
   private val massTransfers = for {
@@ -44,7 +45,7 @@ class MassTransferTransactionSpecification extends PropSpec {
       Seq(ParsedTransfer(recipient, TxNonNegativeAmount.unsafeFrom(Long.MaxValue - fee))),
       (1 to MaxTransferCount).map(_ => ParsedTransfer(recipient, TxNonNegativeAmount.unsafeFrom(1 / MaxTransferCount)))
     )
-    attachment <- Seq(ByteStr.empty, ByteStr(Random.nextBytes(TransferTransaction.MaxAttachmentSize)))
+    attachment <- Seq(ByteStr.empty, ByteStr({ val _b = new Array[Byte](TransferTransaction.MaxAttachmentSize); ThreadLocalRandom.current().nextBytes(_b); _b }))
     proofs     <- proofs
   } yield (chainId, version, asset, recipient, fee, transfers, attachment, proofs)
 

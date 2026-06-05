@@ -1,6 +1,7 @@
 package com.decentralchain.it.sync
 
-import scala.util.{Random, Try}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Try
 import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
@@ -160,7 +161,7 @@ class UtxSuite extends BaseFunSuite {
     }
 
     val startHeight = nodes.waitForHeightArise()
-    Random.shuffle(txs ++ whitelistedTxs).map(_.json()).foreach(AsyncHttpApi.NodeAsyncHttpApi(miner).signedBroadcast)
+    new scala.util.Random(ThreadLocalRandom.current()).shuffle(txs ++ whitelistedTxs).map(_.json()).foreach(AsyncHttpApi.NodeAsyncHttpApi(miner).signedBroadcast)
     miner.waitForEmptyUtx()
     val endHeight = miner.height
 
@@ -197,7 +198,7 @@ class UtxSuite extends BaseFunSuite {
 object UtxSuite {
   private def createAccount = {
     val seed = Array.fill(32)(-1: Byte)
-    Random.nextBytes(seed)
+    ThreadLocalRandom.current().nextBytes(seed)
     KeyPair(seed)
   }
 

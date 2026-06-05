@@ -13,7 +13,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
 import java.util.concurrent.TimeUnit
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -31,7 +31,7 @@ object AddressToStringBenchmark {
   @State(Scope.Benchmark)
   class AddressToString {
     val publicKey = new Array[Byte](Curve25519.KeyLength)
-    Random.nextBytes(publicKey)
+    ThreadLocalRandom.current().nextBytes(publicKey)
 
     val address = Address.fromPublicKey(PublicKey(publicKey)).bytes
 

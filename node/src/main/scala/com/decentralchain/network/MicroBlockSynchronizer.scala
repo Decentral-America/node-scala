@@ -13,7 +13,7 @@ import monix.execution.CancelableFuture
 import monix.execution.schedulers.SchedulerService
 import monix.reactive.Observable
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ThreadLocalRandom, TimeUnit}
 import scala.collection.mutable.Set as MSet
 import scala.concurrent.duration.FiniteDuration
 
@@ -196,7 +196,7 @@ object MicroBlockSynchronizer extends ScorexLogging {
   def random[T](s: Set[T]): Option[T] =
     if (s.isEmpty) None
     else {
-      val n = util.Random.nextInt(s.size)
+      val n = ThreadLocalRandom.current().nextInt(s.size)
       s.drop(n).headOption
     }
 

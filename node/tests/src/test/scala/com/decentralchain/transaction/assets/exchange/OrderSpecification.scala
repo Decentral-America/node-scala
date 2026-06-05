@@ -11,7 +11,7 @@ import com.decentralchain.transaction.smart.Verifier
 import com.decentralchain.transaction.{Asset, AssetIdLength, Proofs, TxExchangeAmount, TxHelpers, TxMatcherFee, TxOrderPrice, ValidationMatcher}
 import org.scalatest.*
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class OrderSpecification extends PropSpec with ValidationMatcher with NTPTime {
   property("Order serialization roundtrip") {
@@ -154,7 +154,7 @@ class OrderSpecification extends PropSpec with ValidationMatcher with NTPTime {
     forAll(orderGen, accountGen) { case (order, pka) =>
       val rndAsset = Array[Byte](32)
 
-      Random.nextBytes(rndAsset)
+      ThreadLocalRandom.current().nextBytes(rndAsset)
 
       Verifier.verifyAsEllipticCurveSignature(order, isRideV6Activated = true) should beRight
 

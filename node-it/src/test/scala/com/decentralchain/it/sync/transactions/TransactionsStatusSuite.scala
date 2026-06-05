@@ -13,7 +13,7 @@ import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{ProvenTransaction, Transaction}
 import play.api.libs.json.*
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class TransactionsStatusSuite extends BaseTransactionSuite with NTPTime {
 
@@ -60,7 +60,7 @@ class TransactionsStatusSuite extends BaseTransactionSuite with NTPTime {
     assertBadRequestAndMessage(notMiner.transactionStatus(maxTxList :+ txIds.head), "Too big sequence requested")
     assertBadRequestAndMessage(notMiner.transactionStatus(Seq()), "Empty request")
 
-    assertApiError(notMiner.transactionStatus(Random.shuffle(txIds :+ "illegal id")), InvalidIds(Seq("illegal id")))
+    assertApiError(notMiner.transactionStatus(new scala.util.Random(ThreadLocalRandom.current()).shuffle(txIds :+ "illegal id")), InvalidIds(Seq("illegal id")))
   }
 
   private def check(data: CheckData, result: Seq[TransactionStatus]): Unit = {

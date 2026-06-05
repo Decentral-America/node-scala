@@ -1,12 +1,11 @@
 package com.decentralchain.common
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ThreadLocalRandom
 
 import com.decentralchain.common.ArrayCompareBenchmark.BytesSt
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-
-import scala.util.Random
 
 //noinspection ScalaStyle
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -31,7 +30,7 @@ object ArrayCompareBenchmark {
     val bytes  = new Array[Byte](1024)
     val bytes1 = new Array[Byte](1024)
 
-    Random.nextBytes(bytes)
+    ThreadLocalRandom.current().nextBytes(bytes)
     bytes.copyToArray(bytes1)
   }
 }

@@ -8,8 +8,9 @@ import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.util.concurrent.GlobalEventExecutor
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.jdk.CollectionConverters.*
-import scala.util.Random
 
 class ChannelGroupExtSpec extends FreeSpec {
   "broadcast" - {
@@ -36,7 +37,7 @@ class ChannelGroupExtSpec extends FreeSpec {
       val allIds      = (0 to 5).toSet
       val allChannels = allIds.map(receiver)
 
-      val excludedChannels = allChannels.filter(_ => Random.nextBoolean())
+      val excludedChannels = allChannels.filter(_ => ThreadLocalRandom.current().nextBoolean())
       val excludedIds      = excludedChannels.map(_.id.asLongText().toInt)
 
       allChannels.foreach(channelGroup.add)

@@ -29,7 +29,7 @@ import org.scalatest
 import org.scalatest.BeforeAndAfterAll
 import play.api.libs.json.*
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with BeforeAndAfterAll {
   override protected def nodeConfigs: Seq[Config] =
@@ -248,7 +248,7 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
   test("/transactions/sign should produce alias transaction that is good for /transactions/broadcast") {
     for (v <- supportedVersions) {
       val isProof = Option(v).nonEmpty
-      val rnd     = Random.alphanumeric.take(9).mkString.toLowerCase
+      val rnd     = alphanumericStream.take(9).mkString.toLowerCase
       signBroadcastAndCalcFee(
         Json.obj("type" -> CreateAliasTransaction.typeId, "sender" -> sender.address, "alias" -> s"myalias$rnd"),
         usesProofs = isProof,
@@ -488,6 +488,8 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
     sender.postForm("/addresses")
     sender.postForm("/addresses")
   }
+
+  private def alphanumericStream: LazyList[Char] = { val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62))) }
 
   private def signBroadcastAndCalcFee(json: JsObject, usesProofs: Boolean, version: TxVersion): String = {
     val jsWithPK  = json ++ Json.obj("senderPublicKey" -> sender.publicKey.toString)

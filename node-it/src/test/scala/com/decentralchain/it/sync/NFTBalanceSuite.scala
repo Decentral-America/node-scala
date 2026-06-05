@@ -15,10 +15,10 @@ import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction
 import play.api.libs.json.*
 
+import java.util.concurrent.ThreadLocalRandom
 import scala.concurrent.Future.traverse
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
-import scala.util.Random
 
 class NFTBalanceSuite extends BaseFreeSpec {
   import NFTBalanceSuite.*
@@ -36,7 +36,7 @@ class NFTBalanceSuite extends BaseFreeSpec {
 
   private val (simple, nft) = fillPortfolio(issuer, 100, 100)
 
-  private val randomTokenToTransfer = IssuedAsset(nft(Random.nextInt(nft.length)).assetId)
+  private val randomTokenToTransfer = IssuedAsset(nft(ThreadLocalRandom.current().nextInt(nft.length)).assetId)
 
   protected override def beforeAll(): Unit = {
     super.beforeAll()
@@ -161,7 +161,7 @@ object NFTBalanceSuite {
           TxVersion.V1,
           issuer,
           "SimpleAsset",
-          s"Simple Test Asset ${Random.nextInt(1000)}",
+          s"Simple Test Asset ${ThreadLocalRandom.current().nextInt(1000)}",
           1000,
           8,
           reissuable = true,
@@ -178,7 +178,7 @@ object NFTBalanceSuite {
           TxVersion.V1,
           issuer,
           "NonFungibleAsset",
-          s"NFT Test Asset ${Random.nextInt(1000)}",
+          s"NFT Test Asset ${ThreadLocalRandom.current().nextInt(1000)}",
           1,
           0,
           reissuable = false,

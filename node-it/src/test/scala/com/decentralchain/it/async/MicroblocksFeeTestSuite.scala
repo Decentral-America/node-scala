@@ -10,7 +10,7 @@ import com.decentralchain.state.Height
 import scala.concurrent.Future.traverse
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class MicroblocksFeeTestSuite extends BaseFreeSpec {
 
@@ -25,7 +25,7 @@ class MicroblocksFeeTestSuite extends BaseFreeSpec {
           // Not mining node sends transfer transactions to another not mining node
           // Mining nodes collect fee
           (1 to n).map { _ =>
-            notMiner.transfer(notMiner.keyPair, firstAddress, (1 + Random.nextInt(10)).dcc, fee)
+            notMiner.transfer(notMiner.keyPair, firstAddress, (1 + ThreadLocalRandom.current().nextInt(10)).dcc, fee)
           }
         }
         .map(_ => ())

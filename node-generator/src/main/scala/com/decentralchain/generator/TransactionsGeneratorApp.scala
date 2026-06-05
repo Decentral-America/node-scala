@@ -21,10 +21,10 @@ import pureconfig.*
 import scopt.OptionParser
 
 import java.io.File
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, ThreadLocalRandom}
 import scala.concurrent.*
 import scala.concurrent.duration.*
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Success}
 
 object TransactionsGeneratorApp extends ScoptImplicits {
 
@@ -191,7 +191,7 @@ object TransactionsGeneratorApp extends ScoptImplicits {
         val threadPool                            = Executors.newFixedThreadPool(Math.max(1, finalConfig.sendTo.size))
         implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(threadPool)
 
-        val sender = new NetworkSender(dccSettings.networkSettings.trafficLogger, finalConfig.addressScheme, "generator", nonce = Random.nextLong())
+        val sender = new NetworkSender(dccSettings.networkSettings.trafficLogger, finalConfig.addressScheme, "generator", nonce = ThreadLocalRandom.current().nextLong())
 
         sys.addShutdownHook(sender.close())
 

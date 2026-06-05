@@ -47,8 +47,10 @@ import com.decentralchain.transaction.*
 import com.decentralchain.utils.EmptyBlockchain
 import org.scalatest.{EitherValues, Inside}
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.collection.immutable
-import scala.util.{Random, Try}
+import scala.util.Try
 
 class InvokeScriptTransactionDiffTest extends PropSpec with WithDomain with DBCacheSettings with EitherValues with Inside {
   import DomainPresets.*
@@ -1434,7 +1436,7 @@ class InvokeScriptTransactionDiffTest extends PropSpec with WithDomain with DBCa
           if (isAccountScripted) Seq(TxHelpers.setScript(invoker, trueScript))
           else Seq.empty
 
-        val failAsset    = Random.nextInt(6) + 1
+        val failAsset    = ThreadLocalRandom.current().nextInt(6) + 1
         val assetScripts = (1 to 6).map(i => if (i == failAsset) falseScript else trueScript)
         val iTxs = (1 to 6).map { _ =>
           TxHelpers.issue(dApp, ENOUGH_AMT, script = Some(trueScript), fee = 1.004.dcc)

@@ -30,7 +30,7 @@ import java.nio.file.{Files, Path, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, Duration as JDuration}
 import java.util.Collections.*
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.{ConcurrentHashMap, ThreadLocalRandom}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.{Properties, List as JList, Map as JMap}
 import scala.annotation.tailrec
@@ -39,7 +39,7 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future, blocking}
 import scala.jdk.CollectionConverters.*
 import scala.util.control.NonFatal
-import scala.util.{Random, Try}
+import scala.util.Try
 
 class Docker(
     suiteConfig: Config = empty,
@@ -79,7 +79,7 @@ class Docker(
   }
 
   // a random network in 10.x.x.x range
-  val networkSeed = Random.nextInt(0x100000) << 4 | 0x0a000000
+  val networkSeed = ThreadLocalRandom.current().nextInt(0x100000) << 4 | 0x0a000000
   // 10.x.x.x/28 network will accommodate up to 13 nodes
   private val networkPrefix = s"${InetAddress.getByAddress(toByteArray(networkSeed)).getHostAddress}/28"
 
@@ -97,7 +97,7 @@ class Docker(
   private def ipForNode(nodeId: Int) = InetAddress.getByAddress(toByteArray(nodeId & 0xf | networkSeed)).getHostAddress
 
   private lazy val dccNetwork: Network = {
-    val id          = Random.nextInt(Int.MaxValue)
+    val id          = ThreadLocalRandom.current().nextInt(Int.MaxValue)
     val networkName = s"dcc-$id"
 
     def network: Option[Network] =

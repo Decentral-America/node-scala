@@ -2,8 +2,8 @@ package com.decentralchain.it
 
 import com.typesafe.config.{Config, ConfigFactory}
 
+import java.util.concurrent.ThreadLocalRandom
 import scala.jdk.CollectionConverters.*
-import scala.util.Random
 import com.decentralchain.state.Height
 
 object NodeConfigs {
@@ -13,7 +13,7 @@ object NodeConfigs {
   val Default: Seq[Config] = ConfigFactory.parseResources("nodes.conf").getConfigList("nodes").asScala.toSeq
   val Miners: Seq[Config]  = Default.init
   val NotMiner: Config     = Default.last
-  def randomMiner: Config  = Random.shuffle(Miners).head
+  def randomMiner: Config  = new scala.util.Random(ThreadLocalRandom.current()).shuffle(Miners).head
 
   def newBuilder: Builder = Builder(Default, Default.size, Seq.empty)
 
@@ -36,7 +36,7 @@ object NodeConfigs {
       val totalEntities = defaultEntities + specialsConfigs.size
       require(totalEntities < baseConfigs.size)
 
-      val baseConfigsShuffled = if (shuffleNodes) Random.shuffle(baseConfigs) else baseConfigs
+      val baseConfigsShuffled = if (shuffleNodes) new scala.util.Random(ThreadLocalRandom.current()).shuffle(baseConfigs) else baseConfigs
       val (defaultNodes: Seq[Config], specialNodes: Seq[Config]) = baseConfigsShuffled
         .take(totalEntities)
         .splitAt(defaultEntities)

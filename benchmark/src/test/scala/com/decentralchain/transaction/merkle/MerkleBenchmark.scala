@@ -1,12 +1,11 @@
 package com.decentralchain.transaction.merkle
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ThreadLocalRandom
 
 import com.decentralchain.common.merkle.Merkle
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
-
-import scala.util.Random
 
 //noinspection ScalaStyle
 @State(Scope.Thread)
@@ -24,21 +23,21 @@ class MerkleBenchmark {
 
   val messagesEven: Seq[Array[Byte]] = (0 until evenSize).map { _ =>
     val message = new Array[Byte](messageSize)
-    Random.nextBytes(message)
+    ThreadLocalRandom.current().nextBytes(message)
     message
   }
 
   val messagesOdd: Seq[Array[Byte]] = (0 until oddSize).map { _ =>
     val message = new Array[Byte](messageSize)
-    Random.nextBytes(message)
+    ThreadLocalRandom.current().nextBytes(message)
     message
   }
 
   val levelsEven: Seq[Seq[Array[Byte]]] = Merkle.mkLevels(messagesEven)
   val levelsOdd: Seq[Seq[Array[Byte]]]  = Merkle.mkLevels(messagesOdd)
 
-  val messageIdxEven: Int            = Random.nextInt(evenSize)
-  val messageIdxOdd: Int             = Random.nextInt(oddSize)
+  val messageIdxEven: Int            = ThreadLocalRandom.current().nextInt(evenSize)
+  val messageIdxOdd: Int             = ThreadLocalRandom.current().nextInt(oddSize)
   val messageDigestEven: Array[Byte] = Merkle.hash(messagesEven(messageIdxEven))
   val messageDigestOdd: Array[Byte]  = Merkle.hash(messagesOdd(messageIdxOdd))
   val proofEven: Seq[Array[Byte]]    = Merkle.mkProofs(messageIdxEven, levelsEven)
@@ -52,7 +51,7 @@ class MerkleBenchmark {
 
   @Benchmark
   def merkleMkProofEven_test(bh: Blackhole): Unit = {
-    val proof = Merkle.mkProofs(Random.nextInt(evenSize), levelsEven)
+    val proof = Merkle.mkProofs(ThreadLocalRandom.current().nextInt(evenSize), levelsEven)
     bh.consume(proof)
   }
 
@@ -70,7 +69,7 @@ class MerkleBenchmark {
 
   @Benchmark
   def merkleMkProofOdd_test(bh: Blackhole): Unit = {
-    val proof = Merkle.mkProofs(Random.nextInt(oddSize), levelsOdd)
+    val proof = Merkle.mkProofs(ThreadLocalRandom.current().nextInt(oddSize), levelsOdd)
     bh.consume(proof)
   }
 

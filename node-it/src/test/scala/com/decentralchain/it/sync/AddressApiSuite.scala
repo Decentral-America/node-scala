@@ -10,7 +10,7 @@ import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import play.api.libs.json.*
 
 import java.net.URLDecoder
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class AddressApiSuite extends BaseTransactionSuite with NTPTime {
   test("balance at height") {
@@ -39,7 +39,7 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
       "%5B%5Ct%5Cr%5Cn%5D"
     )
     val invalidRegexps = List("%5Ba-z", "%5Ba-z%5D%7B0", "%5Ba-z%5D%7B%2C5%7D")
-    val data           = dataKeys.map(str => StringDataEntry(str, Random.nextString(16)))
+    val data           = dataKeys.map(str => StringDataEntry(str, randomString(16)))
     val dataFee        = calcDataFee(data, TxVersion.V1)
     val txId           = sender.putData(firstKeyPair, data, dataFee).id
     nodes.waitForHeightAriseAndTxPresent(txId)
@@ -104,12 +104,14 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
     )
   }
 
+  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+
   private def assertBalances(asset: Option[String]): Unit = {
     val addressesAndBalances = (1 to 5).map(i => (TxHelpers.signer(1000 + i).toAddress.toString, (i * 100).toLong)).toList
 
     val firstAddresses   = addressesAndBalances.slice(0, 2)
     val secondAddresses  = addressesAndBalances.slice(2, 5)
-    val illegalAddresses = List.fill(3)(Random.nextString(10))
+    val illegalAddresses = List.fill(3)(randomString(10))
 
     val heightBefore  = transferAndReturnHeights(firstAddresses, asset).min - 1
     val heightBetween = nodes.waitForHeightArise()

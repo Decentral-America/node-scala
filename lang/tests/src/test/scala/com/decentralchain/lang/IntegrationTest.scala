@@ -32,7 +32,8 @@ import org.scalatest.Inside
 import org.web3j.crypto.Keys
 
 import java.nio.charset.StandardCharsets
-import scala.util.{Random, Using}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Using
 
 class IntegrationTest extends PropSpec with Inside {
   private def eval[T <: EVALUATED](
@@ -1126,7 +1127,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("List[Int] median - 100 elements") {
-    val arr       = (1 to 100).map(_ => Random.nextLong())
+    val arr       = (1 to 100).map(_ => ThreadLocalRandom.current().nextLong())
     val arrSorted = arr.sorted
     val src =
       s"[${arr.mkString(",")}].median()"
@@ -1134,7 +1135,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("List[Int] median - 99 elements") {
-    val arr       = (1 to 99).map(_ => Random.nextLong())
+    val arr       = (1 to 99).map(_ => ThreadLocalRandom.current().nextLong())
     val arrSorted = arr.sorted
     val src =
       s"[${arr.mkString(",")}].median()"
@@ -1142,7 +1143,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("List[Int] median - 1 elements") {
-    val arr = Seq(Random.nextLong())
+    val arr = Seq(ThreadLocalRandom.current().nextLong())
     val src =
       s"[${arr.mkString(",")}].median()"
     eval(src, version = V4) shouldBe Right(CONST_LONG(arr.head))
