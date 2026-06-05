@@ -73,8 +73,8 @@ class NarrowTransactionGenerator(
       val tx: Option[Transaction] = typeGen.getRandom match {
         case TransactionType.Issue =>
           val sender      = randomFrom(accounts).get
-          val name        = random.nextString(5)
-          val description = random.nextString(5)
+          val name        = randomString(5)
+          val description = randomString(5)
           val reissuable  = random.nextBoolean()
           val amount      = 100000000L + random.nextInt(Int.MaxValue)
           logOption(
@@ -309,7 +309,7 @@ class NarrowTransactionGenerator(
             case "integer" => Terms.CONST_LONG(value.toLong)
             case "string" =>
               if (value.equals("random")) {
-                Terms.CONST_STRING(random.nextString(20)).explicitGet()
+                Terms.CONST_STRING(randomString(20)).explicitGet()
               } else
                 Terms.CONST_STRING(value).explicitGet()
             case "boolean" => Terms.CONST_BOOLEAN(value.toBoolean)
