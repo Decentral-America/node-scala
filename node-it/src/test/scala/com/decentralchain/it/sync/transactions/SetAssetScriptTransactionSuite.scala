@@ -20,8 +20,9 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{Proofs, TxPositiveAmount}
 import play.api.libs.json.*
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.concurrent.duration.*
-import scala.util.Random
 
 class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
   val estimator = ScriptEstimatorV1
@@ -299,7 +300,7 @@ class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
       }
       nodes.foreach(_.ensureTxDoesntExist(id(noProof)))
 
-      val badProof = request ++ Json.obj("proofs" -> Seq(Base58.encode(Array.fill(64)(Random.nextInt().toByte))))
+      val badProof = request ++ Json.obj("proofs" -> Seq(Base58.encode(Array.fill(64)(ThreadLocalRandom.current().nextInt().toByte))))
       assertApiError(sender.postJson("/transactions/broadcast", badProof)) { error =>
         error.message should include regex "Proof doesn't validate as signature"
       }

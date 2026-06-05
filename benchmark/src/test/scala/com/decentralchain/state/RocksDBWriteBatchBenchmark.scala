@@ -20,7 +20,7 @@ import org.openjdk.jmh.infra.Blackhole
 import org.rocksdb.{WriteBatch, WriteOptions}
 import com.decentralchain.utils.byteStrOrdering
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -90,8 +90,8 @@ object RocksDBWriteBatchBenchmark {
         (s"${prefixChar}key".getBytes ++ Ints.toByteArray(idx)) -> s"value$idx".getBytes
       }
 
-    Random.setSeed(42)
-    val kvsShuffled: Seq[(Array[Byte], Array[Byte])] = Random.shuffle(kvs)
+    val _rng = new scala.util.Random(42)
+    val kvsShuffled: Seq[(Array[Byte], Array[Byte])] = _rng.shuffle(kvs)
 
     val writeOptions = new WriteOptions()
 

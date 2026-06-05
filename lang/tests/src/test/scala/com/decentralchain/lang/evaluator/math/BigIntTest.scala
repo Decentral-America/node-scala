@@ -8,7 +8,7 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.{PureContext, unit}
 import com.decentralchain.test.produce
 
 import scala.math.BigDecimal.RoundingMode.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class BigIntTest extends EvaluatorSpec {
   implicit val startVersion: StdLibVersion = V5
@@ -213,13 +213,13 @@ class BigIntTest extends EvaluatorSpec {
   }
 
   property("List[BigInt] median - 100 elements") {
-    val arr       = (1 to 100).map(_ => Random.nextLong())
+    val arr       = (1 to 100).map(_ => ThreadLocalRandom.current().nextLong())
     val arrSorted = arr.sorted
     eval(s"[toBigInt(${arr.mkString("),toBigInt(")})].median()") shouldBe Right(CONST_BIGINT(BigInt(Math.floorDiv(arrSorted(49) + arrSorted(50), 2))))
   }
 
   property("List[BigInt] median - 99 elements") {
-    val arr       = (1 to 99).map(_ => Random.nextLong())
+    val arr       = (1 to 99).map(_ => ThreadLocalRandom.current().nextLong())
     val arrSorted = arr.sorted
     eval(s"[toBigInt(${arr.mkString("),toBigInt(")})].median()") shouldBe Right(CONST_BIGINT(BigInt(arrSorted(49))))
   }

@@ -1,6 +1,8 @@
 package com.decentralchain.it.sync.grpc
 
-import scala.util.{Random, Try}
+import java.util.concurrent.ThreadLocalRandom
+
+import scala.util.Try
 
 import com.decentralchain.account.AddressScheme
 import com.decentralchain.common.utils.EitherExt2.*
@@ -140,8 +142,13 @@ class CreateAliasTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPT
     }
   }
 
+  private def alphanumericStream: LazyList[Char] = {
+    val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
+    LazyList.continually(a(ThreadLocalRandom.current().nextInt(62)))
+  }
+
   private def randomAlias(): String = {
-    s"testalias.${Random.alphanumeric.take(9).mkString}".toLowerCase
+    s"testalias.${alphanumericStream.take(9).mkString}".toLowerCase
   }
 
 }

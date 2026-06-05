@@ -1,9 +1,10 @@
 package testHelpers
 
+import java.util.concurrent.ThreadLocalRandom
 import scala.collection.immutable.HashMap
 
 object RandomDataGenerator {
-  val rnd = new scala.util.Random
+  private def rnd = ThreadLocalRandom.current()
 
   val addressDataArray: Array[String] = Array(
     "Address(base58'')",

@@ -57,4 +57,5 @@ WORKDIR $RDATA
 HEALTHCHECK CMD curl -f http://localhost:6890/ride/status || exit 1
 
 STOPSIGNAL SIGINT
+USER ride
 ENTRYPOINT ["/usr/share/decentralchain-ride-runner/bin/entrypoint.sh"]

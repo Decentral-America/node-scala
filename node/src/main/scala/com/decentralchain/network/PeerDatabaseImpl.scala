@@ -9,13 +9,12 @@ import io.netty.channel.Channel
 import io.netty.channel.socket.nio.NioSocketChannel
 
 import java.net.{InetAddress, InetSocketAddress, URI}
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ThreadLocalRandom, TimeUnit}
 import scala.annotation.tailrec
 import scala.collection.*
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters.*
-import scala.util.Random
 import scala.util.control.NonFatal
 
 class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.systemTicker()) extends PeerDatabase with AutoCloseable with ScorexLogging {
@@ -130,7 +129,7 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
     val filteredKnownPeers = knownPeers.keySet.filterNot(excludeAddress)
     val randomKnownPeer =
-      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(Random.nextInt(filteredKnownPeers.size)) else filteredKnownPeers).headOption
+      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(ThreadLocalRandom.current().nextInt(filteredKnownPeers.size)) else filteredKnownPeers).headOption
 
     val selectedCandidate = resolvedPeersFromConfig
       .filterNot(excludeAddress)

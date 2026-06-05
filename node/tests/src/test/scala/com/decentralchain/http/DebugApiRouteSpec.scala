@@ -36,7 +36,7 @@ import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 
 import java.util.concurrent.ConcurrentHashMap
 import scala.concurrent.duration.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 //noinspection ScalaStyle
 class DebugApiRouteSpec
@@ -62,7 +62,7 @@ class DebugApiRouteSpec
   val block: Block = TestBlock.create(Nil).block
   val testStateHash: StateHash = {
     import com.decentralchain.utils.byteStrOrdering
-    def randomHash: ByteStr = ByteStr(Array.fill(32)(Random.nextInt(256).toByte))
+    def randomHash: ByteStr = ByteStr(Array.fill(32)(ThreadLocalRandom.current().nextInt(256).toByte))
 
     val hashes = SectionId.values.map((_, randomHash)).toMap
     StateHash(randomHash, hashes)

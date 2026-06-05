@@ -15,7 +15,7 @@ import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{Proofs, Transaction, TxPositiveAmount}
 import pureconfig.ConfigReader
 
-import scala.util.Random
+import java.security.SecureRandom
 
 class MultisigTransactionGenerator(settings: MultisigTransactionGenerator.Settings, val accounts: Seq[KeyPair], estimator: ScriptEstimator)
     extends TransactionGenerator {
@@ -60,9 +60,11 @@ class MultisigTransactionGenerator(settings: MultisigTransactionGenerator.Settin
     else res
   }
 
+  private val secureRandom = new SecureRandom()
+
   private def createAccount() = {
     val seedBytes = Array.fill(32)(0: Byte)
-    Random.nextBytes(seedBytes)
+    secureRandom.nextBytes(seedBytes)
     KeyPair(seedBytes)
   }
 }

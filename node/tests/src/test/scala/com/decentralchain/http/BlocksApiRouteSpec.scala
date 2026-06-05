@@ -31,7 +31,7 @@ import org.scalatest.Assertion
 import play.api.libs.json.*
 
 import scala.concurrent.duration.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class BlocksApiRouteSpec
     extends RouteSpec("/blocks")
@@ -282,17 +282,17 @@ class BlocksApiRouteSpec
     val blocks = Vector(
       Block(
         BlockHeader(1, 0, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None, None),
-        ByteStr(Random.nextBytes(64)),
+        ByteStr({ val _b = new Array[Byte](64); ThreadLocalRandom.current().nextBytes(_b); _b }),
         Nil
       ),
       Block(
         BlockHeader(1, 1000, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None, None),
-        ByteStr(Random.nextBytes(64)),
+        ByteStr({ val _b = new Array[Byte](64); ThreadLocalRandom.current().nextBytes(_b); _b }),
         Nil
       ),
       Block(
         BlockHeader(1, 2000, ByteStr.empty, 0, ByteStr.empty, TxHelpers.defaultSigner.publicKey, Nil, 0, ByteStr.empty, None, None, None),
-        ByteStr(Random.nextBytes(64)),
+        ByteStr({ val _b = new Array[Byte](64); ThreadLocalRandom.current().nextBytes(_b); _b }),
         Nil
       )
     )
@@ -394,7 +394,7 @@ class BlocksApiRouteSpec
 
     "random blocks" in {
       val (_, blocks) = (1 to 10).foldLeft((0L, Vector.empty[Block])) { case ((ts, blocks), _) =>
-        val newBlock = TestBlock.create(ts + 100 + Random.nextInt(10000), Nil).block
+        val newBlock = TestBlock.create(ts + 100 + ThreadLocalRandom.current().nextInt(10000), Nil).block
         (newBlock.header.timestamp, blocks :+ newBlock)
       }
 

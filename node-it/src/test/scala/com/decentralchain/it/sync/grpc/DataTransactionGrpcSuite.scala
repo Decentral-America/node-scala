@@ -13,6 +13,8 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{DataTransaction, TxVersion}
 import io.grpc.Status.Code
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.concurrent.duration.*
 
 class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
@@ -299,7 +301,7 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
           PBTransactions.vanilla(sender.putData(fourthAcc, data, calcDataFee(data, v), version = v), unsafe = false).explicitGet().id().toString
         )
       txIds.foreach(tx => sender.waitForTransaction(tx))
-      val r = scala.util.Random.nextInt(199)
+      val r = ThreadLocalRandom.current().nextInt(199)
       sender.getDataByKey(fourthAddress, s"int$r") shouldBe List(DataEntry(s"int$r", DataEntry.Value.IntValue(1000 + r)))
       sender.getDataByKey(fourthAddress, s"bool$r") shouldBe List(DataEntry(s"bool$r", DataEntry.Value.BoolValue(false)))
       sender.getDataByKey(fourthAddress, s"blob$r") shouldBe List(

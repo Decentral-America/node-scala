@@ -48,4 +48,4 @@ if [[ -n "${JEMALLOC_ENABLE}" && "${JEMALLOC_ENABLE}" == "true" ]]; then
   export LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libjemalloc.so"
 fi
 
-java $JAVA_OPTS -cp "${RIDE_INSTALL_PATH}/lib/*" $ARGS
+exec gosu ride java $JAVA_OPTS -cp "${RIDE_INSTALL_PATH}/lib/*" $ARGS

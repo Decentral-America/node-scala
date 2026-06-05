@@ -18,14 +18,14 @@ import com.decentralchain.transaction.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.transfer.*
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class MicroBlockSpecification extends FunSuite {
 
-  private val prevResBlockSig  = ByteStr(Array.fill(Block.BlockIdLength)(Random.nextInt(100).toByte))
-  private val totalResBlockSig = ByteStr(Array.fill(Block.BlockIdLength)(Random.nextInt(100).toByte))
-  private val stateHash        = ByteStr.fill(DigestLength)(Random.nextInt(100).toByte)
-  private val reference        = Array.fill(Block.BlockIdLength)(Random.nextInt(100).toByte)
+  private val prevResBlockSig  = ByteStr(Array.fill(Block.BlockIdLength)(ThreadLocalRandom.current().nextInt(100).toByte))
+  private val totalResBlockSig = ByteStr(Array.fill(Block.BlockIdLength)(ThreadLocalRandom.current().nextInt(100).toByte))
+  private val stateHash        = ByteStr.fill(DigestLength)(ThreadLocalRandom.current().nextInt(100).toByte)
+  private val reference        = Array.fill(Block.BlockIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)
   private val sender           = KeyPair(reference.dropRight(2))
   private val gen              = KeyPair(reference)
 
@@ -34,7 +34,7 @@ class MicroBlockSpecification extends FunSuite {
     val ts = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 2, ByteStr.empty, ts + 1).explicitGet()
-    val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(Random.nextInt(100).toByte)))
+    val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)))
     val tr2: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Dcc, 2, ByteStr.empty, ts + 2).explicitGet()
 
@@ -59,7 +59,7 @@ class MicroBlockSpecification extends FunSuite {
     val ts = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 2, ByteStr.empty, ts + 1).explicitGet()
-    val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(Random.nextInt(100).toByte)))
+    val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)))
     val tr2: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Dcc, 2, ByteStr.empty, ts + 2).explicitGet()
 
