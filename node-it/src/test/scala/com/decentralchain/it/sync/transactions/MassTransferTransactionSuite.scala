@@ -22,7 +22,7 @@ import com.decentralchain.transaction.{Proofs, TxVersion}
 import play.api.libs.json.*
 
 import scala.concurrent.duration.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class MassTransferTransactionSuite extends BaseTransactionSuite {
 
@@ -32,7 +32,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
     sender.postForm("/addresses")
   }
 
-  private def fakeSignature = ByteStr(Array.fill(64)(Random.nextInt().toByte))
+  private def fakeSignature = ByteStr(Array.fill(64)(ThreadLocalRandom.current().nextInt().toByte))
 
   test("asset mass transfer changes asset balances and sender's.dcc balance is decreased by fee.") {
     for (v <- massTransferTxSupportedVersions) {

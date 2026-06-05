@@ -3,7 +3,8 @@ package com.decentralchain.it.sync.transactions
 import com.google.common.primitives.Longs
 import com.typesafe.config.Config
 
-import scala.util.{Random, Try}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Try
 import com.decentralchain.account.{AddressScheme, KeyPair}
 import com.decentralchain.api.http.ApiError.WrongJson
 import com.decentralchain.features.BlockchainFeatures.RideV6
@@ -178,7 +179,7 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
         |""".stripMargin
     )
 
-    val kp = KeyPair(Longs.toByteArray(Random.nextLong()))
+    val kp = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
     val cat = CreateAliasTransaction(
       3.toByte,
       notMiner.publicKey,
@@ -243,7 +244,9 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
   }
 
   private def randomAlias(): String = {
-    s"testalias.${Random.alphanumeric.take(9).mkString}".toLowerCase
+    s"testalias.${alphanumericStream.take(9).mkString}".toLowerCase
   }
+
+  private def alphanumericStream: LazyList[Char] = { val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62))) }
 
 }

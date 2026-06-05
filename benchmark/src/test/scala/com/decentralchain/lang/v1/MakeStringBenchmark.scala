@@ -9,7 +9,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
 import java.util.concurrent.TimeUnit
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -53,8 +53,8 @@ class MakeStringBenchmark {
 
 object MakeStringBenchmark {
   abstract class MakeString(listSize: Int, stringSize: Int = 1, separatorSize: Int = 1) {
-    val string    = Random.nextPrintableChar().toString * stringSize
-    val separator = Random.nextPrintableChar().toString * separatorSize
+    val string    = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * stringSize
+    val separator = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * separatorSize
     val expr =
       FUNCTION_CALL(
         Native(FunctionIds.MAKESTRING),

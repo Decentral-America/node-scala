@@ -39,9 +39,19 @@ jobs:
         # exit code 0    : no findings
         # exit code 1    : findings present (not a crash); SARIF upload still runs
         # exit code >1   : semgrep itself failed; propagate as error
+        #
+        # Excluded paths:
+        #   node/src/main/resources/swagger-ui/
+        #     Vendored third-party Webpack bundles from the swagger-ui distribution.
+        #     SAST rules fire false positives on minified module-registry patterns
+        #     (e.g. prototype-pollution-loop) that are not present in our source.
+        #     These files are served as-is; security lies in keeping the swagger-ui
+        #     dependency version current (managed by Renovate in the node/build.sbt).
         run: |
           set +e
-          semgrep scan --config auto --sarif --output semgrep.sarif .
+          semgrep scan --config auto --sarif --output semgrep.sarif \
+            --exclude 'node/src/main/resources/swagger-ui' \
+            .
           EXIT_CODE=$?
           set -e
           if [ "$EXIT_CODE" -ne 0 ] && [ "$EXIT_CODE" -ne 1 ]; then

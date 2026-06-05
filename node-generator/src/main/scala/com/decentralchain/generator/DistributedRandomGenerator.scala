@@ -1,7 +1,7 @@
 package com.decentralchain.generator
 
+import java.util.concurrent.ThreadLocalRandom
 import scala.collection.immutable.TreeMap
-import scala.util.Random
 
 // https://en.wikipedia.org/wiki/Categorical_distribution
 trait DistributedRandomGenerator[T] {
@@ -14,7 +14,7 @@ object DistributedRandomGenerator {
   }
 
   private class MultipleOutcomes[T](outcomes: TreeMap[Double, T], total: Double) extends DistributedRandomGenerator[T] {
-    override def getRandom: T = outcomes.rangeFrom(Random.nextDouble() * total).head._2
+    override def getRandom: T = outcomes.rangeFrom(ThreadLocalRandom.current().nextDouble() * total).head._2
   }
 
   def apply[T](probabilities: Map[T, Double]): DistributedRandomGenerator[T] = {

@@ -22,9 +22,8 @@ import monix.execution.Scheduler
 import monix.reactive.Observable
 import monix.reactive.subjects.ConcurrentSubject
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{CountDownLatch, ThreadLocalRandom}
 import scala.concurrent.duration.*
-import scala.util.Random
 
 class MicroBlockMinerSpec extends FlatSpec with WithDomain {
   "Micro block miner" should "generate microblocks in flat interval" in {
@@ -59,7 +58,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
         import Scheduler.Implicits.global
         val startTime = System.nanoTime()
         val tx = CreateAliasTransaction
-          .selfSigned(TxVersion.V1, acc, "test" + Random.nextInt(), TestValues.fee, TestValues.timestamp)
+          .selfSigned(TxVersion.V1, acc, "test" + ThreadLocalRandom.current().nextInt(), TestValues.fee, TestValues.timestamp)
           .explicitGet()
         utxPool.putIfNew(tx).resultE.explicitGet()
         val result = task.runSyncUnsafe()

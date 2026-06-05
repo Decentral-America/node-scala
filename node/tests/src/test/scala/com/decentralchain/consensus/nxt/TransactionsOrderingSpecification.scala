@@ -9,7 +9,7 @@ import com.decentralchain.transaction.Asset
 import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class TransactionsOrderingSpecification extends PropSpec {
 
@@ -83,7 +83,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         .explicitGet()
     )
 
-    val sorted = Random.shuffle(correctSeq).sorted(using TransactionsOrdering.InBlock)
+    val sorted = new scala.util.Random(ThreadLocalRandom.current()).shuffle(correctSeq).sorted(using TransactionsOrdering.InBlock)
 
     sorted shouldBe correctSeq
   }
@@ -157,7 +157,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         .explicitGet()
     )
 
-    val sorted = Random.shuffle(correctSeq).sorted(using TransactionsOrdering.InUTXPool(Set.empty))
+    val sorted = new scala.util.Random(ThreadLocalRandom.current()).shuffle(correctSeq).sorted(using TransactionsOrdering.InUTXPool(Set.empty))
 
     sorted shouldBe correctSeq
   }
@@ -192,7 +192,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         .explicitGet()
     )
 
-    Random.shuffle(correctSeq).sorted(using TransactionsOrdering.InBlock) shouldBe correctSeq
+    new scala.util.Random(ThreadLocalRandom.current()).shuffle(correctSeq).sorted(using TransactionsOrdering.InBlock) shouldBe correctSeq
   }
 
   property("TransactionsOrdering.InUTXPool should sort txs by ascending block timestamp taking into consideration whitelisted senders") {
@@ -225,6 +225,6 @@ class TransactionsOrderingSpecification extends PropSpec {
         )
         .explicitGet()
     )
-    Random.shuffle(correctSeq).sorted(using TransactionsOrdering.InUTXPool(Set(whitelisted.toAddress.toString))) shouldBe correctSeq
+    new scala.util.Random(ThreadLocalRandom.current()).shuffle(correctSeq).sorted(using TransactionsOrdering.InUTXPool(Set(whitelisted.toAddress.toString))) shouldBe correctSeq
   }
 }

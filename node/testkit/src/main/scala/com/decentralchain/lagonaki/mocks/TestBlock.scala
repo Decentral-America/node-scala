@@ -7,16 +7,15 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.*
 import com.decentralchain.transaction.Transaction
 
-import scala.util.{Random, Try}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Try
 
 object TestBlock {
   case class BlockWithSigner(block: Block, signer: KeyPair)
 
   val defaultSigner: KeyPair = KeyPair(ByteStr(new Array[Byte](KeyLength)))
 
-  val random: Random = new Random()
-
-  def randomOfLength(length: Int): ByteStr = ByteStr(Array.fill(length)(random.nextInt().toByte))
+  def randomOfLength(length: Int): ByteStr = ByteStr(Array.fill(length)(ThreadLocalRandom.current().nextInt().toByte))
 
   def randomSignature(): ByteStr = randomOfLength(SignatureLength)
 

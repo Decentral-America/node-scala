@@ -38,7 +38,7 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.*
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class TransactionBroadcastSpec2
     extends RouteSpec("/transactions")
@@ -596,7 +596,7 @@ class TransactionBroadcastSpec
     with WithDomain
     with SharedSchedulerMixin {
   private val seed = new Array[Byte](32)
-  Random.nextBytes(seed)
+  ThreadLocalRandom.current().nextBytes(seed)
   private val sender: KeyPair = KeyPair(seed)
 
   private val transactionPublisher: TransactionPublisher = (_: Transaction, _: Option[Channel]) =>

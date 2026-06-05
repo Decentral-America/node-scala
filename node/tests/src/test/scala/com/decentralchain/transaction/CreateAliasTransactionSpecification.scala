@@ -15,7 +15,8 @@ import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.transaction.serialization.impl.{CreateAliasTxSerializer, PBTransactionSerializer}
 import play.api.libs.json.Json
 
-import scala.util.{Failure, Random, Success}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.{Failure, Success}
 
 class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
 
@@ -34,8 +35,8 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
   }
 
   property("CreateAliasTransaction PB serialization roundtrip") {
-    val kp1 = KeyPair(Longs.toByteArray(Random.nextLong()))
-    val kp2 = KeyPair(Longs.toByteArray(Random.nextLong()))
+    val kp1 = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
+    val kp2 = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
 
     val cat = CreateAliasTransaction(
       3.toByte,
@@ -133,8 +134,8 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
       DomainPresets.RideV5.setFeaturesHeight((BlockchainFeatures.RideV6, 4)),
       AddrWithBalance.enoughBalances(sender)
     ) { d =>
-      val kp1 = KeyPair(Longs.toByteArray(Random.nextLong()))
-      val kp2 = KeyPair(Longs.toByteArray(Random.nextLong()))
+      val kp1 = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
+      val kp2 = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
 
       val cat = CreateAliasTransaction(
         3.toByte,
@@ -168,8 +169,8 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
       DomainPresets.RideV5.setFeaturesHeight((BlockchainFeatures.RideV6, 3)),
       AddrWithBalance.enoughBalances(sender)
     ) { d =>
-      val kp1 = KeyPair(Longs.toByteArray(Random.nextLong()))
-      val kp2 = KeyPair(Longs.toByteArray(Random.nextLong()))
+      val kp1 = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
+      val kp2 = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
 
       val cat = CreateAliasTransaction(
         3.toByte,

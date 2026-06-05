@@ -27,7 +27,7 @@ import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.{Authorized, CreateAliasTransaction, Transaction, TransactionType, TxHelpers, TxVersion}
 import org.scalatest.exceptions.TestFailedException
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class LeaseActionDiffTest extends PropSpec with WithDomain {
   private def features(version: StdLibVersion): FunctionalitySettings = {
@@ -889,8 +889,8 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       val recipient        = accountGen.sample.get.toAddress
       val amount           = positiveLongGen.sample.get
       val actionsCount     = limit
-      val leaseCount       = Random.nextInt(actionsCount) + 1
-      val leaseCancelCount = Random.nextInt(leaseCount).min(actionsCount - leaseCount)
+      val leaseCount       = ThreadLocalRandom.current().nextInt(actionsCount) + 1
+      val leaseCancelCount = ThreadLocalRandom.current().nextInt(leaseCount).min(actionsCount - leaseCount)
       val transfersCount   = actionsCount - leaseCancelCount - leaseCount
       val dApp = multipleActionsDApp(
         recipient.toRide,
@@ -919,8 +919,8 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       val recipient         = TxHelpers.signer(3).toAddress
       val amount            = 100
       val totalActionsCount = limit + 1
-      val leaseCount        = Random.nextInt(totalActionsCount) + 1
-      val leaseCancelCount  = Random.nextInt(leaseCount).min(totalActionsCount - leaseCount)
+      val leaseCount        = ThreadLocalRandom.current().nextInt(totalActionsCount) + 1
+      val leaseCancelCount  = ThreadLocalRandom.current().nextInt(leaseCount).min(totalActionsCount - leaseCount)
       val transfersCount    = totalActionsCount - leaseCancelCount - leaseCount
       val dApp = multipleActionsDApp(
         recipient.toRide,

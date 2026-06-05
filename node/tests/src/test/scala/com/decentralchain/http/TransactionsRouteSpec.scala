@@ -40,9 +40,10 @@ import org.scalatest.{Assertion, OptionValues}
 import play.api.libs.json.*
 import play.api.libs.json.Json.JsValueWrapper
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.concurrent.Future
 import scala.concurrent.duration.*
-import scala.util.Random
 
 class TransactionsRouteSpec
     extends RouteSpec("/transactions")
@@ -885,7 +886,7 @@ class TransactionsRouteSpec
   routePath("/broadcast") - {
     def withInvokeScriptTransaction(f: (KeyPair, InvokeScriptTransaction) => Unit): Unit = {
       val seed = new Array[Byte](32)
-      Random.nextBytes(seed)
+      ThreadLocalRandom.current().nextBytes(seed)
       val sender: KeyPair = KeyPair(seed)
       val ist = Signed.invokeScript(
         TxVersion.V1,

@@ -14,10 +14,18 @@ import pureconfig.ConfigReader
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import scala.util.{Random, Try}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Try
 
 object Preconditions {
   private val Fee = 1500000L
+
+  private def rng = ThreadLocalRandom.current()
+
+  private def randomString(n: Int): String = {
+    val alpha = "abcdefghijklmnopqrstuvwxyz0123456789"
+    (0 until n).map(_ => alpha.charAt(rng.nextInt(alpha.length))).mkString
+  }
 
   given ConfigReader[KeyPair] =
     ConfigReader[String].map(s =>
@@ -50,11 +58,11 @@ object Preconditions {
         IssueTransaction
           .selfSigned(
             TxVersion.V3,
-            accounts(Random.nextInt(accounts.size)),
+            accounts(rng.nextInt(accounts.size)),
             UUID.randomUUID().toString.take(8),
-            Random.nextString(100),
+            randomString(100),
             10_000_000_000L,
-            Random.nextLong(9).toByte,
+            rng.nextLong(9).toByte,
             true,
             None,
             100000000,
@@ -65,14 +73,14 @@ object Preconditions {
       .toList
 
     val leaseTxs = (1 to settings.leasesCount).map { _ =>
-      val rndAccount = Random.nextInt(accounts.size - 1)
+      val rndAccount = rng.nextInt(accounts.size - 1)
 
       LeaseTransaction
         .selfSigned(
           TxVersion.V3,
           accounts(rndAccount),
-          GeneratorSettings.toKeyPair(Random.nextString(10)).toAddress,
-          1 + Random.nextInt(1000),
+          GeneratorSettings.toKeyPair(randomString(10)).toAddress,
+          1 + rng.nextInt(1000),
           Fee,
           time.correctedTime()
         )

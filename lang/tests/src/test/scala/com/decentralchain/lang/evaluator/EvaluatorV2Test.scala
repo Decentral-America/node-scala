@@ -15,8 +15,9 @@ import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.test.*
 import org.scalatest.Inside
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.annotation.tailrec
-import scala.util.Random
 
 class EvaluatorV2Test extends PropSpec with Inside {
   private val version     = V4
@@ -1018,7 +1019,6 @@ class EvaluatorV2Test extends PropSpec with Inside {
          |
        """.stripMargin
 
-    val random = new Random()
     /*
       a = (a(1) + ... + a(n))
       a(i) = random from (0, a - (a1 + ... + a(i-1)) - n + i]
@@ -1034,8 +1034,8 @@ class EvaluatorV2Test extends PropSpec with Inside {
         expectedSum - generatedSum :: acc
       else {
         val max                     = expectedSum - generatedSum - piecesNumber + acc.size + 1
-        val distributionCoefficient = random.nextInt(Math.min(max, piecesNumber)) + 1
-        val next                    = random.nextInt(max / distributionCoefficient) + 1
+        val distributionCoefficient = ThreadLocalRandom.current().nextInt(Math.min(max, piecesNumber)) + 1
+        val next                    = ThreadLocalRandom.current().nextInt(max / distributionCoefficient) + 1
         randomPieces(expectedSum, piecesNumber, generatedSum + next, next :: acc)
       }
 
@@ -1048,7 +1048,7 @@ class EvaluatorV2Test extends PropSpec with Inside {
     ).foreach { eval =>
       val (evaluated, _, precalculatedComplexity) = eval(expr, 1500)
 
-      val pieces = randomPieces(precalculatedComplexity, Random.nextInt(99) + 2)
+      val pieces = randomPieces(precalculatedComplexity, ThreadLocalRandom.current().nextInt(99) + 2)
       val (resultExpr, summarizedCost) =
         pieces.foldLeft((expr, startCost)) { case ((currentExpr, costSum), nextCostLimit) =>
           currentExpr should not be an[EVALUATED]

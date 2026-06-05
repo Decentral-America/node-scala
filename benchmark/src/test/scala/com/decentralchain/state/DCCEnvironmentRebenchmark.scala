@@ -14,7 +14,7 @@ import com.decentralchain.transaction.transfer.TransferTransaction
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -27,86 +27,86 @@ class DCCEnvironmentRebenchmark {
 
   @Benchmark
   def resolveAlias(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
     if (useUnexisting) {
       bh.consume(st.environment.resolveAlias("unexisting_alias_zzzzz"))
     } else {
-      val aliasNr = Random.nextInt(st.allAliases.size)
+      val aliasNr = ThreadLocalRandom.current().nextInt(st.allAliases.size)
       bh.consume(st.environment.resolveAlias(st.allAliases(aliasNr).name))
     }
   }
 
   @Benchmark
   def dccBalanceOf(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
     if (useUnexisting) {
       bh.consume(st.environment.accountBalanceOf(Recipient.Address(ByteStr.fromBytes(1, 2, 3)), None))
     } else {
-      val addressNr = Random.nextInt(st.allAddresses.size)
+      val addressNr = ThreadLocalRandom.current().nextInt(st.allAddresses.size)
       bh.consume(st.environment.accountBalanceOf(st.allAddresses(addressNr), None))
     }
   }
 
   @Benchmark
   def assetBalanceOf(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
-    val addressNr     = Random.nextInt(st.allAddresses.size)
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
+    val addressNr     = ThreadLocalRandom.current().nextInt(st.allAddresses.size)
     if (useUnexisting) {
       bh.consume(st.environment.accountBalanceOf(st.allAddresses(addressNr), Some(Array[Byte](1, 2, 3))))
     } else {
-      val aliasNr = Random.nextInt(st.allAssets.size)
+      val aliasNr = ThreadLocalRandom.current().nextInt(st.allAssets.size)
       bh.consume(st.environment.accountBalanceOf(st.allAddresses(addressNr), Some(st.allAssets(aliasNr))))
     }
   }
 
   @Benchmark
   def assetInfo(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
     if (useUnexisting) {
       bh.consume(st.environment.assetInfoById(Array[Byte](1, 2, 3)))
     } else {
-      val aliasNr = Random.nextInt(st.allAssets.size)
+      val aliasNr = ThreadLocalRandom.current().nextInt(st.allAssets.size)
       bh.consume(st.environment.assetInfoById(st.allAssets(aliasNr)))
     }
   }
 
   @Benchmark
   def transferTransactionById(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
     if (useUnexisting) {
-      val transactionNr = Random.nextInt(st.allTransactions.size)
+      val transactionNr = ThreadLocalRandom.current().nextInt(st.allTransactions.size)
       bh.consume(st.environment.transferTransactionById(st.allTransactions(transactionNr)))
     } else {
-      val transactionNr = Random.nextInt(st.transferTransactions.size)
+      val transactionNr = ThreadLocalRandom.current().nextInt(st.transferTransactions.size)
       bh.consume(st.environment.transferTransactionById(st.transferTransactions(transactionNr).arr))
     }
   }
 
   @Benchmark
   def transactionHeightById(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
     if (useUnexisting) {
       bh.consume(st.environment.transactionHeightById(Array[Byte](1, 2, 3)))
     } else {
-      val transactionNr = Random.nextInt(st.allTransactions.size)
+      val transactionNr = ThreadLocalRandom.current().nextInt(st.allTransactions.size)
       bh.consume(st.environment.transactionHeightById(st.allTransactions(transactionNr)))
     }
   }
 
   @Benchmark
   def blockInfoByHeight(bh: Blackhole, st: St): Unit = {
-    val indexNr = Random.nextInt(st.heights.size)
+    val indexNr = ThreadLocalRandom.current().nextInt(st.heights.size)
     bh.consume(st.environment.blockInfoByHeight(st.heights(indexNr)))
   }
 
   @Benchmark
   def dataEntries(bh: Blackhole, st: St): Unit = {
-    val useUnexisting = Random.nextBoolean()
+    val useUnexisting = ThreadLocalRandom.current().nextBoolean()
     if (useUnexisting) {
-      val addressNr = Random.nextInt(st.allAddresses.size)
+      val addressNr = ThreadLocalRandom.current().nextInt(st.allAddresses.size)
       bh.consume(st.environment.data(st.allAddresses(addressNr), "unexisting_key", Long))
     } else {
-      val transactionNr = Random.nextInt(st.dataEntries.size)
+      val transactionNr = ThreadLocalRandom.current().nextInt(st.dataEntries.size)
       val dataEntry     = st.dataEntries(transactionNr)._1
       val address       = st.dataEntries(transactionNr)._2
       val t =
@@ -125,7 +125,7 @@ class DCCEnvironmentRebenchmark {
     val address = Recipient.Address(
       ByteStr(Address.fromString("3PFfUN4dRAyMN4nxYayES1CRZHJjS8JVCHf", None).explicitGet().bytes)
     )
-    val checkBinaryOrString = Random.nextBoolean()
+    val checkBinaryOrString = ThreadLocalRandom.current().nextBoolean()
     if (checkBinaryOrString) {
       bh.consume(st.environment.data(address, "bigBinary", ByteArray))
     } else {
@@ -170,7 +170,7 @@ object DCCEnvironmentRebenchmark {
           if (txCount == 0)
             None
           else
-            rdb.db.get(Keys.transactionAt(Height(h), TxNum(Random.nextInt(txCount).toShort), rdb.txHandle)).map(_._2.id().arr)
+            rdb.db.get(Keys.transactionAt(Height(h), TxNum(ThreadLocalRandom.current().nextInt(txCount).toShort), rdb.txHandle)).map(_._2.id().arr)
         }
     }
 
@@ -185,11 +185,11 @@ object DCCEnvironmentRebenchmark {
             None
           else
             rdb.db
-              .get(Keys.transactionAt(Height(h), TxNum(Random.nextInt(txCount).toShort), rdb.txHandle))
+              .get(Keys.transactionAt(Height(h), TxNum(ThreadLocalRandom.current().nextInt(txCount).toShort), rdb.txHandle))
               .collect {
                 case (meta, dataTx: DataTransaction) if meta.status == Status.Succeeded && dataTx.data.nonEmpty =>
                   (
-                    dataTx.data(Random.nextInt(dataTx.data.length)),
+                    dataTx.data(ThreadLocalRandom.current().nextInt(dataTx.data.length)),
                     Recipient.Address(ByteStr(dataTx.sender.toAddress.bytes))
                   )
               }
@@ -207,7 +207,7 @@ object DCCEnvironmentRebenchmark {
             None
           else
             rdb.db
-              .get(Keys.transactionAt(Height(h), TxNum(Random.nextInt(txCount).toShort), rdb.txHandle))
+              .get(Keys.transactionAt(Height(h), TxNum(ThreadLocalRandom.current().nextInt(txCount).toShort), rdb.txHandle))
               .collect { case (meta, transferTx: TransferTransaction) if meta.status == Status.Succeeded => transferTx.id() }
         }
     }

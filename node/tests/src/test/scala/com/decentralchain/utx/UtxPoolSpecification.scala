@@ -47,7 +47,8 @@ import org.scalatest.concurrent.Eventually
 import java.nio.file.{Files, Path}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.*
-import scala.util.{Random, Using}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Using
 
 private object UtxPoolSpecification {
   final case class TempDB(fs: FunctionalitySettings, dbSettings: DBSettings) extends AutoCloseable {
@@ -576,7 +577,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
             )
           val utx = new UtxPoolImpl(time, bcu, utxSettings, Int.MaxValue, isMiningEnabled = true)
 
-          Random.shuffle(whitelistedTxs ++ txs).foreach(tx => utx.putIfNew(tx))
+          new scala.util.Random(ThreadLocalRandom.current()).shuffle(whitelistedTxs ++ txs).foreach(tx => utx.putIfNew(tx))
 
           val (packed, _, _) = utx.packUnconfirmed(MultiDimensionalMiningConstraint.Unlimited, None, PackStrategy.Unlimited)
           packed.get.take(5) should contain theSameElementsAs whitelistedTxs

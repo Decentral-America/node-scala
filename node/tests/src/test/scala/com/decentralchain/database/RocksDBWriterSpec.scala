@@ -23,7 +23,8 @@ import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.{TxHelpers, TxPositiveAmount}
 import org.rocksdb.{ReadOptions, RocksIterator}
 
-import scala.util.{Random, Using}
+import java.util.concurrent.ThreadLocalRandom
+import scala.util.Using
 
 class RocksDBWriterSpec extends FreeSpec with WithDomain {
   "Slice" - {
@@ -217,7 +218,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
 
     val dataKey   = "test"
     val dataTxFee = TxPositiveAmount.unsafeFrom(TestValues.fee)
-    def dataTx    = TxHelpers.dataSingle(account = bob, key = dataKey, value = Random.nextInt().toString, fee = dataTxFee.value)
+    def dataTx    = TxHelpers.dataSingle(account = bob, key = dataKey, value = ThreadLocalRandom.current().nextInt().toString, fee = dataTxFee.value)
 
     "doesn't delete if disabled" in withDomain(
       settings.copy(dbSettings = settings.dbSettings.copy(cleanupInterval = None)),

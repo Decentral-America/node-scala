@@ -14,7 +14,7 @@ import org.scalatest.CancelAfterFailure
 
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
-import scala.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 class ScriptLogSuite extends BaseTransactionSuite with CancelAfterFailure {
 
@@ -60,7 +60,7 @@ class ScriptLogSuite extends BaseTransactionSuite with CancelAfterFailure {
     val data =
       ((0 until 4) map { i =>
         val bytes = new Array[Byte](Short.MaxValue - 1)
-        Random.nextBytes(bytes)
+        ThreadLocalRandom.current().nextBytes(bytes)
         BinaryDataEntry(s"k$i", ByteStr(bytes))
       }).toList
 
@@ -77,7 +77,7 @@ class ScriptLogSuite extends BaseTransactionSuite with CancelAfterFailure {
 
     val signature = new Array[Byte](64)
 
-    Random.nextBytes(signature)
+    ThreadLocalRandom.current().nextBytes(signature)
 
     def mkInvData() =
       DataTransaction

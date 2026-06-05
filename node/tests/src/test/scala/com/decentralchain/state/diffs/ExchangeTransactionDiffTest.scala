@@ -39,8 +39,10 @@ import com.decentralchain.{TestValues, TestWallet, crypto}
 import org.scalatest.{EitherValues, Inside}
 import org.web3j.crypto.Bip32ECKeyPair
 
+import java.util.concurrent.ThreadLocalRandom
+
 import scala.concurrent.duration.*
-import scala.util.{Random, Try}
+import scala.util.Try
 
 class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain with EitherValues with TestWallet with EthHelpers {
 
@@ -2185,7 +2187,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
         (remainder - next) -> (next :: result)
       }
 
-    Random.shuffle(lastRemainder :: values)
+    new scala.util.Random(ThreadLocalRandom.current()).shuffle(lastRemainder :: values)
   }
 
   /** Generates sequence of sell orders for one big buy order */
