@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
+
 jobs:
   update-graph:
     name: Update Dependency Graph

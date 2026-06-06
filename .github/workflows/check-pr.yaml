@@ -11,6 +11,9 @@ concurrency:
   group: check-pr-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
+
 jobs:
   check-pr:
     name: Check PR
@@ -30,7 +33,7 @@ jobs:
           # Only publish-snapshots (below) requires GPG.
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
       - name: Check PR
-        run: sbt -J-Xlog:gc*=debug:file=./gc.log --batch checkPR
+        run: sbt --batch checkPR
       - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
         if: always()
         with:
