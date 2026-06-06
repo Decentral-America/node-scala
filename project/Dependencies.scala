@@ -54,7 +54,7 @@ object Dependencies {
   val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
   val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.32"
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.10"
-  val curve25519      = "io.decentralchain"  % "curve25519"        % "0.6.6"
+  val curve25519      = "io.decentralchain"  % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
 
   val playJson = "org.playframework" %% "play-json" % "3.0.6"
