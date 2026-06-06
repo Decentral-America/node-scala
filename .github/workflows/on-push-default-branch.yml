@@ -30,7 +30,7 @@ jobs:
             packages/jvm/crypto
             packages/jvm/transactions
             packages/jvm/java-sdk
-            packages/sdk/protobuf-serialization
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -42,7 +42,7 @@ jobs:
           set -euo pipefail
           # Wagon retry flags: up to 3 retries on transient TLS/network failures
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
-          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
@@ -93,7 +93,7 @@ jobs:
             packages/jvm/crypto
             packages/jvm/transactions
             packages/jvm/java-sdk
-            packages/sdk/protobuf-serialization
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -107,7 +107,7 @@ jobs:
           set -euo pipefail
           # Wagon retry flags: up to 3 retries on transient TLS/network failures
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
-          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)

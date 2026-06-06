@@ -60,7 +60,7 @@ jobs:
             packages/jvm/curve25519
             packages/jvm/blst
             packages/jvm/groth16
-            packages/sdk/protobuf-serialization
+            packages/sdk/protobuf-schemas
       - uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc  # v0.1.0
       - uses: proudust/gh-describe@80412be8ce0e77d8afba6b340e34790bc772aa45  # v2.2.0
         id: ghd
@@ -103,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
-          (cd _dcc-monorepo/packages/sdk/protobuf-serialization && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
