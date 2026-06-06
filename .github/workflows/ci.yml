@@ -14,6 +14,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Container-aware heap (70% of cgroup limit), G1GC for compilation throughput.
+# Java 25 defaults to ZGC (low-latency) which is suboptimal for batch sbt compilation.
+# -XX:-UseZGC disables the implicit default before +UseG1GC to avoid
+# "Multiple garbage collectors selected" JVM crash.
+env:
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
+
 jobs:
   build:
     name: Build

@@ -31,6 +31,8 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/decentral-america/node-scala
+  # Container-aware heap (70% of cgroup limit), G1GC for compilation throughput.
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
 
 jobs:
   publish:
