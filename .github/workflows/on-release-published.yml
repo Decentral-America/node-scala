@@ -10,7 +10,7 @@ permissions:
 jobs:
   publish-node-image:
     name: Publish DCC Node Image
-    uses: ./.github/workflows/publish-docker-image.yml
+    uses: ./.github/workflows/publish-node-scala.yml
     with:
       raw-docker-tags: |
         type=match,pattern=v(.*),group=1
