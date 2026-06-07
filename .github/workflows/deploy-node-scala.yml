@@ -33,8 +33,8 @@ env:
 jobs:
   # ── 1. Build and push the node-scala Docker image ───────────────────────────
   publish:
-    name: Build & push node-scala image
-    uses: ./.github/workflows/publish-docker-image.yml
+    name: Build · Push · Attest
+    uses: ./.github/workflows/publish-node-scala.yml
     with:
       raw-docker-tags: |
         type=raw,value=node-scala-${{ github.event.inputs.network }}-${{ github.sha }}

@@ -1,5 +1,5 @@
-name: Publish Docker image
-run-name: Publish ref ${{ github.ref_name }}
+name: Publish node-scala
+run-name: Publish node-scala @ ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
         value: ${{ jobs.publish.outputs.digest }}
 
 concurrency:
-  group: publish-docker-image-${{ github.ref }}
+  group: publish-node-scala-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -36,7 +36,7 @@ env:
 
 jobs:
   publish:
-    name: Publish Docker image
+    name: Build · Push · Attest
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: ${{ inputs.environment }}
@@ -45,6 +45,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
+      artifact-metadata: write
     outputs:
       digest: ${{ steps.push.outputs.digest }}
       node-version: ${{ steps.versions.outputs.node-version }}
@@ -64,10 +65,15 @@ jobs:
             packages/jvm/groth16
             packages/sdk/protobuf-schemas
       - uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc  # v0.1.0
-      - uses: proudust/gh-describe@80412be8ce0e77d8afba6b340e34790bc772aa45  # v2.2.0
+      - name: Get version from git describe
         id: ghd
-        with:
-          commit-ish: ${{ inputs.ref || github.sha}}
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          DESCRIBE=$(git describe --tags --match 'v*' --long HEAD 2>/dev/null \
+            || echo "v0.0.0-0-g$(git rev-parse --short HEAD)")
+          echo "describe=$DESCRIBE" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
       - name: Prepare base image and node version
         env:
           BASE_IMAGE_INPUT: ${{ inputs.base-image }}
