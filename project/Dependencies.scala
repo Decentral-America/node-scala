@@ -26,6 +26,10 @@ object Dependencies {
       jacksonModule("core", "databind"),
       jacksonModule("datatype", "datatype-jdk8"),
       jacksonModule("datatype", "datatype-jsr310"),
+      // Force tools.jackson.core 3.1.1 (fixes GHSA-2m67-wjpj-xhg9 HIGH CVE)
+      // Transitive via pekko-http; 3.1.0 has document length constraint bypass.
+      "tools.jackson.core" % "jackson-core"     % "3.1.1",
+      "tools.jackson.core" % "jackson-databind" % "3.1.1",
       gProto
     )
   )
