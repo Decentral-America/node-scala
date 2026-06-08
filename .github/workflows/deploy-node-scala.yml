@@ -22,6 +22,7 @@ permissions:
   packages: write
   attestations: write
   id-token: write
+  artifact-metadata: write
 
 concurrency:
   group: deploy-node-scala-${{ github.event.inputs.network }}
