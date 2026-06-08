@@ -1342,7 +1342,7 @@ paths:
           schema:
             type: array
             items:
-              $ref: '#/components/parameters/txId'
+              $ref: '#/components/schemas/TransactionId'
             minItems: 1
       responses:
         '200':
