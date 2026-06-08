@@ -20,7 +20,7 @@ ENV DCC_NETWORK=mainnet
 SHELL ["/bin/bash", "-c"]
 
 # Install wget for downloading runtime JARs
-RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 
 # Node files
 ENV WVDATA=/var/lib/dcc
