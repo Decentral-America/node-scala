@@ -26,7 +26,7 @@ permissions:
   security-events: write
 
 concurrency:
-  group: deploy-node-scala-${{ github.event.inputs.network }}
+  group: workflow-deploy-node-scala-${{ github.event.inputs.network }}
   cancel-in-progress: false
 
 env:
