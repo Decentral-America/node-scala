@@ -1,5 +1,5 @@
 # renovate: image=eclipse-temurin tag=25-jre-noble
-ARG baseImage=eclipse-temurin:25-jre-noble@sha256:a9f8520bcafe06d2e689cb0d88b9a0fe73492e567821ede6a0abe5c3ec104210
+ARG baseImage=eclipse-temurin:25-jre-noble@sha256:f9bd8815e73632c22985ebb133ec49b9fc4ad5ffe0657594ac02748ad0431ab7
 FROM $baseImage
 
 ARG TARGETARCH
