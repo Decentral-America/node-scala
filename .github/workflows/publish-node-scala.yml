@@ -117,35 +117,19 @@ jobs:
           (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Build tarballs for docker
         run: sbt --batch -Dproject.version=${{ steps.versions.outputs.node-version }} buildTarballsForDocker
-      - name: Extract image name and tags from workflow_call inputs
-        if: inputs.raw-docker-tags != ''
-        env:
-          RAW_DOCKER_TAGS: ${{ inputs.raw-docker-tags }}
-        run: |
-          {
-            echo 'TAGS<<TAGS_EOF'
-            printf '%s\n' "${RAW_DOCKER_TAGS}"
-            echo 'TAGS_EOF'
-          } >> "$GITHUB_ENV"
-          {
-            echo 'IMAGES<<EOF'
-            echo ${{ env.IMAGE_NAME }}
-            echo ghcr.io/decentral-america/node-scala
-            echo EOF
-          } >> "$GITHUB_ENV"
-      - name: Extract image name and tags from workflow_dispatch inputs
+      - name: Resolve tags for workflow_dispatch
+        id: resolved
         if: github.event_name == 'workflow_dispatch'
         env:
           INPUT_DOCKER_TAGS: ${{ inputs.docker-tags }}
-          IMAGE_NAME_ENV: ${{ env.IMAGE_NAME }}
         run: |
           set -euo pipefail
+          TAGS=$(echo "${INPUT_DOCKER_TAGS}" | tr ',' '\n' | sed -e 's/^/type=raw,value=/')
           {
-            echo 'TAGS<<EOF'
-            echo "${INPUT_DOCKER_TAGS}" | tr ',' '\n' | sed -e 's/^/type=raw,value=/'
+            echo 'tags<<EOF'
+            echo "${TAGS}"
             echo EOF
-          } >> "$GITHUB_ENV"
-          echo "IMAGES=${IMAGE_NAME_ENV}" >> "$GITHUB_ENV"
+          } >> "$GITHUB_OUTPUT"
       - name: Prepare annotations
         run: |
           {
@@ -176,9 +160,9 @@ jobs:
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest-descriptor,index-descriptor
         with:
-          images: ${{ env.IMAGES }}
+          images: ${{ env.IMAGE_NAME }}
           flavor: latest=${{ contains(inputs.docker-tags, 'latest') }}
-          tags: ${{ env.TAGS }}
+          tags: ${{ inputs.raw-docker-tags != '' && inputs.raw-docker-tags || steps.resolved.outputs.tags }}
           annotations: ${{ steps.annotations.outputs.annotations }}
       - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
         id: push
