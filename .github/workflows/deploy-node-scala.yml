@@ -49,7 +49,7 @@ jobs:
   deploy:
     name: Deploy node-scala → ${{ github.event.inputs.network }}
     needs: publish
-    uses: Decentral-America/infra/.github/workflows/deploy-container.yml@be893fc35e76ae7f73ce2687d3daa9de2e51285b  # main
+    uses: Decentral-America/infra/.github/workflows/deploy-container.yml@a59bf8faf786c45fdb420373d5b8f07d2437e7a5  # main
     with:
       network:      ${{ github.event.inputs.network }}
       image:        ghcr.io/decentral-america/node-scala:node-scala-${{ github.event.inputs.network }}-${{ github.sha }}
