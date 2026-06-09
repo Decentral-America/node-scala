@@ -55,7 +55,7 @@ jobs:
       image:        ghcr.io/decentral-america/node-scala:node-scala-${{ github.event.inputs.network }}-${{ github.sha }}
       service:      node-scala
       compose_dir:  /opt/dcc/compose
-      # JVM startup: start_period=120s + interval=30s → minimum 150s to become healthy.
-      # 180s gives a full margin for garbage collection pauses at first startup.
-      wait_timeout: 180
+      # Health check: start_period=120s + up to retries(5) × interval(30s) = up to 270s.
+      # 300s gives a full margin for RocksDB state load + JVM warmup + GC pauses.
+      wait_timeout: 300
     secrets: inherit
