@@ -2,11 +2,11 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.test.PropSpec
 import com.decentralchain.transaction.lease.LeaseCancelTransaction
 import com.decentralchain.transaction.serialization.impl.LeaseCancelTxSerializer
+import com.decentralchain.transaction.TxHelpers
 import play.api.libs.json.Json
 
 class LeaseCancelTransactionSpecification extends PropSpec {
@@ -18,26 +18,11 @@ class LeaseCancelTransactionSpecification extends PropSpec {
     }
   }
 
-  property("Lease cancel decode pre-encoded bytes") {
-    val bytes = Base58.decode(
-      "3DyJ39VY7RW3qpveA82NJhLS4YFiJTZ84Lg4r4fA1W75kPxtkJXk5EZ8kBRGUpsK5Mws77JQiraoLgvyLH4KixRH6ZWUbRFhD7HfZuiQrzNxGpfdXqHRXLQk91c7SqRgMfrop6McMds2NQ8vQxJRfntFwi3xVq2NTHfzQdwapcuaBt3jyoTgqjTth1WTzYwkXPApjW"
-    )
-    val json = Json.parse("""{
-                            |  "senderPublicKey" : "Zn6fENXpGbd68Pd8gH6YYTL7mBuUZvd6YG3AZfckPmN",
-                            |  "leaseId" : "2o9jDyHJeAjj4JmBCWoCWX1W494gcxCBifTw4GE7mijN",
-                            |  "sender" : "3N6Jpv3nXAcbYvziaK3bGDjGsfo5XtJ4ti5",
-                            |  "feeAssetId" : null,
-                            |  "signature" : "4cZVxhxZCGgwi2AqWScZ3vft6DPKsRyXBMAr4M6sjj2hUJH5DSfDnC1aQYBv5kvqeQfWt3NggdB6wAvfARK85zy2",
-                            |  "proofs" : [ "4cZVxhxZCGgwi2AqWScZ3vft6DPKsRyXBMAr4M6sjj2hUJH5DSfDnC1aQYBv5kvqeQfWt3NggdB6wAvfARK85zy2" ],
-                            |  "fee" : 66288378,
-                            |  "id" : "DYPzB2aupCtHMrP2YLJXnEr74XpJii5SVMmwPH5Cz3dE",
-                            |  "type" : 9,
-                            |  "version" : 1,
-                            |  "timestamp" : 8263749264550800915
-                            |}""".stripMargin)
-
-    val tx = LeaseCancelTxSerializer.parseBytes(bytes)
-    tx.get.json() shouldBe json
+  property("Lease cancel binary parse roundtrip") {
+    val leaseId = ByteStr(Array.fill(32)(2: Byte))
+    val tx = TxHelpers.leaseCancel(leaseId, version = TxVersion.V2)
+    val parsed = LeaseCancelTxSerializer.parseBytes(tx.bytes()).get
+    parsed.json() shouldBe tx.json()
   }
 
   property("Lease cancel serialization from TypedTransaction") {

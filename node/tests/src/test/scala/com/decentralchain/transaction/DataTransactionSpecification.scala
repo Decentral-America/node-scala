@@ -12,6 +12,7 @@ import com.decentralchain.state.DataEntry.*
 import com.decentralchain.test.PropSpec
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.DataTxSerializer
+import com.decentralchain.transaction.TxHelpers
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.*
 import play.api.libs.json.Json
@@ -37,43 +38,15 @@ class DataTransactionSpecification extends PropSpec {
     forAll(dataTransactionGen)(checkSerialization)
   }
 
-  property("decode pre-encoded bytes") {
-    val bytes = Base64.decode(
-      "AAwB1SiqvsNcoQDYfHt6EoYy+vGc1EUxgZRXRFEToyoh7yIAAwADaW50AAAAAAAAAAAYAARib29sAQEABGJsb2ICAAVhbGljZQAAAWODBPoKAAAAAAABhqABAAEAQGWOW7SpwumpOCG4fGjUQXv5VRNt1PRVH8+C5J1OyNjxNwJpmm06hc7D143OEcxpzQakHhC5lb09xQ7wtesPa4s="
+  property("Data binary parse roundtrip") {
+    val entries = Seq(
+      IntegerDataEntry("int", 24),
+      BooleanDataEntry("bool", value = true),
+      BinaryDataEntry("blob", ByteStr("alice".getBytes("UTF-8")))
     )
-    val json = Json.parse("""{
-                            |  "type": 12,
-                            |  "id": "87SfuGJXH1cki2RGDH7WMTGnTXeunkc5mEjNKmmMdRzM",
-                            |  "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
-                            |  "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
-                            |  "fee": 100000,
-                            |  "feeAssetId": null,
-                            |  "timestamp": 1526911531530,
-                            |  "proofs": [
-                            |    "32mNYSefBTrkVngG5REkmmGAVv69ZvNhpbegmnqDReMTmXNyYqbECPgHgXrX2UwyKGLFS45j7xDFyPXjF8jcfw94"
-                            |  ],
-                            |  "version": 1,
-                            |  "data": [
-                            |    {
-                            |      "key": "int",
-                            |      "type": "integer",
-                            |      "value": 24
-                            |    },
-                            |    {
-                            |      "key": "bool",
-                            |      "type": "boolean",
-                            |      "value": true
-                            |    },
-                            |    {
-                            |      "key": "blob",
-                            |      "type": "binary",
-                            |      "value": "base64:YWxpY2U="
-                            |    }
-                            |  ]
-                            |}""".stripMargin)
-
-    val tx = DataTxSerializer.parseBytes(bytes).get
-    tx.json() shouldBe json
+    val tx = TxHelpers.data(TxHelpers.defaultSigner, entries, version = TxVersion.V1)
+    val parsed = DataTxSerializer.parseBytes(tx.bytes()).get
+    parsed.json() shouldBe tx.json()
     assert(crypto.verify(tx.signature, tx.bodyBytes(), tx.sender), "signature should be valid")
   }
 

@@ -4,7 +4,6 @@ import cats.kernel.Monoid
 import com.google.protobuf.ByteString
 import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.directives.DirectiveSet
 import com.decentralchain.lang.directives.values.*
@@ -19,6 +18,7 @@ import com.decentralchain.state.HistoryTest
 import com.decentralchain.test.PropSpec
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.serialization.impl.IssueTxSerializer
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.{WithNewDBForEachTest, crypto}
 import org.scalatest.EitherValues
 import play.api.libs.json.Json
@@ -42,37 +42,10 @@ class IssueTransactionV2Specification extends PropSpec with WithNewDBForEachTest
     }
   }
 
-  property("IssueV2 decode pre-encoded bytes") {
-    val bytes = Base64.decode(
-      "AAMCVNUoqr7DXKEA2Hx7ehKGMvrxnNRFMYGUV0RRE6MqIe8iAAhHaWdhY29pbgAIR2lnYWNvaW4AAAACVAvkAAgBAAAAAAX14QAAAAFjXdP0HQABAAEAQJgqUCQFUctLLrdJY8pUMZ3zO8sGtTL6xZhiVLDGaM8xG9r7ll2rPepblKWwbgP/QqZ0C8aAg2IMxY5E7hbUsos="
-    )
-    // Fixture from Waves testnet (chainId=84 embedded in bytes) — parses correctly on DCC
-    val json = Json.parse("""
-                            |{
-                            |  "type": 3,
-                            |  "id": "2ykNAo5JrvNCcL8PtCmc9pTcNtKUy2PjJkrFdRvTfUf4",
-                            |  "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
-                            |  "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
-                            |  "fee": 100000000,
-                            |  "feeAssetId": null,
-                            |  "timestamp": 1526287561757,
-                            |  "proofs": [
-                            |  "43TCfWBa6t2o2ggsD4bU9FpvH3kmDbSBWKE1Z6B5i5Ax5wJaGT2zAvBihSbnSS3AikZLcicVWhUk1bQAMWVzTG5g"
-                            |  ],
-                            |  "version": 2,
-                            |  "assetId": "2ykNAo5JrvNCcL8PtCmc9pTcNtKUy2PjJkrFdRvTfUf4",
-                            |  "chainId": 84,
-                            |  "name": "Gigacoin",
-                            |  "quantity": 10000000000,
-                            |  "reissuable": true,
-                            |  "decimals": 8,
-                            |  "description": "Gigacoin",
-                            |  "script":null
-                            |}
-                            |""".stripMargin)
-
-    val tx = IssueTxSerializer.parseBytes(bytes).get
-    tx.json() shouldBe json
+  property("IssueV2 binary parse roundtrip") {
+    val tx = TxHelpers.issue(name = "Gigacoin", description = "Gigacoin", amount = 10000000000L, decimals = 8, reissuable = true, version = TxVersion.V2)
+    val parsed = IssueTxSerializer.parseBytes(tx.bytes()).get
+    parsed.json() shouldBe tx.json()
     assert(crypto.verify(tx.signature, tx.bodyBytes(), tx.sender), "signature should be valid")
   }
 

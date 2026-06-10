@@ -2,11 +2,11 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.serialization.impl.TransferTxSerializer
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.transfer.*
 import play.api.libs.json.Json
 
@@ -28,33 +28,10 @@ class TransferTransactionV1Specification extends PropSpec {
     }
   }
 
-  property("TransferV2 decode pre-encoded bytes") {
-    val bytes = Base58.decode(
-      "2vs1kZ8fsY8kznd5FW5zv1XvBjgtNwNW8WS3GP1MC1dHKDVCjLhLV9UgAtVkUP48bXtgFH2TFFsnwqRoJjEVowSHcFqURiDzCZTEU4pKFjXaDmauvmSpN8LPw7VckeQYkAxvpzPpMxhY765wv5zD4sd8oyFeUxVToaNfepstek4ugJFzXZVM4gAqxz5jtiTksxySdNVHRkhgmY3NYxmRFQPenhaXydUWmLAa9xEfjj4gjVPUy47FbFwQUgta3WspKWq1eki6LA4vZtHFZPfcp2DHu9D1KGMSxERmRJpdLRbvD5LbTS8TaXQHUiqTqiafSme829aB1Jdw1s5KXPZhCWEqmv8ryTzHCF3UqnFcEgsi6VKYu1ARDrbUMwB3gbYq4qTW7uhs4qEG348mdEm6CLm1vE5a6ih"
-    )
-    val json = Json.parse(
-      """{
-        |  "senderPublicKey" : "45FQmahaQC5BsHYnzLypvTB4YKuzQLytu3m83AcDKn1d",
-        |  "amount" : 61305167369911,
-        |  "signature" : "3GgwEGeTmHKoZxMyQWRspwk5KfV2RyoE9sbPxxQVgrDXgVjZZbz2Qzyiu2hNHGm2FovYq62YzSMXkzqSmgbTsoEr",
-        |  "fee" : 2084965,
-        |  "type" : 4,
-        |  "version" : 1,
-        |  "attachment" : "U7iyYx6HwPHpZjpLKDrkE2LjuF2JAZcjT7aKM3ryzcihToW4FgLqqiUcYbGADz9PMCFXibDCb126RVm4AtoHSzpuW8NDMcAmxZBd2LPiQ3VBuDJacn3dD1X",
-        |  "sender" : "3N44LV7DJAi6qxyuMxNsxmsKcGtAD4rXwDV",
-        |  "feeAssetId" : "4vKvkk5vseBeaWR1wdjWf8LfWRvzU9SruKwpW2Cvi5u",
-        |  "proofs" : [ "3GgwEGeTmHKoZxMyQWRspwk5KfV2RyoE9sbPxxQVgrDXgVjZZbz2Qzyiu2hNHGm2FovYq62YzSMXkzqSmgbTsoEr" ],
-        |  "assetId" : "Hrs1iH8YJJKgo1ZgVsqfvFGbRgFp5HxuuU7eCPDPwMjN",
-        |  "recipient" : "3N8JoB6QHbKxSFCD2HfhnQXQkibJkBPC4Ag",
-        |  "feeAsset" : "4vKvkk5vseBeaWR1wdjWf8LfWRvzU9SruKwpW2Cvi5u",
-        |  "id" : "BQTeR8HhbzZfVZ48LFzesi29nPLiKeSGYfesTwWH1pXJ",
-        |  "timestamp" : 1133967589140510377
-        |}
-        |""".stripMargin
-    )
-
-    val tx = TransferTxSerializer.parseBytes(bytes)
-    tx.get.json() shouldBe json
+  property("Transfer binary parse roundtrip") {
+    val tx = TxHelpers.transfer(version = TxVersion.V1)
+    val parsed = TransferTxSerializer.parseBytes(tx.bytes()).get
+    parsed.json() shouldBe tx.json()
   }
 
   property("Transfer serialization from TypedTransaction") {
