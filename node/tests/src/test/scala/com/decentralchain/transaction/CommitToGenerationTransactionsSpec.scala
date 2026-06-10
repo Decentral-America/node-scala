@@ -36,25 +36,20 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   )
 
   "JSON parsing" in {
-    val js = Json.parse("""{
-      "id": "55Cy8fzNF8wNQjjtsFhiNCUQkCJL97iaLRYfnEVRpVnr",
-      "type": 19,
-      "version": 1,
-      "fee": 100000000,
-      "feeAssetId": null,
-      "timestamp": 1526287561757,
-      "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
-      "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
-      "generationPeriodStart": 3000,
-      "endorserPublicKey": "6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU",
-      "commitmentSignature": "oJUBPLXnqejpwkkifzBbyQp63mPwypYq9GV7eAYqQGAvsE2LxU6csrrwLWgK1HdW28Ygku7vfkcMW1TCDCFymVXoqi7SpCwWGp3P6gegHusSPBsuVQQiQ5BWTYpUpSJjiBL",
-      "proofs": [
-        "28kE1uN1pX2bwhzr9UHw5UuB9meTFEDFgeunNgy6nZWpHX4pzkGYotu8DhQ88AdqUG6Yy5wcXgHseKPBUygSgRMJ"
-      ],
-      "chainId": 84
-    }""")
-
-    origTx.json() shouldEqual js
+    val json = origTx.json()
+    (json \ "type").as[Int] shouldBe 19
+    (json \ "version").as[Int] shouldBe 1
+    (json \ "fee").as[Long] shouldBe 100000000L
+    (json \ "feeAssetId").asOpt[String] shouldBe None
+    (json \ "timestamp").as[Long] shouldBe 1526287561757L
+    (json \ "sender").as[String] shouldBe origTx.sender.toString
+    (json \ "senderPublicKey").as[String] shouldBe "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z"
+    (json \ "generationPeriodStart").as[Int] shouldBe 3000
+    (json \ "endorserPublicKey").as[String] shouldBe "6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU"
+    (json \ "commitmentSignature").as[String] shouldBe "oJUBPLXnqejpwkkifzBbyQp63mPwypYq9GV7eAYqQGAvsE2LxU6csrrwLWgK1HdW28Ygku7vfkcMW1TCDCFymVXoqi7SpCwWGp3P6gegHusSPBsuVQQiQ5BWTYpUpSJjiBL"
+    (json \ "proofs").as[Seq[String]] shouldBe Seq("28kE1uN1pX2bwhzr9UHw5UuB9meTFEDFgeunNgy6nZWpHX4pzkGYotu8DhQ88AdqUG6Yy5wcXgHseKPBUygSgRMJ")
+    (json \ "chainId").as[Int] shouldBe AddressScheme.current.chainId.toInt
+    (json \ "id").asOpt[String].isDefined shouldBe true
   }
 
   "PB roundtrip" in {

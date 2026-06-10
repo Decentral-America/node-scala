@@ -46,6 +46,7 @@ class IssueTransactionV2Specification extends PropSpec with WithNewDBForEachTest
     val bytes = Base64.decode(
       "AAMCVNUoqr7DXKEA2Hx7ehKGMvrxnNRFMYGUV0RRE6MqIe8iAAhHaWdhY29pbgAIR2lnYWNvaW4AAAACVAvkAAgBAAAAAAX14QAAAAFjXdP0HQABAAEAQJgqUCQFUctLLrdJY8pUMZ3zO8sGtTL6xZhiVLDGaM8xG9r7ll2rPepblKWwbgP/QqZ0C8aAg2IMxY5E7hbUsos="
     )
+    // Fixture from Waves testnet (chainId=84 embedded in bytes) — parses correctly on DCC
     val json = Json.parse("""
                             |{
                             |  "type": 3,
@@ -78,8 +79,8 @@ class IssueTransactionV2Specification extends PropSpec with WithNewDBForEachTest
   property("JSON format validation") {
     val js = Json.parse("""{
                        "type": 3,
-                       "id": "2ykNAo5JrvNCcL8PtCmc9pTcNtKUy2PjJkrFdRvTfUf4",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "HzbjDutCH6Exkr6SaM6UjiesLudKhdWgdTG2aLH1abvd",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 100000000,
                        "feeAssetId": null,
@@ -88,8 +89,8 @@ class IssueTransactionV2Specification extends PropSpec with WithNewDBForEachTest
                        "43TCfWBa6t2o2ggsD4bU9FpvH3kmDbSBWKE1Z6B5i5Ax5wJaGT2zAvBihSbnSS3AikZLcicVWhUk1bQAMWVzTG5g"
                        ],
                        "version": 2,
-                       "assetId": "2ykNAo5JrvNCcL8PtCmc9pTcNtKUy2PjJkrFdRvTfUf4",
-                       "chainId": 84,
+                       "assetId": "HzbjDutCH6Exkr6SaM6UjiesLudKhdWgdTG2aLH1abvd",
+                       "chainId": 63,
                        "name": "Gigacoin",
                        "quantity": 10000000000,
                        "reissuable": true,
