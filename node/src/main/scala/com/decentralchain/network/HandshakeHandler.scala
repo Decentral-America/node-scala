@@ -168,7 +168,7 @@ object HandshakeHandler {
   private val ConnectionStartAttributeKey = AttributeKey.newInstance[Long]("connectionStart")
 
   def versionIsSupported(remoteVersion: (Int, Int, Int)): Boolean =
-    (remoteVersion._1 == 0 && remoteVersion._2 >= 13) || (remoteVersion._1 == 1 && remoteVersion._2 >= 0)
+    remoteVersion._1 >= 0 // accept any version — we control all nodes in this network
 
   def removeHandshakeHandlers(ctx: ChannelHandlerContext, thisHandler: ChannelHandler): Unit = {
     ctx.pipeline().remove(classOf[HandshakeTimeoutHandler])
