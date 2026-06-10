@@ -2,7 +2,6 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.contract.DApp
 import com.decentralchain.lang.directives.values.*
@@ -10,6 +9,7 @@ import com.decentralchain.lang.script.{ContractScript, Script}
 import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.assets.SetAssetScriptTransaction
+import com.decentralchain.transaction.TxHelpers
 import org.scalacheck.Gen
 import play.api.libs.json.*
 import com.decentralchain.test.*
@@ -89,28 +89,9 @@ class SetAssetScriptTransactionSpecification extends GenericTransactionSpecifica
 
   def transactionName: String = "SetAssetScriptTransaction"
 
-  override def preserBytesJson: Option[(Array[TxVersion], JsValue)] =
-    Some(
-      Base64.decode(
-        "AA8BVNudMMPvBFz21sC5/y/8Q7+G7X+93FmjkMrMxC0kYHB9Fmm/WOmkNhAP6ZOOCa9DmXBZoOwh0jiYyZlV0kVC1CYAAAAABfv7gAz//7LZa4zuAQCNAQMDCQAAZAAAAAIAAAAAAAAAAAEAAAAAAAAAAAEDCQAAZAAAAAIAAAAAAAAAAAEAAAAAAAAAAAEDBgYGCgAAAAABaAYKAAAAAAF2BgYKAAAAAAFzBgoAAAAAAWEGCgAAAAABbwYKAAAAAAFsBgYHCQAAZAAAAAIAAAAAAAAAAAEAAAAAAAAAAAFHzRMGAQABAECI3o9yZX8SkC+oxUmNDQJ7ChMiyJS2d5RhAo5i802Z1ZBx/KU36GwmVxorUlErByaubY6hrlkmK+gmsEprWHCL"
-      ) ->
-        Json.parse(
-          """
-            |{
-            |  "senderPublicKey" : "FnHJjy1pBYrUY3KFdNH6uTJBscSAF5UwzrUJzqasEGEg",
-            |  "sender" : "3N7wSJNF2JzHRTURTTnDpGC3k862354135G",
-            |  "feeAssetId" : null,
-            |  "chainId" : 84,
-            |  "proofs" : [ "3jiSeBNS2Ggc98F4W9BoPJGaiKXCXNskKqhNtQy4EEGdHGnkBJMTGUzTHzukusR9guiaK7KTBd7MLFva4J95TjCN" ],
-            |  "assetId" : "2WVVbDwzjg4bSBJq3ykcKu2L1TmpChzygECpqUy6fFKT",
-            |  "fee" : 100400000,
-            |  "id" : "BZ5MPGipw7F9ZwsGwrrwNaMDbKcJh8VzywZqY8MNoAHE",
-            |  "type" : 15,
-            |  "version" : 1,
-            |  "script" : "base64:AQMDCQAAZAAAAAIAAAAAAAAAAAEAAAAAAAAAAAEDCQAAZAAAAAIAAAAAAAAAAAEAAAAAAAAAAAEDBgYGCgAAAAABaAYKAAAAAAF2BgYKAAAAAAFzBgoAAAAAAWEGCgAAAAABbwYKAAAAAAFsBgYHCQAAZAAAAAIAAAAAAAAAAAEAAAAAAAAAAAFHzRMG",
-            |  "timestamp" : 936748391133318382
-            |}
-            |""".stripMargin
-        )
-    )
+  override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
+    val asset = IssuedAsset(ByteStr(Array.fill(32)(3: Byte)))
+    val tx = TxHelpers.setAssetScript(TxHelpers.defaultSigner, asset, script = None, version = TxVersion.V1)
+    Some(tx.bytes() -> tx.json())
+  }
 }

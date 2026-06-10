@@ -2,10 +2,10 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.PublicKey
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.assets.{IssueTransaction, ReissueTransaction}
+import com.decentralchain.transaction.TxHelpers
 import org.scalacheck.Gen
 import play.api.libs.json.*
 
@@ -92,24 +92,9 @@ class ReissueTransactionV2Specification extends GenericTransactionSpecification[
 
   def transactionName: String = "ReissueTransactionV2"
 
-  override def preserBytesJson: Option[(Array[Byte], JsValue)] = Some(
-    Base64.decode(
-      "AAUCVOCOBZFLfURuJuj21iJgASjQvAM23mv7tVou6+6LYG9l3/w8Zu3PQZcoDmkz3yU/mqiFs096Lu5f6yVf+kZXIlsAy3rx4HUSowAAAAAAAqOonQAAF8vvN3seAQABAEDckjd4IQexe7RX1/MU8IOp6W/n3DpUa1BgOKRENUYcKTCELzSA71sNELc3tWG8YYX8EWHUbdmnD8VDbJQMOi0M"
-    ) ->
-      Json.parse("""{
-                   |  "senderPublicKey" : "G7ZvtLKf7FitWFevdEaqs9fPaVnrLF4JrxteRwBSt3uE",
-                   |  "quantity" : 57274599543739043,
-                   |  "fee" : 44279965,
-                   |  "type" : 5,
-                   |  "version" : 2,
-                   |  "reissuable" : false,
-                   |  "sender" : "3N33A9YpVvk2eNCdUfABmUCTFAKDjvzhL23",
-                   |  "feeAssetId" : null,
-                   |  "chainId" : 84,
-                   |  "proofs" : [ "5Qmz5hWdaTD4jNSPvkF1dyZob3sesJp9ruHBNtGCp7fXgmUaXGtv6GWBt2Ed6Yf4gpMAF6PKXzfmKVhjUWq919Co" ],
-                   |  "assetId" : "G5LzjMfuvAYNEX3kcS1tDyBiaTgE6ta1nNTq8HVnYryY",
-                   |  "id" : "6G3Vne25wTUA9fC6H1tjXhXhYQkBvfPVgSZKn1a5mUPH",
-                   |  "timestamp" : 26164659190558
-                   |}""".stripMargin)
-  )
+  override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
+    val asset = IssuedAsset(ByteStr(Array.fill(32)(4: Byte)))
+    val tx = TxHelpers.reissue(asset, version = TxVersion.V2)
+    Some(tx.bytes() -> tx.json())
+  }
 }
