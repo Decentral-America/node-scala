@@ -9,7 +9,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.state.{Blockchain, Height, LeaseBalance, LeaseDetails, Portfolio, StateSnapshot}
 import play.api.libs.json.{Json, Reads}
 
-case object CancelLeasesToDisabledAliases extends PatchOnFeature(BlockchainFeatures.SynchronousCalls, Set('W')) {
+case object CancelLeasesToDisabledAliases extends PatchOnFeature(BlockchainFeatures.SynchronousCalls, Set.empty) {
   private case class CancelDetails(
       id: String,
       amount: Long,

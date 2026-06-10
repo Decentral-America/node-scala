@@ -20,10 +20,9 @@ import com.decentralchain.transaction.transfer.{MassTransferTransaction, Transfe
 import org.scalacheck.Gen
 
 class ChainIdSpecification extends PropSpec {
-  private val otherChainId   = 'W'.toByte
+  private val otherChainId   = 0xDE.toByte // arbitrary "other network" byte — not any DCC or Waves chain
   private val aliasFromOther = Alias.createWithChainId("sasha", otherChainId, Some(otherChainId)).explicitGet()
-  private val addressFromOther =
-    Address.fromBytes(Base58.tryDecodeWithLimit("3P3oxTkpCWJgCr6SJrBzdP5N8jFqHCiy7L2").get, Some(otherChainId)).explicitGet()
+  private val addressFromOther = TxHelpers.defaultSigner.toAddress(otherChainId)
   private val addressOrAlias = Gen.oneOf(aliasFromOther, addressFromOther)
 
   private def addressOrAliasWithVersion: Gen[(AddressOrAlias, TxVersion, KeyPair, TxPositiveAmount, TxPositiveAmount, TxTimestamp)] =

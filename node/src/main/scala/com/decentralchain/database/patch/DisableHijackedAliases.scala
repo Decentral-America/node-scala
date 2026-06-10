@@ -7,10 +7,7 @@ import com.decentralchain.state.patch.PatchDataLoader
 import com.decentralchain.state.Height
 
 case object DisableHijackedAliases extends PatchDataLoader {
-  val height: Height = AddressScheme.current.chainId.toChar match {
-    case 'W' => Height(1060000)
-    case _   => Height(0)
-  }
+  val height: Height = Height(0)
 
   def apply(rw: RW): Set[Alias] = {
     val aliases = readPatchData[Set[String]]().map(Alias.create(_).explicitGet())
