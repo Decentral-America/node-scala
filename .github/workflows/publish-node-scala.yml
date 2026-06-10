@@ -168,7 +168,7 @@ jobs:
         id: push
         with:
           context: ./docker
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           build-args: baseImage=${{ steps.versions.outputs.base-image }}
           tags: ${{ steps.meta.outputs.tags }}
