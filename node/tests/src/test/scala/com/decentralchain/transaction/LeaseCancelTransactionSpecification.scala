@@ -87,8 +87,8 @@ class LeaseCancelTransactionSpecification extends PropSpec {
   property("JSON format validation for LeaseCancelTransactionV2") {
     val js = Json.parse("""{
                         "type": 9,
-                        "id": "4nvUUiQjTH7D2LFyzaxs8JwaZYZHDggJgq1iP99TvVDM",
-                        "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                        "id": "5NxW2bzREyMqNPaNLDMM8QnUp5RCGeGzoeN2U7eTFqKh",
+                        "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                         "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                         "fee": 1000000,
                         "feeAssetId":null,
@@ -98,7 +98,7 @@ class LeaseCancelTransactionSpecification extends PropSpec {
                         ],
                         "version": 2,
                         "leaseId": "DJWkQxRyJNqWhq9qSQpK2D4tsrct6eZbjSv3AH4PSha6",
-                        "chainId": 84
+                        "chainId": 63
                        }
     """)
 

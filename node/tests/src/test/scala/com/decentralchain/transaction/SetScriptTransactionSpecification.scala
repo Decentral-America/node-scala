@@ -33,8 +33,8 @@ class SetScriptTransactionSpecification extends GenericTransactionSpecification[
       (
         Json.parse("""{
                        "type": 13,
-                       "id": "Cst37pKJ19WnUZSD6mjqywosMJDbqatuYm2sFAbXrysE",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "FCMke7Ua1NRFVcfuL59hGGLvWJWr9bxhfCvLfL6isMJr",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 100000,
                        "feeAssetId": null,
@@ -43,7 +43,7 @@ class SetScriptTransactionSpecification extends GenericTransactionSpecification[
                        "tcTr672rQ5gXvcA9xCGtQpkHC8sAY1TDYqDcQG7hQZAeHcvvHFo565VEv1iD1gVa3ZuGjYS7hDpuTnQBfY2dUhY"
                        ],
                        "version": 1,
-                       "chainId": 84,
+                       "chainId": 63,
                        "script": null
                        }
     """),

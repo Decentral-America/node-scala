@@ -59,8 +59,8 @@ class ReissueTransactionV2Specification extends GenericTransactionSpecification[
       (
         Json.parse("""{
                        "type": 5,
-                       "id": "HbQ7gMoDyRxSU6LbLLBVNTbxASaR8rm4Zck6eYvWVUkB",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "BrAoJM1xSxBN5tkpkeoGrPq9E5sKjBsUbyGH5scfpccY",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 100000000,
                        "feeAssetId": null,
@@ -69,7 +69,7 @@ class ReissueTransactionV2Specification extends GenericTransactionSpecification[
                        "4DFEtUwJ9gjMQMuEXipv2qK7rnhhWEBqzpC3ZQesW1Kh8D822t62e3cRGWNU3N21r7huWnaty95wj2tZxYSvCfro"
                        ],
                        "version": 2,
-                       "chainId": 84,
+                       "chainId": 63,
                        "assetId": "9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz",
                        "quantity": 100000000,
                        "reissuable": true
