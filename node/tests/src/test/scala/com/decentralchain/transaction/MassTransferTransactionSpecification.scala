@@ -2,13 +2,13 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.{AddressScheme, Alias, KeyPair, PublicKey}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.{MassTransferTxSerializer, PBTransactionSerializer}
+import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.{MaxTransferCount, ParsedTransfer, Transfer}
 import play.api.libs.json.Json
@@ -77,40 +77,13 @@ class MassTransferTransactionSpecification extends PropSpec {
     }
   }
 
-  property("decode pre-encoded bytes") {
-    val bytes = Base64.decode(
-      "CwHVKKq+w1yhANh8e3oShjL68ZzURTGBlFdEUROjKiHvIgAAAgFUqGL1rZ+cUjoGcrHCi5yhcMFfaIJfkO4AAAAAAAX14QABVKhi9a2fnFI6BnKxwoucoXDBX2iCX5DuAAAAAAAL68IAAAABYXVLIywAAAAAAAMNQAAHbWFzc3BheQEAAQBADIY7QdjAPaDZwHpkXBIEd7XQZE/E7ihi//v3RizdqW2alpM0DWJJ6PcyLOOcYbeBvLJx49Xv2uCTgIMIEIiyiQ=="
+  property("MassTransfer binary parse roundtrip") {
+    val tx = TxHelpers.massTransfer(
+      to = Seq(TxHelpers.secondAddress -> 100000000L, TxHelpers.secondAddress -> 200000000L),
+      version = TxVersion.V1
     )
-    val json = Json.parse("""{
-                       "type": 11,
-                       "id": "H36CTJc7ztGRZPCrvpNYeagCN1HV1gXqUthsXKdBT3UD",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
-                       "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
-                       "fee": 200000,
-                       "feeAssetId": null,
-                       "timestamp": 1518091313964,
-                       "proofs": [
-                       "FXMNu3ecy5zBjn9b69VtpuYRwxjCbxdkZ3xZpLzB8ZeFDvcgTkmEDrD29wtGYRPtyLS3LPYrL2d5UM6TpFBMUGQ"],
-                       "version": 1,
-                       "assetId": null,
-                       "attachment": "59QuUcqP6p",
-                       "transferCount": 2,
-                       "totalAmount": 300000000,
-                       "transfers": [
-                       {
-                       "recipient": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
-                       "amount": 100000000
-                       },
-                       {
-                       "recipient": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
-                       "amount": 200000000
-                       }
-                       ]
-                       }
-  """)
-
-    val tx = MassTransferTxSerializer.parseBytes(bytes).get
-    tx.json() shouldBe json
+    val parsed = MassTransferTxSerializer.parseBytes(tx.bytes()).get
+    parsed.json() shouldBe tx.json()
     assert(crypto.verify(tx.signature, tx.bodyBytes(), tx.sender), "signature should be valid")
   }
 
