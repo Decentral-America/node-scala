@@ -49,15 +49,15 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val invoke        = EthTxGenerator.generateEthInvoke(TxHelpers.defaultEthSigner, TxHelpers.secondAddress, "test", Nil, Nil)
 
     inside(EthereumTransaction(transfer.toSignedRawTransaction).explicitGet().payload) { case t: EthereumTransaction.Transfer =>
-      t.recipient.chainId shouldBe 'T'.toByte
+      t.recipient.chainId shouldBe AddressScheme.current.chainId
     }
 
     inside(EthereumTransaction(assetTransfer.toSignedRawTransaction).explicitGet().payload) { case t: EthereumTransaction.Transfer =>
-      t.recipient.chainId shouldBe 'T'.toByte
+      t.recipient.chainId shouldBe AddressScheme.current.chainId
     }
 
     inside(EthereumTransaction(invoke.toSignedRawTransaction).explicitGet().payload) { case t: EthereumTransaction.Invocation =>
-      t.dApp.chainId shouldBe 'T'.toByte
+      t.dApp.chainId shouldBe AddressScheme.current.chainId
     }
   }
 
