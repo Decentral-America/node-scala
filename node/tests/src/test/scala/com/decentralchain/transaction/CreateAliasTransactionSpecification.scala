@@ -45,7 +45,7 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
       TxPositiveAmount.unsafeFrom(0.001.dcc),
       System.currentTimeMillis(),
       Proofs.empty,
-      'T'.toByte
+      AddressScheme.current.chainId
     )
     val signedCreateAlias = cat.copy(
       proofs = cat.signWith(kp1.privateKey).proofs.proofs ++ cat.signWith(kp2.privateKey).proofs.proofs
@@ -144,7 +144,7 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
         TxPositiveAmount.unsafeFrom(0.001.dcc),
         System.currentTimeMillis(),
         Proofs.empty,
-        'T'.toByte
+        AddressScheme.current.chainId
       )
       val signedCreateAlias = cat.copy(
         proofs = cat.signWith(kp1.privateKey).proofs.proofs ++ cat.signWith(kp2.privateKey).proofs.proofs
@@ -179,7 +179,7 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
         TxPositiveAmount.unsafeFrom(0.001.dcc),
         System.currentTimeMillis(),
         Proofs.empty,
-        'T'.toByte
+        AddressScheme.current.chainId
       )
       val signedCreateAlias = cat.copy(
         proofs = cat.signWith(kp1.privateKey).proofs.proofs ++ cat.signWith(kp2.privateKey).proofs.proofs

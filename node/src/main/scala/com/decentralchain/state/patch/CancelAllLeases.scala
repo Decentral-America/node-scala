@@ -7,7 +7,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.state.{Blockchain, Height, LeaseBalance, LeaseDetails, StateSnapshot}
 import play.api.libs.json.{Json, OFormat}
 
-case object CancelAllLeases extends PatchAtHeight('W' -> 462000, 'T' -> 51500) {
+case object CancelAllLeases extends PatchAtHeight() {
   private[patch] case class LeaseData(senderPublicKey: String, amount: Long, recipient: String, id: String)
 
   private[patch] case class CancelledLeases(balances: Map[Address, LeaseBalance], cancelledLeases: Seq[LeaseData]) {
