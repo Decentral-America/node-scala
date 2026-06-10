@@ -2,9 +2,9 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.{KeyPair, PublicKey}
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.transaction.smart.SetScriptTransaction
+import com.decentralchain.transaction.TxHelpers
 import org.scalacheck.Gen
 import play.api.libs.json.*
 
@@ -70,26 +70,8 @@ class SetScriptTransactionSpecification extends GenericTransactionSpecification[
     }
   }
 
-  override def preserBytesJson: Option[(Array[TxVersion], JsValue)] =
-    Some(
-      Base64.decode(
-        "AA0BVM0TkdpiFV5gEBKCPA/ywRDiYs057r7FRwiXfwlf5tB1AQAfAQkAAGQAAAACAAAAAAAAAAABAAAAAAAAAAAB/cLTbwAAAAACODUuPMqjnZaOKXYBAAEAQIluaI2QJaNachtUD0FI1RzgcY0NmElIyp/0V06TAljDP4NlAt2XUHme3asul95ah/3/5E7JE9a/NXjvxDx4iA8="
-      ) -> Json.parse(
-        """
-          |{
-          |  "senderPublicKey" : "EoXtNDWGV5XsjiEAZXufddF57a1FdWhypJnps92CAdp8",
-          |  "sender" : "3NBy87bQasxRkFTfMM8sq6MDbVUiPGS95g8",
-          |  "feeAssetId" : null,
-          |  "chainId" : 84,
-          |  "proofs" : [ "3kNEbDaUaCZudgk5V5iJtTEY5Tm6NPLjbE2Jh8cF3ruSRtyRcSdnKqCtUWC8qQnwfpVttio3CftsTC7mbNsBsLo8" ],
-          |  "fee" : 37238062,
-          |  "id" : "HkZwtM5u9H5FAV8ihaKJo5nBj3rj9yYL9mJoLcuecK29",
-          |  "type" : 13,
-          |  "version" : 1,
-          |  "script" : "base64:AQkAAGQAAAACAAAAAAAAAAABAAAAAAAAAAAB/cLTbw==",
-          |  "timestamp" : 4380493484802320758
-          |}
-          |""".stripMargin
-      )
-    )
+  override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
+    val tx = TxHelpers.setScript(TxHelpers.defaultSigner, script = None, version = TxVersion.V1)
+    Some(tx.bytes() -> tx.json())
+  }
 }
