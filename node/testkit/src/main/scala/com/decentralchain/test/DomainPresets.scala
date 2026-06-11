@@ -3,6 +3,7 @@ package com.decentralchain.test
 import com.decentralchain.features.{BlockchainFeature, BlockchainFeatures}
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.settings.{FunctionalitySettings, DCCSettings, loadConfig}
+import com.decentralchain.transaction.TxHelpers
 
 object DomainPresets {
   implicit class DCCSettingsOps(val ws: DCCSettings) extends AnyVal {
@@ -95,7 +96,16 @@ object DomainPresets {
 
   val ConsensusImprovements: DCCSettings = RideV6.addFeatures(BlockchainFeatures.ConsensusImprovements)
 
-  val BlockRewardDistribution: DCCSettings = ConsensusImprovements.addFeatures(BlockchainFeatures.BlockRewardDistribution)
+  // BlockRewardDistribution requires non-None daoAddress and xtnBuybackAddress for the
+  // 3-way reward split. FunctionalitySettings.TESTNET no longer provides these (they were
+  // Waves-specific governance addresses). Derive deterministic test addresses from fixed nonces
+  // using the current AddressScheme so they are valid regardless of network configuration.
+  private lazy val testDaoAddress        = TxHelpers.address(1001).toString
+  private lazy val testXtnBuybackAddress = TxHelpers.address(1002).toString
+
+  val BlockRewardDistribution: DCCSettings = ConsensusImprovements
+    .addFeatures(BlockchainFeatures.BlockRewardDistribution)
+    .configure(_.copy(daoAddress = Some(testDaoAddress), xtnBuybackAddress = Some(testXtnBuybackAddress)))
 
   val ContinuationTransaction: DCCSettings = RideV6
     .addFeatures(BlockchainFeatures.ContinuationTransaction)
