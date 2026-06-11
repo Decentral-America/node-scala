@@ -22,6 +22,9 @@ target
 # logs
 *.log
 
+# Genesis generator input — contains plaintext wallet seeds, never commit
+node/genesis-dcc-testnet.conf
+
 # local settings
 localsettings.json
 *local.conf

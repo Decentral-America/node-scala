@@ -44,8 +44,8 @@ docker run -d \
   --restart unless-stopped \
   -p 6868:6868 \
   -p 6869:6869 \
-  -v dcc-data:/var/lib/decentralchain \
-  -e DCC_NETWORK=MAINNET \
+  -v dcc-data:/var/lib/dcc \
+  -e DCC_NETWORK=mainnet \
   -e DCC_HEAP_SIZE=4g \
   -e DCC_WALLET_SEED="$DCC_WALLET_SEED" \
   -e DCC_WALLET_PASSWORD="$DCC_WALLET_PASSWORD" \
@@ -173,9 +173,9 @@ Use `INFO` in production. `DEBUG` is useful for diagnosing sync or peer issues b
      --restart unless-stopped \
      -p 6868:6868 \
      -p 6869:6869 \
-     -v dcc-data:/var/lib/decentralchain \
+     -v dcc-data:/var/lib/dcc \
      --env-file .env \
-     -e DCC_NETWORK=MAINNET \
+     -e DCC_NETWORK=mainnet \
      -e DCC_HEAP_SIZE=4g \
      ghcr.io/decentral-america/node-scala:mainnet-latest
    ```
@@ -215,9 +215,9 @@ If the upgraded node fails to start or produces errors after upgrade:
      --restart unless-stopped \
      -p 6868:6868 \
      -p 6869:6869 \
-     -v dcc-data:/var/lib/decentralchain \
+     -v dcc-data:/var/lib/dcc \
      --env-file .env \
-     -e DCC_NETWORK=MAINNET \
+     -e DCC_NETWORK=mainnet \
      ghcr.io/decentral-america/node-scala:sha-<previous-commit>
    ```
 
