@@ -16,23 +16,25 @@ The DecentralChain node connects to the blockchain network and provides:
 ## Getting started
 
 *Prerequisites:*
-- Java 11+ (JDK or JRE)
+- Java 25 JDK — [Eclipse Temurin 25](https://adoptium.net/temurin/releases/?version=25) recommended
 - A network configuration file from [node/](./node)
 
 Linux:
 ```bash
-sudo apt-get update
-sudo apt-get install openjdk-11-jre
+# Install Eclipse Temurin 25 (recommended)
+wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo apt-key add -
+echo "deb https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
+sudo apt-get update && sudo apt-get install -y temurin-25-jdk
 java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
 Mac (with Homebrew):
 ```bash
-brew install openjdk@11
+brew install --cask temurin@25
 java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
-Windows (with OpenJDK 11 installed):
+Windows (with Eclipse Temurin 25 installed):
 ```bash
 java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
@@ -48,10 +50,12 @@ The node can be built and installed wherever Java can run.
 ### Setup the environment
 
 ```bash
-sudo apt-get update
-sudo apt-get install openjdk-11-jre                     # Ubuntu
+# Ubuntu — Eclipse Temurin 25 JDK
+wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo apt-key add -
+echo "deb https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
+sudo apt-get update && sudo apt-get install -y temurin-25-jdk
 # or
-# brew install openjdk@11                               # Mac
+# brew install --cask temurin@25                        # Mac
 ```
 
 Install SBT (Scala Build Tool) for your platform: [Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html) | [Mac](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Mac.html) | [Windows](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Windows.html)
