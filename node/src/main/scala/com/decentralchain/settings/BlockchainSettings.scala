@@ -141,12 +141,13 @@ object FunctionalitySettings {
     estimationOverflowFixHeight = 2858710,
     estimatorSumOverflowFixHeight = 2897510,
     enforceTransferValidationAfter = 2959447,
-    daoAddress = Some("3PEgG7eZHLFhcfsTSaYxgRhZsh4AxMvA4Ms"),
-    xtnBuybackAddress = Some("3PFjHWuH6WXNJbwnfLHqNFBpwBS5dkYjTfv"),
+    // DCC: Waves DAO/XTN buyback addresses removed — these protocols don't exist on DCC
+    daoAddress = None,
+    xtnBuybackAddress = None,
     xtnBuybackRewardPeriod = 100000,
     blockRewardBoostPeriod = 300_000,
     paymentsCheckHeight = 4303300,
-    unitsRegistryAddress = Some("3P8LfPXcveST7WKkV3UACQNdr6J3shPYong"),
+    unitsRegistryAddress = None,
     maxValidEndorsers = 128, // BLS has much worse performance from 129
     generationPeriodLength = 10_000
   )
@@ -161,11 +162,12 @@ object FunctionalitySettings {
     estimationOverflowFixHeight = 1793770,
     estimatorSumOverflowFixHeight = 1832520,
     enforceTransferValidationAfter = 1698800,
-    daoAddress = Some("3Myb6G8DkdBb8YcZzhrky65HrmiNuac3kvS"),
-    xtnBuybackAddress = Some("3N13KQpdY3UU7JkWUBD9kN7t7xuUgeyYMTT"),
+    // DCC: Waves DAO/XTN buyback addresses removed — these protocols don't exist on DCC
+    daoAddress = None,
+    xtnBuybackAddress = None,
     xtnBuybackRewardPeriod = 2000,
     blockRewardBoostPeriod = 2_000,
-    unitsRegistryAddress = Some("3N9fwNGJcUcAbhh7YPr6mrpuGJD4tApZFsT"),
+    unitsRegistryAddress = None,
     maxValidEndorsers = 64,
     generationPeriodLength = 3000
   )
@@ -179,8 +181,9 @@ object FunctionalitySettings {
     estimationOverflowFixHeight = 1078680,
     estimatorSumOverflowFixHeight = 1097419,
     ethInvokePaymentsCheckHeight = 1311110,
-    daoAddress = Some("3MaFVH1vTv18FjBRugSRebx259D7xtRh9ic"),
-    xtnBuybackAddress = Some("3MbhiRiLFLJ1EVKNP9npRszcLLQDjwnFfZM"),
+    // DCC: Waves DAO/XTN buyback addresses removed — these protocols don't exist on DCC
+    daoAddress = None,
+    xtnBuybackAddress = None,
     xtnBuybackRewardPeriod = 1000,
     paymentsCheckHeight = 2195900,
     maxValidEndorsers = 32,
