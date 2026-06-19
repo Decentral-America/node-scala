@@ -45,20 +45,10 @@ jobs:
       ref: ${{ github.event.inputs.ref || github.sha }}
     secrets: inherit
 
-  # ── Gate: regular job between two reusable workflow calls ──────────────────
-  # GitHub Actions cannot schedule an external reusable-workflow job that
-  # depends directly on an internal reusable-workflow job. A regular job resolves this.
-  gate:
-    name: Ready to deploy
-    runs-on: ubuntu-latest
-    needs: publish
-    steps:
-      - run: echo "image built and pushed — proceeding to deploy"
-
   # ── 2. Deploy the freshly-built image via the infra reusable workflow ────────
   deploy:
     name: Deploy node-scala → ${{ github.event.inputs.network }}
-    needs: gate
+    needs: publish
     uses: Decentral-America/infra/.github/workflows/deploy-container.yml@c307003d0ad7cf356b3b685d3376839df2fb5b40  # main
     with:
       network:      ${{ github.event.inputs.network }}
