@@ -6,16 +6,16 @@ JAVA_OPTS="-XX:+ExitOnOutOfMemoryError
   --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
   --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
   -Dlogback.stdout.level=${DCC_LOG_LEVEL}
-  -Dlogback.file.directory=${WVLOG}
+  -Dlogback.file.directory=${DCC_LOG}
   -Dlogback.file.level=TRACE
   -Ddcc.config.directory=/etc/dcc
   -Ddcc.defaults.blockchain.type=${DCC_NETWORK}
-  -Ddcc.directory=${WVDATA}
+  -Ddcc.directory=${DCC_DATA}
   -Ddcc.rest-api.bind-address=${DCC_REST_API_BIND:-127.0.0.1}
   ${JAVA_OPTS:-}"
 
 # Log non-sensitive JVM options only
-echo "Node starting with DCC_NETWORK=${DCC_NETWORK}, DCC_HEAP_SIZE=${DCC_HEAP_SIZE}" | tee -a ${WVLOG}/dcc.log
+echo "Node starting with DCC_NETWORK=${DCC_NETWORK}, DCC_HEAP_SIZE=${DCC_HEAP_SIZE}" | tee -a ${DCC_LOG}/dcc.log
 
 # Write wallet secrets to a temp config file (not visible in ps/cmdline)
 DCC_SECRETS_CONF=$(mktemp /tmp/dcc-secrets.XXXXXX.conf)

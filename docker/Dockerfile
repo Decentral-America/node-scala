@@ -23,8 +23,8 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 
 # Node files
-ENV WVDATA=/var/lib/dcc
-ENV WVLOG=/var/log/dcc
+ENV DCC_DATA=/var/lib/dcc
+ENV DCC_LOG=/var/log/dcc
 ENV DCC_INSTALL_PATH=/usr/share/dcc
 ENV DCC_CONFIG=/etc/dcc/dcc.conf
 
@@ -50,24 +50,24 @@ RUN set -euo pipefail && \
 
 # Setup node
 COPY entrypoint.sh $DCC_INSTALL_PATH/bin/entrypoint.sh
-RUN mkdir -p $WVDATA $WVLOG; \
+RUN mkdir -p $DCC_DATA $DCC_LOG; \
     # Create user
     groupadd -r dcc --gid=999; \
-    useradd --no-log-init -r -g dcc --uid=999 --home-dir=$WVDATA --shell=/bin/bash dcc
+    useradd --no-log-init -r -g dcc --uid=999 --home-dir=$DCC_DATA --shell=/bin/bash dcc
 
 RUN --mount=type=bind,source=target,target=/tmp/ \
     # Unpack tgz packages
     tar zxf /tmp/dcc.tgz -C $DCC_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
     tar zxf /tmp/dcc-grpc-server.tgz -C $DCC_INSTALL_PATH --strip-components=1 && \
     # Set permissions
-    chown -R dcc:dcc $WVDATA $WVLOG $DCC_INSTALL_PATH && chmod 755 $WVDATA $WVLOG;
+    chown -R dcc:dcc $DCC_DATA $DCC_LOG $DCC_INSTALL_PATH && chmod 755 $DCC_DATA $DCC_LOG;
 
 # Only expose REST API and mainnet P2P by default; override in docker-compose for other networks
 EXPOSE 6869 6868
-VOLUME $WVDATA
-VOLUME $WVLOG
+VOLUME $DCC_DATA
+VOLUME $DCC_LOG
 VOLUME $DCC_INSTALL_PATH/lib/plugins
-WORKDIR $WVDATA
+WORKDIR $DCC_DATA
 
 HEALTHCHECK CMD wget -q -O /dev/null http://localhost:6869/node/status || exit 1
 
