@@ -6,7 +6,7 @@ import scalapb.compiler.Version.scalapbVersion
 object Dependencies {
   private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.15.Final" // CVE-2026-44249 patch
 
-  val gProtoVersion = "4.35.0"
+  val gProtoVersion = "4.35.1"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
   val overrides = Def.setting(
     Seq(
@@ -26,10 +26,8 @@ object Dependencies {
       jacksonModule("core", "databind"),
       jacksonModule("datatype", "datatype-jdk8"),
       jacksonModule("datatype", "datatype-jsr310"),
-      // Force tools.jackson.core 3.1.1 (fixes GHSA-2m67-wjpj-xhg9 HIGH CVE)
-      // Transitive via pekko-http; 3.1.0 has document length constraint bypass.
-      "tools.jackson.core" % "jackson-core"     % "3.1.1",
-      "tools.jackson.core" % "jackson-databind" % "3.1.1",
+      "tools.jackson.core" % "jackson-core"     % "3.2.0",
+      "tools.jackson.core" % "jackson-databind" % "3.2.0",
       gProto
     )
   )
@@ -44,19 +42,19 @@ object Dependencies {
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.8.1"
 
-  private def jacksonModule(group: String, module: String, version: String = "2.21.3") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
+  private def jacksonModule(group: String, module: String, version: String = "2.22.0") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
   private def web3jModule(module: String) = "org.web3j" % module % "5.0.3" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
-  private def grpcModule(module: String) = "io.grpc" % module % "1.81.0"
+  private def grpcModule(module: String) = "io.grpc" % module % "1.82.0"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.6.0-jre"
   val kamonCore       = kamonModule("core")
   val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
-  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.32"
+  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.34" // CVE-2026-10532 + CVE-2026-9828 patched
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.10"
   val curve25519      = "io.decentralchain"  % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
@@ -113,7 +111,7 @@ object Dependencies {
     "com.github.jnr"       % "jnr-unixsocket"                    % "0.38.24", // To support Apple ARM
     "com.github.docker-java" % "docker-java-core"                 % "3.7.1",
     "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
-    jacksonModule("dataformat", "dataformat-properties", "2.21.3"),
+    jacksonModule("dataformat", "dataformat-properties", "2.22.0"),
     asyncHttpClient
   ).map(_ % Test)
 
