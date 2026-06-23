@@ -4,11 +4,11 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain.BlockchainUpdaterExt
-import com.decentralchain.settings.{BlockchainSettings, WavesSettings}
+import com.decentralchain.settings.{BlockchainSettings, DCCSettings}
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.{IssueTransaction, SponsorFeeTransaction}
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.{Asset, GenesisTransaction, TxHelpers, TxVersion}

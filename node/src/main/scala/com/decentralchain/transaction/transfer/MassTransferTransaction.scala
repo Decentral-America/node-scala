@@ -6,7 +6,7 @@ import com.decentralchain.account.*
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.serialization.impl.MassTransferTxSerializer
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
@@ -36,7 +36,7 @@ case class MassTransferTransaction(
     ),
       ProvenTransaction,
       Versioned.ToV2,
-      TxWithFee.InWaves,
+      TxWithFee.InDcc,
       FastHashId,
       PBSince.V2 {
   override type T = MassTransferTransaction

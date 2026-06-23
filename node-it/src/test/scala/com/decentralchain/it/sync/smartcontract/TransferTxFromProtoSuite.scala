@@ -8,7 +8,7 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{TxHelpers, TxVersion}

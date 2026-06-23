@@ -11,11 +11,11 @@ import com.decentralchain.lang.script.{ContractScript, Script}
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_STRING, *}
 import com.decentralchain.lang.v1.compiler.{TestCompiler, Types}
 import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
-import com.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import org.scalatest.Inside
 

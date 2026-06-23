@@ -9,7 +9,7 @@ import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.test.{FreeSpec, NumericExt}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
 
 class TransactionFeeSpec extends FreeSpec with WithDomain {

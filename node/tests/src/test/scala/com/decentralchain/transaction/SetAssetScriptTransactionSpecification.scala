@@ -7,7 +7,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.contract.DApp
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.script.{ContractScript, Script}
-import com.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.assets.SetAssetScriptTransaction

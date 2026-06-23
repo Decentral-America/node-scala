@@ -11,9 +11,9 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.util.TxHelpers
-import com.decentralchain.protobuf.transaction.{MassTransferTransactionData, PBRecipients, Recipient}
+import io.decentralchain.protobuf.transaction.{MassTransferTransactionData, PBRecipients, Recipient}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.{MaxTransferCount, Transfer}
 import com.decentralchain.transaction.transfer.TransferTransaction.MaxAttachmentSize

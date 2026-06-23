@@ -14,7 +14,7 @@ import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.settings.*
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{BlockEndorser, Blockchain, BlockchainUpdaterImpl, EndorsementStorage, NG}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers}
 import com.decentralchain.utx.UtxPoolImpl
 import com.decentralchain.wallet.Wallet

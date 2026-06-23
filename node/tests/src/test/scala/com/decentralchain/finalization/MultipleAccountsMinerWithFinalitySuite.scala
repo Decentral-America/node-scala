@@ -5,7 +5,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
 import com.decentralchain.mining.{Miner, MinerImpl}
 import com.decentralchain.state.*
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{CatchLogs, NumericExt, TestSchedulerOps, TestTime}
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import com.decentralchain.wallet.Wallet

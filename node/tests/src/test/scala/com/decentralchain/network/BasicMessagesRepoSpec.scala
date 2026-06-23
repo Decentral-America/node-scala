@@ -3,8 +3,8 @@ package com.decentralchain.network
 import com.google.protobuf.{ByteString, CodedOutputStream, WireFormat}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.mining.MiningConstraints
-import com.decentralchain.protobuf.block.*
-import com.decentralchain.protobuf.transaction.*
+import io.decentralchain.protobuf.block.*
+import io.decentralchain.protobuf.transaction.*
 import com.decentralchain.test.FreeSpec
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.{DataTransaction, Proofs, TxHelpers, TxVersion}

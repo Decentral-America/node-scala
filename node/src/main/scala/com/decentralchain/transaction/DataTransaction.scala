@@ -3,7 +3,7 @@ package com.decentralchain.transaction
 import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.ValidationError
-import com.decentralchain.protobuf.transaction.PBTransactions
+import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.*
 import com.decentralchain.transaction.serialization.impl.DataTxSerializer
 import com.decentralchain.transaction.validation.TxValidator

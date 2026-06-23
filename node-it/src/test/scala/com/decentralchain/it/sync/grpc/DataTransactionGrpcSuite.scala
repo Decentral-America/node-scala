@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{dataTxSupportedVersions, minFee}
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
-import com.decentralchain.protobuf.transaction.*
+import io.decentralchain.protobuf.transaction.*
 import com.decentralchain.state.StringDataEntry
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler

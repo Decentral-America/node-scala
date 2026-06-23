@@ -12,7 +12,7 @@ import com.decentralchain.it.sync.grpc.GrpcBaseTransactionSuiteLike
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
+import io.decentralchain.protobuf.transaction.{PBRecipients, PBTransactions}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.transaction.smart.script.ScriptCompiler

@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.consensus.TransactionsOrdering
 import com.decentralchain.test.PropSpec
 import com.decentralchain.transaction.{Asset, TxHelpers}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 
 import java.util.concurrent.ThreadLocalRandom

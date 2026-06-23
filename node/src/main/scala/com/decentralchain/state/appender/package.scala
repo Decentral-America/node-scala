@@ -13,7 +13,7 @@ import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
 import com.decentralchain.mining.Miner
 import com.decentralchain.network.BlockSnapshotResponse
-import com.decentralchain.protobuf.PBSnapshots
+import io.decentralchain.protobuf.PBSnapshots
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.transaction.*

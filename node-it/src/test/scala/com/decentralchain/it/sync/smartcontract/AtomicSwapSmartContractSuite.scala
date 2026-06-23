@@ -11,7 +11,7 @@ import com.decentralchain.it.api.TransactionInfo
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.{Proofs, TxHelpers, TxPositiveAmount}

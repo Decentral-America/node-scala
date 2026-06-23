@@ -4,7 +4,7 @@ import com.decentralchain.api.http.eth.EthRpcRoute
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.features.BlockchainFeatures
-import com.decentralchain.history.{DefaultWavesSettings, Domain, settingsWithFeatures}
+import com.decentralchain.history.{DefaultDCCSettings, Domain, settingsWithFeatures}
 import com.decentralchain.http.RouteSpec
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
@@ -236,10 +236,10 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
       randomKP.toAddress,
       None,
       Seq.empty,
-      Seq(InvokeScriptTransaction.Payment(1.waves, Asset.Waves)),
+      Seq(InvokeScriptTransaction.Payment(1.waves, Asset.Dcc)),
       invoker,
       1.005.waves,
-      Asset.Waves,
+      Asset.Dcc,
       2.toByte,
       ntpTime.getTimestamp()
     )

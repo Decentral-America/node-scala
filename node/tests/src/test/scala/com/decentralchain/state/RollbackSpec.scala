@@ -19,7 +19,7 @@ import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.TRUE
 import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
 import com.decentralchain.lang.v1.traits.domain.Lease
-import com.decentralchain.settings.{TestFunctionalitySettings, WavesSettings}
+import com.decentralchain.settings.{TestFunctionalitySettings, DCCSettings}
 import com.decentralchain.state.{Height, TransactionId}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

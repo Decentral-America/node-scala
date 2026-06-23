@@ -7,6 +7,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.metrics.BlockStats
 import com.decentralchain.settings.SynchronizationSettings.MicroblockSynchronizerSettings
 import com.decentralchain.utils.ScorexLogging
+import java.util.concurrent.ThreadLocalRandom
 import io.netty.channel.*
 import monix.eval.{Coeval, Task}
 import monix.execution.CancelableFuture

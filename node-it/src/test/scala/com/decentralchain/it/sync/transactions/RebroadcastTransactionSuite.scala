@@ -10,7 +10,7 @@ import com.decentralchain.it.NodeConfigs.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.{BaseTransactionSuite, NodesFromDocker}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 
 class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDocker {

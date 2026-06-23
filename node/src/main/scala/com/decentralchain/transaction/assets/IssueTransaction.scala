@@ -34,7 +34,7 @@ case class IssueTransaction(
     with ProvenTransaction
     with FastHashId
     with HasSignature
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with PBSince.V3 {
 
   override type T = IssueTransaction

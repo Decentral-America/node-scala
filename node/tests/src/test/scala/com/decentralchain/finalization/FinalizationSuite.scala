@@ -3,9 +3,9 @@ package com.decentralchain.finalization
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
-import com.decentralchain.settings.WavesSettings
+import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{GeneratorIndex, GenesisBlockHeight, Height}
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.NumericExt
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 

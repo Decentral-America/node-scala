@@ -6,7 +6,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import com.decentralchain.utils.Numbers
 

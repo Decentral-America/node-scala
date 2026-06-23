@@ -8,7 +8,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.settings.{TestFunctionalitySettings, WavesSettings, loadConfig}
+import com.decentralchain.settings.{TestFunctionalitySettings, DCCSettings, loadConfig}
 import com.decentralchain.state.*
 import com.decentralchain.state.utils.TestRocksDB
 import com.decentralchain.test.FreeSpec

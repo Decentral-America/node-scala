@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import com.decentralchain.network.message.{MessageSpec, Message as ScorexMessage}
 import com.decentralchain.test.FreeSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.{TestValues, crypto}
 import io.netty.buffer.Unpooled.wrappedBuffer

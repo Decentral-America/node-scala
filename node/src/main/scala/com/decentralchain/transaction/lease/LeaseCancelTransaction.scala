@@ -24,7 +24,7 @@ final case class LeaseCancelTransaction(
       ProvenTransaction,
       HasSignature,
       Versioned.ToV3,
-      TxWithFee.InWaves,
+      TxWithFee.InDcc,
       FastHashId,
       PBSince.V3 {
   override type T = LeaseCancelTransaction

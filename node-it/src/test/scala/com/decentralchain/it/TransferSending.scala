@@ -12,7 +12,7 @@ import com.decentralchain.it.TransferSending.Req
 import com.decentralchain.it.api.AsyncHttpApi.*
 import com.decentralchain.it.api.Transaction
 import com.decentralchain.transaction.TxHelpers
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.utils.ScorexLogging
 import org.scalatest.Suite

@@ -7,7 +7,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{TransactionInfo, TransactionStatus}
 import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{ProvenTransaction, Transaction, TxHelpers}
 import play.api.libs.json.*
 

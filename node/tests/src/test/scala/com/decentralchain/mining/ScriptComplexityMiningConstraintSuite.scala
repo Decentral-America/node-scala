@@ -5,7 +5,7 @@ import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.settings.{BlockchainSettings, WavesSettings}
+import com.decentralchain.settings.{BlockchainSettings, DCCSettings}
 import com.decentralchain.state.diffs.TransactionDiffer
 import com.decentralchain.state.{AccountScriptInfo, Height}
 import com.decentralchain.test.FlatSpec

@@ -15,7 +15,7 @@ import com.decentralchain.it.{NTPTime, NodeConfigs}
 import com.decentralchain.state.*
 import com.decentralchain.test.*
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.assets.exchange.AssetPair.extractAssetId
 import com.decentralchain.transaction.assets.{BurnTransaction, IssueTransaction, ReissueTransaction, SponsorFeeTransaction}

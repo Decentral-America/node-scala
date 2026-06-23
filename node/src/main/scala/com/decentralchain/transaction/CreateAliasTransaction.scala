@@ -26,7 +26,7 @@ final case class CreateAliasTransaction(
       ProvenTransaction,
       HasSignature,
       Versioned.ToV3,
-      TxWithFee.InWaves,
+      TxWithFee.InDcc,
       PBSince.V3 {
 
   type T = CreateAliasTransaction

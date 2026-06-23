@@ -8,7 +8,7 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.{AsyncHttpApi, TransactionInfo}
 import com.decentralchain.it.{BaseFunSuite, Node}
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.TransferTransaction

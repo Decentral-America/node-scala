@@ -13,7 +13,7 @@ import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.{V2, V5}
 import com.decentralchain.lang.v1.compiler.Terms.CONST_BOOLEAN
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.settings.{GenesisTransactionSettings, WavesSettings}
+import com.decentralchain.settings.{GenesisTransactionSettings, DCCSettings}
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.Height as H
 import com.decentralchain.test.*

@@ -25,7 +25,7 @@ final case class LeaseTransaction(
       ProvenTransaction,
       HasSignature,
       Versioned.ToV3,
-      TxWithFee.InWaves,
+      TxWithFee.InDcc,
       FastHashId,
       PBSince.V3 {
   type T = LeaseTransaction

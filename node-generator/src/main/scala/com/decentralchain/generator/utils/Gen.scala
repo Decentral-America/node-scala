@@ -8,7 +8,7 @@ import com.decentralchain.generator.utils.Implicits.*
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, DataEntry, EmptyDataEntry, IntegerDataEntry, StringDataEntry}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer

@@ -16,13 +16,13 @@ import com.decentralchain.crypto.DigestLength
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
-import com.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
-import com.decentralchain.protobuf.{PBSnapshots, toByteString}
+import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
+import io.decentralchain.protobuf.{PBSnapshots, toByteString}
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{Height, StateSnapshot, TxMeta}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.assets.exchange.{ExchangeTransaction, Order, OrderType}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}

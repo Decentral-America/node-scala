@@ -4,7 +4,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.state.{GeneratorIndex, Height}
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.transaction.TxHelpers
 
 class MultipleConflictEndorserSuite extends BaseFinalizationSpec {

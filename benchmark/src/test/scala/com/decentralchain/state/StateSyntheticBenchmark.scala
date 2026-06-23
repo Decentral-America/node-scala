@@ -12,7 +12,7 @@ import com.decentralchain.lang.v1.compiler.ExpressionCompiler
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.StateSyntheticBenchmark.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{Proofs, Transaction}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.*

@@ -7,7 +7,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.{Asset, TxHelpers}
@@ -79,7 +79,7 @@ class SpentComplexitySpec
   "Invocation" - {
     "does not count verifier complexity when InvokeScript is sent from smart account" in
       withDomain(settings, Seq(AddrWithBalance(sender.toAddress, 10_000_00000000L))) { d =>
-        val invokeTx = TxHelpers.invoke(sender.toAddress, None, Seq.empty, Seq.empty, sender, 90_0000L, Asset.Waves, 2.toByte, ntpTime.getTimestamp())
+        val invokeTx = TxHelpers.invoke(sender.toAddress, None, Seq.empty, Seq.empty, sender, 90_0000L, Asset.Dcc, 2.toByte, ntpTime.getTimestamp())
 
         d.appendBlock(
           TxHelpers.setScript(sender, contract, 100_0000L, 2.toByte, timestamp = ntpTime.getTimestamp()),
@@ -107,7 +107,7 @@ class SpentComplexitySpec
           Seq(InvokeScriptTransaction.Payment(50_00L, issue.asset)),
           recipient,
           90_0000L,
-          Asset.Waves,
+          Asset.Dcc,
           2.toByte,
           ntpTime.getTimestamp()
         )

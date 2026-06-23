@@ -9,12 +9,12 @@ import com.decentralchain.crypto.DigestLength
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
-import com.decentralchain.protobuf.Amount
-import com.decentralchain.protobuf.transaction.{DataEntry, Recipient}
+import io.decentralchain.protobuf.Amount
+import io.decentralchain.protobuf.transaction.{DataEntry, Recipient}
 import com.decentralchain.state.{BlockRewardCalculator, EmptyDataEntry, Height, IntegerDataEntry}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.utils.{DiffMatchers, Schedulers}
 import monix.execution.ExecutionModel.SynchronousExecution

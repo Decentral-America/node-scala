@@ -10,7 +10,7 @@ import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.TransactionStatus
 import com.decentralchain.it.{Node, NodeConfigs}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.assets.exchange.{AssetPair, ExchangeTransaction, Order}
 import com.decentralchain.transaction.smart.script.ScriptCompiler

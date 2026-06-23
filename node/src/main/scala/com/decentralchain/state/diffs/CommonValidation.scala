@@ -14,7 +14,7 @@ import com.decentralchain.lang.script.{ContractScript, Script}
 import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.*
 import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionLike}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*

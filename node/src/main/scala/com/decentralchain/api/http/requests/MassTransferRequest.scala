@@ -42,7 +42,7 @@ case class MassTransferRequest(
       t <- MassTransferTransaction.create(
         version.getOrElse(1.toByte),
         _sender,
-        assetId.getOrElse(Asset.Waves),
+        assetId.getOrElse(Asset.Dcc),
         _transfers,
         fee,
         timestamp,

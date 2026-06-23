@@ -25,7 +25,7 @@ case class UpdateAssetInfoRequest(
     for {
       _feeAssetId <- feeAssetId
         .traverse(parseBase58(_, "invalid.assetId", AssetIdStringLength).map(IssuedAsset(_)))
-        .map(_ getOrElse Waves)
+        .map(_ getOrElse Dcc)
       _sender <- PublicKey.fromBase58String(senderPublicKey)
       tx <- UpdateAssetInfoTransaction
         .create(version, _sender, assetId, name, description, timestamp.getOrElse(0L), fee, _feeAssetId, proofs.getOrElse(Proofs.empty), chainId)

@@ -8,7 +8,7 @@ import com.decentralchain.generator.utils.Gen
 import com.decentralchain.generator.utils.Implicits.DoubleExt
 import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.transfer.TransferTransaction

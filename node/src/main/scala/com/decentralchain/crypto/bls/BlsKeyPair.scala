@@ -16,8 +16,8 @@ object BlsKeyPair {
   def apply(dccPrivateKey: DccPrivateKey): BlsKeyPair = new BlsSeedKeyPair(dccPrivateKey.arr)
 }
 
-private final class BlsSeedKeyPair(private val wavesPrivateKey: Array[Byte]) extends BlsKeyPair {
-  private lazy val sk: blst.SecretKey = BlsUtils.mkSecretKey(wavesPrivateKey)
+private final class BlsSeedKeyPair(private val dccPrivateKey: Array[Byte]) extends BlsKeyPair {
+  private lazy val sk: blst.SecretKey = BlsUtils.mkSecretKey(dccPrivateKey)
   lazy val publicKey: BlsPublicKey    = BlsPublicKey.unchecked(ByteStr(BlsUtils.mkPublicKey(sk)))
 
   def sign(message: Array[Byte]): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message)))

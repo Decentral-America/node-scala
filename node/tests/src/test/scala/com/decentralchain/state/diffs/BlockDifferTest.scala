@@ -15,7 +15,7 @@ import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.diffs.BlockDiffer.Result
 import com.decentralchain.state.{Blockchain, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.{TransactionStateSnapshot, WavesSettingsOps}
+import com.decentralchain.test.DomainPresets.{TransactionStateSnapshot, DCCSettingsOps}
 import com.decentralchain.test.node.*
 import com.decentralchain.transaction.TxValidationError.InvalidStateHash
 import com.decentralchain.transaction.{TxHelpers, TxVersion}

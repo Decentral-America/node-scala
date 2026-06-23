@@ -9,6 +9,7 @@ import io.netty.channel.Channel
 import io.netty.channel.socket.nio.NioSocketChannel
 
 import java.net.{InetAddress, InetSocketAddress, URI}
+import java.util.concurrent.ThreadLocalRandom
 import scala.annotation.tailrec
 import scala.collection.*
 import scala.collection.immutable.Seq

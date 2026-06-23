@@ -10,7 +10,7 @@ import com.decentralchain.crypto.{P256Curve, Sha256}
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.lang.script.{Script, ScriptReader}
-import com.decentralchain.settings.{WalletSettings, WavesSettings}
+import com.decentralchain.settings.{WalletSettings, DCCSettings}
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.TransactionFactory
 import com.decentralchain.transaction.smart.script.ScriptCompiler

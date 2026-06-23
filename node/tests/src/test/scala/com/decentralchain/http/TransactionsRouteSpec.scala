@@ -15,11 +15,11 @@ import com.decentralchain.lang.directives.values.{V5, V7, V8}
 import com.decentralchain.lang.v1.FunctionHeader
 import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BOOLEAN, CONST_BYTESTR, CONST_LONG, CONST_STRING, FUNCTION_CALL}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.protobuf.transaction.PBTransactions
-import com.decentralchain.settings.WavesSettings
+import io.decentralchain.protobuf.transaction.PBTransactions
+import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{BinaryDataEntry, EmptyDataEntry, Height, InvokeScriptResult, StringDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, setScript, transfer}
 import com.decentralchain.transaction.TxValidationError.ScriptExecutionError
 import com.decentralchain.transaction.assets.exchange.{Order, OrderType}

@@ -11,9 +11,9 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.db.{WithDomain, WithState}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
-import com.decentralchain.settings.WavesSettings
+import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{GenerationPeriod, GeneratorIndex, Height, diffs}
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import monix.execution.Scheduler.global
 import org.apache.pekko.http.scaladsl.model.StatusCodes.{NotFound, OK}
@@ -34,7 +34,7 @@ import scala.concurrent.duration.*
 class GeneratorsApiRouteSpec extends RouteSpec("/generators") with WithDomain {
   private val activationHeight       = Height(2)
   private val generationPeriodLength = 3
-  private val defaultSettings: WavesSettings = {
+  private val defaultSettings: DCCSettings = {
     val orig = DomainPresets.DeterministicFinality.setFeaturesHeight(BlockchainFeatures.DeterministicFinality -> activationHeight.toInt)
     orig.copy(
       blockchainSettings = orig.blockchainSettings.copy(

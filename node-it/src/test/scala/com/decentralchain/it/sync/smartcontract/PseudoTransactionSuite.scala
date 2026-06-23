@@ -9,7 +9,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms.EXPR
 import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler

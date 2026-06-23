@@ -13,7 +13,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.events.UtxEvent
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain.BlockchainUpdaterExt
-import com.decentralchain.history.{DefaultWavesSettings, randomSig, settingsWithFeatures}
+import com.decentralchain.history.{DefaultDCCSettings, randomSig, settingsWithFeatures}
 import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.lang.directives.values.*
 import com.decentralchain.lang.script.Script
@@ -27,7 +27,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.diffs.{invoke as _, *}
 import com.decentralchain.state.utils.TestRocksDB
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxValidationError.{GenericError, SenderIsBlacklisted}
 import com.decentralchain.transaction.smart.SetScriptTransaction

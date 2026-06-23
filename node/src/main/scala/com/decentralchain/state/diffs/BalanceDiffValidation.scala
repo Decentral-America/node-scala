@@ -75,7 +75,7 @@ object BalanceDiffValidation {
         }
         .getOrElse(Map())
 
-    val positiveBalanceErrors = wavesCheck ++ assetsCheck
+    val positiveBalanceErrors = dccCheck ++ assetsCheck
     if (positiveBalanceErrors.isEmpty) Right(snapshot)
     else Left(AccountBalanceError(positiveBalanceErrors))
   }

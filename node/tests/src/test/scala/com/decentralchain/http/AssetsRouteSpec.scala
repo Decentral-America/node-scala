@@ -18,7 +18,7 @@ import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.Terms.CONST_BOOLEAN
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.lang.v1.estimator.ScriptEstimatorV1
-import com.decentralchain.settings.WavesSettings
+import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.{AssetDescription, AssetScriptInfo, BinaryDataEntry, Height, TransactionId}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*

@@ -6,7 +6,7 @@ import com.decentralchain.it.NTPTime
 import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{matcherFee, minFee, someAssetAmount}
 import com.decentralchain.test.*
-import com.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
+import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.transaction.assets.IssueTransaction

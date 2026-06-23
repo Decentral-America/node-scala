@@ -10,7 +10,7 @@ import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, defaultSigner}
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers, TxVersion}
 

@@ -5,7 +5,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
 import com.decentralchain.state.*
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{NumericExt, produce}
 import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}

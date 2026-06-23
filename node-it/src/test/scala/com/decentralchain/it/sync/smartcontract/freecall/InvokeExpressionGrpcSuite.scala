@@ -12,9 +12,9 @@ import com.decentralchain.it.sync.invokeExpressionFee
 import com.decentralchain.lang.directives.values.V6
 import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.protobuf.block.VanillaBlock
+import io.decentralchain.protobuf.block.VanillaBlock
 import com.decentralchain.state.Height
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeExpressionTransaction
 import org.scalatest.{Assertion, CancelAfterFailure}
 

@@ -6,7 +6,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{GeneratorIndex, Height, Portfolio}
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.TxHelpers
 

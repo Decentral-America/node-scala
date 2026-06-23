@@ -18,8 +18,8 @@ import com.decentralchain.settings.{Constants, FunctionalitySettings, RewardsSet
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain, GenesisBlockHeight, Height}
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.{RideV6, WavesSettingsOps, BlockRewardDistribution as BlockRewardDistributionSettings}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.test.DomainPresets.{RideV6, DCCSettingsOps, BlockRewardDistribution as BlockRewardDistributionSettings}
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{GenesisTransaction, TxHelpers}
 import org.scalacheck.Gen
 import org.scalactic.source.Position

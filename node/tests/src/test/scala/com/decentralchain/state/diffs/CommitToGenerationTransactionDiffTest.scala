@@ -9,7 +9,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.{DeterministicFinality, WavesSettingsOps}
+import com.decentralchain.test.DomainPresets.{DeterministicFinality, DCCSettingsOps}
 import com.decentralchain.transaction.{CommitToGenerationTransaction, Proofs, TxHelpers}
 
 class CommitToGenerationTransactionDiffTest extends FreeSpec with WithDomain {

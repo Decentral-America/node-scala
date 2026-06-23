@@ -31,7 +31,7 @@ case class ExchangeTransaction(
       ProvenTransaction,
       HasSignature,
       Versioned.ToV3,
-      TxWithFee.InWaves,
+      TxWithFee.InDcc,
       FastHashId,
       PBSince.V3 {
 

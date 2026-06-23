@@ -7,7 +7,7 @@ import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.history.Domain
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{BalanceSnapshot, GeneratorIndex, Height, Portfolio}
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.NumericExt
 import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
 import com.decentralchain.transaction.TxHelpers

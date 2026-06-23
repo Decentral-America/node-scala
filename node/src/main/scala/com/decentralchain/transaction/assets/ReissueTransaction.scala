@@ -28,7 +28,7 @@ case class ReissueTransaction(
     with Versioned.ToV3
     with ProvenTransaction
     with HasSignature
-    with TxWithFee.InWaves
+    with TxWithFee.InDcc
     with FastHashId
     with PBSince.V3 {
   override type T = ReissueTransaction

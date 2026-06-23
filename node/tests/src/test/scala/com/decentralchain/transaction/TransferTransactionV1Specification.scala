@@ -5,7 +5,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.serialization.impl.TransferTxSerializer
 import com.decentralchain.transaction.transfer.*

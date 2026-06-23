@@ -4,7 +4,7 @@ import com.decentralchain.account.*
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.serialization.impl.TransferTxSerializer
 import com.decentralchain.transaction.validation.*
 import com.decentralchain.transaction.validation.impl.TransferTxValidator

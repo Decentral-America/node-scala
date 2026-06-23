@@ -7,7 +7,7 @@ import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import com.decentralchain.network.{EndorseBlock, MessageCodec, PeerDatabase}
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{FreeSpec, NumericExt, WithResourceManager}
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 import com.decentralchain.utils.EmbeddedChannelOps

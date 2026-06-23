@@ -6,8 +6,8 @@ import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.lang.v1.FunctionHeader.User
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_LONG, FUNCTION_CALL}
-import com.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
-import com.decentralchain.protobuf.utils.PBUtils
+import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.settings.Constants
 import com.decentralchain.state.Height
 import com.decentralchain.test.FreeSpec
@@ -133,7 +133,7 @@ class ProtoVersionTransactionsSpec extends FreeSpec {
 
       val transferTx =
         TransferTransaction
-          .create(TxVersion.V3, Account.publicKey, recipient, asset, 100, Asset.Waves, MinFee, ByteStr(attachment), Now, Proofs.empty)
+          .create(TxVersion.V3, Account.publicKey, recipient, asset, 100, Asset.Dcc, MinFee, ByteStr(attachment), Now, Proofs.empty)
           .map(_.signWith(Account.privateKey))
           .explicitGet()
 
@@ -149,7 +149,7 @@ class ProtoVersionTransactionsSpec extends FreeSpec {
 
       val massTransferTx =
         MassTransferTransaction
-          .create(TxVersion.V2, Account.publicKey, Asset.Waves, transfers, MassTransferTxFee, Now, ByteStr(attachment), Proofs.empty)
+          .create(TxVersion.V2, Account.publicKey, Asset.Dcc, transfers, MassTransferTxFee, Now, ByteStr(attachment), Proofs.empty)
           .map(_.signWith(Account.privateKey))
           .explicitGet()
       val base64Str = Base64.encode(PBUtils.encodeDeterministic(PBTransactions.protobuf(massTransferTx)))

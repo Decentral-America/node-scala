@@ -9,7 +9,7 @@ import com.decentralchain.generator.utils.Gen
 import com.decentralchain.generator.utils.Implicits.DoubleExt
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{Transaction, TxHelpers}
 import pureconfig.ConfigReader
 

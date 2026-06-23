@@ -30,15 +30,15 @@ import com.decentralchain.features.BlockchainFeatures.BlockReward
 import com.decentralchain.history.Domain
 import com.decentralchain.lang.directives.values.{V5, V6}
 import com.decentralchain.lang.v1.compiler.TestCompiler
-import com.decentralchain.protobuf.*
-import com.decentralchain.protobuf.block.PBBlocks
-import com.decentralchain.protobuf.transaction.InvokeScriptResult.{Call, Invocation, Payment}
-import com.decentralchain.protobuf.transaction.{DataEntry, InvokeScriptResult}
-import com.decentralchain.settings.{Constants, WavesSettings}
+import io.decentralchain.protobuf.*
+import io.decentralchain.protobuf.block.PBBlocks
+import io.decentralchain.protobuf.transaction.InvokeScriptResult.{Call, Invocation, Payment}
+import io.decentralchain.protobuf.transaction.{DataEntry, InvokeScriptResult}
+import com.decentralchain.settings.{Constants, DCCSettings}
 import com.decentralchain.state.{AssetDescription, BlockRewardCalculator, EmptyDataEntry, Height, LeaseBalance, StringDataEntry, TransactionId}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.OrderType
 import com.decentralchain.transaction.assets.{IssueTransaction, ReissueTransaction}
 import com.decentralchain.transaction.lease.LeaseTransaction
@@ -61,7 +61,7 @@ import java.util.concurrent.ThreadLocalRandom
 class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures {
   private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
 
-  val currentSettings: WavesSettings = RideV5
+  val currentSettings: DCCSettings = RideV5
 
   val transfer: TransferTransaction       = TxHelpers.transfer()
   val lease: LeaseTransaction             = TxHelpers.lease(fee = TestValues.fee)
@@ -719,7 +719,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
         Seq.empty,
         invoker,
         2.waves,
-        Asset.Waves,
+        Asset.Dcc,
         2.toByte,
         ntpTime.getTimestamp()
       )

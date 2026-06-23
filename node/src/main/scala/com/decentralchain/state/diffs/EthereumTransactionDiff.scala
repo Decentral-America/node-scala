@@ -8,7 +8,7 @@ import com.decentralchain.database.protobuf.EthereumTransactionMeta
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.lang.v1.serialization.SerdeV1
-import com.decentralchain.protobuf.transaction.{PBAmounts, PBRecipients}
+import io.decentralchain.protobuf.transaction.{PBAmounts, PBRecipients}
 import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionDiff}
 import com.decentralchain.state.{Blockchain, StateSnapshot}
 import com.decentralchain.transaction.EthereumTransaction

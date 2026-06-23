@@ -12,7 +12,7 @@ import com.decentralchain.metrics.{BlockStats, Instrumented, *}
 import com.decentralchain.mining.Miner.*
 import com.decentralchain.mining.microblocks.MicroBlockMiner
 import com.decentralchain.network.*
-import com.decentralchain.settings.WavesSettings
+import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.*
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.{Applied, Ignored}
 import com.decentralchain.state.appender.BlockAppender

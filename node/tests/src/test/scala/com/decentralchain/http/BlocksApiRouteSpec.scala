@@ -18,7 +18,7 @@ import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain, GeneratorIndex, Height}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.assets.exchange.{Order, OrderType}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.utils.{SharedSchedulerMixin, SystemTime}

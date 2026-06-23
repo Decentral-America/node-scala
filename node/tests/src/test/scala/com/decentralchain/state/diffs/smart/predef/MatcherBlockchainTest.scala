@@ -15,7 +15,7 @@ import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.*
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.script.ScriptRunner
 import com.decentralchain.transaction.transfer.TransferTransaction
 import com.decentralchain.transaction.{Asset, ERC20Address, Transaction, TxHelpers}

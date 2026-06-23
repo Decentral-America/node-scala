@@ -9,7 +9,7 @@ import com.decentralchain.mining.BlockChallengerImpl
 import com.decentralchain.network.{EndorseBlock, MessageCodec, PeerDatabase}
 import com.decentralchain.state.*
 import com.decentralchain.state.appender.BlockAppender
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.TestTime
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.utils.{EmbeddedChannelOps, Schedulers}

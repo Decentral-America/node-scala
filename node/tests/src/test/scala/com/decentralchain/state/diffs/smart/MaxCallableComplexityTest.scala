@@ -11,7 +11,7 @@ import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.{NumericExt, PropSpec, TestTime}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.{GenesisTransaction, Proofs, TxHelpers, TxVersion}
 

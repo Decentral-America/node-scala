@@ -23,7 +23,7 @@ import com.decentralchain.lang.v1.compiler.Terms.*
 import com.decentralchain.lang.v1.compiler.{ExpressionCompiler, Terms, TestCompiler}
 import com.decentralchain.lang.v1.evaluator.FunctionIds
 import com.decentralchain.lang.v1.parser.Parser.LibrariesOffset.NoLibraries
-import com.decentralchain.protobuf.dapp.DAppMeta
+import io.decentralchain.protobuf.dapp.DAppMeta
 import com.decentralchain.settings.{FunctionalitySettings, TestFunctionalitySettings}
 import com.decentralchain.test.*
 import com.decentralchain.transaction.TxValidationError.GenericError

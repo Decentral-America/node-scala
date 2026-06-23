@@ -11,12 +11,12 @@ import com.decentralchain.crypto.DigestLength
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.{chainBaseAndMicro, customBuildBlockOfTxs, defaultSigner}
 import com.decentralchain.lagonaki.mocks.TestBlock
-import com.decentralchain.protobuf.block.PBBlocks
-import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings, WavesSettings}
+import io.decentralchain.protobuf.block.PBBlocks
+import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings, DCCSettings}
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.state.{Blockchain, BlockchainUpdaterImpl, NG, diffs}
 import com.decentralchain.test.{FlatSpec, *}
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.Time
 import com.decentralchain.{BlocksTransactionsHelpers, crypto, protobuf}
@@ -459,7 +459,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
         .block
     } yield (miner1, miner2, genesisBlock)
 
-  private def withBlockchain(time: Time = ntpTime, settings: WavesSettings = testSettings)(
+  private def withBlockchain(time: Time = ntpTime, settings: DCCSettings = testSettings)(
       f: Blockchain & BlockchainUpdater & NG => Unit
   ): Unit = {
     withRocksDBWriter(settings.blockchainSettings) { blockchain =>

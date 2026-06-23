@@ -5,7 +5,7 @@ import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.history.Domain
 import com.decentralchain.state.*
-import com.decentralchain.test.DomainPresets.WavesSettingsOps
+import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{CatchLogs, FreeSpec, NumericExt, TestSchedulerOps, TestTime, WithResourceManager}
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.wallet.Wallet

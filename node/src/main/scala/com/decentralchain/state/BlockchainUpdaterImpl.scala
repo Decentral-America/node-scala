@@ -15,12 +15,12 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
 import com.decentralchain.mining.{Miner, MiningConstraint, MiningConstraints}
-import com.decentralchain.settings.{BlockchainSettings, WavesSettings}
+import com.decentralchain.settings.{BlockchainSettings, DCCSettings}
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.{Applied, Ignored}
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{BlockAppendError, GenericError, MicroBlockAppendError}
 import com.decentralchain.transaction.transfer.TransferTransactionLike
 import com.decentralchain.utils.{ScorexLogging, Time, UnsupportedFeature, forceStopApplication}
@@ -425,7 +425,7 @@ class BlockchainUpdaterImpl(
 
                 restTotalConstraint = updatedTotalConstraint
                 if (
-                  (block.header.timestamp > time.getTimestamp() - wavesSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis)
+                  (block.header.timestamp > time.getTimestamp() - dccSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis)
                   || (newHeight.toInt % 100 == 0)
                 ) {
                   currentFinalizedHeight.foreach { h =>

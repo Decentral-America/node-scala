@@ -6,7 +6,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.*
 import com.decentralchain.lagonaki.mocks.TestBlock
-import com.decentralchain.transaction.Asset.Waves
+import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.transfer.*
 import monix.execution.schedulers.SchedulerService

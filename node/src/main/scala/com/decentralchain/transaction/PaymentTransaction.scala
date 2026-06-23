@@ -22,7 +22,7 @@ case class PaymentTransaction(
     chainId: Byte
 ) extends Transaction(TransactionType.Payment)
     with ProvenTransaction
-    with TxWithFee.InWaves {
+    with TxWithFee.InDcc {
   override type T = PaymentTransaction
   override def addProof(proof: ByteStr): PaymentTransaction = copy(signature = proof)
 

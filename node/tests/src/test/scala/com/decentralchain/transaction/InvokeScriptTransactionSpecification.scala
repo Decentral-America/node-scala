@@ -12,8 +12,8 @@ import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BIGINT, CONST_BYTES
 import com.decentralchain.lang.v1.compiler.Types.CASETYPEREF
 import com.decentralchain.lang.v1.serialization.SerdeV1
 import com.decentralchain.lang.v1.{ContractLimits, FunctionHeader}
-import com.decentralchain.protobuf.transaction.*
-import com.decentralchain.protobuf.{Amount, transaction}
+import io.decentralchain.protobuf.transaction.*
+import io.decentralchain.protobuf.{Amount, transaction}
 import com.decentralchain.serialization.Deser
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}

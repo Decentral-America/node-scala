@@ -9,7 +9,7 @@ import com.decentralchain.database.RocksDBWriter
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.mining.{Miner, MinerDebugInfo}
 import com.decentralchain.network.{PeerDatabase, PeerInfo, *}
-import com.decentralchain.settings.{RestAPISettings, WavesSettings}
+import com.decentralchain.settings.{RestAPISettings, DCCSettings}
 import com.decentralchain.state.diffs.TransactionDiffer
 import com.decentralchain.state.{Blockchain, Height, LeaseBalance, NG, SnapshotBlockchain, StateHash, TxMeta}
 import com.decentralchain.transaction.*

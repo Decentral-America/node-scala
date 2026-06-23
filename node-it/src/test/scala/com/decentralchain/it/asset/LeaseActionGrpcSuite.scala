@@ -16,7 +16,7 @@ import com.decentralchain.lang.v1.compiler.Terms.{CONST_BYTESTR, FUNCTION_CALL}
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.lang.v1.traits.domain.Lease
 import com.decentralchain.lang.v1.traits.domain.Recipient.Address
-import com.decentralchain.protobuf.transaction.Recipient
+import io.decentralchain.protobuf.transaction.Recipient
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.TxVersion
 import com.decentralchain.transaction.smart.script.ScriptCompiler
