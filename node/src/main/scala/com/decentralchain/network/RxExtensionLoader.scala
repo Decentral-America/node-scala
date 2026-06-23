@@ -1,17 +1,17 @@
 package com.decentralchain.network
 
 import com.google.common.cache.{Cache, CacheBuilder}
-import com.wavesplatform.block.Block
-import com.wavesplatform.block.Block.BlockId
-import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.lang.ValidationError
-import com.wavesplatform.metrics.BlockStats
-import com.wavesplatform.network.RxExtensionLoader.ApplierState.Buffer
-import com.wavesplatform.network.RxExtensionLoader.LoaderState.{Idle, WithPeer}
-import com.wavesplatform.network.RxScoreObserver.{ChannelClosedAndSyncWith, SyncWith}
-import com.wavesplatform.state.ParSignatureChecker
-import com.wavesplatform.transaction.TxValidationError.GenericError
-import com.wavesplatform.utils.ScorexLogging
+import com.decentralchain.block.Block
+import com.decentralchain.block.Block.BlockId
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.lang.ValidationError
+import com.decentralchain.metrics.BlockStats
+import com.decentralchain.network.RxExtensionLoader.ApplierState.Buffer
+import com.decentralchain.network.RxExtensionLoader.LoaderState.{Idle, WithPeer}
+import com.decentralchain.network.RxScoreObserver.{ChannelClosedAndSyncWith, SyncWith}
+import com.decentralchain.state.ParSignatureChecker
+import com.decentralchain.transaction.TxValidationError.GenericError
+import com.decentralchain.utils.ScorexLogging
 import io.netty.channel.*
 import monix.eval.{Coeval, Task}
 import monix.execution.CancelableFuture

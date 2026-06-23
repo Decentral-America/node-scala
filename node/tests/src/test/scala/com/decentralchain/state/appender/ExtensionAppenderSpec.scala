@@ -1,14 +1,14 @@
 package com.decentralchain.state.appender
 
-import com.wavesplatform.block.Block
-import com.wavesplatform.common.utils.EitherExt2.*
-import com.wavesplatform.db.WithDomain
-import com.wavesplatform.db.WithState.AddrWithBalance
-import com.wavesplatform.network.{ExtensionBlocks, InvalidBlockStorage, PeerDatabase}
-import com.wavesplatform.test.*
-import com.wavesplatform.transaction.TxHelpers
-import com.wavesplatform.utils.SystemTime
-import com.wavesplatform.utx.UtxPoolImpl
+import com.decentralchain.block.Block
+import com.decentralchain.common.utils.EitherExt2.*
+import com.decentralchain.db.WithDomain
+import com.decentralchain.db.WithState.AddrWithBalance
+import com.decentralchain.network.{ExtensionBlocks, InvalidBlockStorage, PeerDatabase}
+import com.decentralchain.test.*
+import com.decentralchain.transaction.TxHelpers
+import com.decentralchain.utils.SystemTime
+import com.decentralchain.utx.UtxPoolImpl
 import io.netty.channel.embedded.EmbeddedChannel
 import monix.execution.Scheduler.Implicits.global
 

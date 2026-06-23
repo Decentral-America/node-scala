@@ -2,18 +2,18 @@ package com.decentralchain.state.diffs
 
 import cats.implicits.{catsSyntaxEither, catsSyntaxEitherObject, catsSyntaxSemigroup}
 import com.google.protobuf.ByteString
-import com.wavesplatform.account.AddressScheme
-import com.wavesplatform.crypto.EthereumKeyLength
-import com.wavesplatform.database.protobuf.EthereumTransactionMeta
-import com.wavesplatform.features.BlockchainFeatures
-import com.wavesplatform.lang.ValidationError
-import com.wavesplatform.lang.v1.serialization.SerdeV1
-import com.wavesplatform.protobuf.transaction.{PBAmounts, PBRecipients}
-import com.wavesplatform.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionDiff}
-import com.wavesplatform.state.{Blockchain, StateSnapshot}
-import com.wavesplatform.transaction.EthereumTransaction
-import com.wavesplatform.transaction.TxValidationError.GenericError
-import com.wavesplatform.transaction.smart.script.trace.TracedResult
+import com.decentralchain.account.AddressScheme
+import com.decentralchain.crypto.EthereumKeyLength
+import com.decentralchain.database.protobuf.EthereumTransactionMeta
+import com.decentralchain.features.BlockchainFeatures
+import com.decentralchain.lang.ValidationError
+import com.decentralchain.lang.v1.serialization.SerdeV1
+import com.decentralchain.protobuf.transaction.{PBAmounts, PBRecipients}
+import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionDiff}
+import com.decentralchain.state.{Blockchain, StateSnapshot}
+import com.decentralchain.transaction.EthereumTransaction
+import com.decentralchain.transaction.TxValidationError.GenericError
+import com.decentralchain.transaction.smart.script.trace.TracedResult
 
 object EthereumTransactionDiff {
   def meta(blockchain: Blockchain)(tx: EthereumTransaction): StateSnapshot = {

@@ -1,28 +1,28 @@
 package com.decentralchain.state.diffs
 
 import cats.implicits.toBifunctorOps
-import com.wavesplatform.account.{Address, AddressScheme}
-import com.wavesplatform.database.patch.DisableHijackedAliases
-import com.wavesplatform.features.BlockchainFeatures.LightNode
-import com.wavesplatform.features.OverdraftValidationProvider.*
-import com.wavesplatform.features.{BlockchainFeature, BlockchainFeatures, RideVersionProvider}
-import com.wavesplatform.lang.ValidationError
-import com.wavesplatform.lang.directives.values.*
-import com.wavesplatform.lang.script.ContractScript.ContractScriptImpl
-import com.wavesplatform.lang.script.v1.ExprScript
-import com.wavesplatform.lang.script.{ContractScript, Script}
-import com.wavesplatform.settings.FunctionalitySettings
-import com.wavesplatform.state.*
-import com.wavesplatform.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionLike}
-import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
-import com.wavesplatform.transaction.TxValidationError.*
-import com.wavesplatform.transaction.assets.*
-import com.wavesplatform.transaction.assets.exchange.*
-import com.wavesplatform.transaction.lease.*
-import com.wavesplatform.transaction.smart.InvokeScriptTransaction.Payment
-import com.wavesplatform.transaction.smart.{InvokeExpressionTransaction, InvokeScriptTransaction, SetScriptTransaction}
-import com.wavesplatform.transaction.transfer.*
-import com.wavesplatform.transaction.{Asset, *}
+import com.decentralchain.account.{Address, AddressScheme}
+import com.decentralchain.database.patch.DisableHijackedAliases
+import com.decentralchain.features.BlockchainFeatures.LightNode
+import com.decentralchain.features.OverdraftValidationProvider.*
+import com.decentralchain.features.{BlockchainFeature, BlockchainFeatures, RideVersionProvider}
+import com.decentralchain.lang.ValidationError
+import com.decentralchain.lang.directives.values.*
+import com.decentralchain.lang.script.ContractScript.ContractScriptImpl
+import com.decentralchain.lang.script.v1.ExprScript
+import com.decentralchain.lang.script.{ContractScript, Script}
+import com.decentralchain.settings.FunctionalitySettings
+import com.decentralchain.state.*
+import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeScriptTransactionLike}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.TxValidationError.*
+import com.decentralchain.transaction.assets.*
+import com.decentralchain.transaction.assets.exchange.*
+import com.decentralchain.transaction.lease.*
+import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
+import com.decentralchain.transaction.smart.{InvokeExpressionTransaction, InvokeScriptTransaction, SetScriptTransaction}
+import com.decentralchain.transaction.transfer.*
+import com.decentralchain.transaction.{Asset, *}
 
 import scala.util.{Left, Right}
 

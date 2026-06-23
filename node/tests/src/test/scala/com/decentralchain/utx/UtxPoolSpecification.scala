@@ -1,7 +1,6 @@
 package com.decentralchain.utx
 
 import cats.data.NonEmptyList
-import com.wavesplatform
 import com.decentralchain.*
 import com.decentralchain.account.{Address, KeyPair, PublicKey}
 import com.decentralchain.block.{Block, BlockHeader, SignedBlockHeader}
