@@ -11,7 +11,7 @@ import com.decentralchain.mining.BlockChallenger
 import com.decentralchain.network.*
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.{Applied, Ignored}
-import com.decentralchain.state.{BlockEndorser, Blockchain}
+import com.decentralchain.state.{BlockEndorser, Blockchain, Height}
 import com.decentralchain.transaction.BlockchainUpdater
 import com.decentralchain.transaction.TxValidationError.{BlockAppendError, GenericError, InvalidSignature, InvalidStateHash}
 import com.decentralchain.utils.{ScorexLogging, Time}
@@ -39,8 +39,7 @@ object BlockAppender extends ScorexLogging {
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
       verify: Boolean = true,
-      txSignParCheck: Boolean = true,
-      hotStuffEngine: Option[ActorRef] = None
+      txSignParCheck: Boolean = true
   )(newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Either[ValidationError, BlockApplyResult]] =
     Task {
       if (blockchainUpdater.isLastBlockId(newBlock.id())) Right(Ignored) // Cheap to test
@@ -52,17 +51,8 @@ object BlockAppender extends ScorexLogging {
           appendChallengeBlock(blockchainUpdater, utxStorage, pos, time, log, verify, txSignParCheck)(newBlock, snapshot)
         } else {
           appendKeyBlock(blockchainUpdater, utxStorage, pos, time, log, verify, txSignParCheck)(newBlock, snapshot).tap {
-            case Right(Applied(generatorSet = gs)) =>
-              blockEndorser.vote(gs)
-              hotStuffEngine.foreach(
-                _ ! HotStuffEngine.BlockApplied(
-                  blockId      = newBlock.id(),
-                  height       = blockchainUpdater.height,
-                  forgerAddress = newBlock.header.generator.toAddress,
-                  validators   = gs
-                )
-              )
-            case _ =>
+            case Right(Applied(generatorSet = gs)) => blockEndorser.vote(gs)
+            case _                                 =>
           }
         }
       } else if (blockchainUpdater.contains(newBlock.id()))
@@ -93,12 +83,12 @@ object BlockAppender extends ScorexLogging {
       (for {
         _ <- EitherT(Task(Either.cond(newBlock.signatureValid(), (), GenericError("Invalid block signature"))))
         _ = span.markNtp("block.signatures-validated")
-        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler, hotStuffEngine = hotStuffEngine)(newBlock, snapshot))
+        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler)(newBlock, snapshot))
       } yield validApplication).value
 
     val handle = append.flatMap {
       case Right(Ignored) => Task.unit // block already appended
-      case Right(_: Applied) =>
+      case Right(Applied(generatorSet = gs)) =>
         Task {
           log.debug(s"${id(ch)} Appended $newBlock")
 
@@ -108,6 +98,14 @@ object BlockAppender extends ScorexLogging {
           if (blockchainUpdater.isLastBlockId(newBlock.id()) && (newBlock.transactionData.isEmpty || newBlock.header.challengedHeader.isDefined)) {
             allChannels.broadcast(BlockForged(newBlock), Some(ch)) // Key block or challenging block
           }
+          hotStuffEngine.foreach(
+            _ ! HotStuffEngine.BlockApplied(
+              blockId       = newBlock.id(),
+              height        = Height(blockchainUpdater.height),
+              forgerAddress = newBlock.header.generator.toAddress,
+              validators    = gs
+            )
+          )
         }
       case Left(is: InvalidSignature) =>
         Task(peerDatabase.blacklistAndClose(ch, s"Could not append $newBlock: $is"))

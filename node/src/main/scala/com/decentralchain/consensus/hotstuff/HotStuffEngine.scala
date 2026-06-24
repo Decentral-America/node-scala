@@ -4,7 +4,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.consensus.hotstuff.HotStuffEngine.*
 import com.decentralchain.crypto.bls.BlsKeyPair
-import com.decentralchain.network.{HotStuffQCMessage, HotStuffQCSpec, HotStuffVoteMessage, HotStuffVoteSpec, RawBytes}
+import com.decentralchain.network.{ChannelGroupExt, HotStuffQCMessage, HotStuffQCSpec, HotStuffVoteMessage, HotStuffVoteSpec, RawBytes}
 import com.decentralchain.settings.HotStuffSettings
 import com.decentralchain.state.{GeneratorSet, Height}
 import com.decentralchain.utils.ScorexLogging
