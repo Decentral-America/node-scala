@@ -329,7 +329,7 @@ class MinerImpl(
         }
 
         def appendTask(block: Block, totalConstraint: MiningConstraint) = // NOTE: Could accept blockAppender to reduce parameter count — current pattern works correctly
-          BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).flatMap {
+          BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler, verify = true, txSignParCheck = true)(block, None).flatMap {
             case Left(BlockFromFuture(_, _)) => // Time was corrected, retry
               generateBlockTask(account, None)
 

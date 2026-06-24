@@ -95,7 +95,7 @@ case class Domain(
   lazy val wallet: Wallet = Wallet(settings.walletSettings.copy(file = None, seed = Some(ByteStr(DefaultWalletSeed))))
 
   lazy val blockAppender: Block => Task[Either[ValidationError, BlockApplyResult]] =
-    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, scheduler)(_, None)
+    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, scheduler, verify = true, txSignParCheck = true)(_, None)
   lazy val blockChallenger: Option[BlockChallenger] =
     if (!settings.enableLightMode)
       Some(

@@ -180,7 +180,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
             time,
             pos,
             // BlockEndorser is disabled, because the challenging block doesn't contain finalization voting header
-            appendBlock = BlockAppender(blockchainUpdater, time, utxStorage, pos, BlockEndorser.Disabled, appenderScheduler)(_, None)
+            appendBlock = BlockAppender(blockchainUpdater, time, utxStorage, pos, BlockEndorser.Disabled, appenderScheduler, verify = true, txSignParCheck = true)(_, None)
           )
         )
       } else None

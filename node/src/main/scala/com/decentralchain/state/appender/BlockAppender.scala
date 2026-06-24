@@ -38,8 +38,8 @@ object BlockAppender extends ScorexLogging {
       pos: PoSSelector,
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
-      verify: Boolean = true,
-      txSignParCheck: Boolean = true
+      verify: Boolean,
+      txSignParCheck: Boolean
   )(newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Either[ValidationError, BlockApplyResult]] =
     Task {
       if (blockchainUpdater.isLastBlockId(newBlock.id())) Right(Ignored) // Cheap to test
@@ -71,7 +71,7 @@ object BlockAppender extends ScorexLogging {
       blockChallenger: Option[BlockChallenger],
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
-      hotStuffEngine: Option[ActorRef]
+      hotStuffEngine: Option[ActorRef] = None
   )(ch: Channel, newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Unit] = {
     import metrics.*
     implicit val implicitTime: Time = time

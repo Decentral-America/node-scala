@@ -105,7 +105,7 @@ class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
       use(rdbWriterRaw)
       val utxPool     = use(new UtxPoolImpl(time, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable))
       val pos         = PoSSelector(blockchain, settings.synchronizationSettings.maxBaseTarget)
-      val extAppender = BlockAppender(blockchain, time, utxPool, pos, BlockEndorser.Disabled, scheduler)(_, None)
+      val extAppender = BlockAppender(blockchain, time, utxPool, pos, BlockEndorser.Disabled, scheduler, verify = true, txSignParCheck = true)(_, None)
       val utxEvents   = ConcurrentSubject.publish[UtxEvent]
 
       val miner = new MinerImpl(

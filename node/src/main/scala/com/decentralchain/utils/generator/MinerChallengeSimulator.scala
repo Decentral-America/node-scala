@@ -259,7 +259,7 @@ object MinerChallengeSimulator {
         scheduler,
         utxEvents.collect { case _: UtxEvent.TxAdded => () }
       )
-      val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, BlockEndorser.Disabled, scheduler, verify = false)
+      val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, BlockEndorser.Disabled, scheduler, verify = false, txSignParCheck = true)
 
       miner -> blockAppender
     }
