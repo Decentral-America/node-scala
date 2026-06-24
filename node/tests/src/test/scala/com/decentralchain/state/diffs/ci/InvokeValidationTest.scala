@@ -12,7 +12,7 @@ import io.decentralchain.protobuf.transaction.PBTransactions
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.FeeValidation.FeeUnit
 import com.decentralchain.test.{PropSpec, produce}
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxVersion.{V1, V2}

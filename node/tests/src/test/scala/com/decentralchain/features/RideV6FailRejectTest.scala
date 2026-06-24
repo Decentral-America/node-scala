@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.TxMeta.Status
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment

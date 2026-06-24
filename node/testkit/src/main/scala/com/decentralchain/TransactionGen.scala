@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.{ContractLimits, FunctionHeader}
 import com.decentralchain.settings.Constants
 import com.decentralchain.state.*
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.lease.*

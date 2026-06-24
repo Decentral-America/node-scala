@@ -15,7 +15,7 @@ import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.state.diffs.{ENOUGH_AMT, FeeValidation}
 import com.decentralchain.state.{AssetInfo, AssetStaticInfo, AssetVolumeInfo, BinaryDataEntry, BooleanDataEntry}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.smart.InvokeExpressionTransaction
 import com.decentralchain.transaction.{GenesisTransaction, Transaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.JsonMatchers

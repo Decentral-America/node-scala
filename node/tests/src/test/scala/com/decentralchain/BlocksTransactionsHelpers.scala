@@ -9,7 +9,7 @@ import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import io.decentralchain.protobuf.block.PBBlocks
 import com.decentralchain.state.StringDataEntry
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}

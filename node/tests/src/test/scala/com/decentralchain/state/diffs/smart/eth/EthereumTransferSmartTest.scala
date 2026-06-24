@@ -12,7 +12,7 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.GlobalValNames
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.smart.predef.{assertProvenPart, provenPart}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.{Asset, ERC20Address, EthTxGenerator, EthereumTransaction, TxHelpers, TxVersion}
 import com.decentralchain.utils.EthHelpers
 

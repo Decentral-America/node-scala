@@ -13,7 +13,7 @@ import com.decentralchain.lagonaki.mocks.TestBlock.{create as block}
 import com.decentralchain.settings.{Constants, FunctionalitySettings, TestFunctionalitySettings}
 import com.decentralchain.state.diffs.*
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.assets.SponsorFeeTransaction
 import com.decentralchain.transaction.Proofs
 import com.decentralchain.transaction.serialization.impl.SponsorFeeTxSerializer
