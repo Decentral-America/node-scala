@@ -56,7 +56,5 @@ final class HotStuffVoteCollector(
     else
       BlsSignature
         .agg(votes.values)
-        .left
-        .map(GenericError(_))
         .map(aggSig => Some(HotStuffQC(blockId, height, round, votes.keys.toSeq.sorted, aggSig)))
 }

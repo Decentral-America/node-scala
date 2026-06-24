@@ -38,9 +38,9 @@ object BlockAppender extends ScorexLogging {
       pos: PoSSelector,
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
-      hotStuffEngine: Option[ActorRef] = None,
       verify: Boolean = true,
-      txSignParCheck: Boolean = true
+      txSignParCheck: Boolean = true,
+      hotStuffEngine: Option[ActorRef] = None
   )(newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Either[ValidationError, BlockApplyResult]] =
     Task {
       if (blockchainUpdater.isLastBlockId(newBlock.id())) Right(Ignored) // Cheap to test
@@ -93,7 +93,7 @@ object BlockAppender extends ScorexLogging {
       (for {
         _ <- EitherT(Task(Either.cond(newBlock.signatureValid(), (), GenericError("Invalid block signature"))))
         _ = span.markNtp("block.signatures-validated")
-        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler, hotStuffEngine)(newBlock, snapshot))
+        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler, hotStuffEngine = hotStuffEngine)(newBlock, snapshot))
       } yield validApplication).value
 
     val handle = append.flatMap {
