@@ -21,7 +21,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit, ScriptExtraFee}
 import com.decentralchain.state.{DataEntry, Height, StringDataEntry, TransactionId}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}
@@ -457,7 +457,7 @@ object TxHelpers {
       expression: ExprScript,
       sender: KeyPair = defaultSigner,
       fee: Long = TestValues.fee,
-      feeAssetId: Asset = Waves,
+      feeAssetId: Asset = Dcc,
       version: TxVersion = TxVersion.V1
   ): InvokeExpressionTransaction =
     InvokeExpressionTransaction

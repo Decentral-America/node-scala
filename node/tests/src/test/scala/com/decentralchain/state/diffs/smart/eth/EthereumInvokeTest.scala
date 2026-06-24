@@ -17,7 +17,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.diffs.ci.ciFee
 import com.decentralchain.state.diffs.smart.predef.{assertProvenPart, provenPart}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
 import com.decentralchain.transaction.{Asset, EthABIConverter, EthereumTransaction, GenesisTransaction, TxHelpers}
 import com.decentralchain.utils.EthHelpers
 import org.scalatest.Inside

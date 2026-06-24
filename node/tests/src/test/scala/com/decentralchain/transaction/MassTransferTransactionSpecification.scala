@@ -6,7 +6,7 @@ import com.decentralchain.common.utils.Base64
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.serialization.impl.{MassTransferTxSerializer, PBTransactionSerializer}
 import com.decentralchain.transaction.transfer.*

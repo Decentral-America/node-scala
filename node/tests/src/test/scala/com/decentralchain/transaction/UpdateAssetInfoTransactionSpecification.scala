@@ -6,7 +6,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
 import com.decentralchain.transaction.TxValidationError.{InvalidName, TooBigArray}
 import com.decentralchain.transaction.assets.IssueTransaction.{MaxAssetDescriptionLength, MaxAssetNameLength, MinAssetNameLength}
 import com.decentralchain.transaction.assets.UpdateAssetInfoTransaction

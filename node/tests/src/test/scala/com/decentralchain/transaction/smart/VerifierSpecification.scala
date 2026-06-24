@@ -13,7 +13,7 @@ import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
 import com.decentralchain.transaction.assets.SetAssetScriptTransaction
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler

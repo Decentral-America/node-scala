@@ -22,7 +22,7 @@ import com.decentralchain.lang.v1.traits.domain.Lease
 import com.decentralchain.settings.{TestFunctionalitySettings, DCCSettings}
 import com.decentralchain.state.{Height, TransactionId}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
 import com.decentralchain.transaction.TxHelpers.*
 import com.decentralchain.transaction.TxValidationError.AliasDoesNotExist
 import com.decentralchain.transaction.smart.{InvokeTransaction, SetScriptTransaction}

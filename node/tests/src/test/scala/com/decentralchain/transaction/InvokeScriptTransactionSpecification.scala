@@ -16,7 +16,7 @@ import io.decentralchain.protobuf.transaction.*
 import io.decentralchain.protobuf.{Amount, transaction}
 import com.decentralchain.serialization.Deser
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{Dcc => Waves, IssuedAsset}
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.TxValidationError.NonPositiveAmount
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
