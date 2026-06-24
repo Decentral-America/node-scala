@@ -185,7 +185,9 @@ class LightNodeTest extends PropSpec with WithDomain {
         d.utxPool,
         d.posSelector,
         BlockEndorser.Disabled,
-        Scheduler.global
+        Scheduler.global,
+        verify = true,
+        txSignParCheck = true
       )
 
       val sr = BlockSnapshotResponse(challengingBlock.id(), txSnapshots.map { case (s, m) => PBSnapshots.toProtobuf(s, m) })

@@ -116,7 +116,7 @@ class MinerAccountScriptRestrictionsTest extends PropSpec with WithDomain {
       Observable.empty
     )
 
-    val appender = BlockAppender(d.blockchainUpdater, time, utx, d.posSelector, BlockEndorser.Disabled, appenderScheduler)(_, None)
+    val appender = BlockAppender(d.blockchainUpdater, time, utx, d.posSelector, BlockEndorser.Disabled, appenderScheduler, verify = true, txSignParCheck = true)(_, None)
 
     f(miner, appender, appenderScheduler)
 
