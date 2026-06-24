@@ -56,6 +56,6 @@ jobs:
       service:      node-scala
       compose_dir:  /opt/dcc/compose
       # Health check: start_period=120s + up to retries(5) × interval(30s) = up to 270s.
-      # 300s gives a full margin for RocksDB state load + JVM warmup + GC pauses.
-      wait_timeout: 300
+      # 600s gives full margin for cold JVM start on fresh genesis (RocksDB init + warmup).
+      wait_timeout: 600
     secrets: inherit
