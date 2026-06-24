@@ -4,7 +4,9 @@ import com.decentralchain.account.{KeyPair, PublicKey}
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockEndorsement, MicroBlock}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.consensus.hotstuff.{HotStuffQC, HotStuffRound, HotStuffVote}
 import com.decentralchain.crypto
+import com.decentralchain.crypto.bls.BlsSignature
 import com.decentralchain.network.message.MessageSpec
 import io.decentralchain.protobuf.block.EndorseBlock as PBEndorseBlock
 import io.decentralchain.protobuf.snapshot.{TransactionStateSnapshot, BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
@@ -138,4 +140,46 @@ object EndorseBlock {
 
   def from(x: BlockEndorsement): EndorseBlock =
     EndorseBlock(x.endorserIndex.toInt, x.finalizedId, x.finalizedHeight, x.endorsedId, x.signature.byteStr)
+}
+
+// ---- HotStuff T2 fast-finality messages ----
+
+/** A single validator's BLS vote for a (blockId, height, round) triple. Message code 39. */
+final case class HotStuffVoteMessage(
+    voterIndex: Int,
+    blockId: BlockId,
+    height: Height,
+    round: HotStuffRound,
+    signature: BlsSignature
+) extends Message {
+  override def toString: String =
+    s"HotStuffVote(i=$voterIndex, h=$height, r=${round.name}, b=${blockId.trim})"
+}
+
+object HotStuffVoteMessage {
+  def from(v: HotStuffVote): HotStuffVoteMessage =
+    HotStuffVoteMessage(v.voterIndex, v.blockId, v.height, v.round, v.signature)
+
+  def toVote(m: HotStuffVoteMessage): HotStuffVote =
+    HotStuffVote(m.voterIndex, m.blockId, m.height, m.round, m.signature)
+}
+
+/** An aggregated BLS Quorum Certificate from ≥2/3 validators. Message code 40. */
+final case class HotStuffQCMessage(
+    blockId: BlockId,
+    height: Height,
+    round: HotStuffRound,
+    signerIndices: Seq[Int],
+    aggregatedSignature: BlsSignature
+) extends Message {
+  override def toString: String =
+    s"HotStuffQC(h=$height, r=${round.name}, b=${blockId.trim}, signers=${signerIndices.size})"
+}
+
+object HotStuffQCMessage {
+  def from(qc: HotStuffQC): HotStuffQCMessage =
+    HotStuffQCMessage(qc.blockId, qc.height, qc.round, qc.signerIndices, qc.aggregatedSignature)
+
+  def toQC(m: HotStuffQCMessage): HotStuffQC =
+    HotStuffQC(m.blockId, m.height, m.round, m.signerIndices, m.aggregatedSignature)
 }

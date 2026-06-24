@@ -23,6 +23,7 @@ case class DCCSettings(
     rewardsSettings: RewardsVotingSettings,
     metrics: Metrics.Settings,
     enableLightMode: Boolean,
+    hotStuffSettings: HotStuffSettings,
     config: Config
 )
 
@@ -48,6 +49,7 @@ object DCCSettings {
     val rewardsSettings           = dccConfigSource.at("rewards").loadOrThrow[RewardsVotingSettings]
     val metrics                   = ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // NOTE: Metrics config is outside dcc {} root — known structure
     val enableLightMode           = dccConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
+    val hotStuffSettings          = dccConfigSource.at("hotstuff").load[HotStuffSettings].getOrElse(HotStuffSettings.Default)
 
     DCCSettings(
       directory,
@@ -67,6 +69,7 @@ object DCCSettings {
       rewardsSettings,
       metrics,
       enableLightMode,
+      hotStuffSettings,
       rootConfig
     )
   }

@@ -6,8 +6,10 @@ import com.decentralchain.account.PublicKey
 import com.decentralchain.block.serialization.{BlockHeaderSerializer, MicroBlockSerializer}
 import com.decentralchain.block.{Block, MicroBlock}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.consensus.hotstuff.HotStuffRound
 import com.decentralchain.crypto
 import com.decentralchain.crypto.*
+import com.decentralchain.crypto.bls.BlsSignature
 import com.decentralchain.mining.Miner.MaxTransactionsPerMicroblock
 import com.decentralchain.mining.MiningConstraints
 import com.decentralchain.network.message.*
@@ -15,6 +17,7 @@ import com.decentralchain.network.message.Message.*
 import io.decentralchain.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, SignedMicroBlock, EndorseBlock as PBEndorseBlock}
 import io.decentralchain.protobuf.snapshot.{BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
 import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
+import com.decentralchain.state.Height
 import com.decentralchain.transaction.{DataTransaction, EthereumTransaction, Transaction, TransactionParsers}
 import io.netty.channel.ChannelHandler.Sharable
 
@@ -374,6 +377,97 @@ object EndorseBlockSpec extends MessageSpec[EndorseBlock] {
   override val maxLength: Int = 238 // 4 + 32*2 (or 64*2 for old blocks) + 4 + 96 + 4 tags + 2 varint max overhead
 }
 
+// ---- HotStuff T2 fast-finality message specs ----
+
+/** Wire format (all big-endian):
+  *   voterIndex     4 bytes
+  *   blockIdLen     1 byte   (32 for proto blocks, 64 for legacy)
+  *   blockId        blockIdLen bytes
+  *   height         4 bytes
+  *   round          1 byte
+  *   signature     96 bytes  (BLS12-381 G2 compressed)
+  *
+  * Total: 106 + blockIdLen bytes (138 for proto, 170 for legacy)
+  */
+object HotStuffVoteSpec extends MessageSpec[HotStuffVoteMessage] {
+  override val messageCode: MessageCode = 39: Byte
+  override val maxLength: Int           = 4 + 1 + 64 + 4 + 1 + 96 // 170 bytes (legacy upper bound)
+
+  override def serializeData(data: HotStuffVoteMessage): Array[Byte] = {
+    val idArr = data.blockId.arr
+    Bytes.concat(
+      Ints.toByteArray(data.voterIndex),
+      Array(idArr.length.toByte),
+      idArr,
+      Ints.toByteArray(data.height.toInt),
+      Array(data.round.code),
+      data.signature.arr
+    )
+  }
+
+  override def deserializeData(bytes: Array[Byte]): Try[HotStuffVoteMessage] = Try {
+    require(bytes.length >= 4 + 1 + 32 + 4 + 1 + 96, s"HotStuffVote: too short (${bytes.length} bytes)")
+    var pos        = 0
+    val voterIndex = Ints.fromByteArray(bytes.slice(pos, pos + 4)); pos += 4
+    val idLen      = bytes(pos).toInt & 0xff; pos += 1
+    require(idLen == 32 || idLen == 64, s"HotStuffVote: unexpected blockId length $idLen")
+    val blockId  = ByteStr(bytes.slice(pos, pos + idLen)); pos += idLen
+    val height   = Height(Ints.fromByteArray(bytes.slice(pos, pos + 4))); pos += 4
+    val round    = HotStuffRound.fromCode(bytes(pos)).getOrElse(throw new IllegalArgumentException(s"Unknown HotStuff round code ${bytes(pos)}")); pos += 1
+    val sigBytes = bytes.slice(pos, pos + 96)
+    val signature = BlsSignature(sigBytes).fold(e => throw new IllegalArgumentException(e.err), identity)
+    HotStuffVoteMessage(voterIndex, blockId, height, round, signature)
+  }
+}
+
+/** Wire format (variable length):
+  *   blockIdLen      1 byte  (32 for proto blocks, 64 for legacy)
+  *   blockId         blockIdLen bytes
+  *   height          4 bytes
+  *   round           1 byte
+  *   signerCount     4 bytes
+  *   signerIndices   signerCount × 4 bytes
+  *   aggSignature   96 bytes
+  *
+  * Max: 1 + 64 + 4 + 1 + 4 + 100×4 + 96 = 570 bytes
+  */
+object HotStuffQCSpec extends MessageSpec[HotStuffQCMessage] {
+  override val messageCode: MessageCode = 40: Byte
+  override val maxLength: Int           = 1 + 64 + 4 + 1 + 4 + 400 + 96 // 570 bytes (100-validator cap)
+
+  override def serializeData(data: HotStuffQCMessage): Array[Byte] = {
+    val idArr        = data.blockId.arr
+    val indicesBytes = data.signerIndices.foldLeft(Array.emptyByteArray)((acc, i) => acc ++ Ints.toByteArray(i))
+    Bytes.concat(
+      Array(idArr.length.toByte),
+      idArr,
+      Ints.toByteArray(data.height.toInt),
+      Array(data.round.code),
+      Ints.toByteArray(data.signerIndices.size),
+      indicesBytes,
+      data.aggregatedSignature.arr
+    )
+  }
+
+  override def deserializeData(bytes: Array[Byte]): Try[HotStuffQCMessage] = Try {
+    require(bytes.length >= 1 + 32 + 4 + 1 + 4 + 96, s"HotStuffQC: too short (${bytes.length} bytes)")
+    var pos   = 0
+    val idLen = bytes(pos).toInt & 0xff; pos += 1
+    require(idLen == 32 || idLen == 64, s"HotStuffQC: unexpected blockId length $idLen")
+    val blockId = ByteStr(bytes.slice(pos, pos + idLen)); pos += idLen
+    val height  = Height(Ints.fromByteArray(bytes.slice(pos, pos + 4))); pos += 4
+    val round   = HotStuffRound.fromCode(bytes(pos)).getOrElse(throw new IllegalArgumentException(s"Unknown HotStuff round code ${bytes(pos)}")); pos += 1
+    val cnt     = Ints.fromByteArray(bytes.slice(pos, pos + 4)); pos += 4
+    require(cnt >= 0 && cnt <= 100, s"HotStuffQC: invalid signer count $cnt")
+    val indices = (0 until cnt).map { _ =>
+      val i = Ints.fromByteArray(bytes.slice(pos, pos + 4)); pos += 4; i
+    }
+    val sigBytes = bytes.slice(pos, pos + 96)
+    val aggSig   = BlsSignature(sigBytes).fold(e => throw new IllegalArgumentException(e.err), identity)
+    HotStuffQCMessage(blockId, height, round, indices, aggSig)
+  }
+}
+
 // Virtual, only for logs
 object HandshakeSpec {
   val messageCode: MessageCode = 101: Byte
@@ -403,7 +497,9 @@ object BasicMessagesRepo {
     MicroSnapshotRequestSpec,
     BlockSnapshotResponseSpec,
     MicroBlockSnapshotResponseSpec,
-    EndorseBlockSpec
+    EndorseBlockSpec,
+    HotStuffVoteSpec,
+    HotStuffQCSpec
   )
 
   val specsByCodes: Map[Byte, Spec]       = specs.map(s => s.messageCode -> s).toMap
@@ -420,7 +516,9 @@ object BasicMessagesRepo {
         case _: Transaction                        => TransactionSpec.messageCode
         case _: BigInt | _: LocalScoreChanged      => ScoreSpec.messageCode
         case _: Block | _: BlockForged             => BlockSpec.messageCode
-        case x: com.decentralchain.network.Message => specsByClasses(x.getClass).messageCode
+        case _: HotStuffVoteMessage                => HotStuffVoteSpec.messageCode
+      case _: HotStuffQCMessage                  => HotStuffQCSpec.messageCode
+      case x: com.decentralchain.network.Message => specsByClasses(x.getClass).messageCode
         case _: Handshake                          => HandshakeSpec.messageCode
       }
 

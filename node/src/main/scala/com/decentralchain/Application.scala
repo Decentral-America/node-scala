@@ -23,6 +23,8 @@ import com.decentralchain.extensions.{Context, Extension}
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.features.api.ActivationApiRoute
 import com.decentralchain.history.{History, StorageFactory}
+import com.decentralchain.consensus.hotstuff.{HotStuffEngine, HotStuffFinalityTracker}
+import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.Metrics
 import com.decentralchain.mining.{BlockChallengerImpl, Miner, MinerDebugInfo, MinerImpl}
@@ -48,7 +50,7 @@ import monix.execution.schedulers.{ExecutorScheduler, SchedulerService}
 import monix.execution.{ExecutionModel, Scheduler, UncaughtExceptionReporter}
 import monix.reactive.Observable
 import monix.reactive.subjects.ConcurrentSubject
-import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.Http.ServerBinding
 import org.influxdb.dto.Point
@@ -90,6 +92,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     singleThread("microblock-synchronizer", reporter = log.error("Error in Microblock Synchronizer", _))
   private val endorseBlockSynchronizerScheduler =
     singleThread("endorseblock-synchronizer", reporter = log.error("Error in EndorseBlock Synchronizer", _))
+  private val hotStuffSynchronizerScheduler =
+    singleThread("hotstuff-synchronizer", reporter = log.error("Error in HotStuff Synchronizer", _))
   private val scoreObserverScheduler  = singleThread("rx-score-observer", reporter = log.error("Error in Score Observer", _))
   private val historyRepliesScheduler = fixedPool(poolSize = 2, "history-replier", reporter = log.error("Error in History Replier", _))
   private val minerScheduler          = singleThread("block-miner", reporter = log.error("Error in Miner", _))
@@ -181,8 +185,46 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         )
       } else None
 
+    // HotStuff T2 fast-finality engine — disabled by default, gated on hotStuffSettings.enabled.
+    // Enable only after T0 (DeterministicFinality) has been proven stable on mainnet for ≥60 days.
+    val hotStuffFinalityTracker = new HotStuffFinalityTracker()
+    val hotStuffEngine: Option[ActorRef] =
+      if (settings.hotStuffSettings.enabled) {
+        wallet.privateKeyAccounts.headOption.map { kp =>
+          val engine = actorSystem.actorOf(
+            HotStuffEngine.props(
+              kp.toAddress,
+              BlsKeyPair(kp.privateKey),
+              settings.hotStuffSettings,
+              allChannels,
+              hotStuffFinalityTracker
+            ),
+            "hotstuff-engine"
+          )
+          messageObserver.hotStuffVotes.foreach { case (_, msg) =>
+            engine ! HotStuffEngine.VoteReceived(HotStuffVoteMessage.toVote(msg))
+          }(using hotStuffSynchronizerScheduler)
+          messageObserver.hotStuffQCs.foreach { case (_, msg) =>
+            engine ! HotStuffEngine.QCReceived(HotStuffQCMessage.toQC(msg))
+          }(using hotStuffSynchronizerScheduler)
+          log.info(s"HotStuff T2 engine started for ${kp.toAddress}")
+          engine
+        }
+      } else None
+
     val processBlock =
-      BlockAppender(blockchainUpdater, time, utxStorage, pos, allChannels, peerDatabase, blockChallenger, blockEndorser, appenderScheduler)
+      BlockAppender(
+        blockchainUpdater,
+        time,
+        utxStorage,
+        pos,
+        allChannels,
+        peerDatabase,
+        blockChallenger,
+        blockEndorser,
+        appenderScheduler,
+        hotStuffEngine
+      )
 
     val processFork =
       ExtensionAppender(blockchainUpdater, utxStorage, pos, time, knownInvalidBlocks, peerDatabase, appenderScheduler)
@@ -492,7 +534,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           routeTimeout
         ),
         RewardApiRoute(blockchainUpdater),
-        FinalityApiRoute(blockchainUpdater, extensionContext.blocksApi, extensionContext.generatorsApi)
+        FinalityApiRoute(blockchainUpdater, extensionContext.blocksApi, extensionContext.generatorsApi, hotStuffFinalityTracker)
       )
 
       val httpService = CompositeHttpService(apiRoutes, settings.restAPISettings)

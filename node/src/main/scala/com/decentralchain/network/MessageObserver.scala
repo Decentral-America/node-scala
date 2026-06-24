@@ -40,6 +40,12 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
   private val endorseBlocksSubj                      = ConcurrentSubject.publish[(Channel, EndorseBlock)]
   val endorseBlocks: ChannelObservable[EndorseBlock] = endorseBlocksSubj
 
+  private val hotStuffVotesSubj                              = ConcurrentSubject.publish[(Channel, HotStuffVoteMessage)]
+  val hotStuffVotes: ChannelObservable[HotStuffVoteMessage] = hotStuffVotesSubj
+
+  private val hotStuffQCsSubj                          = ConcurrentSubject.publish[(Channel, HotStuffQCMessage)]
+  val hotStuffQCs: ChannelObservable[HotStuffQCMessage] = hotStuffQCsSubj
+
   override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = msg match {
     case b: Block                       => blocksSubj.onNext((ctx.channel(), b))
     case sc: BigInt                     => blockchainScoresSubj.onNext((ctx.channel(), sc))
@@ -50,6 +56,8 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
     case sn: BlockSnapshotResponse      => blockSnapshotsSubj.onNext((ctx.channel(), sn))
     case sn: MicroBlockSnapshotResponse => microblockSnapshotsSubj.onNext((ctx.channel(), sn))
     case e: EndorseBlock                => endorseBlocksSubj.onNext((ctx.channel(), e))
+    case v: HotStuffVoteMessage         => hotStuffVotesSubj.onNext((ctx.channel(), v))
+    case q: HotStuffQCMessage           => hotStuffQCsSubj.onNext((ctx.channel(), q))
     case _                              => super.channelRead(ctx, msg)
   }
 
@@ -63,6 +71,8 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
     blockSnapshotsSubj.onComplete()
     microblockSnapshotsSubj.onComplete()
     endorseBlocksSubj.onComplete()
+    hotStuffVotesSubj.onComplete()
+    hotStuffQCsSubj.onComplete()
   }
 }
 

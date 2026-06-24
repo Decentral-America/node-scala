@@ -4,6 +4,7 @@ import cats.data.EitherT
 import cats.syntax.traverse.*
 import com.decentralchain.block.Block
 import com.decentralchain.consensus.PoSSelector
+import com.decentralchain.consensus.hotstuff.HotStuffEngine
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
 import com.decentralchain.mining.BlockChallenger
@@ -21,6 +22,7 @@ import kamon.Kamon
 import kamon.trace.Span
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.apache.pekko.actor.ActorRef
 
 import java.time.Instant
 import scala.util.chaining.*
@@ -36,6 +38,7 @@ object BlockAppender extends ScorexLogging {
       pos: PoSSelector,
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
+      hotStuffEngine: Option[ActorRef] = None,
       verify: Boolean = true,
       txSignParCheck: Boolean = true
   )(newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Either[ValidationError, BlockApplyResult]] =
@@ -49,8 +52,17 @@ object BlockAppender extends ScorexLogging {
           appendChallengeBlock(blockchainUpdater, utxStorage, pos, time, log, verify, txSignParCheck)(newBlock, snapshot)
         } else {
           appendKeyBlock(blockchainUpdater, utxStorage, pos, time, log, verify, txSignParCheck)(newBlock, snapshot).tap {
-            case Right(Applied(generatorSet = gs)) => blockEndorser.vote(gs)
-            case _                                 =>
+            case Right(Applied(generatorSet = gs)) =>
+              blockEndorser.vote(gs)
+              hotStuffEngine.foreach(
+                _ ! HotStuffEngine.BlockApplied(
+                  blockId      = newBlock.id(),
+                  height       = blockchainUpdater.height,
+                  forgerAddress = newBlock.header.generator.toAddress,
+                  validators   = gs
+                )
+              )
+            case _ =>
           }
         }
       } else if (blockchainUpdater.contains(newBlock.id()))
@@ -68,7 +80,8 @@ object BlockAppender extends ScorexLogging {
       peerDatabase: PeerDatabase,
       blockChallenger: Option[BlockChallenger],
       blockEndorser: BlockEndorser,
-      scheduler: Scheduler
+      scheduler: Scheduler,
+      hotStuffEngine: Option[ActorRef] = None
   )(ch: Channel, newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Unit] = {
     import metrics.*
     implicit val implicitTime: Time = time
@@ -80,7 +93,7 @@ object BlockAppender extends ScorexLogging {
       (for {
         _ <- EitherT(Task(Either.cond(newBlock.signatureValid(), (), GenericError("Invalid block signature"))))
         _ = span.markNtp("block.signatures-validated")
-        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler)(newBlock, snapshot))
+        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler, hotStuffEngine)(newBlock, snapshot))
       } yield validApplication).value
 
     val handle = append.flatMap {
