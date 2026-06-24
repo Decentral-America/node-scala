@@ -196,7 +196,11 @@ object BlockDiffer {
     for {
       _            <- TracedResult(Either.cond(!verify || block.signatureValid(), (), GenericError(s"Block $block has invalid signature")))
       initSnapshot <- TracedResult(initSnapshotE.leftMap(GenericError(_)))
-      prevStateHash = maybePrevBlock.flatMap(_.header.stateHash).getOrElse(blockchain.lastStateHash(None))
+      // Use the block's reference (last microblock ID) to get the accumulated microblock state hash.
+      // This matches what the miner computes: blockchain.lastStateHash(Some(reference)).
+      // Using maybePrevBlock.header.stateHash (the key block's stored hash) diverges when
+      // microblocks exist, because the key block's stateHash does not include microblock changes.
+      prevStateHash = blockchain.lastStateHash(Some(block.header.reference))
       hasChallenge  = block.header.challengedHeader.isDefined
       r <- snapshot match {
         case Some(BlockSnapshot(_, txSnapshots)) =>
