@@ -83,7 +83,7 @@ object BlockAppender extends ScorexLogging {
       (for {
         _ <- EitherT(Task(Either.cond(newBlock.signatureValid(), (), GenericError("Invalid block signature"))))
         _ = span.markNtp("block.signatures-validated")
-        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler)(newBlock, snapshot))
+        validApplication <- EitherT(apply(blockchainUpdater, time, utxStorage, pos, blockEndorser, scheduler, verify = true, txSignParCheck = true)(newBlock, snapshot))
       } yield validApplication).value
 
     val handle = append.flatMap {
