@@ -508,7 +508,7 @@ class BlockChallengeTest
       d.blockchain.height shouldBe 1001
 
       val originalBlock = d.createBlock(
-        Seq(TxHelpers.transfer(challengedMiner, TxHelpers.defaultAddress, amount = 1.waves)),
+        Seq(TxHelpers.transfer(challengedMiner, TxHelpers.defaultAddress, amount = 1.dcc)),
         strictTime = true,
         generator = challengedMiner,
         stateHash = Some(Some(invalidStateHash))
@@ -1306,7 +1306,7 @@ class BlockChallengeTest
       (1 to 999).foreach(_ => d.appendBlock())
 
       val originalBlock = d.createBlock(
-        Seq(TxHelpers.transfer(sender, challengingMiner.toAddress, 1.waves)),
+        Seq(TxHelpers.transfer(sender, challengingMiner.toAddress, 1.dcc)),
         strictTime = true
       )
 
@@ -1808,7 +1808,7 @@ class BlockChallengeTest
       )
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val txs       = Seq(TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 1.waves))
+      val txs       = Seq(TxHelpers.transfer(sender, TxHelpers.defaultAddress, amount = 1.dcc))
       val bestBlock = d.createBlock(txs, generator = bestBlockSender)
       val originalBlock =
         d.createBlock(
@@ -1913,7 +1913,7 @@ class BlockChallengeTest
         TxHelpers.transfer(sender, challengedMiner.toAddress, challengedMinerBalance)
       )
       (1 to 999).foreach(_ => d.appendBlock())
-      val transferAmount   = 1.waves
+      val transferAmount   = 1.dcc
       val txs              = Seq(TxHelpers.transfer(sender, challengedMiner.toAddress, transferAmount))
       val originalBlock    = d.createBlock(txs, strictTime = true, generator = challengedMiner, stateHash = Some(Some(invalidStateHash)))
       val challengingBlock = d.createChallengingBlock(challengingMiner, originalBlock)

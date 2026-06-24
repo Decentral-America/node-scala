@@ -14,7 +14,7 @@ import com.decentralchain.lang.v1.estimator.ScriptEstimator
 import com.decentralchain.state.DataEntry.{MaxValueSize, Type}
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry}
 import com.decentralchain.transaction.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TransactionType
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
@@ -31,6 +31,7 @@ import pureconfig.ConfigReader
 import java.nio.file.{Files, Paths}
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
+import scala.util.Random
 import scala.concurrent.duration.*
 import scala.reflect.ClassTag
 
@@ -311,7 +312,7 @@ class NarrowTransactionGenerator(
               Seq(InvokeScriptTransaction.Payment(random.nextInt(100) + 1, asset)),
               sender,
               5300000L,
-              Waves,
+              Dcc,
               correctVersion(TxVersion.V1)
             )
           )
@@ -546,9 +547,9 @@ object NarrowTransactionGenerator extends ConfigReaders {
                   2.toByte,
                   richAccount.publicKey,
                   account.toAddress,
-                  Waves,
+                  Dcc,
                   balance,
-                  Waves,
+                  Dcc,
                   fee,
                   ByteStr.empty,
                   time.correctedTime(),
@@ -600,7 +601,7 @@ object NarrowTransactionGenerator extends ConfigReaders {
         100000000,
         2,
         "TRADE",
-        "Waves DEX is the best exchange ever",
+        "Dcc DEX is the best exchange ever",
         100400000L,
         None,
         true,
@@ -615,7 +616,7 @@ object NarrowTransactionGenerator extends ConfigReaders {
             to = acc.toAddress,
             asset = IssuedAsset(tradeAsset.id()),
             amount = tradeAsset.quantity.value / accounts.size,
-            feeAsset = Waves,
+            feeAsset = Dcc,
             fee = 900000,
             attachment = ByteStr(Array.fill(random.nextInt(100))(random.nextInt().toByte))
           )
@@ -635,9 +636,9 @@ object NarrowTransactionGenerator extends ConfigReaders {
           TxVersion.V1,
           accounts.head.publicKey,
           ethAccount,
-          Waves,
+          Dcc,
           100_0000_0000L,
-          Waves,
+          Dcc,
           500000L,
           ByteStr.empty,
           System.currentTimeMillis(),
@@ -654,9 +655,9 @@ object NarrowTransactionGenerator extends ConfigReaders {
             2.toByte,
             accounts.head.publicKey,
             s.dappAddress,
-            Waves,
+            Dcc,
             1_0000_000L,
-            Waves,
+            Dcc,
             500000L,
             ByteStr.empty,
             time.correctedTime(),

@@ -232,7 +232,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
             Some(liquid.data.liquidStateHash)
           )
 
-          val block              = d.createBlock(Seq(TxHelpers.transfer(sender, amount = idx.waves, fee = TestValues.fee * idx)))
+          val block              = d.createBlock(Seq(TxHelpers.transfer(sender, amount = idx.dcc, fee = TestValues.fee * idx)))
           val hs                 = d.posSelector.validateGenerationSignature(block).explicitGet()
           val txValidationResult = BlockDiffer.fromBlock(refBlockchain, Some(liquid.block), block, None, MiningConstraint.Unlimited, hs)
 

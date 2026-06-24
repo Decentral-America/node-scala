@@ -43,7 +43,7 @@ object StateSyntheticBenchmark {
       for {
         amount    <- Gen.choose(1L, dcc(1))
         recipient <- accountGen
-      } yield TransferTransaction.create(1.toByte, sender.publicKey, recipient.toAddress, Waves, amount, Waves, 100000, ByteStr.empty, ts, Proofs.empty).map(_.signWith(sender.privateKey)).explicitGet()
+      } yield TransferTransaction.create(1.toByte, sender.publicKey, recipient.toAddress, Dcc, amount, Dcc, 100000, ByteStr.empty, ts, Proofs.empty).map(_.signWith(sender.privateKey)).explicitGet()
   }
 
   @State(Scope.Benchmark)
@@ -58,7 +58,7 @@ object StateSyntheticBenchmark {
         recipient: KeyPair <- accountGen
         amount             <- Gen.choose(1L, dcc(1))
       } yield TransferTransaction
-        .create(2.toByte, sender.publicKey, recipient.toAddress, Waves, amount, Waves, 1000000, ByteStr.empty, ts, Proofs.empty)
+        .create(2.toByte, sender.publicKey, recipient.toAddress, Dcc, amount, Dcc, 1000000, ByteStr.empty, ts, Proofs.empty)
         .map(_.signWith(sender.privateKey))
         .explicitGet()
 

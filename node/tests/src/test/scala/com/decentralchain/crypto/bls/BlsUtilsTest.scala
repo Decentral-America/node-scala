@@ -10,6 +10,7 @@ import supranational.blst.{P1, SecretKey}
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ThreadLocalRandom
+import scala.util.Random
 
 class BlsUtilsTest extends FreeSpec with EitherValues {
   private val sk1 = mkRandomSecretKey()

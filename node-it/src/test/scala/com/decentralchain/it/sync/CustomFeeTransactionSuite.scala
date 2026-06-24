@@ -75,7 +75,7 @@ object CustomFeeTransactionSuite {
   private val defaultAssetQuantity     = 999999999999L
   private val featureCheckBlocksPeriod = 13
 
-  private val assetTx = TxHelpers.issue(issuer = senderKeyPair, amount = defaultAssetQuantity, decimals = 2, name = "asset", description = "asset description", fee = 1.waves, script = None, reissuable = false, version = TxVersion.V1)
+  private val assetTx = TxHelpers.issue(issuer = senderKeyPair, amount = defaultAssetQuantity, decimals = 2, name = "asset", description = "asset description", fee = 1.dcc, script = None, reissuable = false, version = TxVersion.V1)
 
   private val assetId = assetTx.id()
 

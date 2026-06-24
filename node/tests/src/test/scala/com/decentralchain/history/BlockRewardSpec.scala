@@ -234,10 +234,10 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
       tx1 = TxHelpers.transfer(
         issuer,
         sourceAddress.toAddress,
-        10 * Constants.UnitsInWave,
-        Waves,
+        10 * Constants.UnitsInDcc,
+        Dcc,
         OneTotalFee,
-        Waves,
+        Dcc,
         ByteStr.empty,
         ntpTime.getTimestamp(),
         1.toByte
@@ -246,10 +246,10 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
         .transfer(
           issuer,
           sourceAddress.toAddress,
-          10 * Constants.UnitsInWave,
-          Waves,
+          10 * Constants.UnitsInDcc,
+          Dcc,
           OneTotalFee,
-          Waves,
+          Dcc,
           ByteStr.empty,
           ntpTime.getTimestamp(),
           1.toByte
@@ -305,10 +305,10 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
       tx = TxHelpers.transfer(
         issuer,
         sourceAddress.toAddress,
-        10 * Constants.UnitsInWave,
-        Waves,
+        10 * Constants.UnitsInDcc,
+        Dcc,
         OneTotalFee,
-        Waves,
+        Dcc,
         ByteStr.empty,
         ntpTime.getTimestamp(),
         1.toByte
@@ -1384,7 +1384,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     d.appendKeyBlock(blockMiner)
     // height 7: start voting
     (1 to 3).foreach(_ =>
-      d.appendBlock(d.createBlock(version = Block.RewardBlockVersion, generator = blockMiner, rewardVote = 6.waves + rewardDelta))
+      d.appendBlock(d.createBlock(version = Block.RewardBlockVersion, generator = blockMiner, rewardVote = 6.dcc + rewardDelta))
     )
     d.blockchain.height shouldBe 9
     val rewardBeforeIncrease = rewardAtActivationHeight + 4 * 2.dcc * 10
@@ -1396,7 +1396,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
     )
 
     // height 10: new base reward value = 65 waves
-    d.appendBlock(d.createBlock(version = Block.RewardBlockVersion, generator = blockMiner, rewardVote = 7.waves))
+    d.appendBlock(d.createBlock(version = Block.RewardBlockVersion, generator = blockMiner, rewardVote = 7.dcc))
     d.blockchain.height shouldBe 10
     val rewardAfterIncrease = rewardBeforeIncrease + addressShareAfterChange * 10
     assertBalances(

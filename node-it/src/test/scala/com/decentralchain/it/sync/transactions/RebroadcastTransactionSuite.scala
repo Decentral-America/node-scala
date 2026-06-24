@@ -31,7 +31,7 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
         transferAmount,
         Dcc,
         minFee,
-        Waves
+        Dcc
       )
       .json()
 
@@ -56,7 +56,7 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
         transferAmount,
         Dcc,
         minFee,
-        Waves
+        Dcc
       )
       .json()
 
@@ -80,7 +80,7 @@ class RebroadcastTransactionSuite extends BaseTransactionSuite with NodesFromDoc
         transferAmount,
         Dcc,
         minFee,
-        Waves
+        Dcc
       )
       .json()
 

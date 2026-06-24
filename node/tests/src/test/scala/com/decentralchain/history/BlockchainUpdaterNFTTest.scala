@@ -110,14 +110,14 @@ class BlockchainUpdaterNFTTest extends PropSpec with DomainScenarioDrivenPropert
     val recipient = TxHelpers.signer(1006)
     val r2        = TxHelpers.address(1007)
     import DomainPresets.*
-    withDomain(RideV4.addFeatures(BlockchainFeatures.ReduceNFTFee), Seq(sender -> 10.waves)) { d =>
-      val issueNFT = TxHelpers.issue(issuer, 1, 0, "AAAA", "", 0.001.waves, reissuable = false)
+    withDomain(RideV4.addFeatures(BlockchainFeatures.ReduceNFTFee), Seq(sender -> 10.dcc)) { d =>
+      val issueNFT = TxHelpers.issue(issuer, 1, 0, "AAAA", "", 0.001.dcc, reissuable = false)
       d.appendBlock(
-        TxHelpers.transfer(sender, issuer.toAddress, 1.waves),
-        TxHelpers.transfer(sender, recipient.toAddress, 1.waves),
+        TxHelpers.transfer(sender, issuer.toAddress, 1.dcc),
+        TxHelpers.transfer(sender, recipient.toAddress, 1.dcc),
         issueNFT,
-        TxHelpers.transfer(issuer, recipient.toAddress, 1, issueNFT.asset, 0.001.waves),
-        TxHelpers.transfer(recipient, r2, 1, issueNFT.asset, 0.001.waves)
+        TxHelpers.transfer(issuer, recipient.toAddress, 1, issueNFT.asset, 0.001.dcc),
+        TxHelpers.transfer(recipient, r2, 1, issueNFT.asset, 0.001.dcc)
       )
 
       d.accountsApi.nftList(issuer.toAddress, None).headL.runSyncUnsafe(5.seconds) shouldBe empty

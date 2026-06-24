@@ -21,7 +21,7 @@ class SimpleTransactionsSuite extends BaseTransactionSuite {
   private def node = nodes.head
 
   test("valid tx send by network to node should be in blockchain") {
-    val tx = TxHelpers.transfer(node.keyPair, Address.fromString(node.address).explicitGet(), 1L, Waves, minFee, Waves)
+    val tx = TxHelpers.transfer(node.keyPair, Address.fromString(node.address).explicitGet(), 1L, Dcc, minFee, Dcc)
 
     node.sendByNetwork(RawBytes.fromTransaction(tx))
     node.waitForTransaction(tx.id().toString)
@@ -33,9 +33,9 @@ class SimpleTransactionsSuite extends BaseTransactionSuite {
       node.keyPair,
       Address.fromString(node.address).explicitGet(),
       1L,
-      Waves,
+      Dcc,
       minFee,
-      Waves,
+      Dcc,
       timestamp = System.currentTimeMillis() + (1 days).toMillis
     )
 

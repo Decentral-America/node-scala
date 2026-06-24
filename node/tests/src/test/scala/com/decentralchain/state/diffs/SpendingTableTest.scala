@@ -38,8 +38,8 @@ class SpendingTableTest extends FreeSpec with WithState {
         val spender     = TxHelpers.signer(1)
         val spenderAddr = spender.toAddress
 
-        val txFee       = 1.waves
-        val initLeasing = Numbers.when(hasLeasing)(11.waves)
+        val txFee       = 1.dcc
+        val initLeasing = Numbers.when(hasLeasing)(11.dcc)
         val initDeposit = Numbers.when(hasDeposit)(CommitToGenerationTransaction.DepositInWavelets)
         val initBalance = (spendingAmount - 1) + txFee + // Less, than required
           Numbers.when(initLeasing > 0)(initLeasing + txFee) + Numbers.when(initDeposit > 0)(initDeposit + txFee)
@@ -56,7 +56,7 @@ class SpendingTableTest extends FreeSpec with WithState {
           Seq(
             TestBlock.create(
               Seq(
-                TxHelpers.genesis(minerAddr, amount = 10_000.waves),
+                TxHelpers.genesis(minerAddr, amount = 10_000.dcc),
                 TxHelpers.genesis(spenderAddr, amount = initBalance)
               )
             ),

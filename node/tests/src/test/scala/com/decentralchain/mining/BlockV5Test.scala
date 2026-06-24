@@ -339,10 +339,10 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
     TxHelpers.transfer(
       from = sender,
       to = recipient,
-      amount = 10 * Constants.UnitsInWave,
-      asset = Waves,
+      amount = 10 * Constants.UnitsInDcc,
+      asset = Dcc,
       fee = 100000,
-      feeAsset = Waves,
+      feeAsset = Dcc,
       attachment = ByteStr.empty,
       timestamp = ntpTime.getTimestamp(),
       version = TxVersion.V1

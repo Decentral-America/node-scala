@@ -148,7 +148,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
             .create(
               1.toByte,
               sender.keyPair.publicKey,
-              Waves,
+              Dcc,
               parsedTransfers,
               fee,
               timestamp,

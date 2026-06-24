@@ -24,7 +24,7 @@ class MaxCallableComplexityTest extends PropSpec with WithDomain with Transactio
     val dApp = accountGen.sample.get
     withDomain(DomainPresets.RideV5) { d =>
       val genesis = GenesisTransaction.create(dApp.toAddress, ENOUGH_AMT, ts).explicitGet()
-      val setLargeScript = TxHelpers.setScript(dApp, largeScript(V5, 50), 0.01.waves, TxVersion.V2)
+      val setLargeScript = TxHelpers.setScript(dApp, largeScript(V5, 50), 0.01.dcc, TxVersion.V2)
 
       d.appendBlock(genesis)
       intercept[Exception](d.appendBlock(setLargeScript)).getMessage should include("Contract function (test) is too complex: 10352 > 10000")
@@ -37,8 +37,8 @@ class MaxCallableComplexityTest extends PropSpec with WithDomain with Transactio
     withDomain(DomainPresets.RideV6) { d =>
       val genDApp = GenesisTransaction.create(dApp.toAddress, ENOUGH_AMT, ts).explicitGet()
       val genInvoker = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
-      val setScript = TxHelpers.setScript(dApp, largeScript(V6, 285), 0.021.waves, TxVersion.V2)
-      val setLargeScript = TxHelpers.setScript(dApp, largeScript(V6, 300), 0.022.waves, TxVersion.V2)
+      val setScript = TxHelpers.setScript(dApp, largeScript(V6, 285), 0.021.dcc, TxVersion.V2)
+      val setLargeScript = TxHelpers.setScript(dApp, largeScript(V6, 300), 0.022.dcc, TxVersion.V2)
 
       d.appendBlock(genDApp, genInvoker, setScript)
       val invokeSnapshot = d.transactionDiffer(invokeScript(invoker, dApp.toAddress, "test")).resultE.explicitGet()
@@ -57,8 +57,8 @@ class MaxCallableComplexityTest extends PropSpec with WithDomain with Transactio
       val genLargeDApp  = GenesisTransaction.create(largeDApp.toAddress, ENOUGH_AMT, ts).explicitGet()
       val genInvokeDApp = GenesisTransaction.create(invokeDApp.toAddress, ENOUGH_AMT, ts).explicitGet()
 
-      val setLargeScript = TxHelpers.setScript(largeDApp, largeScript(V6, 100), 0.01.waves, TxVersion.V2)
-      val setInvokeScript = TxHelpers.setScript(invokeDApp, invokeScript(V5, largeDApp.toAddress), 0.01.waves, TxVersion.V2)
+      val setLargeScript = TxHelpers.setScript(largeDApp, largeScript(V6, 100), 0.01.dcc, TxVersion.V2)
+      val setInvokeScript = TxHelpers.setScript(invokeDApp, invokeScript(V5, largeDApp.toAddress), 0.01.dcc, TxVersion.V2)
 
       d.appendBlock(genInvoker, genLargeDApp, genInvokeDApp, setLargeScript, setInvokeScript)
       val invokeSnapshot = d.transactionDiffer(invokeScript(invoker, invokeDApp.toAddress, "invokeTest")).resultE.explicitGet()

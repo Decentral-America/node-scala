@@ -10,7 +10,7 @@ import com.decentralchain.it.sync.smartcontract.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.state.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{DataTransaction, TxHelpers}

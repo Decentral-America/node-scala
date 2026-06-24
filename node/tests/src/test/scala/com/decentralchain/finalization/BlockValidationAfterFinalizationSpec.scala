@@ -78,7 +78,7 @@ class BlockValidationAfterFinalizationSpec extends BaseFinalizationSpec {
               TxHelpers.transfer(
                 from = committedGenerator2,
                 to = committedGenerator1Addr,
-                amount = d.blockchain.balance(committedGenerator2Addr) - CommitToGenerationTransaction.DepositInWavelets - 2.waves
+                amount = d.blockchain.balance(committedGenerator2Addr) - CommitToGenerationTransaction.DepositInWavelets - 2.dcc
               )
             ),
             generator = committedGenerator1,

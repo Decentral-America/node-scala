@@ -110,9 +110,9 @@ trait TransferSending extends ScorexLogging {
             KeyPair(Base58.decode(x.senderSeed)),
             AddressOrAlias.fromString(x.targetAddress).explicitGet(),
             x.amount,
-            Waves,
+            Dcc,
             x.fee,
-            Waves,
+            Dcc,
             if (includeAttachment)
               ByteStr(Array.fill(TransferTransaction.MaxAttachmentSize)(ThreadLocalRandom.current().nextInt().toByte))
             else ByteStr.empty,

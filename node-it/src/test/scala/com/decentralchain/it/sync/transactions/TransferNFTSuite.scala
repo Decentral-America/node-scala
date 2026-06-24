@@ -185,7 +185,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
         matcher = matcher,
         order1 = buy,
         order2 = sell,
-        price = 1.waves,
+        price = 1.dcc,
         buyMatcherFee = matcherFee,
         sellMatcherFee = matcherFee,
         fee = matcherFee,

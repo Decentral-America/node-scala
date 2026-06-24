@@ -34,9 +34,9 @@ class InvokeSelfPaymentSuite extends BaseFunSuite with CancelAfterFailure {
 
   test("prerequisite: set contract") {
     sender.massTransfer(caller, List(
-      Transfer(dAppV4.toAddress.toString, 100.waves),
-      Transfer(dAppV3.toAddress.toString, 100.waves),
-    ), 0.005.waves, waitForTx = true)
+      Transfer(dAppV4.toAddress.toString, 100.dcc),
+      Transfer(dAppV3.toAddress.toString, 100.dcc),
+    ), 0.005.dcc, waitForTx = true)
     sender.signedBroadcast(issueTx.json(), true)
 
     val sourceV4 =

@@ -91,9 +91,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
           AliceBC1,
           swapBC1.toAddress,
           transferAmount + setScriptFee + smartFee,
-          Waves,
+          Dcc,
           setScriptFee + smartFee,
-          Waves
+          Dcc
         )
 
     val transferId = sender
@@ -108,9 +108,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
         swapBC1,
         AliceBC1.toAddress,
         transferAmount,
-        Waves,
+        Dcc,
         setScriptFee + smartFee,
-        Waves
+        Dcc
       )
 
     assertApiErrorRaised(sender.signedBroadcast(txToSwapBC1.json()))
@@ -165,9 +165,9 @@ class AtomicSwapSmartContractSuite extends BaseTransactionSuite with CancelAfter
       swapBC1,
       AliceBC1.toAddress,
       transferAmount,
-      Waves,
+      Dcc,
       setScriptFee + smartFee,
-      Waves
+      Dcc
     )
 
     val transferToAlice =

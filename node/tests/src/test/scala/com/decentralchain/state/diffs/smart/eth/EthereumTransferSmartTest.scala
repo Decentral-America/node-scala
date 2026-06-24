@@ -76,7 +76,7 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
       name = "Asset",
       description = "",
       script = None,
-      fee = 1.waves,
+      fee = 1.dcc,
       version = TxVersion.V2
     )
 
@@ -92,8 +92,8 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
           to = ethSender,
           amount = ENOUGH_AMT,
           asset = asset,
-          fee = 0.001.waves,
-          feeAsset = Waves,
+          fee = 0.001.dcc,
+          feeAsset = Dcc,
           attachment = ByteStr.empty,
           timestamp = ts,
           version = 2.toByte
@@ -101,7 +101,7 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
 
       val function    = if (version >= V3) "transferTransactionById" else "transactionById"
       val verifier    = Some(accountScript(version, function, ethTransfer, asset, recipient.toAddress))
-      val setVerifier = () => TxHelpers.setScript(recipient, verifier.get, 0.01.waves, 1.toByte)
+      val setVerifier = () => TxHelpers.setScript(recipient, verifier.get, 0.01.dcc, 1.toByte)
 
       withDomain(settingsForRide(version.max(V6)), Seq(AddrWithBalance(ethSender), AddrWithBalance(recipient.toAddress))) { d =>
         if (asset != Dcc) d.appendBlock(issue, transferIssuedAsset)
@@ -146,7 +146,7 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
       .foreach { version =>
         val script = assetScript(version, dummyEthTransfer, recipient.toAddress)
         val issue =
-          TxHelpers.issue(recipient, ENOUGH_AMT, 8, "Asset", "", fee = 1.waves, Some(script), true, ts, TxVersion.V2)
+          TxHelpers.issue(recipient, ENOUGH_AMT, 8, "Asset", "", fee = 1.dcc, Some(script), true, ts, TxVersion.V2)
         val asset       = IssuedAsset(issue.id())
         val ethTransfer = dummyEthTransfer.copy(dummyTransfer.copy(Some(ERC20Address(asset.id.take(20)))))
         val preTransfer =
@@ -155,8 +155,8 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
             to = ethSender,
             amount = ENOUGH_AMT,
             asset = asset,
-            fee = 0.005.waves,
-            feeAsset = Waves,
+            fee = 0.005.dcc,
+            feeAsset = Dcc,
             attachment = ByteStr.empty,
             timestamp = ts,
             version = 2.toByte

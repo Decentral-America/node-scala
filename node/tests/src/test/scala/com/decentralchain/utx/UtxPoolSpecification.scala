@@ -111,12 +111,12 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       amount    <- chooseNum(1L, (maxAmount * 0.9).toLong)
       recipient <- accountGen
       fee       <- chooseNum(extraFee, (maxAmount * 0.1).toLong)
-    } yield TxHelpers.transfer(from = sender, to = recipient.toAddress, amount = amount, asset = Waves, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte))
+    } yield TxHelpers.transfer(from = sender, to = recipient.toAddress, amount = amount, asset = Dcc, fee = fee, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte))
       .label("transferTransaction")
 
   private def invokeScript(sender: KeyPair, dApp: Address, time: Time) =
     Gen.choose(500000L, 600000L).map { fee =>
-      TxHelpers.invoke(dApp, None, Seq.empty, Seq.empty, sender, fee, Waves, TxVersion.V1, time.getTimestamp())
+      TxHelpers.invoke(dApp, None, Seq.empty, Seq.empty, sender, fee, Dcc, TxVersion.V1, time.getTimestamp())
     }
 
   private def dAppSetScript(sender: KeyPair, time: Time) = {
@@ -338,23 +338,23 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
     }
 
   private def transfer(sender: KeyPair, time: Time) =
-    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = 1, asset = Waves, fee = extraFee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte)
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = 1, asset = Dcc, fee = extraFee, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte)
 
   private def transferWithRecipient(sender: KeyPair, recipient: PublicKey, time: Time) =
-    TxHelpers.transfer(from = sender, to = recipient.toAddress, amount = 1, asset = Waves, fee = extraFee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte)
+    TxHelpers.transfer(from = sender, to = recipient.toAddress, amount = 1, asset = Dcc, fee = extraFee, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = time.getTimestamp(), version = 1.toByte)
 
   private def massTransferWithRecipients(sender: KeyPair, recipients: Seq[PublicKey], maxAmount: Long, time: Time) = {
     val amount    = maxAmount / (recipients.size + 1)
     val transfers = recipients.map(r => ParsedTransfer(r.toAddress, TxNonNegativeAmount.unsafeFrom(amount)))
     val minFee    = FeeValidation.FeeConstants(TransactionType.Transfer) + FeeValidation.FeeConstants(TransactionType.MassTransfer) * transfers.size
-    TxHelpers.massTransfer(sender, transfers.map(t => (t.address, t.amount.value)), Waves, minFee, time.getTimestamp(), 1.toByte)
+    TxHelpers.massTransfer(sender, transfers.map(t => (t.address, t.amount.value)), Dcc, minFee, time.getTimestamp(), 1.toByte)
   }
 
   private def transactionV1(sender: KeyPair, ts: Long, feeAmount: Long): TransferTransaction =
-    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Waves, fee = feeAmount, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 1.toByte)
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Dcc, fee = feeAmount, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 1.toByte)
 
   private def transactionV2(sender: KeyPair, ts: Long, feeAmount: Long): TransferTransaction =
-    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Waves, fee = feeAmount, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Dcc, fee = feeAmount, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
 
   private def utxTest(utxSettings: UtxSettings, txCount: Int = 10)(f: (Seq[TransferTransaction], UtxPool, TestTime) => Unit): Unit = {
     withState { case (sender, _, bcu) =>
@@ -665,8 +665,8 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val minerBalance  = initialAmount + 0.001.dcc * 2
 
       withDomain(DomainPresets.NG, balances = Seq(AddrWithBalance(blockMiner.toAddress, minerBalance))) { d =>
-        val transfer1 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = initialAmount, fee = 0.001.waves)
-        val transfer2 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = 0.0004.waves, fee = 0.001.waves)
+        val transfer1 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = initialAmount, fee = 0.001.dcc)
+        val transfer2 = TxHelpers.transfer(blockMiner, recipient.toAddress, version = 1.toByte, amount = 0.0004.dcc, fee = 0.001.dcc)
         d.appendBlock(d.createBlock(generator = blockMiner, version = Block.NgBlockVersion))
         d.utxPool.addTransaction(transfer1, verify = true)
         d.utxPool.addTransaction(transfer2, verify = true)
@@ -1085,8 +1085,8 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
           ts = System.currentTimeMillis()
           fee <- smallFeeGen
           genesis = GenesisTransaction.create(richAcc.toAddress, ENOUGH_AMT, ts).explicitGet()
-          validTransfer = TxHelpers.transfer(from = richAcc, to = secondAcc.toAddress, amount = 1L, asset = Waves, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = TxVersion.V1)
-          invalidTransfer = TxHelpers.transfer(from = secondAcc, to = richAcc.toAddress, amount = 2L, asset = Waves, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = TxVersion.V1)
+          validTransfer = TxHelpers.transfer(from = richAcc, to = secondAcc.toAddress, amount = 1L, asset = Dcc, fee = fee, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = TxVersion.V1)
+          invalidTransfer = TxHelpers.transfer(from = secondAcc, to = richAcc.toAddress, amount = 2L, asset = Dcc, fee = fee, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = TxVersion.V1)
         } yield (genesis, validTransfer, invalidTransfer)
 
         forAll(preconditions) { case (genesis, validTransfer, invalidTransfer) =>

@@ -22,7 +22,7 @@ import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.compiler.Terms.FUNCTION_CALL
 import com.decentralchain.state.DataEntry.Format
 import com.decentralchain.state.{AssetDistribution, AssetDistributionPage, DataEntry, EmptyDataEntry, Height, LeaseBalance, Portfolio}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.{Order, ExchangeTransaction as ExchangeTx}
 import com.decentralchain.transaction.lease.{LeaseCancelTransaction, LeaseTransaction}

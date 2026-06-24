@@ -158,7 +158,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
           sender.publicKey,
           IssuedAsset(issue.id()),
           Some(script2),
-          1 * Constants.UnitsInWave + ScriptExtraFee,
+          1 * Constants.UnitsInDcc + ScriptExtraFee,
           timestamp,
           Proofs.empty
         )
@@ -272,7 +272,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
       amount                                    <- Gen.choose(1L, maxAmount)
       (_, _, _, _, _, _, feeAmount, attachment) <- transferParamGen
     } yield TransferTransaction
-      .create(1.toByte, sender.publicKey, recipient, Waves, amount, Waves, feeAmount, attachment, timestamp, Proofs.empty)
+      .create(1.toByte, sender.publicKey, recipient, Dcc, amount, Dcc, feeAmount, attachment, timestamp, Proofs.empty)
       .map(_.signWith(sender.privateKey))
       .explicitGet()
 
@@ -298,7 +298,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
       timestamp: Long
   ): Either[ValidationError, TransferTransaction] =
     TransferTransaction
-      .create(1.toByte, sender.publicKey, recipient, Waves, amount, Waves, fee, ByteStr.empty, timestamp, Proofs.empty)
+      .create(1.toByte, sender.publicKey, recipient, Dcc, amount, Dcc, fee, ByteStr.empty, timestamp, Proofs.empty)
       .map(_.signWith(sender.privateKey))
 
   val transferV1Gen: Gen[TransferTransaction] = (for {
@@ -500,7 +500,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
       fee         <- smallFeeGen
       timestamp   <- timestampGen
     } yield InvokeScriptTransaction
-      .create(1.toByte, sender.publicKey, dappAddress.toAddress, Some(fc), payments, fee, Waves, timestamp)
+      .create(1.toByte, sender.publicKey, dappAddress.toAddress, Some(fc), payments, fee, Dcc, timestamp)
       .map(_.signWith(sender.privateKey))
       .explicitGet()
 
@@ -834,7 +834,7 @@ trait TransactionGenBase extends ScriptGen with TypedScriptGen with NTPTime { su
 
   def invokeExpressionTransactionGen(sender: KeyPair, script: ExprScript, feeAmount: Long): Gen[InvokeExpressionTransaction] =
     InvokeExpressionTransaction
-      .create(1, sender.publicKey, script, feeAmount, Waves, ntpTime.getTimestamp(), Proofs.empty)
+      .create(1, sender.publicKey, script, feeAmount, Dcc, ntpTime.getTimestamp(), Proofs.empty)
       .map(_.signWith(sender.privateKey))
       .explicitGet()
 }

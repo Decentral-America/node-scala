@@ -28,7 +28,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[Transaction] =
       for {
         timestamp <- timestamp
-      } yield TxHelpers.transfer(from, to, amount, Waves, FeeAmount, Waves, ByteStr.empty, timestamp, 1.toByte)
+      } yield TxHelpers.transfer(from, to, amount, Dcc, FeeAmount, Dcc, ByteStr.empty, timestamp, 1.toByte)
 
     def transferV2(
         from: KeyPair,
@@ -38,7 +38,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[Transaction] =
       for {
         timestamp <- timestamp
-      } yield TxHelpers.transfer(from, to, amount, Waves, FeeAmount, Waves, ByteStr.empty, timestamp, 2.toByte)
+      } yield TxHelpers.transfer(from, to, amount, Dcc, FeeAmount, Dcc, ByteStr.empty, timestamp, 2.toByte)
 
     def transferAsset(
         asset: IssuedAsset,
@@ -49,7 +49,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[Transaction] =
       for {
         timestamp <- timestamp
-      } yield TxHelpers.transfer(from, to, amount, asset, FeeAmount, Waves, ByteStr.empty, timestamp, 1.toByte)
+      } yield TxHelpers.transfer(from, to, amount, asset, FeeAmount, Dcc, ByteStr.empty, timestamp, 1.toByte)
 
     def lease(
         from: KeyPair,
@@ -102,7 +102,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
     ): Gen[InvokeScriptTransaction] =
       for {
         timestamp <- timestamp
-      } yield TxHelpers.invoke(dapp, Some(call.function.funcName), call.args, payments, from, FeeAmount * 2, Waves, 1.toByte, timestamp)
+      } yield TxHelpers.invoke(dapp, Some(call.function.funcName), call.args, payments, from, FeeAmount * 2, Dcc, 1.toByte, timestamp)
   }
 
   object UnsafeBlocks {

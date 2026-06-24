@@ -27,7 +27,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
       2,
       name,
       "",
-      1.waves,
+      1.dcc,
       script,
       reissuable = false,
       ntpTime.getTimestamp()
@@ -94,7 +94,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
               )
               .explicitGet()
               ._1,
-            0.001.waves,
+            0.001.dcc,
             timestamp = ntpTime.getTimestamp()
           )
         )
@@ -105,10 +105,10 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
             mkOrder(sender, OrderType.SELL, matcher.publicKey, assetPair),
             matcher,
             100,
-            5.waves,
-            0.003.waves,
-            0.003.waves,
-            0.003.waves,
+            5.dcc,
+            0.003.dcc,
+            0.003.dcc,
+            0.003.dcc,
             ntpTime.getTimestamp()
           )
         )
@@ -130,10 +130,10 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
       mkOrder(sender, OrderType.SELL, matcher.publicKey, assetPair, 100, sellFeeAssetId),
       matcher,
       100,
-      5.waves,
+      5.dcc,
       100,
       100,
-      0.003.waves,
+      0.003.dcc,
       timestamp = ntpTime.getTimestamp()
     ),
     buyFeeAssetId,
@@ -143,7 +143,7 @@ class VerifierSpecification extends PropSpec with NTPTime with WithDomain {
   property("matcher fee asset script is executed during exchange transaction validation") {
     forAll(sharedParamGen2) { case (sender, genesisTxs, exchangeTx, buyFeeAsset, sellFeeAsset) =>
       def setAssetScript(assetId: IssuedAsset, script: Script): SetAssetScriptTransaction =
-        TxHelpers.setAssetScript(sender, assetId, script, 0.001.waves, ntpTime.getTimestamp())
+        TxHelpers.setAssetScript(sender, assetId, script, 0.001.dcc, ntpTime.getTimestamp())
 
       withDomain(
         domainSettingsWithPreactivatedFeatures(

@@ -27,7 +27,7 @@ trait IntegrationSuiteWithThreeAddresses extends BaseSuite {
 
     withClue("beforeAll") {
       nodes.waitForHeightAriseAndTxPresent(
-        sender.massTransfer(sender.keyPair, List(firstAddress, secondAddress, thirdAddress).map(MassTransferTransaction.Transfer(_, 100.waves)), 0.003.waves, version = 1.toByte).id
+        sender.massTransfer(sender.keyPair, List(firstAddress, secondAddress, thirdAddress).map(MassTransferTransaction.Transfer(_, 100.dcc)), 0.003.dcc, version = 1.toByte).id
       )
     }
   }
@@ -37,8 +37,8 @@ trait IntegrationSuiteWithThreeAddresses extends BaseSuite {
       val scriptText = x.stripMargin
       ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
     }
-    val setScriptTransaction = script.fold(TxHelpers.removeScript(acc, 0.014.waves)) { s =>
-      TxHelpers.setScript(acc, s, 0.014.waves)
+    val setScriptTransaction = script.fold(TxHelpers.removeScript(acc, 0.014.dcc)) { s =>
+      TxHelpers.setScript(acc, s, 0.014.dcc)
     }
 
     sender

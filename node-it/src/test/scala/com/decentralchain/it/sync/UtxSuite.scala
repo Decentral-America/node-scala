@@ -31,9 +31,9 @@ class UtxSuite extends BaseFunSuite {
         1.toByte,
         miner.keyPair.publicKey,
         account.toAddress,
-        Waves,
+        Dcc,
         AMOUNT,
-        Waves,
+        Dcc,
         ENOUGH_FEE,
         ByteStr.empty,
         System.currentTimeMillis(),
@@ -173,9 +173,9 @@ class UtxSuite extends BaseFunSuite {
           TxVersion.V1,
           miner.keyPair.publicKey,
           UtxSuite.createAccount.toAddress,
-          Waves,
+          Dcc,
           1L,
-          Waves,
+          Dcc,
           higherFee,
           ByteStr.empty,
           time,
@@ -192,9 +192,9 @@ class UtxSuite extends BaseFunSuite {
             TxVersion.V1,
             whitelistedAccount.publicKey,
             UtxSuite.createAccount.toAddress,
-            Waves,
+            Dcc,
             1L,
-            Waves,
+            Dcc,
             minTransferFee + i,
             ByteStr.empty,
             time,
@@ -204,7 +204,7 @@ class UtxSuite extends BaseFunSuite {
           .explicitGet()
       }
       val byDApp = (1 to 5).map { i =>
-        TxHelpers.invoke(whitelistedDAppAccount.toAddress, None, Seq.empty, Seq.empty, invokeAccount, minInvokeFee + i, Waves, timestamp = time)
+        TxHelpers.invoke(whitelistedDAppAccount.toAddress, None, Seq.empty, Seq.empty, invokeAccount, minInvokeFee + i, Dcc, timestamp = time)
       }
       bySender ++ byDApp
     }

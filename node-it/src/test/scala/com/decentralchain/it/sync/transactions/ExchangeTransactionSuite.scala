@@ -10,7 +10,7 @@ import com.decentralchain.it.sync.smartcontract.exchangeTx
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.it.{NTPTime, NodeConfigs}
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.*
 import com.decentralchain.transaction.{TxExchangeAmount, TxExchangePrice, TxHelpers, TxVersion}
@@ -23,7 +23,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
     decimals = 2,
     name = "myasset",
     description = "my asset description",
-    fee = 1.waves,
+    fee = 1.dcc,
     script = None,
     reissuable = true,
     version = TxVersion.V1
@@ -164,7 +164,7 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
       decimals = 8,
       name = "myasset",
       description = assetDescription,
-      fee = 1.waves,
+      fee = 1.dcc,
       script = None,
       reissuable = true,
       version = TxVersion.V1

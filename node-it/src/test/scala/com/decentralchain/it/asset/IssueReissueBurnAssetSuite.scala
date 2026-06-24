@@ -23,8 +23,8 @@ import scala.concurrent.duration.*
 class IssueReissueBurnAssetSuite extends BaseFreeSpec {
   import com.decentralchain.it.NodeConfigs.*
   override val nodeConfigs: Seq[Config] = Seq(BiggestMiner.quorum(0))
-  private val initialWavesBalance = 100.waves
-  private val setScriptPrice      = 0.01.waves
+  private val initialWavesBalance = 100.dcc
+  private val setScriptPrice      = 0.01.dcc
   private val accountCounter      = AtomicInt(1000)
 
   private val CallableMethod    = "@Callable"

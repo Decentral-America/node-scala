@@ -15,7 +15,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.repl.Repl
 import com.decentralchain.lang.v1.repl.node.http.NodeConnectionSettings
 import com.decentralchain.state.{BinaryDataEntry, BooleanDataEntry, IntegerDataEntry, StringDataEntry, Height}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import org.scalatest.Assertion
 import org.scalatest.EitherValues.*

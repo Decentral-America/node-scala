@@ -93,7 +93,7 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe true
 
     // removing account script
-    d.appendBlock(SetScriptTransaction.create(1.toByte, scriptOwner.publicKey, None, 0.014.waves, ntpNow, Proofs.empty).map(_.signWith(scriptOwner.privateKey)).explicitGet())
+    d.appendBlock(SetScriptTransaction.create(1.toByte, scriptOwner.publicKey, None, 0.014.dcc, ntpNow, Proofs.empty).map(_.signWith(scriptOwner.privateKey)).explicitGet())
     d.blockchain.hasAccountScript(scriptOwner.toAddress) shouldBe false
 
     d.appendBlock()

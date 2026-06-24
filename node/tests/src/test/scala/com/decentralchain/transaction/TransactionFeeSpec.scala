@@ -63,7 +63,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                       |  ]
                                                       |}
                                                       |""".stripMargin)),
-              0.01.waves,
+              0.01.dcc,
               ntpTime.getTimestamp(),
               Proofs.empty
             )
@@ -100,7 +100,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                         |  true
                                                         |}
                                                         |""".stripMargin)),
-                0.01.waves,
+                0.01.dcc,
                 ntpTime.getTimestamp(),
                 Proofs.empty
               )
@@ -133,7 +133,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                           .mkString(" || ")}
                                                          |  [ScriptTransfer(i.caller, 100, unit)]
                                                          |}""".stripMargin)),
-                0.01.waves,
+                0.01.dcc,
                 ntpTime.getTimestamp(),
                 Proofs.empty
               )
@@ -185,7 +185,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                         |  p0 + p1 + p2 >= 1
                                                         |}
                                                         |""".stripMargin)),
-                0.01.waves,
+                0.01.dcc,
                 ntpTime.getTimestamp(),
                 Proofs.empty
               )
@@ -211,7 +211,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                          |  )
                                                          |}
                                                          |""".stripMargin)),
-                0.01.waves,
+                0.01.dcc,
                 ntpTime.getTimestamp(),
                 Proofs.empty
               )
@@ -237,20 +237,20 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
         val issue = TxHelpers.issue()
         d.appendBlock(issue)
         d.appendBlock(
-          TxHelpers.sponsor(issue.asset, Some(1L), TxHelpers.defaultSigner, 1.waves)
+          TxHelpers.sponsor(issue.asset, Some(1L), TxHelpers.defaultSigner, 1.dcc)
         )
 
         val transfer = TxHelpers.transfer(
           TxHelpers.defaultSigner,
           TxHelpers.secondAddress,
           1,
-          Waves,
+          Dcc,
           1L,
           issue.asset,
           version = TxVersion.V2,
           timestamp = ntpTime.getTimestamp()
         )
-        d.commonApi.calculateFee(transfer) shouldBe (issue.asset, 1L, 0.001.waves)
+        d.commonApi.calculateFee(transfer) shouldBe (issue.asset, 1L, 0.001.dcc)
       }
     }
 
@@ -301,7 +301,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                    |
                                                    |sigVerify_16Kb(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
                                                    |""".stripMargin),
-              0.01.waves,
+              0.01.dcc,
               2.toByte,
               timestamp = ntpTime.getTimestamp()
             ),
@@ -320,7 +320,7 @@ class TransactionFeeSpec extends FreeSpec with WithDomain {
                                                  |    s0 + s1 + s2 > 1
                                                  |}
                                                  |""".stripMargin),
-            0.01.waves,
+            0.01.dcc,
             2.toByte,
             timestamp = ntpTime.getTimestamp()
           )

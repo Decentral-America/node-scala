@@ -186,7 +186,7 @@ class PseudoTransactionSuite extends BaseTransactionSuite {
       Seq.empty,
       caller,
       smartMinFee + smartFee,
-      Waves,
+      Dcc,
       2.toByte
     )
 }

@@ -37,9 +37,9 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
       master,
       alice.toAddress,
       feeAsset.fee.value + sponsorTx.fee.value + transferAssetWavesFee + wavesFee,
-      Waves,
+      Dcc,
       transferAssetWavesFee,
-      Waves,
+      Dcc,
       ByteStr.empty,
       ts + 1,
       TxVersion.V1
@@ -50,7 +50,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
       feeAsset.quantity.value / 2,
       Asset.fromCompatId(Some(feeAsset.id())),
       transferAssetWavesFee,
-      Waves,
+      Dcc,
       ByteStr.empty,
       ts + 2,
       TxVersion.V1

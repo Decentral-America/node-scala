@@ -30,8 +30,8 @@ class DAppListArgTypesTest extends PropSpec with WithDomain with Inside {
     val dApp    = RandomKeyPair()
     val fee     = ciFee().sample.get
     val genesis = Seq(invoker, dApp).map(acc => TxHelpers.genesis(acc.toAddress, ENOUGH_AMT))
-    val setDApp = TxHelpers.setScript(dApp, dAppScript, 0.01.waves, 1.toByte)
-    val ci      = () => TxHelpers.invoke(dApp.toAddress, Some("f"), args, Nil, invoker, fee, Waves, 1.toByte, ts)
+    val setDApp = TxHelpers.setScript(dApp, dAppScript, 0.01.dcc, 1.toByte)
+    val ci      = () => TxHelpers.invoke(dApp.toAddress, Some("f"), args, Nil, invoker, fee, Dcc, 1.toByte, ts)
     (genesis :+ setDApp, ci, dApp.toAddress)
   }
 

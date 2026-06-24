@@ -19,6 +19,7 @@ import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.transfer.*
 
 import java.util.concurrent.ThreadLocalRandom
+import scala.util.Random
 
 class MicroBlockSpecification extends FunSuite {
 
@@ -33,10 +34,10 @@ class MicroBlockSpecification extends FunSuite {
 
     val ts = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
-      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = Waves, fee = 2, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts + 1, version = 1.toByte)
+      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = Dcc, fee = 2, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts + 1, version = 1.toByte)
     val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(Random.nextInt(100).toByte)))
     val tr2: TransferTransaction =
-      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = assetId, fee = 2, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts + 2, version = 1.toByte)
+      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = assetId, fee = 2, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts + 2, version = 1.toByte)
 
     val transactions = Seq(tr, tr2)
 
@@ -58,10 +59,10 @@ class MicroBlockSpecification extends FunSuite {
   test("MicroBlock with txs bytes/parse roundtrip, with finalizationVoting") {
     val ts = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
-      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = Waves, fee = 2, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts + 1, version = 1.toByte)
+      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = Dcc, fee = 2, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts + 1, version = 1.toByte)
     val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(Random.nextInt(100).toByte)))
     val tr2: TransferTransaction =
-      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = assetId, fee = 2, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts + 2, version = 1.toByte)
+      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = assetId, fee = 2, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts + 2, version = 1.toByte)
 
     val transactions = Seq(tr, tr2)
 
@@ -198,7 +199,7 @@ class MicroBlockSpecification extends FunSuite {
 
   test("MicroBlock cannot contain more than Miner.MaxTransactionsPerMicroblock") {
     val transaction =
-      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = Waves, fee = 1000, feeAsset = Waves, attachment = ByteStr.empty, timestamp = System.currentTimeMillis(), version = 1.toByte)
+      TxHelpers.transfer(from = sender, to = gen.toAddress, amount = 5, asset = Dcc, fee = 1000, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = System.currentTimeMillis(), version = 1.toByte)
     val transactions = Seq.fill(Miner.MaxTransactionsPerMicroblock + 1)(transaction)
 
     val eitherBlockOrError = MicroBlock.buildAndSign(3.toByte, sender, transactions, prevResBlockSig, totalResBlockSig, None, None)

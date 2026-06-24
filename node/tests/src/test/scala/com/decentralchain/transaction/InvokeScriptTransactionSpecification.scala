@@ -158,7 +158,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       ),
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58(publicKey).get))),
       TxPositiveAmount.unsafeFrom(100000),
-      Waves,
+      Dcc,
       1526910778245L,
       Proofs.empty,
       dApp.chainId
@@ -196,7 +196,7 @@ class InvokeScriptTransactionSpecification extends PropSpec {
       None,
       Seq(InvokeScriptTransaction.Payment(7, IssuedAsset(ByteStr.decodeBase58(publicKey).get))),
       TxPositiveAmount.unsafeFrom(100000),
-      Waves,
+      Dcc,
       1526910778245L,
       Proofs.empty,
       dApp.chainId

@@ -31,7 +31,7 @@ class HttpScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite {
       miner
         .signedBroadcast(
           TxHelpers
-            .setScript(address, compiledScript, 1.waves, timestamp = System.currentTimeMillis())
+            .setScript(address, compiledScript, 1.dcc, timestamp = System.currentTimeMillis())
             .json()
         )
         .id

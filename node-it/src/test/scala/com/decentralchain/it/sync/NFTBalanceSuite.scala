@@ -8,12 +8,13 @@ import com.decentralchain.it.api.*
 import com.decentralchain.it.api.AsyncHttpApi.*
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import play.api.libs.json.*
 
 import java.util.concurrent.ThreadLocalRandom
+import scala.util.Random
 import scala.concurrent.Future.traverse
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
@@ -81,8 +82,8 @@ class NFTBalanceSuite extends BaseFreeSpec {
         to = other.toAddress,
         amount = 1,
         asset = randomTokenToTransfer,
-        fee = 0.001.waves,
-        feeAsset = Waves,
+        fee = 0.001.dcc,
+        feeAsset = Dcc,
         attachment = ByteStr.empty,
         timestamp = System.currentTimeMillis(),
         version = 1.toByte
@@ -163,7 +164,7 @@ object NFTBalanceSuite {
         decimals = 8,
         name = "SimpleAsset",
         description = s"Simple Test Asset ${Random.nextInt(1000)}",
-        fee = 1.waves,
+        fee = 1.dcc,
         script = None,
         reissuable = true,
         version = TxVersion.V1
@@ -177,7 +178,7 @@ object NFTBalanceSuite {
         decimals = 0,
         name = "NonFungibleAsset",
         description = s"NFT Test Asset ${Random.nextInt(1000)}",
-        fee = 1.waves,
+        fee = 1.dcc,
         script = None,
         reissuable = false,
         version = TxVersion.V1

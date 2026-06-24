@@ -98,7 +98,7 @@ class SpentComplexitySpec
         val issue = TxHelpers.issue(sender, 1000_00L, 2.toByte, "TEST", "", 1_00000000L, Some(assetScript), false, ntpTime.getTimestamp(), 2.toByte)
 
         val transferAsset = TxHelpers
-          .transfer(sender, recipient.toAddress, 50_00L, issue.asset, 90_0000L, Waves, timestamp = ntpTime.getTimestamp(), version = 2.toByte)
+          .transfer(sender, recipient.toAddress, 50_00L, issue.asset, 90_0000L, Dcc, timestamp = ntpTime.getTimestamp(), version = 2.toByte)
 
         val invokeTx = TxHelpers.invoke(
           sender.toAddress,
@@ -133,10 +133,10 @@ class SpentComplexitySpec
       val issue = TxHelpers.issue(sender, 1000_00L, 2.toByte, "TEST", "", 1_00000000L, Some(assetScript), false, ntpTime.getTimestamp(), 2.toByte)
 
       val transferAsset =
-        TxHelpers.transfer(sender, recipient.toAddress, 50_00L, issue.asset, 90_0000L, Waves, ByteStr.empty, ntpTime.getTimestamp(), 2.toByte)
+        TxHelpers.transfer(sender, recipient.toAddress, 50_00L, issue.asset, 90_0000L, Dcc, ByteStr.empty, ntpTime.getTimestamp(), 2.toByte)
 
       val returnFrom =
-        TxHelpers.transfer(recipient, sender.toAddress, 49_00L, issue.asset, 90_0000L, Waves, ByteStr.empty, ntpTime.getTimestamp(), 2.toByte)
+        TxHelpers.transfer(recipient, sender.toAddress, 49_00L, issue.asset, 90_0000L, Dcc, ByteStr.empty, ntpTime.getTimestamp(), 2.toByte)
 
       d.appendBlock(
         issue,

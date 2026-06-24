@@ -34,8 +34,8 @@ class GenericRideActivationTest extends PropSpec with WithDomain with EitherValu
       fee     <- ciFee(sc = 1)
       gTx1   = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
       gTx2   = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
-      ssTx   = TxHelpers.setScript(master, dApp(version), 0.01.waves, 1.toByte)
-      ssTx2  = TxHelpers.setScript(invoker, verifier(version), 0.01.waves, 1.toByte)
+      ssTx   = TxHelpers.setScript(master, dApp(version), 0.01.dcc, 1.toByte)
+      ssTx2  = TxHelpers.setScript(invoker, verifier(version), 0.01.dcc, 1.toByte)
       invoke = TxHelpers.invoke(master.toAddress, invoker = invoker, fee = fee, version = 1.toByte, timestamp = ts)
     } yield (Seq(gTx1, gTx2), Seq(ssTx, ssTx2), invoke)
 

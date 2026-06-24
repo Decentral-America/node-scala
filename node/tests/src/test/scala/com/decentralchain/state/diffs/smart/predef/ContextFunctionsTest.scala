@@ -19,7 +19,7 @@ import com.decentralchain.lang.script.ContractScript
 import com.decentralchain.lang.v1.compiler.Terms.{CONST_BOOLEAN, CONST_LONG}
 import com.decentralchain.lang.v1.compiler.{ContractCompiler, TestCompiler}
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
-import com.decentralchain.lang.v1.evaluator.ctx.impl.waves.WavesContext
+import com.decentralchain.lang.v1.evaluator.ctx.impl.dcc.WavesContext
 import com.decentralchain.lang.v1.evaluator.ctx.impl.{CryptoContext, PureContext}
 import com.decentralchain.lang.v1.parser.Parser
 import com.decentralchain.lang.v1.traits.Environment

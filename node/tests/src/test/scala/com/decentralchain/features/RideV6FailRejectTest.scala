@@ -310,7 +310,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
           s"NODE-546 If an invoke writes an empty $entryType key to the state",
           "Data entry key should not be empty",
           mkDAppFunc(entry),
-          invokeTx = TxHelpers.invoke(dApp = aliceAddr, invoker = invoker, func = Some("foo"), fee = 3.waves, version = TxVersion.V1)
+          invokeTx = TxHelpers.invoke(dApp = aliceAddr, invoker = invoker, func = Some("foo"), fee = 3.dcc, version = TxVersion.V1)
         )
       } ++
         dataEntries.map { case (entryType, entry) =>

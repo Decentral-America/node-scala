@@ -79,9 +79,9 @@ class TransactionsStatusSuite extends BaseTransactionSuite with NTPTime {
         from = miner.keyPair,
         to = secondKeyPair.toAddress,
         amount = amount,
-        asset = Waves,
+        asset = Dcc,
         fee = minFee,
-        feeAsset = Waves,
+        feeAsset = Dcc,
         attachment = ByteStr.empty,
         timestamp = ntpTime.correctedTime(),
         version = 2.toByte

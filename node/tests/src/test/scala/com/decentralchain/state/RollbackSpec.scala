@@ -265,7 +265,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
                   amount = assetAmount,
                   asset = IssuedAsset(issueTransaction.id()),
                   fee = 1,
-                  feeAsset = Waves,
+                  feeAsset = Dcc,
                   attachment = ByteStr.empty,
                   timestamp = nextTs,
                   version = 1.toByte

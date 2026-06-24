@@ -75,7 +75,7 @@ class IssueNFTSuite extends BaseTransactionSuite with TableDrivenPropertyChecks 
         assetDescription,
         quantity = 1,
         decimals = 0,
-        fee = 0.001.waves,
+        fee = 0.001.dcc,
         script = None,
         waitForTx = true
       ),

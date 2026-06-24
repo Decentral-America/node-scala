@@ -50,8 +50,8 @@ class SyncDAppBalanceCheckTest extends PropSpec with WithDomain with Transaction
       gTx1     = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
       gTx2     = GenesisTransaction.create(dApp1.toAddress, 0.01.dcc, ts).explicitGet()
       gTx3     = GenesisTransaction.create(dApp2.toAddress, ENOUGH_AMT, ts).explicitGet()
-      ssTx1    = TxHelpers.setScript(dApp1, dApp1Script(dApp2.toAddress), 0.01.waves, 1.toByte)
-      ssTx2    = TxHelpers.setScript(dApp2, dApp2Script, 0.01.waves, 1.toByte)
+      ssTx1    = TxHelpers.setScript(dApp1, dApp1Script(dApp2.toAddress), 0.01.dcc, 1.toByte)
+      ssTx2    = TxHelpers.setScript(dApp2, dApp2Script, 0.01.dcc, 1.toByte)
       invokeTx = () => TxHelpers.invoke(dApp1.toAddress, invoker = invoker, fee = fee, version = TxVersion.V3, timestamp = ts)
     } yield (Seq(gTx1, gTx2, gTx3, ssTx1, ssTx2), invokeTx)
 

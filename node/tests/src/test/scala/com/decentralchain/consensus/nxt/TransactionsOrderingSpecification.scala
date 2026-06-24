@@ -22,7 +22,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           125L,
-          Waves,
+          Dcc,
           ByteStr.empty,
           1
         ),
@@ -32,7 +32,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           124L,
-          Waves,
+          Dcc,
           ByteStr.empty,
           2
         ),
@@ -42,7 +42,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           124L,
-          Waves,
+          Dcc,
           ByteStr.empty,
           1
         ),
@@ -50,7 +50,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
           100000,
-          Waves,
+          Dcc,
           124L,
           Asset.fromCompatId(Some(ByteStr.empty)),
           ByteStr.empty,
@@ -60,7 +60,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
           100000,
-          Waves,
+          Dcc,
           124L,
           Asset.fromCompatId(Some(ByteStr.empty)),
           ByteStr.empty,
@@ -81,7 +81,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           124L,
-          Waves,
+          Dcc,
           ByteStr.empty,
           1
         ),
@@ -91,7 +91,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           123L,
-          Waves,
+          Dcc,
           ByteStr.empty,
           1
         ),
@@ -101,7 +101,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           123L,
-          Waves,
+          Dcc,
           ByteStr.empty,
           2
         ),
@@ -109,7 +109,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
           100000,
-          Waves,
+          Dcc,
           124L,
           Asset.fromCompatId(Some(ByteStr.empty)),
           ByteStr.empty,
@@ -119,7 +119,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           kp,
           Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
           100000,
-          Waves,
+          Dcc,
           124L,
           Asset.fromCompatId(Some(ByteStr.empty)),
           ByteStr.empty,
@@ -140,7 +140,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           1,
-          Waves,
+          Dcc,
           ByteStr.empty,
           124L
         ),
@@ -150,7 +150,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           1,
-          Waves,
+          Dcc,
           ByteStr.empty,
           123L
         )
@@ -168,7 +168,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           2,
-          Waves,
+          Dcc,
           ByteStr.empty,
           123L
         ),
@@ -178,7 +178,7 @@ class TransactionsOrderingSpecification extends PropSpec {
           100000,
           Dcc,
           2,
-          Waves,
+          Dcc,
           ByteStr.empty,
           124L
         )

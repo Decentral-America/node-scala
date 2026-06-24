@@ -33,7 +33,7 @@ class LightNodeTest extends PropSpec with WithDomain {
     val recipient = TxHelpers.address(2)
     withDomain(settings.configure(_.copy(lightNodeBlockFieldsAbsenceInterval = 0)), AddrWithBalance.enoughBalances(sender)) { d =>
       val prevBlock    = d.lastBlock
-      val txs          = Seq(TxHelpers.transfer(sender, recipient, amount = 10.waves), TxHelpers.transfer(sender, recipient, amount = 100.waves))
+      val txs          = Seq(TxHelpers.transfer(sender, recipient, amount = 10.dcc), TxHelpers.transfer(sender, recipient, amount = 100.dcc))
       val validBlock   = d.createBlock(txs)
       val invalidBlock = d.createBlock(txs, stateHash = Some(Some(invalidStateHash)))
       val txSnapshots  = getTxSnapshots(d, validBlock)
@@ -118,7 +118,7 @@ class LightNodeTest extends PropSpec with WithDomain {
         val genesisId = d.lastBlockId
         val betterBlocks = (1 to chainSize).map { idx =>
           val txs =
-            Seq(TxHelpers.transfer(sender, recipient, amount = (idx + 10).waves), TxHelpers.transfer(sender, recipient, amount = (idx + 11).waves))
+            Seq(TxHelpers.transfer(sender, recipient, amount = (idx + 10).dcc), TxHelpers.transfer(sender, recipient, amount = (idx + 11).dcc))
           val block       = d.createBlock(txs, strictTime = true)
           val txSnapshots = if (isLightMode) Some(getTxSnapshots(d, block)) else None
           d.appendBlock(block)
@@ -174,7 +174,7 @@ class LightNodeTest extends PropSpec with WithDomain {
       settings.configure(_.copy(lightNodeBlockFieldsAbsenceInterval = 0)),
       AddrWithBalance.enoughBalances(challengingMiner, TxHelpers.defaultSigner, sender)
     ) { d =>
-      val txs              = Seq(TxHelpers.transfer(sender, recipient, amount = 1.waves), TxHelpers.transfer(sender, recipient, amount = 2.waves))
+      val txs              = Seq(TxHelpers.transfer(sender, recipient, amount = 1.dcc), TxHelpers.transfer(sender, recipient, amount = 2.dcc))
       val invalidBlock     = d.createBlock(txs, strictTime = true, stateHash = Some(Some(invalidStateHash)))
       val challengingBlock = d.createChallengingBlock(challengingMiner, invalidBlock, strictTime = true)
       val txSnapshots      = getTxSnapshots(d, challengingBlock)

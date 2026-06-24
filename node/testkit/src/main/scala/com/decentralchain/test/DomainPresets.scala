@@ -98,7 +98,7 @@ object DomainPresets {
 
   // BlockRewardDistribution requires non-None daoAddress and xtnBuybackAddress for the
   // 3-way reward split. FunctionalitySettings.TESTNET no longer provides these (they were
-  // Waves-specific governance addresses). Derive deterministic test addresses from fixed nonces
+  // Dcc-specific governance addresses). Derive deterministic test addresses from fixed nonces
   // using the current AddressScheme so they are valid regardless of network configuration.
   private lazy val testDaoAddress        = TxHelpers.address(1001).toString
   private lazy val testXtnBuybackAddress = TxHelpers.address(1002).toString

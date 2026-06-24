@@ -7,7 +7,7 @@ import com.decentralchain.it.api.SyncGrpcApi.*
 import com.decentralchain.it.sync.{matcherFee, minFee, someAssetAmount}
 import com.decentralchain.test.*
 import io.decentralchain.protobuf.transaction.{PBTransactions, Recipient}
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
@@ -124,7 +124,7 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         2,
         "myasset",
         "my asset description",
-        fee = 1.waves,
+        fee = 1.dcc,
         script = None,
         timestamp = System.currentTimeMillis()
       )

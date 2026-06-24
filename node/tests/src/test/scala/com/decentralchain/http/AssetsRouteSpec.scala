@@ -87,7 +87,7 @@ class AssetsRouteSpec
                                            |  ]
                                            |}
                                            |""".stripMargin),
-        0.01.waves,
+        0.01.dcc,
         timestamp = ntpTime.getTimestamp()
       )
 
@@ -98,7 +98,7 @@ class AssetsRouteSpec
       assetDesc.decimals.toByte,
       name.getOrElse(assetDesc.name.toStringUtf8),
       assetDesc.description.toStringUtf8,
-      1.waves,
+      1.dcc,
       script,
       assetDesc.reissuable,
       TxHelpers.timestamp,
@@ -303,7 +303,7 @@ class AssetsRouteSpec
         issuer,
         transfers,
         issueTransaction.asset,
-        0.01.waves,
+        0.01.dcc,
         timestamp = ntpTime.getTimestamp()
       )
     )

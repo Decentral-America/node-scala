@@ -4,7 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.decentralchain.account.{Address, KeyPair, SeedKeyPair}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.lease.LeaseTransaction
 import com.decentralchain.transaction.{Transaction, TxHelpers, TxVersion}
@@ -14,6 +14,7 @@ import pureconfig.ConfigReader
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
+import scala.util.Random
 import scala.util.Try
 
 object Preconditions {
@@ -47,7 +48,7 @@ object Preconditions {
   ): (UniverseHolder, List[Transaction], List[Transaction]) = {
     val transfers = accounts.map { account =>
       // val acc = GeneratorSettings.toKeyPair(accountSeed)
-      TxHelpers.transfer(settings.faucet, account.toAddress, settings.balance, Waves, Fee, Waves, ByteStr.empty, time.correctedTime())
+      TxHelpers.transfer(settings.faucet, account.toAddress, settings.balance, Dcc, Fee, Dcc, ByteStr.empty, time.correctedTime())
     }.toList
 
     val issuedAssets = (1 to settings.assetsCount)
@@ -90,7 +91,7 @@ object Preconditions {
           balance,
           IssuedAsset(issuedAsset.assetId),
           Fee,
-          Waves,
+          Dcc,
           ByteStr.empty,
           time.correctedTime(),
           TxVersion.V3

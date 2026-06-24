@@ -236,11 +236,11 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
         ),
         AddrWithBalance.enoughBalances(committedGenerator1) :+ AddrWithBalance(
           committedGenerator2Addr,
-          CommitToGenerationTransaction.DepositInWavelets + 1.waves
+          CommitToGenerationTransaction.DepositInWavelets + 1.dcc
         )
       ) { d =>
         log.debug(s"Append block 2 with leasing")
-        val leasingTxn = TxHelpers.lease(committedGenerator1, committedGenerator2Addr, amount = 20_000.waves)
+        val leasingTxn = TxHelpers.lease(committedGenerator1, committedGenerator2Addr, amount = 20_000.dcc)
         d.appender.appendBlock(
           d.createBlock(
             txs = Seq(leasingTxn),
@@ -351,8 +351,8 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
           TxHelpers.transfer(
             from = committedGenerator1,
             to = notCommittedGeneratorAddr,
-            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-            fee = 1.waves
+            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            fee = 1.dcc
           )
         )
       )
@@ -384,8 +384,8 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
           TxHelpers.transfer(
             from = committedGenerator1,
             to = notCommittedGeneratorAddr,
-            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.waves,
-            fee = 1.waves
+            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            fee = 1.dcc
           )
         )
       )

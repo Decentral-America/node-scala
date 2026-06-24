@@ -116,15 +116,15 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
     val emptyScript = Some(ExprScript(V4, Terms.TRUE).explicitGet())
     val issues =
       (1 to paymentCount).map(_ =>
-        TxHelpers.issue(issuer = dApp, amount = ENOUGH_AMT, decimals = 8, name = "Asset", description = "", fee = 1.waves, script = emptyScript, reissuable = true, timestamp = ts, version = 2.toByte)
+        TxHelpers.issue(issuer = dApp, amount = ENOUGH_AMT, decimals = 8, name = "Asset", description = "", fee = 1.dcc, script = emptyScript, reissuable = true, timestamp = ts, version = 2.toByte)
       )
     val assets = issues.map(i => IssuedAsset(i.id()))
     val setAssetScripts = assets.map { asset =>
       val resultScript = assetScript(dummyEthInvoke, dApp.toAddress, assets, asset, assetScriptVersion)
-      TxHelpers.setAssetScript(acc = dApp, asset = asset, script = resultScript, fee = 1.waves, timestamp = ts, version = 1.toByte)
+      TxHelpers.setAssetScript(acc = dApp, asset = asset, script = resultScript, fee = 1.dcc, timestamp = ts, version = 1.toByte)
     }
     val assetTransfers =
-      assets.map(a => TxHelpers.transfer(from = dApp, to = invoker, amount = ENOUGH_AMT, asset = a, fee = fee, feeAsset = Waves, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte))
+      assets.map(a => TxHelpers.transfer(from = dApp, to = invoker, amount = ENOUGH_AMT, asset = a, fee = fee, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte))
 
     val dAppScript  = makeDAppScript(assets, dApp2.toAddress, dAppVersion, syncCall)
     val dAppScript2 = makeDAppScript2(if (dAppVersion >= V5) dAppVersion else V5, dApp2, dApp, invoker, invokerPk)

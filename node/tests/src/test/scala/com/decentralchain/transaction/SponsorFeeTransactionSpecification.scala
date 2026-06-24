@@ -186,7 +186,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       minFee <- Gen.choose(1L, issue.quantity.value)
       sponsor = SponsorFeeTransaction.create(1.toByte, acc.publicKey, IssuedAsset(issue.id()), Some(minFee), One, ts, Proofs.empty).map(_.signWith(acc.privateKey)).explicitGet()
       transfer = TransferTransaction
-        .create(1.toByte, acc.publicKey, acc.toAddress, Waves, 1L, feeAsset = IssuedAsset(issue.id()), minFee, ByteStr.empty, ts, Proofs.empty)
+        .create(1.toByte, acc.publicKey, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee, ByteStr.empty, ts, Proofs.empty)
         .map(_.signWith(acc.privateKey))
         .explicitGet()
     } yield (acc, genesis, issue, sponsor, transfer)
@@ -210,11 +210,11 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
       minFee <- Gen.choose(1000000L, issue.quantity.value)
       sponsor = SponsorFeeTransaction.create(1.toByte, acc.publicKey, IssuedAsset(issue.id()), Some(minFee), One, ts, Proofs.empty).map(_.signWith(acc.privateKey)).explicitGet()
       transfer1 = TransferTransaction
-        .create(1.toByte, acc.publicKey, acc.toAddress, Waves, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 7, ByteStr.empty, ts, Proofs.empty)
+        .create(1.toByte, acc.publicKey, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 7, ByteStr.empty, ts, Proofs.empty)
         .map(_.signWith(acc.privateKey))
         .explicitGet()
       transfer2 = TransferTransaction
-        .create(1.toByte, acc.publicKey, acc.toAddress, Waves, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 9, ByteStr.empty, ts, Proofs.empty)
+        .create(1.toByte, acc.publicKey, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 9, ByteStr.empty, ts, Proofs.empty)
         .map(_.signWith(acc.privateKey))
         .explicitGet()
     } yield (acc, genesis, issue, sponsor, transfer1, transfer2)
@@ -239,12 +239,12 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
 
       sponsor1 = SponsorFeeTransaction.create(1.toByte, acc.publicKey, IssuedAsset(issue.id()), Some(minFee), One, ts, Proofs.empty).map(_.signWith(acc.privateKey)).explicitGet()
       transfer1 = TransferTransaction
-        .create(1.toByte, acc.publicKey, acc.toAddress, Waves, 1L, IssuedAsset(issue.id()), fee = minFee, ByteStr.empty, ts, Proofs.empty)
+        .create(1.toByte, acc.publicKey, acc.toAddress, Dcc, 1L, IssuedAsset(issue.id()), fee = minFee, ByteStr.empty, ts, Proofs.empty)
         .map(_.signWith(acc.privateKey))
         .explicitGet()
       sponsor2 = SponsorFeeTransaction.create(1.toByte, acc.publicKey, IssuedAsset(issue.id()), Some(minFee * 10), One, ts, Proofs.empty).map(_.signWith(acc.privateKey)).explicitGet()
       transfer2 = TransferTransaction
-        .create(1.toByte, acc.publicKey, acc.toAddress, Waves, 1L, IssuedAsset(issue.id()), fee = minFee * 10, ByteStr.empty, ts, Proofs.empty)
+        .create(1.toByte, acc.publicKey, acc.toAddress, Dcc, 1L, IssuedAsset(issue.id()), fee = minFee * 10, ByteStr.empty, ts, Proofs.empty)
         .map(_.signWith(acc.privateKey))
         .explicitGet()
     } yield (acc, genesis, issue, sponsor1, transfer1, sponsor2, transfer2)

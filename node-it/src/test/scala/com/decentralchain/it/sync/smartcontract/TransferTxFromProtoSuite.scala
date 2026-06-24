@@ -9,7 +9,7 @@ import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.Terms
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import io.decentralchain.protobuf.transaction.PBTransactions
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 
@@ -56,9 +56,9 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
       version = TxVersion.V3,
       from = source,
       to = recipient.toAddress,
-      asset = Waves,
+      asset = Dcc,
       amount = transferAmount,
-      feeAsset = Waves,
+      feeAsset = Dcc,
       fee = minFee,
       attachment = ByteStr("WAVES transfer".getBytes),
       timestamp = System.currentTimeMillis()
@@ -125,9 +125,9 @@ class TransferTxFromProtoSuite extends BaseTransactionSuite {
       version = TxVersion.V3,
       from = source,
       to = recipient.toAddress,
-      asset = Waves,
+      asset = Dcc,
       amount = 10000,
-      feeAsset = Waves,
+      feeAsset = Dcc,
       fee = minFee,
       attachment = ByteStr("Some Attachment".getBytes),
       timestamp = System.currentTimeMillis()

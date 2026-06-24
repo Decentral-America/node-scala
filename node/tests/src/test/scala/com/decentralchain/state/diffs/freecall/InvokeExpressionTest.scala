@@ -408,10 +408,10 @@ private object InvokeExpressionTest {
     val genesis     = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, TxHelpers.timestamp).explicitGet()
     val setVerifier = verifier.fold(TxHelpers.removeScript(invoker, fee, TxVersion.V2)) { s => TxHelpers.setScript(invoker, s, fee, TxVersion.V2) }
 
-    val sponsorIssueTx = TxHelpers.issue(invoker, 1000, 1, "name", "", 1.waves, None, true, TxVersion.V2)
+    val sponsorIssueTx = TxHelpers.issue(invoker, 1000, 1, "name", "", 1.dcc, None, true, TxVersion.V2)
     val sponsorAsset   = IssuedAsset(sponsorIssueTx.id.value())
     val sponsorTx      = TxHelpers.sponsor(sponsorAsset, Some(1000L), invoker, fee, TxVersion.V2)
-    val feeAsset       = if (sponsor) sponsorAsset else Waves
+    val feeAsset       = if (sponsor) sponsorAsset else Dcc
 
     val call   = makeExpression(invoker, fee, issue, transfersCount, receiver.toAddress, sigVerifyCount, raiseError)
     val invoke = TxHelpers.invokeExpression(call, invoker, fee, feeAsset, version)

@@ -159,7 +159,7 @@ class LastMicroBlockSuite extends FreeSpec with WithDomain with TestSchedulerOps
       defaultSettings
         .configure(_.copy(generationPeriodLength = 3))
         .copy(minerSettings = defaultSettings.minerSettings.copy(maxTransactionsInMicroBlock = 2)), // Fixes 5 seconds delay
-      AddrWithBalance.enoughBalances(otherNodeAcc, thisNodeAcc1, thisNodeAcc2) :+ AddrWithBalance(thisNodeAcc3.toAddress, 1000.waves - 1),
+      AddrWithBalance.enoughBalances(otherNodeAcc, thisNodeAcc1, thisNodeAcc2) :+ AddrWithBalance(thisNodeAcc3.toAddress, 1000.dcc - 1),
       miner = Miner.forwardTo(miner)
     ) { d =>
       val minerScheduler    = TestScheduler()
@@ -203,7 +203,7 @@ class LastMicroBlockSuite extends FreeSpec with WithDomain with TestSchedulerOps
       log.debug("Forge last microblock")
       d.testTime.setTimeIfGreater(block4Ts - 1) // To exclude the latest microblock, see min-micro-block-age
       Seq(thisNodeAcc1, thisNodeAcc2).map { kp =>
-        d.utxPool.putIfNew(TxHelpers.transfer(kp, amount = d.blockchain.balance(kp.toAddress) - 1.waves))
+        d.utxPool.putIfNew(TxHelpers.transfer(kp, amount = d.blockchain.balance(kp.toAddress) - 1.dcc))
       }
       utxEvents.onNext(())
       minerScheduler.tickNext("miner-3")

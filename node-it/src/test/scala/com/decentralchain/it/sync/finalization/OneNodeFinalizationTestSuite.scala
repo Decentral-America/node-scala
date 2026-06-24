@@ -74,7 +74,7 @@ class OneNodeFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLog
 
     // We need at least one transaction, otherwise there won't be a microblock, thus no voting, no finalization
     // Finalization happened in a microblock
-    node.waitForHeight(Height(node.waitForTransaction(node.transfer(miner1Acc, miner3Addr, 1.waves, waitForTx = true).id).height + 1))
+    node.waitForHeight(Height(node.waitForTransaction(node.transfer(miner1Acc, miner3Addr, 1.dcc, waitForTx = true).id).height + 1))
     val fs = node.finalityStatus
     if (fs.height > waitingFinalizedHeight + 2)
       fail(

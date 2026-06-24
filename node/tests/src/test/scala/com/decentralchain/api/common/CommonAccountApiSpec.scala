@@ -86,13 +86,13 @@ class CommonAccountApiSpec extends FreeSpec with WithDomain with BlocksTransacti
 
     val fundSource = TxHelpers.signer(1003)
     val dataSender = TxHelpers.signer(1004)
-    "filters entries created and deleted in liquid block" in withDomain(DomainPresets.RideV4, Seq(fundSource -> 100.waves)) { d =>
+    "filters entries created and deleted in liquid block" in withDomain(DomainPresets.RideV4, Seq(fundSource -> 100.dcc)) { d =>
       def dataList() = d.accountsApi.dataStream(dataSender.toAddress, None).toListL.runSyncUnsafe()
 
       val e1 = StringDataEntry("k1", "v1")
       val e2 = StringDataEntry("k2", "v2")
       d.appendKeyBlock()
-      d.appendMicroBlock(TxHelpers.transfer(fundSource, dataSender.toAddress, 1.waves), TxHelpers.data(dataSender, Seq(e1, e2)))
+      d.appendMicroBlock(TxHelpers.transfer(fundSource, dataSender.toAddress, 1.dcc), TxHelpers.data(dataSender, Seq(e1, e2)))
       dataList() shouldBe Seq(e1, e2)
       d.appendMicroBlock(TxHelpers.data(dataSender, Seq(EmptyDataEntry("k1"), EmptyDataEntry("k2")), version = 2.toByte))
       dataList() shouldBe empty

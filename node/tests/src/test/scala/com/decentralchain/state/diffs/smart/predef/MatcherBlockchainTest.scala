@@ -71,9 +71,9 @@ class MatcherBlockchainTest extends PropSpec, WithDomain {
       from = accountGen.sample.get,
       to = accountGen.sample.get.toAddress,
       amount = 1,
-      asset = Waves,
+      asset = Dcc,
       fee = 1,
-      feeAsset = Waves,
+      feeAsset = Dcc,
       attachment = ByteStr.empty,
       timestamp = 0,
       version = 1.toByte

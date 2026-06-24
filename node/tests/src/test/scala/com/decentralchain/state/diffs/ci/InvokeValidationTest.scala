@@ -124,7 +124,7 @@ class InvokeValidationTest extends PropSpec with WithDomain {
       Some(FUNCTION_CALL(User("f"), List(array(559)))),
       Seq.empty,
       1,
-      Waves,
+      Dcc,
       1,
       Proofs.empty,
       defaultAddress.chainId
@@ -141,7 +141,7 @@ class InvokeValidationTest extends PropSpec with WithDomain {
       Some(FUNCTION_CALL(User("f"), List(array(566)))),
       Seq.empty,
       1,
-      Waves,
+      Dcc,
       1,
       Proofs.empty,
       defaultAddress.chainId

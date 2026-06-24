@@ -84,7 +84,7 @@ class LegacyFrameCodecSpec extends FreeSpec {
   }
 
   "should pack update asset info in PB message" in {
-    val tx = TxHelpers.updateAssetInfo(TestValues.asset.id, "bomz", "", TestValues.keyPair, TestValues.fee, Waves)
+    val tx = TxHelpers.updateAssetInfo(TestValues.asset.id, "bomz", "", TestValues.keyPair, TestValues.fee, Dcc)
     RawBytes.fromTransaction(tx) shouldBe RawBytes(PBTransactionSpec.messageCode, PBTransactionSpec.serializeData(tx))
   }
 

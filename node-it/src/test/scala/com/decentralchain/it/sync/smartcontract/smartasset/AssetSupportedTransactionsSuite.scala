@@ -6,7 +6,7 @@ import com.decentralchain.it.sync.*
 import com.decentralchain.it.transactions.BaseTransactionSuite
 import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.state.IntegerDataEntry
-import com.decentralchain.transaction.Asset.{IssuedAsset, Waves}
+import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxHelpers
 import com.decentralchain.transaction.transfer.MassTransferTransaction.Transfer
 
@@ -182,7 +182,7 @@ class AssetSupportedTransactionsSuite extends BaseTransactionSuite {
       amount = 1,
       asset = IssuedAsset(ByteStr.decodeBase58(blackAsset).get),
       fee = smartMinFee,
-      feeAsset = Waves,
+      feeAsset = Dcc,
       attachment = ByteStr.empty,
       timestamp = System.currentTimeMillis + 1.minutes.toMillis,
       version = 2.toByte
@@ -194,7 +194,7 @@ class AssetSupportedTransactionsSuite extends BaseTransactionSuite {
       amount = 1,
       asset = IssuedAsset(ByteStr.decodeBase58(blackAsset).get),
       fee = smartMinFee,
-      feeAsset = Waves,
+      feeAsset = Dcc,
       attachment = ByteStr.empty,
       timestamp = System.currentTimeMillis + 10.minutes.toMillis,
       version = 2.toByte

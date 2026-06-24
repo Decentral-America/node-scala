@@ -42,7 +42,7 @@ class BigLetChain extends BaseFunSuite with CancelAfterFailure {
 
     val pkNewAddress = sender.createKeyPair()
 
-    sender.transfer(sender.keyPair, pkNewAddress.toAddress.toString, 10.waves, minFee, waitForTx = true)
+    sender.transfer(sender.keyPair, pkNewAddress.toAddress.toString, 10.dcc, minFee, waitForTx = true)
 
     val scriptSet          = SetScriptTransaction.create(1.toByte, pkNewAddress.publicKey, Some(compiledScript), setScriptFee, System.currentTimeMillis(), Proofs.empty).map(_.signWith(pkNewAddress.privateKey))
     val scriptSetBroadcast = sender.signedBroadcast(scriptSet.explicitGet().json())

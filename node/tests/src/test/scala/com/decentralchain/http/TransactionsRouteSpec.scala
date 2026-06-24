@@ -426,7 +426,7 @@ class TransactionsRouteSpec
     }
 
     "large-significand-format" in {
-      val transferTxn           = TxHelpers.transfer(richAccount, TxHelpers.address(930), 10.waves)
+      val transferTxn           = TxHelpers.transfer(richAccount, TxHelpers.address(930), 10.dcc)
       val commitToGenerationTxn = TxHelpers.commitToGeneration(Height(3001), richAccount)
       domain.appendBlock(transferTxn, commitToGenerationTxn)
 
@@ -986,7 +986,7 @@ class TransactionsRouteSpec
       val invoke = TxHelpers.invoke(
         dApp = sender.toAddress,
         invoker = sender,
-        fee = 0.005.waves,
+        fee = 0.005.dcc,
         version = 2.toByte,
         timestamp = ntpTime.getTimestamp()
       )

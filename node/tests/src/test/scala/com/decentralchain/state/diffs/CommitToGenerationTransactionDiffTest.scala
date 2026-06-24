@@ -83,8 +83,8 @@ class CommitToGenerationTransactionDiffTest extends FreeSpec with WithDomain {
       withDomain(
         DeterministicFinality,
         Seq(
-          AddrWithBalance(sender.toAddress, 1000000.waves),
-          AddrWithBalance(newGenerator.toAddress, 10000.waves)
+          AddrWithBalance(sender.toAddress, 1000000.dcc),
+          AddrWithBalance(newGenerator.toAddress, 10000.dcc)
         )
       ) { d =>
         val periodStart = Height(3001)
@@ -127,11 +127,11 @@ class CommitToGenerationTransactionDiffTest extends FreeSpec with WithDomain {
 
     "with insufficient balance" in {
       val newGenerator = TxHelpers.signer(1005)
-      val txFee        = 1.waves
+      val txFee        = 1.dcc
       withDomain(
         DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance),
         Seq(
-          AddrWithBalance(sender.toAddress, 1000000.waves),
+          AddrWithBalance(sender.toAddress, 1000000.dcc),
           AddrWithBalance(
             newGenerator.toAddress,
             GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets + txFee - 1

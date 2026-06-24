@@ -68,7 +68,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
     ) { d =>
       val testKP = randomKeyPair()
       d.appendBlock(
-        GenesisTransaction.create(testKP.toAddress, 1.waves, ntpTime.getTimestamp()).explicitGet(),
+        GenesisTransaction.create(testKP.toAddress, 1.dcc, ntpTime.getTimestamp()).explicitGet(),
         TxHelpers.setScript(
           testKP,
           TestCompiler(V5).compileContract("""{-# STDLIB_VERSION 4 #-}
@@ -82,7 +82,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
                                              |  ]
                                              |}
                                              |""".stripMargin),
-          0.01.waves,
+          0.01.dcc,
           version = TxVersion.V2,
           timestamp = ntpTime.getTimestamp()
         )
@@ -109,7 +109,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   "eth_call" - {
     "asset calls" in withDomain() { d =>
       val randomKP         = randomKeyPair()
-      val issueTransaction = TxHelpers.issue(randomKP, 100000, 2, "TEST", "test asset", 1.waves, None, false, ntpTime.getTimestamp(), TxVersion.V2)
+      val issueTransaction = TxHelpers.issue(randomKP, 100000, 2, "TEST", "test asset", 1.dcc, None, false, ntpTime.getTimestamp(), TxVersion.V2)
 
       d.appendBlock(
         GenesisTransaction.create(randomKP.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet(),
@@ -224,8 +224,8 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
   ) { d =>
     val randomKP = randomKeyPair()
     val invoker  = randomKeyPair()
-    val issue1   = TxHelpers.issue(randomKP,100000, 2,  "TEST1", "test asset", 1.waves, None, true, version = 2.toByte)
-    val issue2   = TxHelpers.issue(randomKP,1, 0,  "NFT1", "test asset",  0.001.waves, None, false, version = 2.toByte)
+    val issue1   = TxHelpers.issue(randomKP,100000, 2,  "TEST1", "test asset", 1.dcc, None, true, version = 2.toByte)
+    val issue2   = TxHelpers.issue(randomKP,1, 0,  "NFT1", "test asset",  0.001.dcc, None, false, version = 2.toByte)
 
     d.appendBlock(
       GenesisTransaction.create(randomKP.toAddress, 5.dcc, ntpTime.getTimestamp()).explicitGet(),
@@ -236,9 +236,9 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
       randomKP.toAddress,
       None,
       Seq.empty,
-      Seq(InvokeScriptTransaction.Payment(1.waves, Asset.Dcc)),
+      Seq(InvokeScriptTransaction.Payment(1.dcc, Asset.Dcc)),
       invoker,
-      1.005.waves,
+      1.005.dcc,
       Asset.Dcc,
       2.toByte,
       ntpTime.getTimestamp()
@@ -261,7 +261,7 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
                                                 |  ]
                                                 |}
                                                 |""".stripMargin),
-        0.01.waves,
+        0.01.dcc,
         timestamp = ntpTime.getTimestamp()
       ),
       invoke

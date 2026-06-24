@@ -32,7 +32,7 @@ class OracleTransactionGenerator(settings: Settings, val accounts: Seq[KeyPair],
 
     val now = System.currentTimeMillis()
     val transactions: List[Transaction] = (1 to settings.transactions).map { i =>
-      TxHelpers.transfer(scriptedAccount, oracle.toAddress, 1.waves, Waves, enoughFee, Waves, ByteStr.empty, now + i, 2.toByte)
+      TxHelpers.transfer(scriptedAccount, oracle.toAddress, 1.dcc, Dcc, enoughFee, Dcc, ByteStr.empty, now + i, 2.toByte)
     }.toList
 
     setScript +: setDataTx +: transactions

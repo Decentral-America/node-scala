@@ -507,7 +507,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
         description = "desc",
         reissuable = true,
         script = script,
-        fee = 1.waves,
+        fee = 1.dcc,
         version = TxVersion.V2
       )
 
