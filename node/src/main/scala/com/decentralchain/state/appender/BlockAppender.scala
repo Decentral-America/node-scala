@@ -71,7 +71,7 @@ object BlockAppender extends ScorexLogging {
       blockChallenger: Option[BlockChallenger],
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
-      hotStuffEngine: Option[ActorRef] = None
+      hotStuffEngine: Option[ActorRef]
   )(ch: Channel, newBlock: Block, snapshot: Option[BlockSnapshotResponse]): Task[Unit] = {
     import metrics.*
     implicit val implicitTime: Time = time
