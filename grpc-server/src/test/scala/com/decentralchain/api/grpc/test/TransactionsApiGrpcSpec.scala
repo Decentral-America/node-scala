@@ -2,14 +2,8 @@ package com.decentralchain.api.grpc.test
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
-import com.decentralchain.api.grpc.{
-  ApplicationStatus,
-  TransactionResponse,
-  TransactionSnapshotResponse,
-  TransactionSnapshotsRequest,
-  TransactionsApiGrpcImpl,
-  TransactionsRequest
-}
+import com.decentralchain.api.grpc.{TransactionsApiGrpcImpl}
+import io.decentralchain.api.grpc.{ApplicationStatus, TransactionResponse, TransactionSnapshotResponse, TransactionSnapshotsRequest, TransactionsRequest}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.DigestLength

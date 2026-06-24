@@ -19,12 +19,12 @@ import com.decentralchain.events.StateUpdate.{
   LeasingBalanceUpdate,
   ScriptUpdate
 }
-import com.decentralchain.events.api.grpc.protobuf.{GetBlockUpdateRequest, GetBlockUpdatesRangeRequest, SubscribeRequest}
-import com.decentralchain.events.protobuf.BlockchainUpdated.Rollback.RollbackType
-import com.decentralchain.events.protobuf.BlockchainUpdated.Update
-import com.decentralchain.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
+import io.decentralchain.events.api.grpc.protobuf.{GetBlockUpdateRequest, GetBlockUpdatesRangeRequest, SubscribeRequest}
+import io.decentralchain.events.protobuf.BlockchainUpdated.Rollback.RollbackType
+import io.decentralchain.events.protobuf.BlockchainUpdated.Update
+import io.decentralchain.events.protobuf.StateUpdate.BalanceUpdate as PBBalanceUpdate
 import com.decentralchain.events.protobuf.serde.*
-import com.decentralchain.events.protobuf.{TransactionMetadata, BlockchainUpdated as PBBlockchainUpdated, StateUpdate as PBStateUpdate}
+import io.decentralchain.events.protobuf.{TransactionMetadata, BlockchainUpdated as PBBlockchainUpdated, StateUpdate as PBStateUpdate}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.BlockchainFeatures.BlockReward
 import com.decentralchain.history.Domain
@@ -718,15 +718,15 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
         Seq.empty,
         Seq.empty,
         invoker,
-        2.waves,
+        2.dcc,
         Asset.Dcc,
         2.toByte,
         ntpTime.getTimestamp()
       )
       d.appendBlock(
-        GenesisTransaction.create(issuerAddress, 1000.waves, ntpTime.getTimestamp()).explicitGet(),
-        GenesisTransaction.create(invoker.toAddress, 1000.waves, ntpTime.getTimestamp()).explicitGet(),
-        SetScriptTransaction.create(2.toByte, issuer.publicKey, Some(dAppScript), 0.01.waves, ntpTime.getTimestamp(), Proofs.empty).map(_.signWith(issuer.privateKey)).explicitGet(),
+        GenesisTransaction.create(issuerAddress, 1000.dcc, ntpTime.getTimestamp()).explicitGet(),
+        GenesisTransaction.create(invoker.toAddress, 1000.dcc, ntpTime.getTimestamp()).explicitGet(),
+        SetScriptTransaction.create(2.toByte, issuer.publicKey, Some(dAppScript), 0.01.dcc, ntpTime.getTimestamp(), Proofs.empty).map(_.signWith(issuer.privateKey)).explicitGet(),
         invoke
       )
 
@@ -1118,8 +1118,8 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
         subscription
           .fetchAllEvents(d.blockchain)
-          .map(_.getUpdate.getAppend.getBlock.updatedWavesAmount) shouldBe
-          (2 to 16).scanLeft(100_000_000.waves) { (total, height) => total + 6.waves * d.blockchain.blockRewardBoost(Height(height)) }
+          .map(_.getUpdate.getAppend.getBlock.updatedDccAmount) shouldBe
+          (2 to 16).scanLeft(100_000_000.dcc) { (total, height) => total + 6.dcc * d.blockchain.blockRewardBoost(Height(height)) }
 
       }
     }

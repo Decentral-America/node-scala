@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString
 import com.decentralchain.TestValues
 import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.api.grpc.*
+import io.decentralchain.api.grpc.*
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.db.WithDomain

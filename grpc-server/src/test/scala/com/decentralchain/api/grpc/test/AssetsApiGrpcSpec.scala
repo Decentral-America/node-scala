@@ -2,7 +2,8 @@ package com.decentralchain.api.grpc.test
 
 import com.google.protobuf.ByteString
 import com.decentralchain.account.KeyPair
-import com.decentralchain.api.grpc.{AssetInfoResponse, AssetsApiGrpcImpl, NFTRequest, NFTResponse}
+import com.decentralchain.api.grpc.{AssetsApiGrpcImpl}
+import io.decentralchain.api.grpc.{AssetInfoResponse, NFTRequest, NFTResponse}
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
