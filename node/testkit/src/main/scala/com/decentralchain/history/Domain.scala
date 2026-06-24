@@ -724,7 +724,9 @@ class DefaultAppender(d: Domain)(implicit appenderScheduler: SchedulerService) {
     d.utxPool,
     d.posSelector,
     blockEndorser,
-    appenderScheduler
+    appenderScheduler,
+    verify = true,
+    txSignParCheck = true
   )(_, snapshot = None)
 
   def appendBlock(b: Block, requireAppended: Boolean = true, adjustTestTime: Boolean = true): Unit = {
