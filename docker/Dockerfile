@@ -29,6 +29,7 @@ ENV DCC_DATA=/var/lib/dcc
 ENV DCC_LOG=/var/log/dcc
 ENV DCC_INSTALL_PATH=/usr/share/dcc
 ENV DCC_CONFIG=/etc/dcc/dcc.conf
+ENV DCC_LOG_LEVEL=INFO
 
 RUN set -euo pipefail && \
     if [ "$TARGETARCH" = "amd64" ]; then \
