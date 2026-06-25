@@ -49,7 +49,13 @@ RUN set -euo pipefail && \
     echo "${CORRETTO_SHA256}  ${DCC_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" | sha256sum -c - && \
     wget -q "https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/${ROCKSDB_VERSION}/${ROCKSDB_JAR}" \
          -O "${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" && \
-    echo "${ROCKSDB_LINUX64_SHA1}  ${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c -
+    echo "${ROCKSDB_LINUX64_SHA1}  ${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c - && \
+    # rocksdbjni is built with Java 8 (no JPMS module-info). Add Automatic-Module-Name so
+    # JDK 25 native-access can be scoped to org.rocksdb instead of ALL-UNNAMED (JEP 472).
+    cd /tmp && jar -xf "${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" META-INF/MANIFEST.MF && \
+    printf '\nAutomatic-Module-Name: org.rocksdb\n' >> META-INF/MANIFEST.MF && \
+    jar -uf "${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" META-INF/MANIFEST.MF && \
+    rm -rf /tmp/META-INF
 
 # Setup node
 COPY entrypoint.sh $DCC_INSTALL_PATH/bin/entrypoint.sh
