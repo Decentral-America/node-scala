@@ -3,7 +3,7 @@ set -euo pipefail
 
 JAVA_OPTS="-XX:+ExitOnOutOfMemoryError
   -Xmx${DCC_HEAP_SIZE}
-  --enable-native-access=org.rocksdb
+  --enable-native-access=ALL-UNNAMED
   --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
   --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
   -Dlogback.stdout.level=${DCC_LOG_LEVEL}

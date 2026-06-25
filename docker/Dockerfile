@@ -49,30 +49,7 @@ RUN set -euo pipefail && \
     echo "${CORRETTO_SHA256}  ${DCC_INSTALL_PATH}/lib/software.amazon.cryptools.${CORRETTO_JAR}" | sha256sum -c - && \
     wget -q "https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/${ROCKSDB_VERSION}/${ROCKSDB_JAR}" \
          -O "${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" && \
-    echo "${ROCKSDB_LINUX64_SHA1}  ${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c - && \
-    # rocksdbjni was built with Java 8 — unnamed JPMS module calling System.loadLibrary().
-    # JDK 25 (JEP 472) requires --enable-native-access for such calls; JDK 26 will hard-block.
-    # Add Automatic-Module-Name so --enable-native-access=org.rocksdb (scoped) works instead
-    # of --enable-native-access=ALL-UNNAMED (blanket). Uses python3 (available in Ubuntu Noble)
-    # because 'jar' is a JDK tool absent from this JRE-only base image.
-    python3 - "${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" << 'PEOF'
-import sys, zipfile, shutil, os, tempfile
-jar = sys.argv[1]
-with zipfile.ZipFile(jar, 'r') as zin:
-    manifest = zin.read('META-INF/MANIFEST.MF').decode('utf-8')
-    entries  = [(i, zin.read(i.filename)) for i in zin.infolist()]
-if 'Automatic-Module-Name' in manifest:
-    sys.exit(0)  # already patched
-manifest = manifest.rstrip('\r\n') + '\nAutomatic-Module-Name: org.rocksdb\n'
-tmp = jar + '.patching'
-with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
-    for info, data in entries:
-        if info.filename == 'META-INF/MANIFEST.MF':
-            data = manifest.encode('utf-8')
-        zout.writestr(info, data)
-os.replace(tmp, jar)
-print(f'patched {jar}: added Automatic-Module-Name: org.rocksdb')
-PEOF
+    echo "${ROCKSDB_LINUX64_SHA1}  ${DCC_INSTALL_PATH}/lib/org.rocksdb.${ROCKSDB_JAR}" | sha1sum -c -
 
 # Setup node
 COPY entrypoint.sh $DCC_INSTALL_PATH/bin/entrypoint.sh
