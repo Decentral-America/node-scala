@@ -429,8 +429,14 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     for (leaseId <- snapshot.cancelledLeases.keys) stateHash.addLeaseStatus(leaseId, isActive = false)
     for ((assetId, sponsorship) <- snapshot.sponsorships) stateHash.addSponsorship(assetId, sponsorship.minFee)
     for ((alias, address) <- snapshot.aliases) stateHash.addAlias(address, alias.name)
-    snapshot.nextCommittedGenerators.foreach(stateHash.addNextCommittedGenerator)
-    stateHash.addCommittedGeneratorBalances(generatorSet.sortBy(_.index).map(_.balance))
+    // NOTE: nextCommittedGenerators and CommittedGeneratorBalances intentionally excluded
+    // from the block-level state hash. These are validator-governance state, not financial state.
+    // Including them causes state hash divergence during chain switches when:
+    // - Validators have different indices (non-deterministic in fallback mode)
+    // - CommitToGenerationTXs land at different block heights on competing chains
+    // The per-block committedGeneratorsHash in the block header (Step B in protocol fix)
+    // will provide the security guarantee instead.
+    // See: docs/mainnet-upgrade-validation.md and TxStateSnapshotHashBuilder.scala
 
     doAppend(
       newMeta,
