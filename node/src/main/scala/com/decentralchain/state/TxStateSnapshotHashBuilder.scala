@@ -97,9 +97,13 @@ object TxStateSnapshotHashBuilder {
         Ints.toByteArray(assetInfo.lastUpdatedAt.toInt)
     }
 
-    snapshot.nextCommittedGenerators.foreach { case (publicKey, blsPublicKey) =>
-      changedKeys += publicKey.arr ++ blsPublicKey.arr
-    }
+    // NOTE: nextCommittedGenerators intentionally excluded from the per-TX state hash.
+    // CommitToGenerationTransaction lands in different block positions on competing chains
+    // (e.g. block N on chain A vs block N+1 on chain B), making the cumulative state hash
+    // diverge at those heights. Feature 21 then prevents chain switches permanently.
+    // The validator set is still committed cryptographically at period boundaries via the
+    // period-boundary committedGeneratorsHash in the block header (see docs/mainnet-upgrade-validation.md).
+    // See: TxStateSnapshotHashBuilder — per-TX hash for financial state only.
 
     txStatusOpt.foreach(txInfo =>
       txInfo.status match {
