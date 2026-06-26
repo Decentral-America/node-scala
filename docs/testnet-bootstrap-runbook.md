@@ -37,7 +37,13 @@
 **Recovery:** Self-corrects over ~100-200 blocks once validators reconnect and mine steadily. No action needed unless peer connections are also lost.  
 **Prevention:** Set `initial-base-target = 272` (starting closer to natural equilibrium) and ensure all validators connect within 60 seconds of genesis.
 
-### 8. gen node wipe fails via kubectl exec
+### 9. `initial-base-target` is immutable — baked into genesis signature
+**Cause:** The genesis block signature is computed from ALL genesis config fields including `initial-base-target`. Changing this value invalidates the signature: node crashes on startup with "Passed genesis signature is not valid."  
+**Impact:** Cannot tune block time by changing `initial-base-target`. Value is permanently 218 for the current testnet genesis.  
+**To change it:** Requires regenerating the entire genesis block (new timestamp, new signature, new genesis transactions). This resets the entire chain — effectively a new network.  
+**Workaround for slow blocks:** Accept the initial ~580s period after multi-validator genesis. Block time self-corrects to equilibrium (~60s with 80% stake) over 100-200 blocks.
+
+### 10. gen node wipe fails via kubectl exec
 **Cause:** `resync-gen-nodes` wipe step uses `kubectl exec` to run `rm -rf /var/lib/dcc/data`. Fails if gen pods are in non-Running state (Pending, CrashLoopBackOff, Terminating) during a rollout cycle.  
 **Workaround:** Use `cluster-diagnostics roll=true` (reconcile + rollout restart, no wipe) to pick up config changes. For wipe: wait for pods to be fully Running before triggering resync-gen-nodes.  
 **Proper fix:** Add pod readiness wait before the wipe step in resync-gen-nodes.yml.
