@@ -31,6 +31,17 @@
 **Cause:** The commit-to-generation convergence check included gen-1 (miner disabled → stuck at height 1) in the min_height calculation, making convergence impossible.  
 **Fix applied:** Convergence check now only requires main node + gen-0 agreement (active miners only).
 
+### 7. Block time normalization after multi-validator genesis
+**Cause:** With 3 validators at 80% combined stake, blocks come every ~37.5s. The Waves/DCC baseTarget adjustment formula increases baseTarget when blockInterval < 2×averageDelay (60s). Starting at baseTarget=218, repeated fast blocks drive baseTarget toward Long.MaxValue. At Long.MaxValue, each block contributes score≈1, making score comparison irrelevant. Block production slows dramatically (10+ min/block) until baseTarget self-corrects downward.  
+**Symptom:** Dashboard shows Avg Block Time: 580s.  
+**Recovery:** Self-corrects over ~100-200 blocks once validators reconnect and mine steadily. No action needed unless peer connections are also lost.  
+**Prevention:** Set `initial-base-target = 272` (starting closer to natural equilibrium) and ensure all validators connect within 60 seconds of genesis.
+
+### 8. gen node wipe fails via kubectl exec
+**Cause:** `resync-gen-nodes` wipe step uses `kubectl exec` to run `rm -rf /var/lib/dcc/data`. Fails if gen pods are in non-Running state (Pending, CrashLoopBackOff, Terminating) during a rollout cycle.  
+**Workaround:** Use `cluster-diagnostics roll=true` (reconcile + rollout restart, no wipe) to pick up config changes. For wipe: wait for pods to be fully Running before triggering resync-gen-nodes.  
+**Proper fix:** Add pod readiness wait before the wipe step in resync-gen-nodes.yml.
+
 ---
 
 ## Correct Bootstrap Procedure
@@ -45,19 +56,24 @@
 
 ### Steps
 
-1. **Full reset:** Wipe all chain data simultaneously (`mainnode-ops wipe-chain-and-restart` + `resync-gen-nodes WIPE`)
+1. **Apply genesis config to main node FIRST:** `mainnode-ops fix-genesis-config-and-restart` (patches initial-base-target=272, generation-period-length=100 on VPS)
 
-2. **Let chain build:** With the correct `initial-base-target`, all 3 validators mine at ~30s/block. Chains converge via score comparison (state hash fix ensures this works).
+2. **Full reset — all nodes simultaneously:** `mainnode-ops wipe-chain-and-restart` + `resync-gen-nodes WIPE`. If gen wipe fails (pods not Ready), use `cluster-diagnostics roll=true` instead.
 
-3. **Run commit-to-generation ONCE:** After height 20+, when all nodes have converged. The convergence check (main + gen-0 agreement) ensures TXs go onto the canonical chain. This activates explicit validators for T2 HotStuff.
+3. **Wait for all nodes online (height > 5):** Check `curl https://testnet-node.decentralchain.io/peers/connected` — needs to show gen-0 and gen-1. If peers=0 after 3 min, run `mainnode-ops wipe-peers-and-restart`.
 
-4. **Keep committing:** Run commit-to-generation every ~80 blocks (before each period boundary). Can be automated with a cron schedule.
+4. **Run commit-to-generation:** After height 20+. The convergence check requires main node + gen-0 to agree on a shared block ID. With the state hash fix, this passes within minutes.
+
+5. **Keep committing every ~80 blocks:** Before each period boundary (every 100 blocks). Automate via cron or `/schedule` command in Claude Code targeting `commit-to-generation.yml`.
+
+6. **Monitor block time:** Should stabilize at ~37s/block. If spike to 10+ min: check Connected Peers. If 0, run `mainnode-ops wipe-peers-and-restart`.
 
 ### What NOT to do
-- ❌ Do not disable miners for "single-miner bootstrap" — non-mining nodes don't sync
-- ❌ Do not submit CommitToGeneration TXs before chain convergence — causes state hash divergence (now fixed but still better practice)
-- ❌ Do not use `gh run watch` — burns GitHub API rate limit (1200 calls/hr)
-- ❌ Do not set `initial-base-target = 218` with 3 validators — baseTarget explodes in 100 blocks
+- ❌ **Do not disable miners** — non-mining nodes don't sync in DCC (miner drives sync)
+- ❌ **Do not submit CommitToGeneration TXs before convergence** — causes state hash divergence (state hash fix mitigates but avoid anyway)
+- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit (1200 calls/hr). Use GraphQL polling + artifact download.
+- ❌ **Do not set `initial-base-target = 218` with 3 validators** — baseTarget explodes in ~130 blocks, then takes hours to normalize
+- ❌ **Do not disable `rest-api` section** — the `disable-miner-and-restart` bug that disabled REST API is now fixed but watch the sed/awk targeting
 
 ---
 
@@ -77,13 +93,25 @@ OK for testnet — keep as is.
 
 ---
 
-## Automation Needed
+## Automation Needed (TODO)
 
-### Auto commit-to-generation cron
-The commit-to-generation workflow should run automatically every ~80 blocks (~40 minutes). Set up as a scheduled GitHub Actions workflow or use `/schedule` in Claude Code.
+### 1. Auto commit-to-generation cron
+**Action:** Schedule `commit-to-generation.yml` to run every 40 minutes (before each 100-block period boundary at ~37s/block).  
+**How:** GitHub Actions schedule trigger OR `infra/scripts/gh-wait-and-download.sh` approach via cron.
 
-### Peer monitoring
-Alert when `Connected Peers: 0` on main node. Auto-trigger `mainnode-ops wipe-peers-and-restart` after 5 minutes of 0 peers.
+### 2. Peer reconnection watchdog
+**Action:** If `testnet-node.decentralchain.io/peers/connected` returns 0 peers for >5 min, auto-trigger `mainnode-ops wipe-peers-and-restart`.  
+**How:** Monitor task or GitHub Actions scheduled workflow polling the endpoint.
+
+### 3. Block time alert
+**Action:** If avg block time > 120s, alert that baseTarget has inflated or validators disconnected.
+
+### 4. T2 HotStuff activation procedure (not yet done)
+T2 requires `CommitToGenerationTransaction` with BLS public keys. The BLS keys are derived from each validator's wallet seed. Procedure:
+1. Get BLS public key from each gen node: `kubectl exec dcc-gen-0-0 -- wget -qO- http://localhost:6869/node/blsPublicKey` (endpoint TBD)
+2. Include BLS public key in CommitToGeneration TX (already handled by the node's own wallet signing)
+3. The commit-to-generation workflow handles this — it signs TXs with the node's own wallet
+4. T2 activates automatically once `hotStuffSettings.enabled = true` (already set) AND validators are in the committed set
 
 ---
 
