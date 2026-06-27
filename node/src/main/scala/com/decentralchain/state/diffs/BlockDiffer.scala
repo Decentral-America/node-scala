@@ -34,7 +34,6 @@ import com.decentralchain.transaction.{
 import scala.collection.immutable.VectorMap
 
 object BlockDiffer {
-  private val log = org.slf4j.LoggerFactory.getLogger(getClass)
   final case class Result(
       snapshot: StateSnapshot,
       carry: Long,
@@ -132,23 +131,14 @@ object BlockDiffer {
 
     val feeFromPreviousBlockE =
       if (stateHeight >= sponsorshipHeight) {
-        val carry = blockchain.carryFee(None)
-        log.warn(s"[StateHashDiag2] BlockDiffer.fromBlockTraced height=$heightWithNewBlock sponsorshipPath carryFee=$carry prevBlockTxs=N/A")
-        Right(Portfolio(balance = carry))
-      } else if (stateHeight > ngHeight) maybePrevBlock.fold(Portfolio.empty.asRight[String]) { pb =>
-        // it's important to combine tx fee fractions (instead of getting a fraction of the combined tx fee)
-        // so that we end up with the same value as when computing per-transaction fee part
-        // during microblock processing below
-        val result = pb.transactionData
-          .map { t =>
-            val pf = Portfolio.build(t.assetFee)
-            pf.minus(pf.multiply(CurrentBlockFeePart))
-          }
-          .foldM(Portfolio.empty)(_.combine(_))
-        result.foreach { pf =>
-          log.warn(s"[StateHashDiag2] BlockDiffer.fromBlockTraced height=$heightWithNewBlock ngPath carryFee=${pf.balance} prevBlockTxCount=${pb.transactionData.size} prevBlockId=${pb.id()} carryFeeFromBlockchain=${blockchain.carryFee(None)} prevBlockRef=${pb.header.reference}")
-        }
-        result
+        Right(Portfolio(balance = blockchain.carryFee(None)))
+      } else if (stateHeight > ngHeight) {
+        // Use blockchain.carryFee(None) — same source as createInitialBlockSnapshot — to ensure
+        // the miner's state hash and BlockDiffer's validation hash use identical carry fee values.
+        // Previously this branch recomputed from maybePrevBlock.transactionData, which diverges
+        // from the miner when rocksdb.carryFee is 0 but rocksdb.lastBlock still has TXs (can
+        // happen after a competitor-block path commit resets carry to 0).
+        Right(Portfolio(balance = blockchain.carryFee(None)))
       }
       else
         Right(Portfolio.empty)
@@ -360,9 +350,7 @@ object BlockDiffer {
       miner: Address
   ): Either[ValidationError, StateSnapshot] = {
     val blockchain           = blockchainUpdater.referencedBlockchain(reference)
-    val carryRaw             = blockchain.carryFee(Some(reference))
-    log.warn(s"[StateHashDiag2] createInitialBlockSnapshot reference=$reference carryFee=$carryRaw height=${blockchain.height}")
-    val feeFromPreviousBlock = Portfolio.dcc(carryRaw)
+    val feeFromPreviousBlock = Portfolio.dcc(blockchain.carryFee(Some(reference)))
 
     val daoAddress        = blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten
     val xtnBuybackAddress = blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
@@ -389,14 +377,8 @@ object BlockDiffer {
   def computeInitialStateHash(blockchain: Blockchain, initSnapshot: StateSnapshot, prevStateHash: ByteStr): ByteStr = {
     if (initSnapshot == StateSnapshot.empty || blockchain.height == 1)
       prevStateHash
-    else {
-      val result = TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevStateHash)
-      log.warn(
-        s"[StateHashDiag] BlockDiffer.computeInitialStateHash: height=${blockchain.height} prevStateHash=$prevStateHash " +
-        s"initBalances=${initSnapshot.balances.map{case((a,_),b)=>s"$a->$b"}.mkString(",")} result=$result"
-      )
-      result
-    }
+    else
+      TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevStateHash)
   }
 
   private def apply(
