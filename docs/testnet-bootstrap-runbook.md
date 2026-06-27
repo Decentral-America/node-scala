@@ -1,127 +1,213 @@
 # Testnet Bootstrap Runbook
 
-## Root Causes Identified (2 days of debugging)
-
-### 1. baseTarget inflation — slow blocks
-**Cause:** With 3 validators mining from genesis, blocks come every ~10s (3× target rate). `baseTarget` triples per block. After 100 blocks, baseTarget saturates → each block takes 10+ minutes.  
-**Fix:** Reset with `initial-base-target` set high enough to match the expected multi-validator rate, OR accept slow initial blocks that auto-correct over ~100 blocks.  
-**Proper fix:** Set `initial-base-target = 1739` (= 218 × 8, tuned for 3 validators at 80% total stake mining at 30s each).
-
-### 2. Main node loses peer connections
-**Cause:** Unknown — the P2P connection between VPS (66.228.55.154) and LKE cluster (172.105.64.89) drops periodically. Peers.dat blacklist, score comparison oscillation, or network instability.  
-**Symptom:** Connected Peers: 0 on dashboard, block time spikes.  
-**Workaround:** `mainnode-ops wipe-peers-and-restart` forces reconnection.  
-**Proper fix:** Investigate if the `blockchain-postgres-sync` or `scanner` service is hammering the P2P port. Add reconnection monitoring + auto-alert.
-
-### 3. CommitToGenerationTransaction causes state hash divergence
-**Cause (FIXED):** The TX lands in different blocks on competing chains, causing cumulative state hash mismatch. Feature 21 (state hash validation) prevents chain switches.  
-**Fix applied:** Removed `nextCommittedGenerators` from per-TX state hash in `TxStateSnapshotHashBuilder.scala` (commit `d352f5fb`). This is in production on the new image.  
-**Status:** Fixed. Chain advances past all period boundaries now.
-
-### 4. Fallback rule vs explicit CommitToGeneration
-**Discovery:** When NOBODY commits for a period, the fallback rule allows all genesis-funded accounts to mine. T0 DeterministicFinality ALSO works with fallback. T2 HotStuff requires explicit commits with BLS keys.  
-**Implication:** For basic chain operation, CommitToGeneration TXs are optional. Only needed for T2 HotStuff activation.
-
-### 5. DCC requires miner enabled to sync blocks
-**Cause:** With `miner.enable = no`, the DCC node does NOT actively request blocks from peers even when connected. Miner module drives sync.  
-**Impact:** "Single-miner bootstrap" approach with other miners disabled doesn't work — non-mining nodes stay at genesis.  
-**Fix:** All nodes must have miner enabled for proper P2P sync.
-
-### 6. Convergence check must exclude non-syncing nodes
-**Cause:** The commit-to-generation convergence check included gen-1 (miner disabled → stuck at height 1) in the min_height calculation, making convergence impossible.  
-**Fix applied:** Convergence check now only requires main node + gen-0 agreement (active miners only).
-
-### 7. Block time normalization after multi-validator genesis
-**Cause:** With 3 validators at 80% combined stake, blocks come every ~37.5s. The Waves/DCC baseTarget adjustment formula increases baseTarget when blockInterval < 2×averageDelay (60s). Starting at baseTarget=218, repeated fast blocks drive baseTarget toward Long.MaxValue. At Long.MaxValue, each block contributes score≈1, making score comparison irrelevant. Block production slows dramatically (10+ min/block) until baseTarget self-corrects downward.  
-**Symptom:** Dashboard shows Avg Block Time: 580s.  
-**Recovery:** Self-corrects over ~100-200 blocks once validators reconnect and mine steadily. No action needed unless peer connections are also lost.  
-**Prevention:** Set `initial-base-target = 272` (starting closer to natural equilibrium) and ensure all validators connect within 60 seconds of genesis.
-
-### 9. `initial-base-target` is immutable — baked into genesis signature
-**Cause:** The genesis block signature is computed from ALL genesis config fields including `initial-base-target`. Changing this value invalidates the signature: node crashes on startup with "Passed genesis signature is not valid."  
-**Impact:** Cannot tune block time by changing `initial-base-target`. Value is permanently 218 for the current testnet genesis.  
-**To change it:** Requires regenerating the entire genesis block (new timestamp, new signature, new genesis transactions). This resets the entire chain — effectively a new network.  
-**Workaround for slow blocks:** Accept the initial ~580s period after multi-validator genesis. Block time self-corrects to equilibrium (~60s with 80% stake) over 100-200 blocks.
-
-### 10. gen node wipe fails via kubectl exec
-**Cause:** `resync-gen-nodes` wipe step uses `kubectl exec` to run `rm -rf /var/lib/dcc/data`. Fails if gen pods are in non-Running state (Pending, CrashLoopBackOff, Terminating) during a rollout cycle.  
-**Workaround:** Use `cluster-diagnostics roll=true` (reconcile + rollout restart, no wipe) to pick up config changes. For wipe: wait for pods to be fully Running before triggering resync-gen-nodes.  
-**Proper fix:** Add pod readiness wait before the wipe step in resync-gen-nodes.yml.
+> **Single Source of Truth.** Last updated: 2026-06-26. Supersedes all prior STATUS/HANDOFF/TODO docs.
 
 ---
 
-## Correct Bootstrap Procedure
+## Current Testnet State (2026-06-26)
+
+| Item | Status |
+|------|--------|
+| Chain height | ~613+, advancing ~30s/block via fallback rule |
+| Main node (Newark 66.228.55.154) | ✅ Running, producing blocks |
+| gen-0 (LKE 172.105.64.89:6863) | ⚠️ Cycling — RC#2 fix deployed via config (see below) |
+| gen-1 (LKE 172.105.64.89:6864) | ❌ Blacklisted on main node — fix: `disable-blacklisting-and-restart` + resync |
+| State hash fix (RC#3) | ✅ Deployed (commit 44b93a0) |
+| initial-base-target immutable | ✅ Documented — cannot change without new genesis |
+| Auto commit-to-generation | ✅ Scheduled cron every 35 min (added 2026-06-26) |
+| Peer reconnection watchdog | ✅ `peer-watchdog.yml` auto-reconnects every 5 min (added 2026-06-26) |
+| T2 HotStuff | ❌ Not activated — requires committed validators with BLS keys |
+| RC#2 blacklisting fix | ✅ Config deployed — requires `disable-blacklisting-and-restart` + resync to take effect |
+
+---
+
+## Root Causes Identified
+
+### RC#1 — baseTarget inflation (RESOLVED)
+
+**Cause:** With 3 validators mining from genesis, blocks come every ~10s (3× target rate). `baseTarget` triples per block. After 100 blocks, baseTarget saturates → each block takes 10+ minutes.  
+**Fix applied:** `initial-base-target = 1739` (= 218 × 8) in genesis config prevents overshoot. Current genesis is locked at 218 (immutable — see RC#9).  
+**Current state:** Blocks self-correct to ~30s equilibrium via fallback generator rule over 100–200 blocks.
+
+---
+
+### RC#2 — Peer disconnection cycling (ROOT CAUSE FIXED 2026-06-26)
+
+**Precise cause (traced through source code):**
+
+1. Gen-0 mines blocks on its own fork (disconnected from main node)
+2. Gen-0 reconnects and attempts a chain switch (its forked chain has higher score)
+3. `ExtensionAppender.scala:138` fails block validation → calls `peerDatabase.blacklistAndClose(ch, reason)`
+4. Gen-0's IP is blacklisted on main node for `black-list-residence-time = 1h` (default)
+5. `NetworkServer.scala:134` — when gen-0's outgoing channel closes, gen-0 suspends main node for `suspension-residence-time = 1m`
+6. After 60s, gen-0 retries connecting to main node
+7. `InboundConnectionFilter.scala:35` — main node rejects inbound from gen-0 (still blacklisted for 1h)
+8. Gen-0 gets suspended again → **60s cycling**
+
+**Fix (deployed 2026-06-26, no code rebuild required):**
+
+All node configs (`dcc.conf` + `dcc-nodes.yaml`) now include:
+```hocon
+network {
+  enable-blacklisting = no        # removes 1h IP bans after validation failure
+  suspension-residence-time = 10s # faster channel-close recovery
+}
+```
+Main node also has:
+```hocon
+synchronization {
+  max-rollback = 2000
+  invalid-blocks-storage {
+    timeout = 30s   # invalid block IDs expire in 30s, not 1h
+  }
+}
+```
+
+**To activate immediately (one-time ops):**
+1. Run `mainnode-ops → disable-blacklisting-and-restart` (applies config to VPS, clears in-memory blacklist via restart)
+2. Run `resync-gen-nodes WIPE` (wipes gen-0/gen-1 fork chains → forces clean sync from main node)
+
+**Why wipe gen nodes?** Gen-0 has been mining a fork with higher cumulative score. Wiping forces it to sync from the main node's canonical 613-block chain instead. After sync, all 3 nodes mine on the same chain.
+
+---
+
+### RC#3 — CommitToGeneration causes state hash divergence (FIXED)
+
+**Cause:** TX lands in different blocks on competing chains → cumulative state hash mismatch → Feature 21 blocks chain switch.  
+**Fix applied:** Removed `nextCommittedGenerators` from per-TX state hash in `TxStateSnapshotHashBuilder.scala` (commit `d352f5fb`, also `44b93a0` / `Caches.scala`).  
+**Status:** Fixed. Chain advances past all period boundaries via fallback rule.
+
+---
+
+### RC#4 — Fallback rule vs explicit CommitToGeneration
+
+When NOBODY commits for a period, the fallback rule allows all genesis-funded accounts to mine. T0 DeterministicFinality works with fallback. T2 HotStuff requires explicit commits with BLS keys.
+
+**Implication:** Chain advances without CommitToGeneration TXs (fallback). Now automated: cron commits every 35 min to keep generators committed for T2 activation readiness.
+
+---
+
+### RC#5 — DCC requires miner enabled to sync blocks
+
+With `miner.enable = no`, the DCC node does NOT actively request blocks from peers even when connected. All nodes must have `miner.enable = yes`.
+
+---
+
+### RC#6 — Convergence check must exclude non-syncing nodes
+
+The commit-to-generation convergence check only requires main node + gen-0 agreement. Gen-1 (miner disabled or syncing) is excluded from min_height calculation.
+
+---
+
+### RC#7 — Block time normalization after multi-validator genesis
+
+With 3 validators at 80% combined stake, blocks come every ~37.5s. Starting at `initial-base-target = 218`, baseTarget increases then self-corrects over ~100-200 blocks.  
+**Recovery:** Self-corrects once validators reconnect and mine steadily.  
+**Prevention:** Cannot change `initial-base-target` (see RC#9).
+
+---
+
+### RC#9 — `initial-base-target` is immutable (baked into genesis signature)
+
+Changing `initial-base-target` invalidates the genesis block signature → node crashes: "Passed genesis signature is not valid."  
+**Workaround:** Accept the initial ~580s period after multi-validator genesis. Block time self-corrects to equilibrium.
+
+---
+
+### RC#10 — Gen node wipe fails via kubectl exec if pods not Running
+
+Wipe step uses `kubectl exec` which fails if pods are Pending/CrashLoopBackOff.  
+**Workaround:** Use `cluster-diagnostics roll=true` for config-only changes. Wait for pods Running before `resync-gen-nodes WIPE`.
+
+---
+
+## Correct Bootstrap / Recovery Procedure
 
 ### Prerequisites
 - All nodes running image `d352f5fb` or later (state hash fix)
-- `initial-base-target = 1739` in genesis config (prevents baseTarget inflation)
-- `miner.enable = yes` on all nodes
-- `micro-block-interval = 2s` (normal production value)
-- `generation-period-length = 100` (production value)
+- `miner.enable = yes` on all gen nodes
+- `enable-blacklisting = no` in all node network configs (deployed 2026-06-26)
+- `initial-base-target = 218` (immutable — cannot change)
+- `generation-period-length = 100`
 - `max-rollback = 2000`
 
-### Steps
+### Full Reset Procedure (from height 0)
 
-1. **Apply genesis config to main node FIRST:** `mainnode-ops fix-genesis-config-and-restart` (patches initial-base-target=272, generation-period-length=100 on VPS)
+1. **Apply genesis config to main node:** `mainnode-ops → fix-genesis-config-and-restart`
+2. **Apply RC#2 fix to main node:** `mainnode-ops → disable-blacklisting-and-restart`
+3. **Wipe all nodes simultaneously:** `mainnode-ops → wipe-chain-and-restart` + `resync-gen-nodes WIPE`
+4. **Wait for all nodes online (height > 5):** Check `curl https://testnet-node.decentralchain.io/peers/connected`
+5. **If peers = 0 after 3 min:** `mainnode-ops → wipe-peers-and-restart` (now automated by peer-watchdog.yml)
+6. **Commit-to-generation:** Now automated via schedule trigger every 35 min
+7. **Monitor block time:** Should stabilize at ~37s/block via peer-watchdog.yml
 
-2. **Full reset — all nodes simultaneously:** `mainnode-ops wipe-chain-and-restart` + `resync-gen-nodes WIPE`. If gen wipe fails (pods not Ready), use `cluster-diagnostics roll=true` instead.
+### Recovery from Gen Node Fork (current situation 2026-06-26)
 
-3. **Wait for all nodes online (height > 5):** Check `curl https://testnet-node.decentralchain.io/peers/connected` — needs to show gen-0 and gen-1. If peers=0 after 3 min, run `mainnode-ops wipe-peers-and-restart`.
-
-4. **Run commit-to-generation:** After height 20+. The convergence check requires main node + gen-0 to agree on a shared block ID. With the state hash fix, this passes within minutes.
-
-5. **Keep committing every ~80 blocks:** Before each period boundary (every 100 blocks). Automate via cron or `/schedule` command in Claude Code targeting `commit-to-generation.yml`.
-
-6. **Monitor block time:** Should stabilize at ~37s/block. If spike to 10+ min: check Connected Peers. If 0, run `mainnode-ops wipe-peers-and-restart`.
-
-### What NOT to do
-- ❌ **Do not disable miners** — non-mining nodes don't sync in DCC (miner drives sync)
-- ❌ **Do not submit CommitToGeneration TXs before convergence** — causes state hash divergence (state hash fix mitigates but avoid anyway)
-- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit (1200 calls/hr). Use GraphQL polling + artifact download.
-- ❌ **Do not set `initial-base-target = 218` with 3 validators** — baseTarget explodes in ~130 blocks, then takes hours to normalize
-- ❌ **Do not disable `rest-api` section** — the `disable-miner-and-restart` bug that disabled REST API is now fixed but watch the sed/awk targeting
+1. `mainnode-ops → disable-blacklisting-and-restart` — clears in-memory blacklist, applies RC#2 fix
+2. `resync-gen-nodes WIPE` — wipes gen-0/gen-1 fork data, pods restart and sync from main node
+3. Wait 5 min, verify heights agree and block production resumes from all 3 generators
+4. No manual commit-to-generation needed — cron handles it
 
 ---
 
-## Current Config Issues to Fix
+## Automation (all active as of 2026-06-26)
 
-### `initial-base-target` (HIGH PRIORITY)
-Current: `218`  
-Should be: `1739` (218 × 8, tuned for 80% stake at 30s blocks)  
-Why: With 3 validators at 80% combined stake, actual block time = 30s/0.8 = 37.5s. Starting at 218, the baseTarget increases and equilibrates around 218 × (37.5/30) ≈ 272. The current 218 causes initial overshoot.
-
-Actually, the proper calculation: for the testnet genesis with 3 validators at combined 80% stake, expected block time = 37.5s. The baseTarget self-adjusts to produce 30s blocks on average. Set `initial-base-target = 272` to start near equilibrium.
-
-### `generation-period-length` consideration
-Current: `100` blocks = ~50 minutes per period (at 30s/block)  
-Mainnet: 100 blocks  
-OK for testnet — keep as is.
+| Automation | Schedule | Workflow | Purpose |
+|-----------|----------|----------|---------|
+| Commit-to-generation | Every 35 min | `commit-to-generation.yml` | Keep generators committed before 50-min period boundaries |
+| Peer reconnection watchdog | Every 5 min | `peer-watchdog.yml` | Auto-reconnect or restart if peer count drops to 0 |
 
 ---
 
-## Automation Needed (TODO)
+## Config Reference
 
-### 1. Auto commit-to-generation cron
-**Action:** Schedule `commit-to-generation.yml` to run every 40 minutes (before each 100-block period boundary at ~37s/block).  
-**How:** GitHub Actions schedule trigger OR `infra/scripts/gh-wait-and-download.sh` approach via cron.
+### Main Node (`/opt/dcc/config/node-testnet/dcc.conf` on 66.228.55.154)
 
-### 2. Peer reconnection watchdog
-**Action:** If `testnet-node.decentralchain.io/peers/connected` returns 0 peers for >5 min, auto-trigger `mainnode-ops wipe-peers-and-restart`.  
-**How:** Monitor task or GitHub Actions scheduled workflow polling the endpoint.
+Key non-default settings:
+```hocon
+network {
+  enable-blacklisting = no         # RC#2 fix
+  suspension-residence-time = 10s  # RC#2 fix
+}
+synchronization {
+  max-rollback = 2000
+  invalid-blocks-storage {
+    timeout = 30s                  # RC#2 fix
+  }
+}
+miner {
+  enable = yes
+  quorum = 0
+}
+```
 
-### 3. Block time alert
-**Action:** If avg block time > 120s, alert that baseTarget has inflated or validators disconnected.
+### Gen Nodes (`dcc-nodes.yaml` → Flux → LKE)
 
-### 4. T2 HotStuff activation procedure (not yet done)
-T2 requires `CommitToGenerationTransaction` with BLS public keys. The BLS keys are derived from each validator's wallet seed. Procedure:
-1. Get BLS public key from each gen node: `kubectl exec dcc-gen-0-0 -- wget -qO- http://localhost:6869/node/blsPublicKey` (endpoint TBD)
-2. Include BLS public key in CommitToGeneration TX (already handled by the node's own wallet signing)
-3. The commit-to-generation workflow handles this — it signs TXs with the node's own wallet
-4. T2 activates automatically once `hotStuffSettings.enabled = true` (already set) AND validators are in the committed set
+Same `enable-blacklisting = no` + `suspension-residence-time = 10s` applied to gen-0-config, gen-1-config, val-0-config.
+
+---
+
+## What NOT to Do
+
+- ❌ **Do not disable miners** — non-mining nodes don't sync in DCC
+- ❌ **Do not submit CommitToGeneration TXs before convergence** — wait for shared ancestor
+- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit (1200 calls/hr). Use GraphQL polling + artifact download
+- ❌ **Do not set `initial-base-target = 218` with 3 validators** — baseTarget explodes in ~130 blocks
+- ❌ **Do not re-enable blacklisting** without understanding why a peer's blocks failed validation
+
+---
+
+## T2 HotStuff Activation Procedure (TODO — requires explicit commits)
+
+1. Get BLS public key from each gen node: `kubectl exec dcc-gen-0-0 -- wget -qO- http://localhost:6869/node/blsPublicKey`
+2. CommitToGeneration TXs with BLS keys (handled by `commit-to-generation.yml` when validators sign)
+3. T2 activates automatically once `hotStuffSettings.enabled = true` AND validators in committed set
+4. Prerequisite: gen-0 and gen-1 must be stably peered and on the same chain as main node
 
 ---
 
 ## Known Non-Issues
 
-- `31HrVNJz...3ab8EE` with 0 DCC in block production stats: Genesis block signer. Always present with 1 block and 0 balance. Not a bug.
+- `31HrVNJz...3ab8EE` with 0 DCC in block production stats: Genesis block signer. Always present with 1 block and 0 balance.
 - T2 HotStuff shows `None`: Requires explicit CommitToGeneration TXs with BLS keys. Will activate once validators commit.
+- Slow initial blocks (580s avg): Expected after genesis with `initial-base-target = 218`. Self-corrects over 100–200 blocks.
