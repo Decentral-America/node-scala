@@ -4,17 +4,17 @@
 
 ---
 
-## Current Testnet State (2026-06-27)
+## Current Testnet State (2026-06-27 — FULLY OPERATIONAL)
 
 | Item | Status |
 |------|--------|
-| Chain height | ~1400+, advancing ~30s/block |
+| Chain height | 1625+, advancing ~30s/block |
 | Main node (Newark 66.228.55.154) | ✅ Running, healthy, host network mode |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining blocks on canonical chain |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining blocks on canonical chain |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
-| blockchain-postgres-sync | ✅ Running, syncing from height 1 |
-| matcher | 🔄 Being fixed — account.dat being recreated from KeeWeb seed |
+| blockchain-postgres-sync | ✅ Running, healthy |
+| matcher | ✅ Running, healthy — public key `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
 | T2 HotStuff | ❌ Not activated — requires committed validators with BLS keys |
 
 ---
@@ -80,9 +80,22 @@ Both sides had each other in `known-peers` → simultaneous connections → dupl
 
 ### Matcher
 - **Data dir:** `/opt/dcc/data/matcher-testnet/` on VPS host → `/var/lib/decentralchain-dex/` in container
-- **account.dat:** Recreating from KeeWeb seed
-- **Credentials:** See KeeWeb section above
-- **Config:** `config/application.conf` in data dir with `address-scheme-character = "!"` and `type = encrypted-file`
+- **Config dir (CORRECT):** `/opt/dcc/config/matcher-testnet/` → `/var/lib/decentralchain-dex/config/` (READ-ONLY bind mount — shadows data volume's `config/` subdir)
+  - This is the mount that `dex.conf` reads via `include`. Write `local.conf` HERE, NOT in the data dir.
+- **Config:** `/opt/dcc/config/matcher-testnet/local.conf`
+  ```hocon
+  dcc.dex {
+    address-scheme-character = "!"
+    account-storage.type = in-mem
+  }
+  ```
+- **Account storage:** `in-mem` — no `account.dat` file needed. Seed comes from `MATCHER_ACCOUNT_SEED` env var in `/opt/dcc/secrets/testnet.env`
+- **Port:** 6886 (REST API, health check on `:1AE6` in `/proc/net/tcp`)
+- **Public key:** `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY`
+- **CRITICAL — Volume shadowing:** The compose mounts BOTH:
+  - `/opt/dcc/data/matcher-testnet → /var/lib/decentralchain-dex` (data)
+  - `/opt/dcc/config/matcher-testnet → /var/lib/decentralchain-dex/config:ro` (config, shadows data/config/)
+  - Writing `local.conf` to data dir config is silently ignored by the container.
 
 ---
 
@@ -121,12 +134,39 @@ END; $$;"'
 docker restart blockchain-postgres-sync-testnet
 ```
 
-### Fix matcher after account.dat deletion
+### Fix matcher (wrong config dir, or crashing with account.dat error)
 ```bash
-# Run with real seed from KeeWeb:
-gh workflow run matcher-create-account.yml
-# Seed: "tomorrow bleak cram rival inherit river genuine unknown guitar sister slot scale flip animal grit"
-# Password: "+cUVQtSQTU+KRzP+Q1m+b5fgtHUSiNsWb4xAZp/ArVI="
+# The compose mounts /opt/dcc/config/matcher-testnet → /var/lib/decentralchain-dex/config (read-only).
+# Write local.conf to the CONFIG dir (not the DATA dir):
+ssh deploy@66.228.55.154 'sudo tee /opt/dcc/config/matcher-testnet/local.conf > /dev/null <<EOF
+dcc.dex {
+  address-scheme-character = "!"
+  account-storage.type = in-mem
+}
+EOF'
+docker restart matcher-testnet
+
+# Verify via workflow:
+gh workflow run matcher-fix-app-conf.yml --repo Decentral-America/infra
+```
+
+### Fix BPS after node restart (start height exceeds chain height)
+```bash
+# BPS stores last synced height in postgres. After node restart, BPS may
+# try to subscribe from a height higher than the node currently reports.
+# Simply restart BPS (it will re-read the chain and catch up):
+docker start blockchain-postgres-sync-testnet
+# OR use the workflow:
+gh workflow run matcher-fix-app-conf.yml --repo Decentral-America/infra
+# (workflow now also handles BPS restart)
+
+# If BPS still fails after restart (wrong height from chain reset):
+ssh deploy@66.228.55.154 'sudo -u postgres psql -d bps_testnet -c "
+DO \$\$ DECLARE r record; BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='"'"'public'"'"'
+  LOOP EXECUTE '"'"'TRUNCATE '"'"'||r.tablename||'"'"' CASCADE'"'"'; END LOOP;
+END; \$\$;"'
+docker restart blockchain-postgres-sync-testnet
 ```
 
 ---
@@ -135,6 +175,7 @@ gh workflow run matcher-create-account.yml
 
 - ❌ **Do not disable miners** — non-mining nodes don't sync in DCC
 - ❌ **Do not use bridge mode for main node Docker container** — causes TCP connectivity failure from LKE
-- ❌ **Do not delete `/opt/dcc/data/matcher-testnet/`** — destroys account.dat (recreate from KeeWeb seed if deleted)
+- ❌ **Do not write matcher local.conf to `/opt/dcc/data/matcher-testnet/config/`** — shadowed by the config volume mount; container never sees it
+- ✅ **Write matcher local.conf to `/opt/dcc/config/matcher-testnet/local.conf`** — this is the real config location
 - ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit
 - ❌ **Do not check KEEWEB_BACKUP.md last** — check it FIRST for any credential issue
