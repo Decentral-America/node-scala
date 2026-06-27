@@ -15,7 +15,7 @@
 | val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
 | blockchain-postgres-sync | ✅ Running, healthy |
 | matcher | ✅ Running, healthy — public key `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
-| T2 HotStuff | ✅ All 3 generators committed for period 1801 — activates at height 1801 |
+| T2 HotStuff | ✅ CurGens: 3 active for period 1801-1900. hotStuffFinalizedHeight: pending peer reconnection |
 
 ---
 
@@ -177,6 +177,18 @@ docker restart blockchain-postgres-sync-testnet
 - ❌ **Do not use bridge mode for main node Docker container** — causes TCP connectivity failure from LKE
 - ❌ **Do not write matcher local.conf to `/opt/dcc/data/matcher-testnet/config/`** — shadowed by the config volume mount; container never sees it
 - ✅ **Write matcher local.conf to `/opt/dcc/config/matcher-testnet/local.conf`** — this is the real config location
+
+---
+
+## Bug 5: InvalidStateHash on mining after CommitToGeneration (fixed 2026-06-27, commit e6f9e76cc8)
+
+**Symptom:** `Error mining block by ADDRESS: InvalidStateHash(Some(...), Some(...))` in node logs immediately after CommitToGenerationTransaction microblocks are appended.
+
+**Root cause:** `BlockDiffer.fromBlockTraced` at `stateHeight < sponsorshipHeight` (< 2700) computed `feeFromPreviousBlock` by summing `maybePrevBlock.transactionData × 3/5`. The miner's `createInitialBlockSnapshot` used `blockchain.carryFee(Some(reference))`. These diverge when `rocksdb.carryFee = 0` but `rocksdb.lastBlock.transactionData` still has CommitToGen fees — this happens when a competitor-block commit path resets carryFee to 0 while the stored liquid block still has TXs. The resulting balance in `initSnapshot` differed by exactly `3/5 × (sum of CommitToGen fees)`.
+
+**Fix:** `node/src/main/scala/com/decentralchain/state/diffs/BlockDiffer.scala` — use `blockchain.carryFee(None)` in the pre-sponsorship `else if stateHeight > ngHeight` branch, matching `createInitialBlockSnapshot`'s source.
+
+**Diagnosis method:** Add WARN log in `computeInitialStateHash` and `packTransactionsForKeyBlock` printing `initBalances` → compare miner vs BlockDiffer balance at same height.
 
 ---
 
