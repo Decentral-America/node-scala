@@ -132,17 +132,23 @@ object BlockDiffer {
 
     val feeFromPreviousBlockE =
       if (stateHeight >= sponsorshipHeight) {
-        Right(Portfolio(balance = blockchain.carryFee(None)))
+        val carry = blockchain.carryFee(None)
+        log.warn(s"[StateHashDiag2] BlockDiffer.fromBlockTraced height=$heightWithNewBlock sponsorshipPath carryFee=$carry prevBlockTxs=N/A")
+        Right(Portfolio(balance = carry))
       } else if (stateHeight > ngHeight) maybePrevBlock.fold(Portfolio.empty.asRight[String]) { pb =>
         // it's important to combine tx fee fractions (instead of getting a fraction of the combined tx fee)
         // so that we end up with the same value as when computing per-transaction fee part
         // during microblock processing below
-        pb.transactionData
+        val result = pb.transactionData
           .map { t =>
             val pf = Portfolio.build(t.assetFee)
             pf.minus(pf.multiply(CurrentBlockFeePart))
           }
           .foldM(Portfolio.empty)(_.combine(_))
+        result.foreach { pf =>
+          log.warn(s"[StateHashDiag2] BlockDiffer.fromBlockTraced height=$heightWithNewBlock ngPath carryFee=${pf.balance} prevBlockTxCount=${pb.transactionData.size} carryFeeFromBlockchain=${blockchain.carryFee(None)} prevBlockRef=${pb.header.reference}")
+        }
+        result
       }
       else
         Right(Portfolio.empty)
@@ -354,7 +360,9 @@ object BlockDiffer {
       miner: Address
   ): Either[ValidationError, StateSnapshot] = {
     val blockchain           = blockchainUpdater.referencedBlockchain(reference)
-    val feeFromPreviousBlock = Portfolio.dcc(blockchain.carryFee(Some(reference)))
+    val carryRaw             = blockchain.carryFee(Some(reference))
+    log.warn(s"[StateHashDiag2] createInitialBlockSnapshot reference=$reference carryFee=$carryRaw height=${blockchain.height}")
+    val feeFromPreviousBlock = Portfolio.dcc(carryRaw)
 
     val daoAddress        = blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten
     val xtnBuybackAddress = blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
