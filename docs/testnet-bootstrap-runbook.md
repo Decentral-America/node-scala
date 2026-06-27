@@ -15,7 +15,7 @@
 | val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
 | blockchain-postgres-sync | ✅ Running, healthy |
 | matcher | ✅ Running, healthy — public key `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
-| T2 HotStuff | 🔄 CurGens: 3 committed (auto-renewed every 35min via cron). Awaiting QC formation — round-timeout increased to 5000ms, suspension-residence-time 300s |
+| T2 HotStuff | ✅ ACTIVE — first QC formed at height 2343. hotStuffFinalizedHeight advancing. |
 
 ---
 
@@ -179,6 +179,17 @@ docker restart blockchain-postgres-sync-testnet
 - ✅ **Write matcher local.conf to `/opt/dcc/config/matcher-testnet/local.conf`** — this is the real config location
 
 ---
+
+## Bug 6: HotStuff engine never activated (fixed 2026-06-27, commits a153d6f142 + fb0bfbe)
+
+**Symptoms:** `hotStuffFinalizedHeight: null` forever despite CurGens=3 and peer connections.
+
+**Root causes (2):**
+1. `hotstuff.enabled = true` was in `decentralchain-testnet.conf` (JAR classpath) but `dcc.conf` is the PRIMARY config loaded by the entrypoint. When `dcc.conf` is primary, classpath defaults are LOW priority and the HotStuff block default `enabled=false` wins. **Fix:** Add `hotstuff { enabled = true; round-timeout-ms = 5000 }` to `/opt/dcc/config/node-testnet/dcc.conf` on the VPS (deployed via `deploy-node-config.yml` workflow).
+
+2. `HotStuffEngine.BlockApplied` was only fired in `BlockAppender.apply` (10-arg P2P path), NOT in the miner's `appendTask` (6-arg path). Since the main node mines ~50% of blocks, HotStuff was IDLE for those blocks. **Fix:** Add `Miner.setHotStuffEngine()` to MinerImpl and call it from Application.scala after engine init.
+
+**Key metrics at activation:** validators=2 (main 40M + gen-0 20M = 60M > 53.3M = 2/3 of 80M total). First QC at height 2343. Round timeout: 5000ms.
 
 ## Bug 5: InvalidStateHash on mining after CommitToGeneration (fixed 2026-06-27, commit e6f9e76cc8)
 
