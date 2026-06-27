@@ -1,213 +1,140 @@
 # Testnet Bootstrap Runbook
 
-> **Single Source of Truth.** Last updated: 2026-06-26. Supersedes all prior STATUS/HANDOFF/TODO docs.
+> **Single Source of Truth.** Last updated: 2026-06-27. Supersedes all prior STATUS/HANDOFF/TODO docs.
 
 ---
 
-## Current Testnet State (2026-06-26)
+## Current Testnet State (2026-06-27)
 
 | Item | Status |
 |------|--------|
-| Chain height | ~613+, advancing ~30s/block via fallback rule |
-| Main node (Newark 66.228.55.154) | ✅ Running, producing blocks |
-| gen-0 (LKE 172.105.64.89:6863) | ⚠️ Cycling — RC#2 fix deployed via config (see below) |
-| gen-1 (LKE 172.105.64.89:6864) | ❌ Blacklisted on main node — fix: `disable-blacklisting-and-restart` + resync |
-| State hash fix (RC#3) | ✅ Deployed (commit 44b93a0) |
-| initial-base-target immutable | ✅ Documented — cannot change without new genesis |
-| Auto commit-to-generation | ✅ Scheduled cron every 35 min (added 2026-06-26) |
-| Peer reconnection watchdog | ✅ `peer-watchdog.yml` auto-reconnects every 5 min (added 2026-06-26) |
+| Chain height | ~1400+, advancing ~30s/block |
+| Main node (Newark 66.228.55.154) | ✅ Running, healthy, host network mode |
+| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining blocks on canonical chain |
+| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining blocks on canonical chain |
+| val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
+| blockchain-postgres-sync | ✅ Running, syncing from height 1 |
+| matcher | 🔄 Being fixed — account.dat being recreated from KeeWeb seed |
 | T2 HotStuff | ❌ Not activated — requires committed validators with BLS keys |
-| RC#2 blacklisting fix | ✅ Config deployed — requires `disable-blacklisting-and-restart` + resync to take effect |
 
 ---
 
-## Root Causes Identified
+## All Credentials — KeeWeb Backup Location
 
-### RC#1 — baseTarget inflation (RESOLVED)
+**File:** `/Users/jourlez/Documents/Code/Blockchain/Ecosystem/KEEWEB_BACKUP.md`
 
-**Cause:** With 3 validators mining from genesis, blocks come every ~10s (3× target rate). `baseTarget` triples per block. After 100 blocks, baseTarget saturates → each block takes 10+ minutes.  
-**Fix applied:** `initial-base-target = 1739` (= 218 × 8) in genesis config prevents overshoot. Current genesis is locked at 218 (immutable — see RC#9).  
-**Current state:** Blocks self-correct to ~30s equilibrium via fallback generator rule over 100–200 blocks.
-
----
-
-### RC#2 — Peer disconnection cycling (ROOT CAUSE FIXED 2026-06-26)
-
-**Precise cause (traced through source code):**
-
-1. Gen-0 mines blocks on its own fork (disconnected from main node)
-2. Gen-0 reconnects and attempts a chain switch (its forked chain has higher score)
-3. `ExtensionAppender.scala:138` fails block validation → calls `peerDatabase.blacklistAndClose(ch, reason)`
-4. Gen-0's IP is blacklisted on main node for `black-list-residence-time = 1h` (default)
-5. `NetworkServer.scala:134` — when gen-0's outgoing channel closes, gen-0 suspends main node for `suspension-residence-time = 1m`
-6. After 60s, gen-0 retries connecting to main node
-7. `InboundConnectionFilter.scala:35` — main node rejects inbound from gen-0 (still blacklisted for 1h)
-8. Gen-0 gets suspended again → **60s cycling**
-
-**Fix (deployed 2026-06-26, no code rebuild required):**
-
-All node configs (`dcc.conf` + `dcc-nodes.yaml`) now include:
-```hocon
-network {
-  enable-blacklisting = no        # removes 1h IP bans after validation failure
-  suspension-residence-time = 10s # faster channel-close recovery
-}
-```
-Main node also has:
-```hocon
-synchronization {
-  max-rollback = 2000
-  invalid-blocks-storage {
-    timeout = 30s   # invalid block IDs expire in 30s, not 1h
-  }
-}
-```
-
-**To activate immediately (one-time ops):**
-1. Run `mainnode-ops → disable-blacklisting-and-restart` (applies config to VPS, clears in-memory blacklist via restart)
-2. Run `resync-gen-nodes WIPE` (wipes gen-0/gen-1 fork chains → forces clean sync from main node)
-
-**Why wipe gen nodes?** Gen-0 has been mining a fork with higher cumulative score. Wiping forces it to sync from the main node's canonical 613-block chain instead. After sync, all 3 nodes mine on the same chain.
+Key entries:
+- **MATCHER_SEED mnemonic:** `tomorrow bleak cram rival inherit river genuine unknown guitar sister slot scale flip animal grit`
+- **MATCHER_ACCOUNT_PASSWORD:** `+cUVQtSQTU+KRzP+Q1m+b5fgtHUSiNsWb4xAZp/ArVI=`
+- **MATCHER_ADDRESS:** `31T5QNR7coVipCQuvcXyz4yjdqq3MR5K974`
+- **POSTGRES_PASSWORD:** `NyaDHU8cuEesdXLnhGNZpMrgunevidu6gDR0QFQfoag=`
+- **Main node wallet seed (Base58):** `PCK4Fstm8w9CcR1YmQdAPjUCBLUwyETzRci2Ypo93xXGgqVb2HJUh9Gq4R16`
+- **gen-0 seed (mnemonic):** `pizza walk tourist speed dress wagon link property answer sell drum random loop high paper`
+- **gen-1 seed (mnemonic):** `love earth taxi into alone reopen common blade curtain rookie result depart left ensure state`
 
 ---
 
-### RC#3 — CommitToGeneration causes state hash divergence (FIXED)
+## 4 Code Bugs Fixed (2026-06-27)
 
-**Cause:** TX lands in different blocks on competing chains → cumulative state hash mismatch → Feature 21 blocks chain switch.  
-**Fix applied:** Removed `nextCommittedGenerators` from per-TX state hash in `TxStateSnapshotHashBuilder.scala` (commit `d352f5fb`, also `44b93a0` / `Caches.scala`).  
-**Status:** Fixed. Chain advances past all period boundaries via fallback rule.
+### Bug 1: RC#2 — Blacklist cycle (config fix)
+`enable-blacklisting = no` in all node configs. No rebuild needed.
 
----
+### Bug 2: PeerKey race condition (config fix)
+Both sides had each other in `known-peers` → simultaneous connections → duplicate detection → `allChannels` lost gen-0's channel → score broadcasts never reached gen-0 → 5-min idle timeout.
+**Fix:** `known-peers = []` on main node. Gen nodes initiate only.
 
-### RC#4 — Fallback rule vs explicit CommitToGeneration
+### Bug 3: MessageCodec.isNewMsgsSupported (code fix — commit d0b24c55)
+`isNewMsgsSupported` returned `false` for DCC version `(0,0,0)` → `GetSignatures` silently dropped → 5-min sync timeout → channel closed.
+**Fix:** `v1 == 0` treated as new-msgs-supported.
 
-When NOBODY commits for a period, the fallback rule allows all genesis-funded accounts to mine. T0 DeterministicFinality works with fallback. T2 HotStuff requires explicit commits with BLS keys.
-
-**Implication:** Chain advances without CommitToGeneration TXs (fallback). Now automated: cron commits every 35 min to keep generators committed for T2 activation readiness.
-
----
-
-### RC#5 — DCC requires miner enabled to sync blocks
-
-With `miner.enable = no`, the DCC node does NOT actively request blocks from peers even when connected. All nodes must have `miner.enable = yes`.
+### Bug 4: BlockIdSeqSpec.maxLength too small (code fix — commit cc88d9417b)
+`maxLength = 13004` sized for 200×64-byte signatures. With 32-byte hash IDs, even moderate chains exceeded limit → `"BlockIds message length N is invalid"` → instant `blacklistAndClose` after every handshake.
+**Fix:** `maxLength = 4 + 3000 × 33 = 99,004`
 
 ---
 
-### RC#6 — Convergence check must exclude non-syncing nodes
+## Infrastructure State
 
-The commit-to-generation convergence check only requires main node + gen-0 agreement. Gen-1 (miner disabled or syncing) is excluded from min_height calculation.
+### Main Node (Newark 66.228.55.154)
+- **Container:** `node-scala-testnet` via docker-compose
+- **Network mode:** `host` (NOT bridge — bridge mode caused TCP connectivity failure from LKE)
+- **Image:** `ghcr.io/decentral-america/node-scala:node-scala-testnet-latest` → `cc88d9417b`
+- **Config:** `/opt/dcc/config/node-testnet/dcc.conf`
+  - `known-peers = []` — gen nodes initiate connections only
+  - `enable-blacklisting = no`
+  - `suspension-residence-time = 10s`
+- **Chain data:** fresh from genesis after resets today
 
----
+### Gen Nodes (LKE Frankfurt 172.105.64.89)
+- **Image:** `ghcr.io/decentral-america/node-scala:testnet-latest` → same `cc88d9417b`
+- **Config:** `dcc-nodes.yaml` via Flux GitOps
+  - `known-peers = ["66.228.55.154:6868"]` — only main node
+  - `enable-blacklisting = no`
+  - `suspension-residence-time = 10s`
+- **Chain data:** synced from main node
 
-### RC#7 — Block time normalization after multi-validator genesis
+### blockchain-postgres-sync
+- **Database:** `bps_testnet` (PostgreSQL local on VPS)
+- **Status:** Running healthy after tables were truncated via `sudo -u postgres psql`
+- **Starting height:** 1 (fresh after chain reset)
 
-With 3 validators at 80% combined stake, blocks come every ~37.5s. Starting at `initial-base-target = 218`, baseTarget increases then self-corrects over ~100-200 blocks.  
-**Recovery:** Self-corrects once validators reconnect and mine steadily.  
-**Prevention:** Cannot change `initial-base-target` (see RC#9).
-
----
-
-### RC#9 — `initial-base-target` is immutable (baked into genesis signature)
-
-Changing `initial-base-target` invalidates the genesis block signature → node crashes: "Passed genesis signature is not valid."  
-**Workaround:** Accept the initial ~580s period after multi-validator genesis. Block time self-corrects to equilibrium.
-
----
-
-### RC#10 — Gen node wipe fails via kubectl exec if pods not Running
-
-Wipe step uses `kubectl exec` which fails if pods are Pending/CrashLoopBackOff.  
-**Workaround:** Use `cluster-diagnostics roll=true` for config-only changes. Wait for pods Running before `resync-gen-nodes WIPE`.
-
----
-
-## Correct Bootstrap / Recovery Procedure
-
-### Prerequisites
-- All nodes running image `d352f5fb` or later (state hash fix)
-- `miner.enable = yes` on all gen nodes
-- `enable-blacklisting = no` in all node network configs (deployed 2026-06-26)
-- `initial-base-target = 218` (immutable — cannot change)
-- `generation-period-length = 100`
-- `max-rollback = 2000`
-
-### Full Reset Procedure (from height 0)
-
-1. **Apply genesis config to main node:** `mainnode-ops → fix-genesis-config-and-restart`
-2. **Apply RC#2 fix to main node:** `mainnode-ops → disable-blacklisting-and-restart`
-3. **Wipe all nodes simultaneously:** `mainnode-ops → wipe-chain-and-restart` + `resync-gen-nodes WIPE`
-4. **Wait for all nodes online (height > 5):** Check `curl https://testnet-node.decentralchain.io/peers/connected`
-5. **If peers = 0 after 3 min:** `mainnode-ops → wipe-peers-and-restart` (now automated by peer-watchdog.yml)
-6. **Commit-to-generation:** Now automated via schedule trigger every 35 min
-7. **Monitor block time:** Should stabilize at ~37s/block via peer-watchdog.yml
-
-### Recovery from Gen Node Fork (current situation 2026-06-26)
-
-1. `mainnode-ops → disable-blacklisting-and-restart` — clears in-memory blacklist, applies RC#2 fix
-2. `resync-gen-nodes WIPE` — wipes gen-0/gen-1 fork data, pods restart and sync from main node
-3. Wait 5 min, verify heights agree and block production resumes from all 3 generators
-4. No manual commit-to-generation needed — cron handles it
+### Matcher
+- **Data dir:** `/opt/dcc/data/matcher-testnet/` on VPS host → `/var/lib/decentralchain-dex/` in container
+- **account.dat:** Recreating from KeeWeb seed
+- **Credentials:** See KeeWeb section above
+- **Config:** `config/application.conf` in data dir with `address-scheme-character = "!"` and `type = encrypted-file`
 
 ---
 
-## Automation (all active as of 2026-06-26)
+## Automation
 
 | Automation | Schedule | Workflow | Purpose |
 |-----------|----------|----------|---------|
-| Commit-to-generation | Every 35 min | `commit-to-generation.yml` | Keep generators committed before 50-min period boundaries |
-| Peer reconnection watchdog | Every 5 min | `peer-watchdog.yml` | Auto-reconnect or restart if peer count drops to 0 |
+| Commit-to-generation | Every 35 min | `commit-to-generation.yml` | Keep generators committed |
+| Peer reconnection watchdog | Every 5 min | `peer-watchdog.yml` | Auto-reconnect on 0 peers |
 
 ---
 
-## Config Reference
+## Operations Reference
 
-### Main Node (`/opt/dcc/config/node-testnet/dcc.conf` on 66.228.55.154)
+### Re-deploy main node after chain reset
+```bash
+# 1. Apply config fixes
+gh workflow run mainnode-ops.yml --field operation=clear-known-peers-and-restart
 
-Key non-default settings:
-```hocon
-network {
-  enable-blacklisting = no         # RC#2 fix
-  suspension-residence-time = 10s  # RC#2 fix
-}
-synchronization {
-  max-rollback = 2000
-  invalid-blocks-storage {
-    timeout = 30s                  # RC#2 fix
-  }
-}
-miner {
-  enable = yes
-  quorum = 0
-}
+# 2. Force pull new image + wipe chain
+gh workflow run restart-host-network.yml
+# (OR force-recreate-node.yml for bridge→host switch)
+
+# 3. Resync gen nodes
+gh workflow run resync-gen-nodes.yml --field confirm=WIPE
 ```
 
-### Gen Nodes (`dcc-nodes.yaml` → Flux → LKE)
+### Fix blockchain-postgres-sync after chain reset
+```bash
+# BPS stores last height in postgres. After reset, truncate tables:
+ssh deploy@66.228.55.154 'sudo -u postgres psql -d bps_testnet -c "
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='"'"'public'"'"'
+  LOOP EXECUTE '"'"'TRUNCATE '"'"'||r.tablename||'"'"' CASCADE'"'"'; END LOOP;
+END; $$;"'
+docker restart blockchain-postgres-sync-testnet
+```
 
-Same `enable-blacklisting = no` + `suspension-residence-time = 10s` applied to gen-0-config, gen-1-config, val-0-config.
+### Fix matcher after account.dat deletion
+```bash
+# Run with real seed from KeeWeb:
+gh workflow run matcher-create-account.yml
+# Seed: "tomorrow bleak cram rival inherit river genuine unknown guitar sister slot scale flip animal grit"
+# Password: "+cUVQtSQTU+KRzP+Q1m+b5fgtHUSiNsWb4xAZp/ArVI="
+```
 
 ---
 
 ## What NOT to Do
 
 - ❌ **Do not disable miners** — non-mining nodes don't sync in DCC
-- ❌ **Do not submit CommitToGeneration TXs before convergence** — wait for shared ancestor
-- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit (1200 calls/hr). Use GraphQL polling + artifact download
-- ❌ **Do not set `initial-base-target = 218` with 3 validators** — baseTarget explodes in ~130 blocks
-- ❌ **Do not re-enable blacklisting** without understanding why a peer's blocks failed validation
-
----
-
-## T2 HotStuff Activation Procedure (TODO — requires explicit commits)
-
-1. Get BLS public key from each gen node: `kubectl exec dcc-gen-0-0 -- wget -qO- http://localhost:6869/node/blsPublicKey`
-2. CommitToGeneration TXs with BLS keys (handled by `commit-to-generation.yml` when validators sign)
-3. T2 activates automatically once `hotStuffSettings.enabled = true` AND validators in committed set
-4. Prerequisite: gen-0 and gen-1 must be stably peered and on the same chain as main node
-
----
-
-## Known Non-Issues
-
-- `31HrVNJz...3ab8EE` with 0 DCC in block production stats: Genesis block signer. Always present with 1 block and 0 balance.
-- T2 HotStuff shows `None`: Requires explicit CommitToGeneration TXs with BLS keys. Will activate once validators commit.
-- Slow initial blocks (580s avg): Expected after genesis with `initial-base-target = 218`. Self-corrects over 100–200 blocks.
+- ❌ **Do not use bridge mode for main node Docker container** — causes TCP connectivity failure from LKE
+- ❌ **Do not delete `/opt/dcc/data/matcher-testnet/`** — destroys account.dat (recreate from KeeWeb seed if deleted)
+- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit
+- ❌ **Do not check KEEWEB_BACKUP.md last** — check it FIRST for any credential issue
