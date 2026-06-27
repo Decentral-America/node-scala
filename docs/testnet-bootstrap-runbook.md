@@ -15,7 +15,7 @@
 | val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
 | blockchain-postgres-sync | ✅ Running, healthy |
 | matcher | ✅ Running, healthy — public key `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
-| T2 HotStuff | ✅ CurGens: 3 active for period 1801-1900. hotStuffFinalizedHeight: pending peer reconnection |
+| T2 HotStuff | 🔄 CurGens: 3 committed (auto-renewed every 35min via cron). Awaiting QC formation — round-timeout increased to 5000ms, suspension-residence-time 300s |
 
 ---
 
