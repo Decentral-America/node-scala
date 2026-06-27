@@ -146,7 +146,7 @@ object BlockDiffer {
           }
           .foldM(Portfolio.empty)(_.combine(_))
         result.foreach { pf =>
-          log.warn(s"[StateHashDiag2] BlockDiffer.fromBlockTraced height=$heightWithNewBlock ngPath carryFee=${pf.balance} prevBlockTxCount=${pb.transactionData.size} carryFeeFromBlockchain=${blockchain.carryFee(None)} prevBlockRef=${pb.header.reference}")
+          log.warn(s"[StateHashDiag2] BlockDiffer.fromBlockTraced height=$heightWithNewBlock ngPath carryFee=${pf.balance} prevBlockTxCount=${pb.transactionData.size} prevBlockId=${pb.id()} carryFeeFromBlockchain=${blockchain.carryFee(None)} prevBlockRef=${pb.header.reference}")
         }
         result
       }
