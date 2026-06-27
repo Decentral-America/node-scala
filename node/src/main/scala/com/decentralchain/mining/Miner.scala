@@ -23,7 +23,10 @@ import com.decentralchain.utils.{ScorexLogging, Time}
 import com.decentralchain.utx.UtxPool
 import com.decentralchain.utx.UtxPool.PackStrategy
 import com.decentralchain.wallet.Wallet
+import com.decentralchain.consensus.hotstuff.HotStuffEngine
+import com.decentralchain.state.Height
 import io.netty.channel.group.ChannelGroup
+import org.apache.pekko.actor.ActorRef
 import kamon.Kamon
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -67,6 +70,10 @@ class MinerImpl(
 ) extends Miner
     with MinerDebugInfo
     with ScorexLogging {
+
+  // Set post-construction by Application after HotStuff engine is initialized.
+  // Locally-mined blocks notify the engine the same way as P2P-received blocks.
+  @volatile var hotStuffEngine: Option[ActorRef] = None
 
   private val minerSettings              = settings.minerSettings
   private val minMicroBlockDurationMills = minerSettings.minMicroBlockAge.toMillis
@@ -336,13 +343,22 @@ class MinerImpl(
             case Left(err) =>
               Task.raiseError(new RuntimeException(err.toString))
 
-            case Right(Applied(score = score)) =>
+            case Right(Applied(generatorSet = gs, score = score)) =>
               log.debug(s"Forged and applied $block with cumulative score $score")
               BlockStats.mined(block, blockchainUpdater.height)
               if (blockchainUpdater.isLastBlockId(block.id())) {
                 allChannels.broadcast(BlockForged(block))
                 if (ngEnabled && !totalConstraint.isFull) startMicroBlockMining(account, block, totalConstraint)
               }
+              // Notify HotStuff engine for locally-mined blocks (same as P2P path in BlockAppender).
+              hotStuffEngine.foreach(
+                _ ! HotStuffEngine.BlockApplied(
+                  blockId       = block.id(),
+                  height        = Height(blockchainUpdater.height),
+                  forgerAddress = block.header.generator.toAddress,
+                  validators    = gs
+                )
+              )
               Task.unit
 
             case Right(Ignored) =>

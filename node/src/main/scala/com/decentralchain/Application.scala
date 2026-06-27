@@ -212,6 +212,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         }
       } else None
 
+    // Wire HotStuff engine to miner so locally-mined blocks also trigger T2 rounds.
+    miner.hotStuffEngine = hotStuffEngine
+
     val processBlock =
       BlockAppender(
         blockchainUpdater,
