@@ -123,7 +123,10 @@ trait BlockIdSeqSpec[A <: AnyRef] extends MessageSpec[A] {
 
   def unwrap(v: A): Seq[Array[Byte]]
 
-  override val maxLength: Int = Ints.BYTES + (200 * SignatureLength) + 200
+  // Support both old 64-byte signature IDs (max 200) and new 32-byte hash IDs
+  // (up to maxRollback=2000). Each ID is prefixed by a 1-byte length field.
+  // 2000 × (32 + 1) + 4-byte count = 66,004. Use 3000 for headroom.
+  override val maxLength: Int = Ints.BYTES + 3000 * (crypto.DigestLength + 1)
 
   override def deserializeData(bytes: Array[Byte]): Try[A] = Try {
     val lengthBytes = bytes.take(Ints.BYTES)
