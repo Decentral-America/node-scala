@@ -155,7 +155,7 @@ class MinerImpl(
           if (initSnapshot == StateSnapshot.empty) prevHash
           else {
             val result = TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevHash)
-            log.debug(
+            log.warn(
               s"[StateHashDiag] Miner.packTransactionsForKeyBlock: reference=$reference prevHash=$prevHash " +
               s"initBalances=${initSnapshot.balances.map{case((a,_),b)=>s"$a->$b"}.mkString(",")} result=$result"
             )

@@ -383,7 +383,7 @@ object BlockDiffer {
       prevStateHash
     else {
       val result = TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevStateHash)
-      log.debug(
+      log.warn(
         s"[StateHashDiag] BlockDiffer.computeInitialStateHash: height=${blockchain.height} prevStateHash=$prevStateHash " +
         s"initBalances=${initSnapshot.balances.map{case((a,_),b)=>s"$a->$b"}.mkString(",")} result=$result"
       )
