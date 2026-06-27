@@ -380,8 +380,14 @@ object BlockDiffer {
   def computeInitialStateHash(blockchain: Blockchain, initSnapshot: StateSnapshot, prevStateHash: ByteStr): ByteStr = {
     if (initSnapshot == StateSnapshot.empty || blockchain.height == 1)
       prevStateHash
-    else
-      TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevStateHash)
+    else {
+      val result = TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevStateHash)
+      log.debug(
+        s"[StateHashDiag] BlockDiffer.computeInitialStateHash: height=${blockchain.height} prevStateHash=$prevStateHash " +
+        s"initBalances=${initSnapshot.balances.map{case((a,_),b)=>s"$a->$b"}.mkString(",")} result=$result"
+      )
+      result
+    }
   }
 
   private def apply(
