@@ -15,7 +15,7 @@
 | val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
 | blockchain-postgres-sync | ✅ Running, healthy |
 | matcher | ✅ Running, healthy — public key `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
-| T2 HotStuff | ❌ Not activated — requires committed validators with BLS keys |
+| T2 HotStuff | ✅ All 3 generators committed for period 1801 — activates at height 1801 |
 
 ---
 
@@ -177,5 +177,39 @@ docker restart blockchain-postgres-sync-testnet
 - ❌ **Do not use bridge mode for main node Docker container** — causes TCP connectivity failure from LKE
 - ❌ **Do not write matcher local.conf to `/opt/dcc/data/matcher-testnet/config/`** — shadowed by the config volume mount; container never sees it
 - ✅ **Write matcher local.conf to `/opt/dcc/config/matcher-testnet/local.conf`** — this is the real config location
+
+---
+
+## T2 HotStuff Activation
+
+### How it works
+- Transaction type **19** (`CommitToGenerationTransaction`) — each generator commits its BLS key
+- The node's `/transactions/sign` endpoint auto-derives BLS from Ed25519 private key, auto-computes Proof of Possession
+- Committed generators become active in the NEXT generation period (every 100 blocks)
+- Once active, HotStuff runs 3-round protocol (Prepare → PreCommit → Commit QC) per block
+- `GET /blockchain/finality` → `hotStuffFinalizedHeight` advances as QCs form
+
+### REST API ports per node
+| Node | REST API port | API key from KEEWEB |
+|------|--------------|---------------------|
+| main node (Newark) | 6869 | MAIN_NODE_REST_API_KEY |
+| gen-0 (LKE) | 6869 | GEN_0_NODE_REST_API_KEY |
+| gen-1 (LKE) | **6870** | GEN_1_NODE_REST_API_KEY |
+| val-0 (LKE) | 6869 | VAL_0_NODE_REST_API_KEY |
+
+### Commit workflow (run once per 100-block period)
+```bash
+gh workflow run commit-generators-hotstuff.yml --repo Decentral-America/infra
+```
+- Signs via each node's own `/transactions/sign` (BLS auto-derived)
+- Gen-0 accessed via `kubectl port-forward dcc-gen-0-0 -n dcc 16869:6869`
+- Gen-1 accessed via `kubectl port-forward dcc-gen-1-0 -n dcc 16870:6870` (port 6870!)
+- "already committed" error = normal if already committed this period
+
+### Verify T2 is active
+```bash
+curl http://localhost:6869/blockchain/finality
+# hotStuffFinalizedHeight should be non-null once generators are in currentGenerators
+```
 - ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit
 - ❌ **Do not check KEEWEB_BACKUP.md last** — check it FIRST for any credential issue
