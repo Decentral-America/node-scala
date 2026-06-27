@@ -68,7 +68,16 @@ class MessageCodec(peerDatabase: PeerDatabase) extends MessageToMessageCodec[Raw
   }
 
   private def isNewMsgsSupported(ctx: ChannelHandlerContext): Boolean = {
-    val (v1, v2, _) = ctx.channel().attr(HandshakeHandler.NodeVersionAttributeKey).get()
-    v1 > 1 || (v1 == 1 && v2 >= 2) // >= 1.2.0
+    // DCC nodes report version (0,0,0) for untagged builds and always use
+    // hash-based (32-byte) block IDs — the new message format. Treat v0 as
+    // new-msgs-supported so GetSignatures encodes via GetBlockIdsSpec rather
+    // than falling through to the 64-byte-signature-only GetSignaturesSpec,
+    // which returns isSupported=false for 32-byte IDs and drops the message.
+    val ver = ctx.channel().attr(HandshakeHandler.NodeVersionAttributeKey).get()
+    if (ver == null) true
+    else {
+      val (v1, v2, _) = ver
+      v1 == 0 || v1 > 1 || (v1 == 1 && v2 >= 2) // v0 (DCC) or >= 1.2.0
+    }
   }
 }
