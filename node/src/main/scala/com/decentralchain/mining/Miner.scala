@@ -38,6 +38,7 @@ import scala.concurrent.duration.*
 
 trait Miner {
   def scheduleMining(baseBlockchain: Option[Blockchain] = None, cancelMicroBlockMining: Boolean = true): Unit
+  def setHotStuffEngine(engine: Option[ActorRef]): Unit = () // no-op by default; MinerImpl overrides
 }
 
 trait MinerDebugInfo {
@@ -73,7 +74,11 @@ class MinerImpl(
 
   // Set post-construction by Application after HotStuff engine is initialized.
   // Locally-mined blocks notify the engine the same way as P2P-received blocks.
-  @volatile var hotStuffEngine: Option[ActorRef] = None
+  @volatile private var hotStuffEngine: Option[ActorRef] = None
+
+  override def setHotStuffEngine(engine: Option[ActorRef]): Unit = {
+    hotStuffEngine = engine
+  }
 
   private val minerSettings              = settings.minerSettings
   private val minMicroBlockDurationMills = minerSettings.minMicroBlockAge.toMillis
