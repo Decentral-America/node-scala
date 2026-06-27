@@ -33,7 +33,8 @@ import com.decentralchain.transaction.{
 
 import scala.collection.immutable.VectorMap
 
-object BlockDiffer extends com.typesafe.scalalogging.StrictLogging {
+object BlockDiffer {
+  private val log = org.slf4j.LoggerFactory.getLogger(getClass)
   final case class Result(
       snapshot: StateSnapshot,
       carry: Long,
