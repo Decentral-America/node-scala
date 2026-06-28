@@ -237,6 +237,8 @@ class MinerImpl(
             Some(blockchain.lastStateHash(Some(reference)))
           else None
         (unconfirmed, totalConstraint, stateHash) = packTransactionsForKeyBlock(address, reference, prevStateHash)
+        // Step B: include committedGeneratorsHash at period boundaries
+        committedGenHash = BlockDiffer.computeCommittedGeneratorsHash(blockchain, newBlockHeight)
         block <- Block
           .buildAndSign(
             version,
@@ -250,7 +252,8 @@ class MinerImpl(
             blockRewardVote(version),
             if (blockchain.supportsLightNodeBlockFields(newBlockHeight.toInt)) stateHash else None,
             challengedHeader = None,
-            finalizationVoting = None // Haven't voted in a key block
+            finalizationVoting = None, // Haven't voted in a key block
+            committedGeneratorsHash = committedGenHash
           )
           .leftMap(_.err)
       } yield ForgeAttemptResult.Success(block, totalConstraint)

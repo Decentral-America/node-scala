@@ -31,6 +31,10 @@ import com.decentralchain.transaction.{
   Transaction
 }
 
+import com.decentralchain.crypto
+import com.decentralchain.state.GenerationPeriod
+import com.decentralchain.crypto.bls.BlsPublicKey
+
 import scala.collection.immutable.VectorMap
 
 object BlockDiffer {
@@ -221,6 +225,19 @@ object BlockDiffer {
           )
       }
       _ <- checkStateHash(blockchainWithNewBlock, block.header.stateHash, r.computedStateHash)
+      // Step C: Validate committedGeneratorsHash at period boundary blocks.
+      _ <- {
+        val newHeight = Height(blockchainWithNewBlock.height)
+        val expected  = computeCommittedGeneratorsHash(blockchainWithNewBlock, newHeight)
+        val actual    = block.header.committedGeneratorsHash
+        (expected, actual) match {
+          case (Some(exp), Some(act)) if exp != act =>
+            TracedResult(Either.left(GenericError(s"Invalid committedGeneratorsHash at h=$newHeight: expected $exp got $act")))
+          case (Some(_), None) =>
+            TracedResult(Either.left(GenericError(s"Missing committedGeneratorsHash at period boundary h=$newHeight")))
+          case _ => TracedResult(Either.right(()))
+        }
+      }
     } yield r
   }
 
@@ -372,6 +389,32 @@ object BlockDiffer {
       penaltiesPf   <- calculatePenalties(blockchain, reference).leftMap(GenericError(_))
       withPenalties <- withRewards.addBalances(penaltiesPf, blockchain).leftMap(GenericError(_))
     } yield withPenalties
+  }
+
+  /** Step B: Compute the committed generators hash at period boundary blocks.
+    *
+    * Blake2b-256 of the sorted (address.bytes ++ blsPublicKey.arr) pairs for the next generation period.
+    * Returns None for non-boundary blocks (height % periodLength != 0).
+    */
+  def computeCommittedGeneratorsHash(blockchain: Blockchain, height: Height): Option[ByteStr] = {
+    val periodLength = blockchain.settings.functionalitySettings.generationPeriodLength
+    if (height.toInt % periodLength != 0) None
+    else {
+      for {
+        activation   <- blockchain.featureActivationHeight(BlockchainFeatures.DeterministicFinality)
+        currentPeriod <- GenerationPeriod.from(height, activation, periodLength)
+        nextPeriod    = currentPeriod.next
+        validators    = blockchain.committedGenerators(nextPeriod)
+        if validators.nonEmpty
+      } yield {
+        val sortedBytes = validators
+          .map { case (address, blsPk) => address.bytes ++ blsPk.arr }
+          .sortBy(identity)(ByteStr.byteArrayOrdering)
+          .flatten
+          .toArray
+        ByteStr(crypto.fastHash(sortedBytes))
+      }
+    }
   }
 
   def computeInitialStateHash(blockchain: Blockchain, initSnapshot: StateSnapshot, prevStateHash: ByteStr): ByteStr = {
