@@ -46,32 +46,32 @@ object PBBlocks {
     VanillaBlock(vanilla(block.getHeader), block.signature.toByteStr, block.transactions.map(PBTransactions.vanilla(_, unsafe).explicitGet()))
   }
 
-  def protobuf(header: BlockHeader): PBHeader = PBBlock.Header.of(
-    AddressScheme.current.chainId,
-    header.reference.toByteString,
-    header.baseTarget,
-    header.generationSignature.toByteString,
-    header.featureVotes.map(_.toInt),
-    header.timestamp,
-    header.version,
-    ByteString.copyFrom(header.generator.arr),
-    header.rewardVote,
-    header.transactionsRoot.toByteString,
-    header.stateHash.getOrElse(ByteStr.empty).toByteString,
-    header.challengedHeader.map { ch =>
-      PBBlock.Header.ChallengedHeader.of(
-        ch.baseTarget,
-        ch.generationSignature.toByteString,
-        ch.featureVotes.map(_.toInt),
-        ch.timestamp,
-        ch.generator.toByteString,
-        ch.rewardVote,
-        ch.stateHash.getOrElse(ByteStr.empty).toByteString,
-        ch.headerSignature.toByteString,
-        ch.finalizationVoting.map(PBFinalizationVotings.protobuf)
+  def protobuf(header: BlockHeader): PBHeader = PBBlock.Header.defaultInstance.copy(
+    chainId             = AddressScheme.current.chainId,
+    reference           = header.reference.toByteString,
+    baseTarget          = header.baseTarget,
+    generationSignature = header.generationSignature.toByteString,
+    featureVotes        = header.featureVotes.map(_.toInt),
+    timestamp           = header.timestamp,
+    version             = header.version,
+    generator           = ByteString.copyFrom(header.generator.arr),
+    rewardVote          = header.rewardVote,
+    transactionsRoot    = header.transactionsRoot.toByteString,
+    stateHash           = header.stateHash.getOrElse(ByteStr.empty).toByteString,
+    challengedHeader    = header.challengedHeader.map { ch =>
+      PBBlock.Header.ChallengedHeader.defaultInstance.copy(
+        baseTarget          = ch.baseTarget,
+        generationSignature = ch.generationSignature.toByteString,
+        featureVotes        = ch.featureVotes.map(_.toInt),
+        timestamp           = ch.timestamp,
+        generator           = ch.generator.toByteString,
+        rewardVote          = ch.rewardVote,
+        stateHash           = ch.stateHash.getOrElse(ByteStr.empty).toByteString,
+        headerSignature     = ch.headerSignature.toByteString,
+        finalizationVoting  = ch.finalizationVoting.map(PBFinalizationVotings.protobuf)
       )
     },
-    header.finalizationVoting.map(PBFinalizationVotings.protobuf)
+    finalizationVoting  = header.finalizationVoting.map(PBFinalizationVotings.protobuf)
   )
 
   def protobuf(block: VanillaBlock): PBBlock = {
