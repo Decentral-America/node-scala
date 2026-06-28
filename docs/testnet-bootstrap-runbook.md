@@ -180,6 +180,25 @@ docker restart blockchain-postgres-sync-testnet
 
 ---
 
+## Open Items Before Mainnet
+
+### Item 1 — Remove `[HotStuffDiag]` debug log (1-line fix)
+**File:** `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEngine.scala:61`
+**What:** `log.info(s"[HotStuffDiag] onBlockApplied...")` fires on every single block — leftover from T2 diagnosis.
+**Fix:** Delete that one line. Rebuild + deploy via `update-node-image.yml` (no data wipe).
+
+### Item 2 — `committedGeneratorsHash` in block headers (security gap — mainnet blocker)
+**Files:** `TxStateSnapshotHashBuilder.scala:100`, `Caches.scala:437` — both have `// intentionally excluded... deferred to mainnet`
+**What:** The committed validator set (who has BLS-committed to generate) is NOT cryptographically bound to the block state hash. A node cannot be detected if it lies about the validator set. Comments call this "Step B in protocol fix" and "testnet-only workaround."
+**Fix:** Add `committedGeneratorsHash: ByteStr` to block headers at each period boundary, computed from the sorted set of `(address, blsPublicKey)` pairs. This closes the security gap and replaces the current exclusion workaround. Requires block version bump and migration.
+
+### Item 3 — BPS `CommitToGenerationSkip` → actual storage (data completeness)
+**Files:** `DecentralChain/apps/blockchain-postgres-sync/src/lib/consumer/models/txs/convert.rs:779`, `mod.rs:687`
+**What:** Type-19 (CommitToGeneration) transactions are silently skipped — no postgres record. Data-service APIs and block explorer have no visibility into validator commitments.
+**Fix:** Add `txs_19` table to BPS schema, implement `Tx19` struct in convert.rs with fields `(uid, sender, endorser_public_key, generation_period_start, fee, height, block_uid)`. Map `Data::CommitToGeneration` → `ConvertedTx::CommitToGeneration(Tx19{...})` instead of `CommitToGenerationSkip`.
+
+---
+
 ## Bug 6: HotStuff engine never activated (fixed 2026-06-27, commits a153d6f142 + fb0bfbe)
 
 **Symptoms:** `hotStuffFinalizedHeight: null` forever despite CurGens=3 and peer connections.
