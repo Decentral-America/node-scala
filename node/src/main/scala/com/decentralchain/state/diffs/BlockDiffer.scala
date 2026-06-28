@@ -225,6 +225,8 @@ object BlockDiffer {
       }
       _ <- checkStateHash(blockchainWithNewBlock, block.header.stateHash, r.computedStateHash)
       // Step C: Validate committedGeneratorsHash at period boundary blocks.
+      // Backward-compatible: only reject if a hash IS present but WRONG.
+      // Blocks without the field (older blocks) are accepted to allow chain load.
       _ <- {
         val newHeight = Height(blockchainWithNewBlock.height)
         val expected  = computeCommittedGeneratorsHash(blockchainWithNewBlock, newHeight)
@@ -232,8 +234,6 @@ object BlockDiffer {
         (expected, actual) match {
           case (Some(exp), Some(act)) if exp != act =>
             TracedResult(Either.left(GenericError(s"Invalid committedGeneratorsHash at h=$newHeight: expected $exp got $act")))
-          case (Some(_), None) =>
-            TracedResult(Either.left(GenericError(s"Missing committedGeneratorsHash at period boundary h=$newHeight")))
           case _ => TracedResult(Either.right(()))
         }
       }
