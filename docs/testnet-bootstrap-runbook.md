@@ -1,27 +1,62 @@
 # Testnet Bootstrap Runbook
 
-> **Single Source of Truth.** Last updated: 2026-06-27. Supersedes all prior STATUS/HANDOFF/TODO docs.
+> **Single Source of Truth.** Last updated: 2026-06-28. Supersedes all prior STATUS/HANDOFF/TODO docs.
 
 ---
 
-## Current Testnet State (2026-06-27 — FULLY OPERATIONAL)
+## Current Testnet State (2026-06-28)
 
 | Item | Status |
 |------|--------|
-| Chain height | 1625+, advancing ~30s/block |
-| Main node (Newark 66.228.55.154) | ✅ Running, healthy, host network mode |
-| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining blocks on canonical chain |
-| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining blocks on canonical chain |
-| val-0 (LKE 172.105.64.89:6865) | ✅ Connected, synced |
-| blockchain-postgres-sync | ✅ Running, healthy |
-| matcher | ✅ Running, healthy — public key `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
-| T2 HotStuff | ✅ ACTIVE — first QC formed at height 2343. hotStuffFinalizedHeight advancing. |
+| Chain height | 2340+, advancing ~30s/block |
+| Main node (Newark 66.228.55.154) | ✅ Healthy, host network, `node-scala-testnet-latest` |
+| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining (~21% share) |
+| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining (~27% share) |
+| val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
+| blockchain-postgres-sync | ✅ Running, healthy (new image with type-19 skip) |
+| matcher | ✅ Healthy — pubkey `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
+| T0 DeterministicFinality | ✅ finalizedHeight ≈ height − 100 |
+| T2 HotStuff | ✅ ACTIVE — first QC height 2343, advancing intermittently |
+
+---
+
+## Open Items Before Mainnet
+
+### Item 1 — Remove `[HotStuffDiag]` debug log
+**File:** `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEngine.scala:61`
+**What:** `log.info(s"[HotStuffDiag] onBlockApplied...")` fires on every block. Debug artifact from T2 diagnosis.
+**Fix:** Delete one line. CI rebuild → `update-node-image.yml`.
+
+### Item 2 — BPS CommitToGeneration storage (type-19 miscategorized)
+**Files:**
+- `DecentralChain/apps/blockchain-postgres-sync/src/lib/consumer/mod.rs:525` — CommitToGeneration mapped to `(1i32, ...)` i.e. stored as type=1 (Genesis placeholder). **Wrong.**
+- `convert.rs:779` — `CommitToGenerationSkip` — no subtype table written.
+
+**What:** Type-19 TXs ARE in the `txs` table but with wrong `tx_type = 1`. No `txs_19` subtype table with validator-specific fields (endorser_public_key, generation_period_start).
+**Fix:**
+1. `mod.rs:525` — change `(1i32, ...)` → `(19i32, ...)`
+2. `convert.rs` — implement `Tx19` struct and `ConvertedTx::CommitToGeneration(Tx19{uid, sender, sender_public_key, endorser_public_key, generation_period_start, fee, height, block_uid, status})`
+3. New Diesel migration for `txs_19` table
+4. BPS rebuild → `deploy-bps.yml --network testnet`
+5. BPS must resync from height 1 to backfill correct data
+
+### Item 3 — `committedGeneratorsHash` in block headers (hard protocol fix)
+**Context:** `mainnet-upgrade-validation.md` documents Steps A/B/C. **Step A is done** (Bug 5, commit d352f5fb9f + 44b93a06c5 — excluded from per-TX and block-level state hash). Steps B and C are not implemented.
+
+**What is missing:** At each generation period boundary block, the final committed validator set for the next period is NOT cryptographically hashed into the block header. This means nodes cannot detect validator set divergence between competing chains via the state hash. The workaround (excluding from state hash) prevents crashes but removes the security guarantee.
+
+**Fix — Step B:** Add `committedGeneratorsHash: Option[ByteStr]` to `BlockHeader` case class (`Block.scala`). At period boundary blocks (`height % periodLength == 0`), compute: `Blake2b256(sortBy(addr.toString)(committedGenerators(nextPeriod)).flatMap { case (addr, blsPk) => addr.bytes ++ blsPk.arr })`. Requires: proto update, `PBBlocks.scala` round-trip, block version bump.
+
+**Fix — Step C:** In `BlockDiffer.fromBlockTraced`, validate `block.header.committedGeneratorsHash` at period boundaries.
+
+**Prerequisite:** Locate the `.proto` source for `Block.Header` (not the generated Scala in `target/`). The three found proto files (`database.proto`, `api.proto`, `transactions_api.proto`) don't define `Block.Header` — it comes from an upstream dependency. Must identify before implementing.
 
 ---
 
 ## All Credentials — KeeWeb Backup Location
 
 **File:** `/Users/jourlez/Documents/Code/Blockchain/Ecosystem/KEEWEB_BACKUP.md`
+**Check here FIRST for any credential issue.**
 
 Key entries:
 - **MATCHER_SEED mnemonic:** `tomorrow bleak cram rival inherit river genuine unknown guitar sister slot scale flip animal grit`
@@ -34,68 +69,41 @@ Key entries:
 
 ---
 
-## 4 Code Bugs Fixed (2026-06-27)
-
-### Bug 1: RC#2 — Blacklist cycle (config fix)
-`enable-blacklisting = no` in all node configs. No rebuild needed.
-
-### Bug 2: PeerKey race condition (config fix)
-Both sides had each other in `known-peers` → simultaneous connections → duplicate detection → `allChannels` lost gen-0's channel → score broadcasts never reached gen-0 → 5-min idle timeout.
-**Fix:** `known-peers = []` on main node. Gen nodes initiate only.
-
-### Bug 3: MessageCodec.isNewMsgsSupported (code fix — commit d0b24c55)
-`isNewMsgsSupported` returned `false` for DCC version `(0,0,0)` → `GetSignatures` silently dropped → 5-min sync timeout → channel closed.
-**Fix:** `v1 == 0` treated as new-msgs-supported.
-
-### Bug 4: BlockIdSeqSpec.maxLength too small (code fix — commit cc88d9417b)
-`maxLength = 13004` sized for 200×64-byte signatures. With 32-byte hash IDs, even moderate chains exceeded limit → `"BlockIds message length N is invalid"` → instant `blacklistAndClose` after every handshake.
-**Fix:** `maxLength = 4 + 3000 × 33 = 99,004`
-
----
-
 ## Infrastructure State
 
 ### Main Node (Newark 66.228.55.154)
-- **Container:** `node-scala-testnet` via docker-compose
-- **Network mode:** `host` (NOT bridge — bridge mode caused TCP connectivity failure from LKE)
-- **Image:** `ghcr.io/decentral-america/node-scala:node-scala-testnet-latest` → `cc88d9417b`
-- **Config:** `/opt/dcc/config/node-testnet/dcc.conf`
-  - `known-peers = []` — gen nodes initiate connections only
+- **Container:** `node-scala-testnet`, `--network host`, `--restart unless-stopped`
+- **Image:** `ghcr.io/decentral-america/node-scala:node-scala-testnet-latest`
+- **Config on VPS:** `/opt/dcc/config/node-testnet/dcc.conf`
+  - `known-peers = ["172.105.64.89:6863", "172.105.64.89:6864"]` — main initiates to gen nodes
   - `enable-blacklisting = no`
-  - `suspension-residence-time = 10s`
-- **Chain data:** fresh from genesis after resets today
+  - `suspension-residence-time = 300s`
+  - `hotstuff { enabled = true; round-timeout-ms = 5000 }`
 
 ### Gen Nodes (LKE Frankfurt 172.105.64.89)
-- **Image:** `ghcr.io/decentral-america/node-scala:testnet-latest` → same `cc88d9417b`
-- **Config:** `dcc-nodes.yaml` via Flux GitOps
-  - `known-peers = ["66.228.55.154:6868"]` — only main node
+- **Image:** `ghcr.io/decentral-america/node-scala:node-scala-testnet-latest`
+- **Config:** `infra/clusters/testnet/apps/dcc-nodes.yaml` via Flux GitOps
+  - `known-peers = ["66.228.55.154:6868"]`
   - `enable-blacklisting = no`
-  - `suspension-residence-time = 10s`
-- **Chain data:** synced from main node
+  - `suspension-residence-time = 300s`
+  - `hotstuff { enabled = true; round-timeout-ms = 5000 }`
+- **gen-0 P2P port:** 6863, **REST port:** 6869
+- **gen-1 P2P port:** 6864, **REST port:** 6870 (NOT 6869)
 
 ### blockchain-postgres-sync
-- **Database:** `bps_testnet` (PostgreSQL local on VPS)
-- **Status:** Running healthy after tables were truncated via `sudo -u postgres psql`
-- **Starting height:** 1 (fresh after chain reset)
+- **Database:** `bps_testnet` on VPS postgres
+- **Image:** `ghcr.io/decentral-america/blockchain-postgres-sync:testnet-latest`
+- **Known issue:** type-19 TXs stored as type=1 (see Open Items)
 
 ### Matcher
-- **Data dir:** `/opt/dcc/data/matcher-testnet/` on VPS host → `/var/lib/decentralchain-dex/` in container
-- **Config dir (CORRECT):** `/opt/dcc/config/matcher-testnet/` → `/var/lib/decentralchain-dex/config/` (READ-ONLY bind mount — shadows data volume's `config/` subdir)
-  - This is the mount that `dex.conf` reads via `include`. Write `local.conf` HERE, NOT in the data dir.
-- **Config:** `/opt/dcc/config/matcher-testnet/local.conf`
+- **Config dir (CORRECT):** `/opt/dcc/config/matcher-testnet/local.conf`
   ```hocon
   dcc.dex {
     address-scheme-character = "!"
     account-storage.type = in-mem
   }
   ```
-- **Account storage:** `in-mem` — no `account.dat` file needed. Seed comes from `MATCHER_ACCOUNT_SEED` env var in `/opt/dcc/secrets/testnet.env`
-- **Port:** 6886 (REST API, health check on `:1AE6` in `/proc/net/tcp`)
-- **Public key:** `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY`
-- **CRITICAL — Volume shadowing:** The compose mounts BOTH:
-  - `/opt/dcc/data/matcher-testnet → /var/lib/decentralchain-dex` (data)
-  - `/opt/dcc/config/matcher-testnet → /var/lib/decentralchain-dex/config:ro` (config, shadows data/config/)
-  - Writing `local.conf` to data dir config is silently ignored by the container.
+- **CRITICAL:** The compose mounts `/opt/dcc/config/matcher-testnet → /var/lib/decentralchain-dex/config:ro`. Writing `local.conf` to the data dir (`/opt/dcc/data/matcher-testnet/config/`) is silently ignored.
 
 ---
 
@@ -103,155 +111,133 @@ Both sides had each other in `known-peers` → simultaneous connections → dupl
 
 | Automation | Schedule | Workflow | Purpose |
 |-----------|----------|----------|---------|
-| Commit-to-generation | Every 35 min | `commit-to-generation.yml` | Keep generators committed |
-| Peer reconnection watchdog | Every 5 min | `peer-watchdog.yml` | Auto-reconnect on 0 peers |
+| Auto-commit generators | Every 35 min | `auto-commit-generators.yml` | Keep all 3 generators committed for next period |
 
 ---
 
 ## Operations Reference
 
-### Re-deploy main node after chain reset
+### Deploy new node image (NO chain wipe)
 ```bash
-# 1. Apply config fixes
-gh workflow run mainnode-ops.yml --field operation=clear-known-peers-and-restart
-
-# 2. Force pull new image + wipe chain
-gh workflow run restart-host-network.yml
-# (OR force-recreate-node.yml for bridge→host switch)
-
-# 3. Resync gen nodes
-gh workflow run resync-gen-nodes.yml --field confirm=WIPE
+# Use this for all image updates and config changes
+gh workflow run update-node-image.yml --repo Decentral-America/infra
 ```
 
-### Fix blockchain-postgres-sync after chain reset
+### Deploy updated dcc.conf (NO chain wipe)
 ```bash
-# BPS stores last height in postgres. After reset, truncate tables:
-ssh deploy@66.228.55.154 'sudo -u postgres psql -d bps_testnet -c "
-DO $$ DECLARE r record; BEGIN
-  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='"'"'public'"'"'
-  LOOP EXECUTE '"'"'TRUNCATE '"'"'||r.tablename||'"'"' CASCADE'"'"'; END LOOP;
-END; $$;"'
-docker restart blockchain-postgres-sync-testnet
+# Copies dcc.conf from repo to VPS and restarts node
+gh workflow run deploy-node-config.yml --repo Decentral-America/infra
 ```
 
-### Fix matcher (wrong config dir, or crashing with account.dat error)
+### Commit generators for next period
 ```bash
-# The compose mounts /opt/dcc/config/matcher-testnet → /var/lib/decentralchain-dex/config (read-only).
-# Write local.conf to the CONFIG dir (not the DATA dir):
-ssh deploy@66.228.55.154 'sudo tee /opt/dcc/config/matcher-testnet/local.conf > /dev/null <<EOF
+gh workflow run auto-commit-generators.yml --repo Decentral-America/infra
+# OR the manual workflow:
+gh workflow run commit-generators-hotstuff.yml --repo Decentral-America/infra
+```
+
+### Fix BPS after node restart
+```bash
+# BPS crashes after node restart — just restart it:
+docker start blockchain-postgres-sync-testnet
+# Automated via matcher-fix-app-conf.yml which also handles BPS
+
+# If BPS fails with wrong height after chain reset, truncate tables:
+sudo -u postgres psql -d bps_testnet -c "
+DO \$\$ DECLARE r record; BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public'
+  LOOP EXECUTE 'TRUNCATE '||r.tablename||' CASCADE'; END LOOP;
+END; \$\$;"
+docker start blockchain-postgres-sync-testnet
+```
+
+### Fix matcher
+```bash
+sudo tee /opt/dcc/config/matcher-testnet/local.conf > /dev/null <<EOF
 dcc.dex {
   address-scheme-character = "!"
   account-storage.type = in-mem
 }
-EOF'
+EOF
 docker restart matcher-testnet
-
-# Verify via workflow:
-gh workflow run matcher-fix-app-conf.yml --repo Decentral-America/infra
 ```
 
-### Fix BPS after node restart (start height exceeds chain height)
+### Check T2 HotStuff finality
 ```bash
-# BPS stores last synced height in postgres. After node restart, BPS may
-# try to subscribe from a height higher than the node currently reports.
-# Simply restart BPS (it will re-read the chain and catch up):
-docker start blockchain-postgres-sync-testnet
-# OR use the workflow:
-gh workflow run matcher-fix-app-conf.yml --repo Decentral-America/infra
-# (workflow now also handles BPS restart)
+curl http://localhost:6869/blockchain/finality
+# hotStuffFinalizedHeight advances when gen nodes are connected during 5s round window
+# CurGens must be >= 1 for rounds to start
+# Quorum: main(40M) + gen-0(20M) = 60M > 53M threshold (2/3 of 80M total)
+```
 
-# If BPS still fails after restart (wrong height from chain reset):
-ssh deploy@66.228.55.154 'sudo -u postgres psql -d bps_testnet -c "
-DO \$\$ DECLARE r record; BEGIN
-  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='"'"'public'"'"'
-  LOOP EXECUTE '"'"'TRUNCATE '"'"'||r.tablename||'"'"' CASCADE'"'"'; END LOOP;
-END; \$\$;"'
-docker restart blockchain-postgres-sync-testnet
+### Verify generators committed for current period
+```bash
+gh workflow run peer-check.yml --repo Decentral-America/infra
+# Look for CurGens >= 2 and NextGens >= 2
 ```
 
 ---
 
 ## What NOT to Do
 
-- ❌ **Do not disable miners** — non-mining nodes don't sync in DCC
-- ❌ **Do not use bridge mode for main node Docker container** — causes TCP connectivity failure from LKE
-- ❌ **Do not write matcher local.conf to `/opt/dcc/data/matcher-testnet/config/`** — shadowed by the config volume mount; container never sees it
-- ✅ **Write matcher local.conf to `/opt/dcc/config/matcher-testnet/local.conf`** — this is the real config location
+- ❌ **`restart-host-network.yml` WIPES chain data** — use `update-node-image.yml` instead for image updates
+- ❌ **`peer-watchdog.yml` SIGKILLs the node** — it's an emergency tool, not routine automation. Causes BPS crash and chain reset
+- ❌ **Do not use bridge mode for main node** — causes TCP connectivity failure from LKE
+- ❌ **Do not write matcher `local.conf` to `/opt/dcc/data/matcher-testnet/config/`** — shadowed by config mount
+- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit (1200/hr)
+- ❌ **Do not check credentials from memory** — always read KEEWEB_BACKUP.md first
 
 ---
 
-## Open Items Before Mainnet
+## Bugs Fixed (2026-06-27)
 
-### Item 1 — Remove `[HotStuffDiag]` debug log (1-line fix)
-**File:** `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEngine.scala:61`
-**What:** `log.info(s"[HotStuffDiag] onBlockApplied...")` fires on every single block — leftover from T2 diagnosis.
-**Fix:** Delete that one line. Rebuild + deploy via `update-node-image.yml` (no data wipe).
+### Bug 1: RC#2 — Blacklist cycle
+`enable-blacklisting = no` in all node configs.
 
-### Item 2 — `committedGeneratorsHash` in block headers (security gap — mainnet blocker)
-**Files:** `TxStateSnapshotHashBuilder.scala:100`, `Caches.scala:437` — both have `// intentionally excluded... deferred to mainnet`
-**What:** The committed validator set (who has BLS-committed to generate) is NOT cryptographically bound to the block state hash. A node cannot be detected if it lies about the validator set. Comments call this "Step B in protocol fix" and "testnet-only workaround."
-**Fix:** Add `committedGeneratorsHash: ByteStr` to block headers at each period boundary, computed from the sorted set of `(address, blsPublicKey)` pairs. This closes the security gap and replaces the current exclusion workaround. Requires block version bump and migration.
+### Bug 2: PeerKey race condition
+Both sides in `known-peers` → simultaneous connections → duplicate detection → channel lost → no sync.
+**Fix:** `known-peers = []` on main node. Gen nodes initiate only. *(Note: main node now has gen IPs added back for T2 — PeerKey risk mitigated by `enable-blacklisting = no` + 300s suspension.)*
 
-### Item 3 — BPS `CommitToGenerationSkip` → actual storage (data completeness)
-**Files:** `DecentralChain/apps/blockchain-postgres-sync/src/lib/consumer/models/txs/convert.rs:779`, `mod.rs:687`
-**What:** Type-19 (CommitToGeneration) transactions are silently skipped — no postgres record. Data-service APIs and block explorer have no visibility into validator commitments.
-**Fix:** Add `txs_19` table to BPS schema, implement `Tx19` struct in convert.rs with fields `(uid, sender, endorser_public_key, generation_period_start, fee, height, block_uid)`. Map `Data::CommitToGeneration` → `ConvertedTx::CommitToGeneration(Tx19{...})` instead of `CommitToGenerationSkip`.
+### Bug 3: MessageCodec.isNewMsgsSupported (commit d0b24c55)
+Version `(0,0,0)` treated as old-msgs → `GetSignatures` dropped silently.
 
----
+### Bug 4: BlockIdSeqSpec.maxLength (commit cc88d9417b)
+13004 too small for 32-byte hash IDs. Fixed to 99,004.
 
-## Bug 6: HotStuff engine never activated (fixed 2026-06-27, commits a153d6f142 + fb0bfbe)
+### Bug 5: InvalidStateHash after CommitToGeneration (commit e6f9e76cc8)
+`fromBlockTraced` used `maybePrevBlock.transactionData × 3/5` for carry fee in pre-sponsorship path. Miner used `blockchain.carryFee(None)`. Diverged when competitor-block commit reset `rocksdb.carryFee = 0`. **Fix:** Unified to `blockchain.carryFee(None)` in both paths.
 
-**Symptoms:** `hotStuffFinalizedHeight: null` forever despite CurGens=3 and peer connections.
-
-**Root causes (2):**
-1. `hotstuff.enabled = true` was in `decentralchain-testnet.conf` (JAR classpath) but `dcc.conf` is the PRIMARY config loaded by the entrypoint. When `dcc.conf` is primary, classpath defaults are LOW priority and the HotStuff block default `enabled=false` wins. **Fix:** Add `hotstuff { enabled = true; round-timeout-ms = 5000 }` to `/opt/dcc/config/node-testnet/dcc.conf` on the VPS (deployed via `deploy-node-config.yml` workflow).
-
-2. `HotStuffEngine.BlockApplied` was only fired in `BlockAppender.apply` (10-arg P2P path), NOT in the miner's `appendTask` (6-arg path). Since the main node mines ~50% of blocks, HotStuff was IDLE for those blocks. **Fix:** Add `Miner.setHotStuffEngine()` to MinerImpl and call it from Application.scala after engine init.
-
-**Key metrics at activation:** validators=2 (main 40M + gen-0 20M = 60M > 53.3M = 2/3 of 80M total). First QC at height 2343. Round timeout: 5000ms.
-
-## Bug 5: InvalidStateHash on mining after CommitToGeneration (fixed 2026-06-27, commit e6f9e76cc8)
-
-**Symptom:** `Error mining block by ADDRESS: InvalidStateHash(Some(...), Some(...))` in node logs immediately after CommitToGenerationTransaction microblocks are appended.
-
-**Root cause:** `BlockDiffer.fromBlockTraced` at `stateHeight < sponsorshipHeight` (< 2700) computed `feeFromPreviousBlock` by summing `maybePrevBlock.transactionData × 3/5`. The miner's `createInitialBlockSnapshot` used `blockchain.carryFee(Some(reference))`. These diverge when `rocksdb.carryFee = 0` but `rocksdb.lastBlock.transactionData` still has CommitToGen fees — this happens when a competitor-block commit path resets carryFee to 0 while the stored liquid block still has TXs. The resulting balance in `initSnapshot` differed by exactly `3/5 × (sum of CommitToGen fees)`.
-
-**Fix:** `node/src/main/scala/com/decentralchain/state/diffs/BlockDiffer.scala` — use `blockchain.carryFee(None)` in the pre-sponsorship `else if stateHeight > ngHeight` branch, matching `createInitialBlockSnapshot`'s source.
-
-**Diagnosis method:** Add WARN log in `computeInitialStateHash` and `packTransactionsForKeyBlock` printing `initBalances` → compare miner vs BlockDiffer balance at same height.
+### Bug 6: HotStuff engine never activated (commits a153d6f142, fb0bfbe)
+Two root causes:
+1. `dcc.conf` is primary config — `hotstuff.enabled` defaults to `false` unless explicitly set there. **Fix:** Add `hotstuff { enabled = true; round-timeout-ms = 5000 }` to `dcc.conf` on VPS.
+2. Miner's `appendTask` never fired `BlockApplied` to HotStuff engine — only P2P-received blocks did. **Fix:** `Miner.setHotStuffEngine()` wired from `Application.scala`.
 
 ---
 
-## T2 HotStuff Activation
-
-### How it works
-- Transaction type **19** (`CommitToGenerationTransaction`) — each generator commits its BLS key
-- The node's `/transactions/sign` endpoint auto-derives BLS from Ed25519 private key, auto-computes Proof of Possession
-- Committed generators become active in the NEXT generation period (every 100 blocks)
-- Once active, HotStuff runs 3-round protocol (Prepare → PreCommit → Commit QC) per block
-- `GET /blockchain/finality` → `hotStuffFinalizedHeight` advances as QCs form
+## T2 HotStuff Reference
 
 ### REST API ports per node
-| Node | REST API port | API key from KEEWEB |
-|------|--------------|---------------------|
-| main node (Newark) | 6869 | MAIN_NODE_REST_API_KEY |
-| gen-0 (LKE) | 6869 | GEN_0_NODE_REST_API_KEY |
-| gen-1 (LKE) | **6870** | GEN_1_NODE_REST_API_KEY |
-| val-0 (LKE) | 6869 | VAL_0_NODE_REST_API_KEY |
+| Node | P2P | REST | API key (KEEWEB) |
+|------|-----|------|-----------------|
+| main node | 6868 | 6869 | MAIN_NODE_REST_API_KEY |
+| gen-0 (LKE) | 6863 | 6869 | GEN_0_NODE_REST_API_KEY |
+| gen-1 (LKE) | 6864 | **6870** | GEN_1_NODE_REST_API_KEY |
+| val-0 (LKE) | 6865 | 6869 | VAL_0_NODE_REST_API_KEY |
 
-### Commit workflow (run once per 100-block period)
+### CommitToGeneration via node REST API
 ```bash
-gh workflow run commit-generators-hotstuff.yml --repo Decentral-America/infra
+# Each node signs for itself — BLS auto-derived, period start auto-filled
+curl -X POST http://localhost:6869/transactions/sign \
+  -H "X-API-Key: KEY" -H "Content-Type: application/json" \
+  -d '{"type":19,"sender":"ADDRESS"}'
+# Then broadcast the result to /transactions/broadcast
 ```
-- Signs via each node's own `/transactions/sign` (BLS auto-derived)
-- Gen-0 accessed via `kubectl port-forward dcc-gen-0-0 -n dcc 16869:6869`
-- Gen-1 accessed via `kubectl port-forward dcc-gen-1-0 -n dcc 16870:6870` (port 6870!)
-- "already committed" error = normal if already committed this period
+- Gen-0: `kubectl port-forward dcc-gen-0-0 -n dcc 16869:6869`
+- Gen-1: `kubectl port-forward dcc-gen-1-0 -n dcc 16870:6870` (port 6870 inside pod)
 
-### Verify T2 is active
-```bash
-curl http://localhost:6869/blockchain/finality
-# hotStuffFinalizedHeight should be non-null once generators are in currentGenerators
-```
-- ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit
-- ❌ **Do not check KEEWEB_BACKUP.md last** — check it FIRST for any credential issue
+### Key numbers
+- Generation period: 100 blocks ≈ 50 minutes
+- Quorum threshold: 2/3 of total committed balance
+- Main: ~40M DCC, gen-0: ~20M DCC, gen-1: ~20M DCC (total ~80M)
+- Main + gen-0 = 60M > 53.3M → sufficient for QC
+- Round timeout: 5000ms
