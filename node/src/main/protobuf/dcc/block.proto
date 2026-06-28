@@ -1,10 +1,10 @@
 syntax = "proto3";
-package waves;
+package dcc;
 option java_package = "io.decentralchain.protobuf.block";
 option csharp_namespace = "DecentralChain";
-option go_package = "github.com/Decentral-America/node-go/pkg/grpc/generated/waves";
+option go_package = "github.com/Decentral-America/protobuf-serialization/pkg/grpc/generated/dcc";
 
-import "waves/transaction.proto";
+import "dcc/transaction.proto";
 
 message Block {
     message Header {
@@ -34,6 +34,7 @@ message Block {
         ChallengedHeader challenged_header = 12;
         FinalizationVoting finalization_voting = 13;
         // Committed validators hash at period boundaries (Step B — mainnet upgrade safety).
+        // Blake2b-256 of sorted (address, blsPublicKey) pairs for the next generation period.
         bytes committed_generators_hash = 14;
     }
 
