@@ -33,7 +33,6 @@ import com.decentralchain.transaction.{
 
 import com.decentralchain.crypto
 import com.decentralchain.state.GenerationPeriod
-import com.decentralchain.crypto.bls.BlsPublicKey
 
 import scala.collection.immutable.VectorMap
 
@@ -409,7 +408,7 @@ object BlockDiffer {
       } yield {
         val sortedBytes = validators
           .map { case (address, blsPk) => address.bytes ++ blsPk.arr }
-          .sortBy(identity)(ByteStr.byteArrayOrdering)
+          .sortWith { (a, b) => java.util.Arrays.compareUnsigned(a, b) < 0 }
           .flatten
           .toArray
         ByteStr(crypto.fastHash(sortedBytes))
