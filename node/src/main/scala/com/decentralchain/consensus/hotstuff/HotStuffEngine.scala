@@ -58,7 +58,6 @@ class HotStuffEngine(
   private def onBlockApplied(msg: BlockApplied): Unit = {
     cancelCurrentRound()
 
-    log.info(s"[HotStuffDiag] onBlockApplied h=${msg.height} validators=${msg.validators.size} myAddr=$myAddress amValidator=${msg.validators.exists(_.address == myAddress)}")
 
     if (msg.validators.isEmpty) {
       state = Idle
