@@ -231,21 +231,27 @@ object BlockDiffer {
       blockchain: Blockchain,
       height: Height,
       actual: Option[ByteStr]
-  ): TracedResult[ValidationError, Unit] = {
-    val periodLength = blockchain.settings.functionalitySettings.generationPeriodLength
-    val expected =
-      if (height.toInt % periodLength == 0)
-        blockchain.generationPeriodOf(height).map { period =>
-          val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
-          ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
-        }
-      else None
-    TracedResult(Either.cond(
-      actual == expected,
-      (),
-      GenericError(s"committedGeneratorsHash mismatch at height $height: expected $expected, got $actual")
-    ))
-  }
+  ): TracedResult[ValidationError, Unit] =
+    // If absent: always accept — backward-compatible with blocks mined before this feature.
+    // If present: strictly validate correctness (boundary blocks must have the right hash;
+    // non-boundary blocks must not have a hash at all).
+    actual match {
+      case None => TracedResult(Right(()))
+      case Some(actualHash) =>
+        val periodLength = blockchain.settings.functionalitySettings.generationPeriodLength
+        val expected =
+          if (height.toInt % periodLength == 0)
+            blockchain.generationPeriodOf(height).map { period =>
+              val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
+              ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
+            }
+          else None
+        TracedResult(Either.cond(
+          expected.contains(actualHash),
+          (),
+          GenericError(s"committedGeneratorsHash mismatch at height $height: expected $expected, got $actual")
+        ))
+    }
 
   def fromMicroBlock(
       blockchain: Blockchain,
