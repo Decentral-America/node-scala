@@ -3,6 +3,8 @@ package com.decentralchain.state.diffs
 import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.decentralchain.account.Address
+import com.decentralchain.crypto
+import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
@@ -221,7 +223,28 @@ object BlockDiffer {
           )
       }
       _ <- checkStateHash(blockchainWithNewBlock, block.header.stateHash, r.computedStateHash)
+      _ <- checkCommittedGeneratorsHash(blockchain, heightWithNewBlock, block.header.committedGeneratorsHash)
     } yield r
+  }
+
+  private def checkCommittedGeneratorsHash(
+      blockchain: Blockchain,
+      height: Height,
+      actual: Option[ByteStr]
+  ): TracedResult[ValidationError, Unit] = {
+    val periodLength = blockchain.settings.functionalitySettings.generationPeriodLength
+    val expected =
+      if (height.toInt % periodLength == 0)
+        blockchain.generationPeriodOf(height).map { period =>
+          val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
+          ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
+        }
+      else None
+    TracedResult(Either.cond(
+      actual == expected,
+      (),
+      GenericError(s"committedGeneratorsHash mismatch at height $height: expected $expected, got $actual")
+    ))
   }
 
   def fromMicroBlock(

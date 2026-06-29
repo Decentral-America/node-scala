@@ -30,7 +30,8 @@ case class BlockHeader(
     transactionsRoot: ByteStr,
     stateHash: Option[ByteStr],
     challengedHeader: Option[ChallengedHeader],
-    finalizationVoting: Option[FinalizationVoting]
+    finalizationVoting: Option[FinalizationVoting],
+    committedGeneratorsHash: Option[ByteStr] = None
 ) {
   val score: Coeval[BigInt] = Coeval.evalOnce((BigInt("18446744073709551616") / baseTarget).ensuring(_ > 0))
 }
@@ -145,7 +146,8 @@ object Block {
       transactionData: Seq[Transaction],
       stateHash: Option[ByteStr],
       challengedHeader: Option[ChallengedHeader],
-      finalizationVoting: Option[FinalizationVoting]
+      finalizationVoting: Option[FinalizationVoting],
+      committedGeneratorsHash: Option[ByteStr] = None
   ): Block = {
     val transactionsRoot = mkTransactionsRoot(version, transactionData)
     Block(
@@ -161,7 +163,8 @@ object Block {
         transactionsRoot,
         stateHash,
         challengedHeader,
-        finalizationVoting
+        finalizationVoting,
+        committedGeneratorsHash
       ),
       ByteStr.empty,
       transactionData
@@ -196,7 +199,8 @@ object Block {
       rewardVote: Long,
       stateHash: Option[ByteStr],
       challengedHeader: Option[ChallengedHeader],
-      finalizationVoting: Option[FinalizationVoting]
+      finalizationVoting: Option[FinalizationVoting],
+      committedGeneratorsHash: Option[ByteStr] = None
   ): Either[GenericError, Block] =
     create(
       version,
@@ -210,7 +214,8 @@ object Block {
       txs,
       stateHash,
       challengedHeader,
-      finalizationVoting
+      finalizationVoting,
+      committedGeneratorsHash
     ).validate
       .map(_.sign(signer.privateKey))
 

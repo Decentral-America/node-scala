@@ -406,7 +406,8 @@ object Importer extends ScorexLogging {
               transactionsRoot = ByteStr.empty,
               stateHash = None,
               challengedHeader = None,
-              finalizationVoting = None
+              finalizationVoting = None,
+              committedGeneratorsHash = None
             ),
             ByteStr.empty,
             Nil

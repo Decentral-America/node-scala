@@ -7,6 +7,8 @@ import com.decentralchain.block.Block.*
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
+import com.decentralchain.crypto
+import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.metrics.{BlockStats, Instrumented, *}
 import com.decentralchain.mining.Miner.*
@@ -237,6 +239,15 @@ class MinerImpl(
             Some(blockchain.lastStateHash(Some(reference)))
           else None
         (unconfirmed, totalConstraint, stateHash) = packTransactionsForKeyBlock(address, reference, prevStateHash)
+        committedGeneratorsHash = {
+          val periodLength = blockchainSettings.functionalitySettings.generationPeriodLength
+          if (newBlockHeight.toInt % periodLength == 0)
+            blockchain.generationPeriodOf(newBlockHeight).map { period =>
+              val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
+              ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
+            }
+          else None
+        }
         block <- Block
           .buildAndSign(
             version,
@@ -250,7 +261,8 @@ class MinerImpl(
             blockRewardVote(version),
             if (blockchain.supportsLightNodeBlockFields(newBlockHeight.toInt)) stateHash else None,
             challengedHeader = None,
-            finalizationVoting = None // Haven't voted in a key block
+            finalizationVoting = None, // Haven't voted in a key block
+            committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
       } yield ForgeAttemptResult.Success(block, totalConstraint)
