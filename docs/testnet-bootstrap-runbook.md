@@ -1,22 +1,39 @@
 # Testnet Bootstrap Runbook
 
-> **Single Source of Truth.** Last updated: 2026-06-28. Supersedes all prior STATUS/HANDOFF/TODO docs.
+> **Single Source of Truth.** Last updated: 2026-06-29. Supersedes all prior STATUS/HANDOFF/TODO docs.
 
 ---
 
-## Current Testnet State (2026-06-28)
+## Current Testnet State (2026-06-29)
 
 | Item | Status |
 |------|--------|
-| Chain height | 2340+, advancing ~30s/block |
-| Main node (Newark 66.228.55.154) | ✅ Healthy, host network, `node-scala-testnet-latest` |
-| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining (~21% share) |
-| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining (~27% share) |
-| val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ✅ Running, healthy (new image with type-19 skip) |
-| matcher | ✅ Healthy — pubkey `2eEUvypDSivnzPiLrbYEW39SM8yMZ1aq4eJuiKfs4sEY` |
-| T0 DeterministicFinality | ✅ finalizedHeight ≈ height − 100 |
-| T2 HotStuff | ✅ ACTIVE — first QC height 2343, advancing intermittently |
+| Chain height | 1 — CI rebuild in progress (see Active Incident below) |
+| Main node (Newark 66.228.55.154) | ⚠️ Healthy but not mining — awaiting new image from CI |
+| gen-0 (LKE 172.105.64.89:6863) | ⚠️ Diverged chain — needs resync after new image deploys |
+| gen-1 (LKE 172.105.64.89:6864) | ⚠️ Old chain — needs resync after new image deploys |
+| val-0 (LKE 172.105.64.89:6865) | Connected |
+| blockchain-postgres-sync | ❌ Crashing — start height > chain height (fixable after chain starts) |
+| matcher | ⚠️ Running but chain not advancing |
+| T0 DeterministicFinality | ⏸ Paused (chain at genesis) |
+| T2 HotStuff | ⏸ Paused (chain at genesis) |
+
+### Active Incident (2026-06-29)
+**Root cause:** `committed_generators_hash` field 14 was added to monorepo `dcc/block.proto` (commit c38dd3c). CI built node-scala with 14-field `Block.Header`. Runtime JAR is 1.6.2 (13 fields). Result: `NoSuchMethodError: Block$Header.copy$default$14()` on first block forge → miner crashes silently → chain stuck at genesis forever.
+
+**Fix applied:**
+1. Reverted field 14 from monorepo `dcc/block.proto` (DecentralChain commit b55392351)
+2. Pushed to node-scala to trigger CI rebuild with 13-field proto
+3. After CI: run `update-node-image.yml` → `resync-gen-nodes.yml` → `auto-commit-generators.yml`
+
+**Recovery sequence once CI passes:**
+```bash
+gh workflow run update-node-image.yml --repo Decentral-America/infra
+# wait ~30s for node to restart and start mining
+gh workflow run resync-gen-nodes.yml --repo Decentral-America/infra -f network=testnet -f confirm=WIPE
+# wait 5 min for gen nodes to sync
+gh workflow run auto-commit-generators.yml --repo Decentral-America/infra
+```
 
 ---
 
