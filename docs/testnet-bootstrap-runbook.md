@@ -8,15 +8,17 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 6510+, advancing ~30-60s/block |
-| Main node (Newark 66.228.55.154) | ✅ Healthy, mining (~29% share) |
-| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining (~57% share) |
-| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining (~14% share) |
+| Chain height | 7405+, advancing ~30-60s/block |
+| Main node (Newark 66.228.55.154) | ✅ Healthy, mining — v1.6.3-8561518153 |
+| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
+| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ✅ Healthy, syncing from height 0 |
-| matcher | ✅ Healthy |
-| T0 DeterministicFinality | ✅ finalizedHeight ≈ height − 17 |
-| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip, 2-3 validators per QC |
+| blockchain-postgres-sync | ⚠️ Restarting — gRPC timing issue (auto-recovers) |
+| matcher | ✅ Healthy (port 6886) |
+| T0 DeterministicFinality | ✅ finalizedHeight catching up (~7380) |
+| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (7405) |
+| CurGens | ✅ 3 — main + gen-0 + gen-1 |
+| NextGens | ✅ 3 — all committed for period 75 |
 
 ### Bug Fixed (2026-06-29) — Proto Field 14 NoSuchMethodError
 **Root cause:** `committed_generators_hash` field 14 was added to monorepo `dcc/block.proto` (commit c38dd3c). CI built node-scala with 14-field `Block.Header`. Runtime JAR is protobuf-schemas 1.6.2 (13 fields). Result: `NoSuchMethodError: Block$Header.copy$default$14()` on every block forge → miner crashes silently → chain stuck at genesis.
@@ -31,6 +33,11 @@
 **File:** `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEngine.scala:61`
 **What:** `log.info(s"[HotStuffDiag] onBlockApplied...")` fires on every block. Debug artifact from T2 diagnosis.
 **Fix:** Delete one line. CI rebuild → `update-node-image.yml`.
+
+### Item 1 — Remove `[HotStuffDiag]` debug log ✅ DONE
+Already removed in previous session.
+
+---
 
 ### Item 2 — BPS CommitToGeneration storage (type-19 miscategorized)
 **Files:**
@@ -190,6 +197,15 @@ gh workflow run peer-check.yml --repo Decentral-America/infra
 - ❌ **Do not write matcher `local.conf` to `/opt/dcc/data/matcher-testnet/config/`** — shadowed by config mount
 - ❌ **Do not use `gh run watch`** — burns GitHub REST rate limit (1200/hr)
 - ❌ **Do not check credentials from memory** — always read KEEWEB_BACKUP.md first
+
+---
+
+## ⚠️ Security: API Keys in Git History
+Node REST API keys are in git history of `infra` repo (commits Jun 25-27). Keys must be **rotated before mainnet**:
+1. Generate new API keys
+2. Hash them: `sha256(key)` base58-encoded
+3. Update `api-key-hash` in `dcc.conf` for each node via `deploy-node-config.yml`
+4. Update GitHub Actions secrets: `MAIN_NODE_REST_API_KEY`, `GEN_0_NODE_REST_API_KEY`, `GEN_1_NODE_REST_API_KEY`, `VAL_0_NODE_REST_API_KEY`
 
 ---
 
