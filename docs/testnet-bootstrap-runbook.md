@@ -8,37 +8,26 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 7569+, gen nodes mining |
-| Main node (Newark 66.228.55.154) | ⚠️ Restarting — CI building fix (see Active Issue) |
+| Chain height | 7948+, advancing |
+| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-c8eaacee, mining from period 80 |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ❌ gRPC not available |
+| blockchain-postgres-sync | ⚠️ Restarting — connecting to gRPC (self-heals) |
 | matcher | ✅ Healthy (port 6886) |
-| T0 DeterministicFinality | ⏸ Node restarting |
-| T2 HotStuff | ⏸ Node restarting |
+| T0 DeterministicFinality | ✅ finalizedHeight ~7901 |
+| T2 HotStuff | ⚠️ None — resumes when main enters CurGens at height 8001 |
+| CurGens | 2 — gen-0 + gen-1 (main joins at period 80 = height 8001) |
+| NextGens | 3 — all committed |
 
-### Active Issue (2026-06-29)
-**Root cause chain:**
-1. Deploying `committedGeneratorsHash` (Open Item 3) needed updated `dcc-grpc.jar` (plugin fat JAR was old 4.7MB with stale 13-field proto classes)
-2. Classpath reorder `lib/*:lib/plugins/*` fixed `NoSuchMethodError` but broke BlockchainUpdates extension loading  
-3. Extension loading mechanism: `dcc.extensions` populated via testnet config + extension fat JAR's application.conf cascade; `dcc-ext.jar` has `NodeBlockchainApiGrpcService`, `dcc-grpc.jar` has `BlockchainUpdates` + `GRPCServerExtension`
-4. Plugin JAR surgery left `blockchain-updates` RocksDB at height 7371 < node height 7569
-5. Fix: `BlockchainUpdates.start()` now allows fresh start (height 0 = initialize at current node height)
-
-**Recovery sequence (after CI `5945b47116` passes):**
-```bash
-gh workflow run update-node-image.yml --repo Decentral-America/infra
-# Node starts with fresh blockchain-updates DB → gRPC on 6881 ✅
-# Then deploy BPS:
-gh workflow run deploy-bps.yml --repo Decentral-America/DecentralChain -f network=testnet
-```
-
-**Plugin JAR state on VPS:**
-- `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb classes removed, extension classes kept
+### Plugin JAR state on VPS (changed during debugging)
+- `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept
 - `dcc-ext.jar` (184KB) — original, contains NodeBlockchainApiGrpcService
-- `dcc-grpc.jar.disabled` (2.1MB) — backup of modified version
-- `blockchain-updates/` RocksDB — DELETED (fresh start pending)
+- `blockchain-updates/` RocksDB — deleted + fresh-started at height 7569
+
+### Bug Fixed (2026-06-29) — BlockchainUpdates fresh-start
+`BlockchainUpdates.start()` used to throw if `extensionHeight < nodeHeight`. With a wiped extension DB (height 0), it always crashed. Fixed: height 0 now initializes at current node height.
+Commit: `c8eaacee` (grpc-server/src/main/scala/com/decentralchain/events/BlockchainUpdates.scala)
 
 ### Bug Fixed (2026-06-29) — Proto Field 14 NoSuchMethodError
 **Root cause:** `committed_generators_hash` field 14 was added to monorepo `dcc/block.proto` (commit c38dd3c). CI built node-scala with 14-field `Block.Header`. Runtime JAR is protobuf-schemas 1.6.2 (13 fields). Result: `NoSuchMethodError: Block$Header.copy$default$14()` on every block forge → miner crashes silently → chain stuck at genesis.
@@ -49,13 +38,8 @@ gh workflow run deploy-bps.yml --repo Decentral-America/DecentralChain -f networ
 
 ## Open Items Before Mainnet
 
-### Item 1 — Remove `[HotStuffDiag]` debug log
-**File:** `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEngine.scala:61`
-**What:** `log.info(s"[HotStuffDiag] onBlockApplied...")` fires on every block. Debug artifact from T2 diagnosis.
-**Fix:** Delete one line. CI rebuild → `update-node-image.yml`.
-
 ### Item 1 — Remove `[HotStuffDiag]` debug log ✅ DONE
-Already removed in previous session.
+Already removed in a previous session (not present in current codebase).
 
 ---
 
@@ -80,7 +64,7 @@ Already removed in previous session.
 - Step B: `committedGeneratorsHash: Option[ByteStr]` added to `BlockHeader`. Miner computes `Blake2b256(sorted(addr.bytes ++ blsKey.arr) for nextPeriod generators)` at period boundary blocks. `protobuf-schemas` bumped to **1.6.3** (field 14 in `dcc/block.proto`).
 - Step C: `BlockDiffer.checkCommittedGeneratorsHash()` validates the hash on every applied block. Mismatch = `GenericError` — chain adoption blocked.
 
-**CI rebuilding** — deploy with `update-node-image.yml` once CI passes.
+**Status:** Deployed in v1.6.3-c8eaacee. Plugin JARs on VPS need updating (see Plugin JAR state above). `committedGeneratorsHash` is validated on new blocks; old blocks (pre-deploy) return `None` which is accepted (backward-compatible).
 
 ---
 
