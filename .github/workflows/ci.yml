@@ -50,7 +50,7 @@ jobs:
             ~/.cache/coursier
             ~/.ivy2/cache
             ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
       - name: Install JVM dependencies from DecentralChain monorepo
@@ -96,7 +96,7 @@ jobs:
             ~/.cache/coursier
             ~/.ivy2/cache
             ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
       - name: Install Rust stable (for groth16 JNI native lib)
@@ -195,7 +195,7 @@ jobs:
             ~/.cache/coursier
             ~/.ivy2/cache
             ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
       - name: Install JVM dependencies from DecentralChain monorepo
@@ -250,7 +250,7 @@ jobs:
             ~/.cache/coursier
             ~/.ivy2/cache
             ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
       - name: Install JVM dependencies from DecentralChain monorepo
