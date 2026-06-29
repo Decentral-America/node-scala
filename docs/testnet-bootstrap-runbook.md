@@ -8,17 +8,37 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 7405+, advancing ~30-60s/block |
-| Main node (Newark 66.228.55.154) | ✅ Healthy, mining — v1.6.3-8561518153 |
+| Chain height | 7569+, gen nodes mining |
+| Main node (Newark 66.228.55.154) | ⚠️ Restarting — CI building fix (see Active Issue) |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ⚠️ Restarting — gRPC timing issue (auto-recovers) |
+| blockchain-postgres-sync | ❌ gRPC not available |
 | matcher | ✅ Healthy (port 6886) |
-| T0 DeterministicFinality | ✅ finalizedHeight catching up (~7380) |
-| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (7405) |
-| CurGens | ✅ 3 — main + gen-0 + gen-1 |
-| NextGens | ✅ 3 — all committed for period 75 |
+| T0 DeterministicFinality | ⏸ Node restarting |
+| T2 HotStuff | ⏸ Node restarting |
+
+### Active Issue (2026-06-29)
+**Root cause chain:**
+1. Deploying `committedGeneratorsHash` (Open Item 3) needed updated `dcc-grpc.jar` (plugin fat JAR was old 4.7MB with stale 13-field proto classes)
+2. Classpath reorder `lib/*:lib/plugins/*` fixed `NoSuchMethodError` but broke BlockchainUpdates extension loading  
+3. Extension loading mechanism: `dcc.extensions` populated via testnet config + extension fat JAR's application.conf cascade; `dcc-ext.jar` has `NodeBlockchainApiGrpcService`, `dcc-grpc.jar` has `BlockchainUpdates` + `GRPCServerExtension`
+4. Plugin JAR surgery left `blockchain-updates` RocksDB at height 7371 < node height 7569
+5. Fix: `BlockchainUpdates.start()` now allows fresh start (height 0 = initialize at current node height)
+
+**Recovery sequence (after CI `5945b47116` passes):**
+```bash
+gh workflow run update-node-image.yml --repo Decentral-America/infra
+# Node starts with fresh blockchain-updates DB → gRPC on 6881 ✅
+# Then deploy BPS:
+gh workflow run deploy-bps.yml --repo Decentral-America/DecentralChain -f network=testnet
+```
+
+**Plugin JAR state on VPS:**
+- `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb classes removed, extension classes kept
+- `dcc-ext.jar` (184KB) — original, contains NodeBlockchainApiGrpcService
+- `dcc-grpc.jar.disabled` (2.1MB) — backup of modified version
+- `blockchain-updates/` RocksDB — DELETED (fresh start pending)
 
 ### Bug Fixed (2026-06-29) — Proto Field 14 NoSuchMethodError
 **Root cause:** `committed_generators_hash` field 14 was added to monorepo `dcc/block.proto` (commit c38dd3c). CI built node-scala with 14-field `Block.Header`. Runtime JAR is protobuf-schemas 1.6.2 (13 fields). Result: `NoSuchMethodError: Block$Header.copy$default$14()` on every block forge → miner crashes silently → chain stuck at genesis.
