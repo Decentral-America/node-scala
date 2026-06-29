@@ -58,12 +58,14 @@ RUN mkdir -p $DCC_DATA $DCC_LOG; \
     groupadd -r dcc --gid=999; \
     useradd --no-log-init -r -g dcc --uid=999 --home-dir=$DCC_DATA --shell=/bin/bash dcc
 
-RUN --mount=type=bind,source=target,target=/tmp/ \
-    # Unpack tgz packages
-    tar zxf /tmp/dcc.tgz -C $DCC_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
+# COPY (not --mount=type=bind) so Docker includes tgz content in cache key.
+# --mount=type=bind does NOT bust the GHA layer cache when tgz content changes,
+# causing stale ScalaPB-generated classes to be served from cache.
+COPY target/dcc.tgz target/dcc-grpc-server.tgz /tmp/
+RUN tar zxf /tmp/dcc.tgz -C $DCC_INSTALL_PATH --strip-components=1 --exclude '*AmazonCorrettoCryptoProvider*.jar' --exclude '*conscrypt*.jar' --exclude '*rocksdbjni*' && \
     tar zxf /tmp/dcc-grpc-server.tgz -C $DCC_INSTALL_PATH --strip-components=1 && \
-    # Set permissions
-    chown -R dcc:dcc $DCC_DATA $DCC_LOG $DCC_INSTALL_PATH && chmod 755 $DCC_DATA $DCC_LOG;
+    chown -R dcc:dcc $DCC_DATA $DCC_LOG $DCC_INSTALL_PATH && chmod 755 $DCC_DATA $DCC_LOG && \
+    rm /tmp/dcc.tgz /tmp/dcc-grpc-server.tgz;
 
 # Only expose REST API and mainnet P2P by default; override in docker-compose for other networks
 EXPOSE 6869 6868
