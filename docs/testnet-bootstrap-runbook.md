@@ -45,16 +45,15 @@
 4. BPS rebuild → `deploy-bps.yml --network testnet`
 5. BPS must resync from height 1 to backfill correct data
 
-### Item 3 — `committedGeneratorsHash` in block headers (hard protocol fix)
-**Context:** `mainnet-upgrade-validation.md` documents Steps A/B/C. **Step A is done** (Bug 5, commit d352f5fb9f + 44b93a06c5 — excluded from per-TX and block-level state hash). Steps B and C are not implemented.
+### Item 3 — `committedGeneratorsHash` in block headers ✅ IMPLEMENTED
+**Commits:** node-scala `8fd7ef90d9`, DecentralChain `7a7e602f8`
 
-**What is missing:** At each generation period boundary block, the final committed validator set for the next period is NOT cryptographically hashed into the block header. This means nodes cannot detect validator set divergence between competing chains via the state hash. The workaround (excluding from state hash) prevents crashes but removes the security guarantee.
+**Steps A+B+C all done:**
+- Step A: Bug 5 fix (excluded from per-TX state hash — commits d352f5fb9f + 44b93a06c5)
+- Step B: `committedGeneratorsHash: Option[ByteStr]` added to `BlockHeader`. Miner computes `Blake2b256(sorted(addr.bytes ++ blsKey.arr) for nextPeriod generators)` at period boundary blocks. `protobuf-schemas` bumped to **1.6.3** (field 14 in `dcc/block.proto`).
+- Step C: `BlockDiffer.checkCommittedGeneratorsHash()` validates the hash on every applied block. Mismatch = `GenericError` — chain adoption blocked.
 
-**Fix — Step B:** Add `committedGeneratorsHash: Option[ByteStr]` to `BlockHeader` case class (`Block.scala`). At period boundary blocks (`height % periodLength == 0`), compute: `Blake2b256(sortBy(addr.toString)(committedGenerators(nextPeriod)).flatMap { case (addr, blsPk) => addr.bytes ++ blsPk.arr })`. Requires: proto update, `PBBlocks.scala` round-trip, block version bump.
-
-**Fix — Step C:** In `BlockDiffer.fromBlockTraced`, validate `block.header.committedGeneratorsHash` at period boundaries.
-
-**Prerequisite:** Locate the `.proto` source for `Block.Header` (not the generated Scala in `target/`). The three found proto files (`database.proto`, `api.proto`, `transactions_api.proto`) don't define `Block.Header` — it comes from an upstream dependency. Must identify before implementing.
+**CI rebuilding** — deploy with `update-node-image.yml` once CI passes.
 
 ---
 
