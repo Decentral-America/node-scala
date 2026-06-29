@@ -60,19 +60,25 @@ class BlockchainUpdates(private val context: Context) extends Extension with Sco
     val nodeHeight      = context.blockchain.height
     val extensionHeight = repo.height
 
-    if (extensionHeight < nodeHeight)
-      throw new IllegalStateException(s"BlockchainUpdates height $extensionHeight is lower than node height $nodeHeight")
+    if (extensionHeight == 0) {
+      // Fresh DB — initialize at current node height and skip historical sync.
+      // Events will be tracked from nodeHeight onward.
+      log.info(s"BlockchainUpdates DB is empty, initializing fresh at node height $nodeHeight")
+    } else {
+      if (extensionHeight < nodeHeight)
+        throw new IllegalStateException(s"BlockchainUpdates height $extensionHeight is lower than node height $nodeHeight")
 
-    if (extensionHeight > nodeHeight) {
-      log.info(s"Rolling back from $extensionHeight to node height $nodeHeight")
-      repo.rollbackData(Height(nodeHeight))
+      if (extensionHeight > nodeHeight) {
+        log.info(s"Rolling back from $extensionHeight to node height $nodeHeight")
+        repo.rollbackData(Height(nodeHeight))
+      }
+
+      val lastUpdateId = Try(ByteStr(repo.getBlockUpdate(Height(nodeHeight)).getUpdate.id.toByteArray)).toOption
+      val lastBlockId  = context.blockchain.blockHeader(nodeHeight).map(_.id())
+
+      if (lastUpdateId != lastBlockId)
+        throw new IllegalStateException(s"Last update ID $lastUpdateId does not match last block ID $lastBlockId at height $nodeHeight")
     }
-
-    val lastUpdateId = Try(ByteStr(repo.getBlockUpdate(Height(nodeHeight)).getUpdate.id.toByteArray)).toOption
-    val lastBlockId  = context.blockchain.blockHeader(nodeHeight).map(_.id())
-
-    if (lastUpdateId != lastBlockId)
-      throw new IllegalStateException(s"Last update ID $lastUpdateId does not match last block ID $lastBlockId at height $nodeHeight")
 
     log.info(s"BlockchainUpdates startup check successful at height $nodeHeight")
 
