@@ -52,4 +52,7 @@ else
   EXEC_ARGS=("$@")
 fi
 
-exec java $JAVA_OPTS -cp "$DCC_INSTALL_PATH/lib/plugins/*:$DCC_INSTALL_PATH/lib/*" com.decentralchain.Application "${EXEC_ARGS[@]}"
+# lib/* before lib/plugins/* so node-compiled classes take priority over any
+# extension JAR that bundles stale copies of the same classes (e.g. dcc-grpc.jar
+# shipping old Block$Header without field 14 would shadow the correct class).
+exec java $JAVA_OPTS -cp "$DCC_INSTALL_PATH/lib/*:$DCC_INSTALL_PATH/lib/plugins/*" com.decentralchain.Application "${EXEC_ARGS[@]}"
