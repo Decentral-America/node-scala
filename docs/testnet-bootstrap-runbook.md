@@ -8,32 +8,20 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 1 — CI rebuild in progress (see Active Incident below) |
-| Main node (Newark 66.228.55.154) | ⚠️ Healthy but not mining — awaiting new image from CI |
-| gen-0 (LKE 172.105.64.89:6863) | ⚠️ Diverged chain — needs resync after new image deploys |
-| gen-1 (LKE 172.105.64.89:6864) | ⚠️ Old chain — needs resync after new image deploys |
-| val-0 (LKE 172.105.64.89:6865) | Connected |
-| blockchain-postgres-sync | ❌ Crashing — start height > chain height (fixable after chain starts) |
-| matcher | ⚠️ Running but chain not advancing |
-| T0 DeterministicFinality | ⏸ Paused (chain at genesis) |
-| T2 HotStuff | ⏸ Paused (chain at genesis) |
+| Chain height | 6510+, advancing ~30-60s/block |
+| Main node (Newark 66.228.55.154) | ✅ Healthy, mining (~29% share) |
+| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining (~57% share) |
+| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining (~14% share) |
+| val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
+| blockchain-postgres-sync | ✅ Healthy, syncing from height 0 |
+| matcher | ✅ Healthy |
+| T0 DeterministicFinality | ✅ finalizedHeight ≈ height − 17 |
+| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip, 2-3 validators per QC |
 
-### Active Incident (2026-06-29)
-**Root cause:** `committed_generators_hash` field 14 was added to monorepo `dcc/block.proto` (commit c38dd3c). CI built node-scala with 14-field `Block.Header`. Runtime JAR is 1.6.2 (13 fields). Result: `NoSuchMethodError: Block$Header.copy$default$14()` on first block forge → miner crashes silently → chain stuck at genesis forever.
+### Bug Fixed (2026-06-29) — Proto Field 14 NoSuchMethodError
+**Root cause:** `committed_generators_hash` field 14 was added to monorepo `dcc/block.proto` (commit c38dd3c). CI built node-scala with 14-field `Block.Header`. Runtime JAR is protobuf-schemas 1.6.2 (13 fields). Result: `NoSuchMethodError: Block$Header.copy$default$14()` on every block forge → miner crashes silently → chain stuck at genesis.
 
-**Fix applied:**
-1. Reverted field 14 from monorepo `dcc/block.proto` (DecentralChain commit b55392351)
-2. Pushed to node-scala to trigger CI rebuild with 13-field proto
-3. After CI: run `update-node-image.yml` → `resync-gen-nodes.yml` → `auto-commit-generators.yml`
-
-**Recovery sequence once CI passes:**
-```bash
-gh workflow run update-node-image.yml --repo Decentral-America/infra
-# wait ~30s for node to restart and start mining
-gh workflow run resync-gen-nodes.yml --repo Decentral-America/infra -f network=testnet -f confirm=WIPE
-# wait 5 min for gen nodes to sync
-gh workflow run auto-commit-generators.yml --repo Decentral-America/infra
-```
+**Fix:** Reverted field 14 from monorepo `dcc/block.proto` (DecentralChain commit b55392351). Rebuilt CI (node-scala commit 63bd6e500). Open Item 3 (committedGeneratorsHash) remains deferred until protobuf-schemas 1.6.3 is published.
 
 ---
 
