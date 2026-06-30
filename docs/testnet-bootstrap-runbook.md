@@ -314,3 +314,9 @@ curl -X POST http://localhost:6869/transactions/sign \
 - Main: ~26.7M DCC, gen-0: ~26.7M DCC, gen-1: ~26.7M DCC (total ~80M, equal share)
 - Any 2-of-3 = ~53.4M > 53.3M threshold → QC possible with any majority
 - Round timeout: 1200ms (tuned 2026-06-30, p99 ~1000ms + 20% margin)
+
+### Item 7 — E2E test suite ✅ PASSED (2026-06-30)
+Direct vitest run against `testnet-node.decentralchain.io` — 2 spec files, 29 tests, all passed.
+- `network/node-api.spec.ts`: blocks, addresses, transactions, node health (24 tests)
+- `network/peers.spec.ts`: connectivity, chain consistency (5 tests)
+- Workflow: `infra/.github/workflows/admin-e2e.yml` (runs from CI against public HTTPS endpoint)
