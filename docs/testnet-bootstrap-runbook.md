@@ -8,18 +8,21 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 9733+, advancing ~30-60s/block |
+| Chain height | 10344+, advancing ~30-60s/block |
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
-| val-0 (LKE 172.105.64.89:6865) | ✅ Synced (observer only — no mining, no T2 votes) |
+| val-0 (LKE 172.105.64.89:6865) | ⏳ Upgrading to T2 validator (miner+hotstuff enabled, Flux deploying) |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
-| T0 DeterministicFinality | ⚠️ Lagging (stuck at 9668 — self-healing, see below) |
-| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, soak PASSED |
+| admin-dashboard | ✅ Healthy — E2E crash fixed (E2E_SUITE_PATH=/dev/null/disabled) |
+| T0 DeterministicFinality | ✅ Advancing — recovered to 10237 (was stuck at 9668, self-healed) |
+| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, validators=3 |
 | CurGens | 3 — main + gen-0 + gen-1 |
-| NextGens | 3 — all committed |
-| Prometheus monitoring | ✅ 6 production alerts, 10 real metrics (exporter v2) |
+| NextGens | 0 → auto-commit running |
+| Prometheus monitoring | ✅ 7 alerts, 10 metrics + Loki log aggregation deployed |
+| Log aggregation | ✅ Loki + Promtail running (committed, deploying) |
+| Chain state backup | ✅ Daily 03:00 UTC → Cloudflare R2 (7-day retention) |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
 | File | Source | Purpose |
