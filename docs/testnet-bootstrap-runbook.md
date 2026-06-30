@@ -67,18 +67,18 @@ All 4 failure scenarios verified at round-timeout=1200ms:
 5000ms → 1200ms (p99 ~1000ms + 20% margin). Deployed to main node and gen nodes via Flux.
 
 ### Item 6 — Stress test ✅ COMPLETE (2026-06-30)
-Single funded sender (gen-0 nonce=0), various TPS targets:
 
-| TPS target | Achieved | Error rate | p50 | p99 | p99.9 | Verdict |
-|-----------|---------|-----------|-----|-----|-------|---------|
-| 50 TPS | 50.0 | **0.00%** | 33ms | 67ms | 107ms | ✅ Healthy |
-| 100 TPS | 99.9 | **0.00%** | 18ms | 104ms | 163ms | ✅ Healthy |
-| 500 TPS | 469.7 | **0.00%** | 34ms | 786ms | 11,415ms | ⚠️ Accepted but tail latency blows out |
+| Config | TPS achieved | Error rate | p50 | p99 | p99.9 | Verdict |
+|--------|-------------|-----------|-----|-----|-------|---------|
+| 1 sender, 50 TPS | 50.0 | **0.00%** | 33ms | 67ms | 107ms | ✅ Healthy |
+| 1 sender, 100 TPS | 99.9 | **0.00%** | 18ms | 104ms | 163ms | ✅ Healthy |
+| 1 sender, 500 TPS | 469.7 | **0.00%** | 34ms | 786ms | 11,415ms | ⚠️ UTX queue backed up |
+| 5 senders, 500 TPS | **377.0** | **0.00%** | 234ms | 787ms | 71,935ms | ⚠️ Block throughput ceiling |
 
 **Conclusions:**
-- Node accepts up to ~470 TPS with zero rejections (UTX pool accepts but queues)
-- Healthy operation: ≤100 TPS per sender account (p99 < 200ms)
-- To scale beyond 100 TPS: fund secondary sender accounts (derived from seed nonce 1, 2, ...)
+- **Node block throughput ceiling: ~380 TPS** (255 tx/microblock × ~1.5 microblocks/s)
+- **Healthy operating range: ≤100 TPS/sender** with p99 < 200ms and zero errors
+- **Multi-sender setup**: `fund-load-test-senders.yml` (1M DCC each to nonces 1-4) + `list-senders.yml`
 - Workflow: `DecentralChain/.github/workflows/stress-test.yml`
 
 ---
