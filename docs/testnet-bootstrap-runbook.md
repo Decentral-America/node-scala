@@ -161,7 +161,7 @@ docker restart matcher-testnet
 curl http://localhost:6869/blockchain/finality
 # hotStuffFinalizedHeight advances when gen nodes are connected during 5s round window
 # CurGens must be >= 1 for rounds to start
-# Quorum: main(40M) + gen-0(20M) = 60M > 53M threshold (2/3 of 80M total)
+# Quorum: 2/3 of ~80M total. Each node ~26.7M. Any 2-of-3 = 53.4M > 53.3M threshold.
 ```
 
 ### Verify generators committed for current period
@@ -241,6 +241,6 @@ curl -X POST http://localhost:6869/transactions/sign \
 ### Key numbers
 - Generation period: 100 blocks ≈ 50 minutes
 - Quorum threshold: 2/3 of total committed balance
-- Main: ~40M DCC, gen-0: ~20M DCC, gen-1: ~20M DCC (total ~80M)
-- Main + gen-0 = 60M > 53.3M → sufficient for QC
+- Main: ~26.7M DCC, gen-0: ~26.7M DCC, gen-1: ~26.7M DCC (total ~80M, equal share)
+- Any 2-of-3 = ~53.4M > 53.3M threshold → QC possible with any majority
 - Round timeout: 5000ms

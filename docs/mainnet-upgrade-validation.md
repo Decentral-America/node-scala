@@ -216,8 +216,8 @@ The protocol fix (Steps A–C above) is required for mainnet upgrade safety.
 | Convergence check in commit-to-generation workflow | ✅ Done | Interim only |
 | Stagenet test harness setup | ⬜ TODO | Yes — must validate before mainnet |
 | Remove CommitToGeneration from per-TX hash (Step A) | ✅ Done — commits d352f5fb9f + 44b93a06c5 (2026-06-26) | Complete |
-| Period-boundary committedGeneratorsHash in BlockHeader (Step B) | ⬜ TODO | Yes — protocol fix |
-| Block appender validation at period boundaries (Step C) | ⬜ TODO | Yes — protocol fix |
+| Period-boundary committedGeneratorsHash in BlockHeader (Step B) | ✅ DONE | Deployed v1.6.3-be2dcfc0 |
+| Block appender validation at period boundaries (Step C) | ✅ DONE | Deployed v1.6.3-be2dcfc0 |
 | Stagenet validation run (Phase 1–3) | ⬜ TODO | Yes — must pass before mainnet |
 
 **The mainnet upgrade MUST NOT proceed until:**
