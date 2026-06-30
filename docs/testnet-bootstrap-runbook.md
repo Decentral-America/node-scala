@@ -72,7 +72,7 @@ Key entries:
   - `known-peers = ["172.105.64.89:6863", "172.105.64.89:6864"]` — main initiates to gen nodes
   - `enable-blacklisting = no`
   - `suspension-residence-time = 300s`
-  - `hotstuff { enabled = true; round-timeout-ms = 5000 }`
+  - `hotstuff { enabled = true; round-timeout-ms = 1200 }`
 
 ### Gen Nodes (LKE Frankfurt 172.105.64.89)
 - **Image:** `ghcr.io/decentral-america/node-scala:node-scala-testnet-latest`
@@ -80,7 +80,7 @@ Key entries:
   - `known-peers = ["66.228.55.154:6868"]`
   - `enable-blacklisting = no`
   - `suspension-residence-time = 300s`
-  - `hotstuff { enabled = true; round-timeout-ms = 5000 }`
+  - `hotstuff { enabled = true; round-timeout-ms = 1200 }`
 - **gen-0 P2P port:** 6863, **REST port:** 6869
 - **gen-1 P2P port:** 6864, **REST port:** 6870 (NOT 6869)
 
@@ -212,7 +212,7 @@ Version `(0,0,0)` treated as old-msgs → `GetSignatures` dropped silently.
 
 ### Bug 6: HotStuff engine never activated (commits a153d6f142, fb0bfbe)
 Two root causes:
-1. `dcc.conf` is primary config — `hotstuff.enabled` defaults to `false` unless explicitly set there. **Fix:** Add `hotstuff { enabled = true; round-timeout-ms = 5000 }` to `dcc.conf` on VPS.
+1. `dcc.conf` is primary config — `hotstuff.enabled` defaults to `false` unless explicitly set there. **Fix:** Add `hotstuff { enabled = true; round-timeout-ms = 1200 }` to `dcc.conf` on VPS.
 2. Miner's `appendTask` never fired `BlockApplied` to HotStuff engine — only P2P-received blocks did. **Fix:** `Miner.setHotStuffEngine()` wired from `Application.scala`.
 
 ---
