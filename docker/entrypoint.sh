@@ -52,4 +52,8 @@ else
   EXEC_ARGS=("$@")
 fi
 
-exec java $JAVA_OPTS -cp "$DCC_INSTALL_PATH/lib/plugins/*:$DCC_INSTALL_PATH/lib/*" com.decentralchain.Application "${EXEC_ARGS[@]}"
+# lib/* before lib/plugins/* so node proto classes (14-field Block$Header) take
+# priority over DEX extension JARs that bundle older proto-generated classes.
+# Plugin JARs (dcc-grpc.jar, dcc-ext.jar) still provide DccBlockchainApiGrpc and
+# extension registration — they're found in classpath even when loaded after lib/*.
+exec java $JAVA_OPTS -cp "$DCC_INSTALL_PATH/lib/*:$DCC_INSTALL_PATH/lib/plugins/*" com.decentralchain.Application "${EXEC_ARGS[@]}"
