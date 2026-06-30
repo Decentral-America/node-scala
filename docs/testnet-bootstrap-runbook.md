@@ -269,7 +269,7 @@ Two root causes:
 | main node | 6868 | 6869 | MAIN_NODE_REST_API_KEY |
 | gen-0 (LKE) | 6863 | 6869 | GEN_0_NODE_REST_API_KEY |
 | gen-1 (LKE) | 6864 | **6870** | GEN_1_NODE_REST_API_KEY |
-| val-0 (LKE) | 6865 | 6869 | VAL_0_NODE_REST_API_KEY |
+| val-0 (LKE) | 6865 | 6871 | VAL_0_NODE_REST_API_KEY |
 
 ### CommitToGeneration via node REST API
 ```bash
