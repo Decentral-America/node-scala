@@ -4,21 +4,26 @@
 
 ---
 
-## Current Testnet State (2026-06-29)
+## Current Testnet State (2026-06-30)
 
 | Item | Status |
 |------|--------|
-| Chain height | 8009+, advancing ~30-60s/block |
+| Chain height | 8043+, advancing ~30-60s/block |
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-c8eaacee |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ✅ Healthy, syncing from height 0 |
+| blockchain-postgres-sync | ✅ Healthy, syncing |
 | matcher | ✅ Healthy (port 6886) |
 | T0 DeterministicFinality | ✅ finalizedHeight = 8000 |
-| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (8009) |
+| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (8043) |
 | CurGens | ✅ 3 — main + gen-0 + gen-1 |
 | NextGens | ✅ 3 — all committed |
+
+### Plugin JAR state on VPS (needs proper CI pipeline — deferred)
+- `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept ⚠️
+- `dcc-ext.jar` (184KB) — original
+- **Proper fix:** Add CI step to build thin extension JAR from `grpc-server` module and deploy as part of `update-node-image.yml`. Currently working but not built from clean sources.
 
 ### Plugin JAR state on VPS (changed during debugging)
 - `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept
