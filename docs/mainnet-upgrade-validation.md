@@ -227,7 +227,22 @@ The protocol fix (Steps A–C above) is required for mainnet upgrade safety.
 
 ---
 
-## 6. Related Files
+## 6. Testnet Infrastructure Status (2026-06-30)
+
+Before stagenet validation can proceed, the testnet must be mainnet-equivalent quality. Current status:
+
+| Area | Status | Notes |
+|------|--------|-------|
+| T2 HotStuff soak | ✅ PASSED | All 4 failure scenarios, round-timeout=1200ms |
+| BPS type-19 storage | ✅ DEPLOYED | CommitToGeneration indexed in txs_19 |
+| Prometheus monitoring | ✅ 6 alerts | T2 lag, T0 lag, generators, block production |
+| Security audit (pass 1+2) | ✅ 20 findings resolved | API keys, wipe gate, alert rules, etc. |
+| API key rotation | ⬜ PENDING | Required before mainnet — see SSOT security section |
+| round-timeout-ms | ✅ 1200ms | Tuned from 5000ms based on measured p99 |
+| T0 DeterministicFinality | ⚠️ LAGGING | Stuck at ~9668 — self-healing via consistent gen commits |
+| val-0 | ✅ Observer | No mining, no T2 votes — pure chain validation node |
+
+## 7. Related Files
 
 - Protocol fix: `node/src/main/scala/com/decentralchain/state/TxStateSnapshotHashBuilder.scala`
 - Key storage: `node/src/main/scala/com/decentralchain/database/Keys.scala`
