@@ -12,7 +12,7 @@
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
-| val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
+| val-0 (LKE 172.105.64.89:6865) | ✅ Synced (observer only — no mining, no T2 votes) |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
 | T0 DeterministicFinality | ⚠️ Lagging (stuck at 9668 — self-healing, see below) |
