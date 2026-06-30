@@ -8,17 +8,18 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 9724+, advancing ~30-60s/block |
+| Chain height | 9733+, advancing ~30-60s/block |
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
-| T0 DeterministicFinality | ✅ Active |
+| T0 DeterministicFinality | ⚠️ Lagging (stuck at 9668 — self-healing, see below) |
 | T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, soak PASSED |
 | CurGens | 3 — main + gen-0 + gen-1 |
 | NextGens | 3 — all committed |
+| Prometheus monitoring | ✅ 6 production alerts, 10 real metrics (exporter v2) |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
 | File | Source | Purpose |
@@ -28,6 +29,16 @@
 
 Both JARs built from source, committed to `infra/plugins/testnet/`, deployed by `update-node-image.yml`.
 **Classpath:** `lib/plugins/*:lib/*` — plugins first so extension `application.conf` registers both extensions. 14-field `Block$Header` in `grpc.jar` (matcher updated to match protobuf-schemas 1.6.3).
+
+---
+
+## T0 DeterministicFinality — Known Lag (Self-Healing)
+
+**Status:** T0 finalizedHeight stuck at ~9668. Root cause: during T2 soak Phase C (both gen nodes killed), no CommitToGeneration transactions were signed for those blocks. `BlockEndorser` requires `committedGenerators()` to return a valid set for each block — without it, no endorsements flow → T0 cannot advance past the last block with valid endorsements.
+
+**Self-healing:** T0 will resume advancing as generators consistently commit for each new period. The dual-cron `auto-commit-generators.yml` (every 35min + :17 hourly) ensures no periods are missed going forward. T0 may remain lagged through the gap period but will catch up once endorsements accumulate.
+
+**Not a chain safety issue:** T2 HotStuff provides finality at lag=0. T0 is an additional finality layer; its temporary lag does not affect block production or T2.
 
 ---
 
