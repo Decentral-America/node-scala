@@ -21,14 +21,14 @@
 | NextGens | ✅ 3 — all committed |
 
 ### Plugin JAR state on VPS
-- `dcc-grpc.jar` (2.2MB) — **fresh thin JAR** from CI build `2dbc88ac`, contains BlockchainUpdates + GRPCServerExtension
-- `dcc-ext.jar.disabled` — **disabled** — contains NodeBlockchainApiGrpcService which references `DccBlockchainApiGrpc` (legacy DEX class not in current repos)
-- **Blocker for DEX matching:** `DccBlockchainApiGrpc` is generated from DEX proto files not in current repos. Must port DEX gRPC protos to monorepo before re-enabling `dcc-ext.jar`.
+- `grpc.jar` (2.2MB) — **fresh thin JAR** from CI build `2dbc88ac`, contains BlockchainUpdates + GRPCServerExtension
+- `ext.jar.disabled` — **disabled** — contains NodeBlockchainApiGrpcService which references `DccBlockchainApiGrpc` (legacy DEX class not in current repos)
+- **Blocker for DEX matching:** `DccBlockchainApiGrpc` is generated from DEX proto files not in current repos. Must port DEX gRPC protos to monorepo before re-enabling `ext.jar`.
 - **Chain/T2/T0 unaffected** — DEX extension is only needed for matcher order execution.
 
 ### Plugin JAR state on VPS (changed during debugging)
-- `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept
-- `dcc-ext.jar` (184KB) — original, contains NodeBlockchainApiGrpcService
+- `grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept
+- `ext.jar` (184KB) — original, contains NodeBlockchainApiGrpcService
 - `blockchain-updates/` RocksDB — deleted + fresh-started at height 7569
 
 ### Bug Fixed (2026-06-29) — BlockchainUpdates fresh-start
