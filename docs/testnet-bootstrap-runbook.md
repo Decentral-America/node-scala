@@ -13,7 +13,7 @@
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ✅ Healthy, syncing |
+| blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, 237+ blocks) |
 | matcher | ✅ Healthy (port 6886) |
 | T0 DeterministicFinality | ✅ Active |
 | T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (lag=0) |
@@ -35,12 +35,12 @@ Both JARs built from source, committed to `infra/plugins/testnet/`, deployed by 
 
 ### Item 1 — Remove `[HotStuffDiag]` debug log ✅ DONE
 
-### Item 2 — BPS CommitToGeneration storage (type-19) ✅ CODE DONE — deploy pending
-Code complete and CI passing (`DecentralChain` @ `2f35c45a`). Deploy with:
-```bash
-# Truncate BPS tables first, then:
-gh workflow run deploy-bps.yml --repo Decentral-America/DecentralChain -f network=testnet
-```
+### Item 2 — BPS CommitToGeneration storage (type-19) ✅ DEPLOYED
+Image `DecentralChain` @ `fbece975a` deployed to testnet. Running healthy, 237+ blocks synced.
+- Added `txs_19` table (migration `20260628000000`)
+- Fixed gRPC duplicate-block bug: dedup + upsert in `insert_blocks_or_microblocks` (`pg.rs`)
+- Fixed `Loader.scala` root cause: tracks actual RocksDB key height to prevent re-seek into gaps
+- BPS reset procedure: `fix-extension-height.yml` (drop-recreate DB + run migrations + start)
 
 ### Item 3 — `committedGeneratorsHash` in block headers ✅ DEPLOYED
 Steps A+B+C implemented. Active in current node image. Old blocks return `None` (accepted, backward-compatible).
@@ -86,8 +86,8 @@ Key entries:
 
 ### blockchain-postgres-sync
 - **Database:** `bps_testnet` on VPS postgres
-- **Image:** `ghcr.io/decentral-america/blockchain-postgres-sync:testnet-latest`
-- **Type-19 fix:** code deployed, BPS deploy pending (see Open Items)
+- **Image:** `ghcr.io/decentral-america/blockchain-postgres-sync:fbece975a0074868d20dc476324a0fa0587f2e70`
+- **Type-19 fix:** ✅ deployed — `txs_19` table, dedup upsert fix, Loader.scala root-cause fix
 
 ### Matcher
 - **Config dir (CORRECT):** `/opt/dcc/config/matcher-testnet/local.conf`
