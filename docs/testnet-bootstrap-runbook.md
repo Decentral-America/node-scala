@@ -8,15 +8,15 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 8556+, advancing ~30-60s/block |
+| Chain height | 9724+, advancing ~30-60s/block |
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, 237+ blocks) |
+| blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
 | T0 DeterministicFinality | ✅ Active |
-| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (lag=0) |
+| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, soak PASSED |
 | CurGens | 3 — main + gen-0 + gen-1 |
 | NextGens | 3 — all committed |
 
@@ -44,6 +44,16 @@ Image `DecentralChain` @ `fbece975a` deployed to testnet. Running healthy, 237+ 
 
 ### Item 3 — `committedGeneratorsHash` in block headers ✅ DEPLOYED
 Steps A+B+C implemented. Active in current node image. Old blocks return `None` (accepted, backward-compatible).
+
+### Item 4 — T2 soak ✅ PASSED (2026-06-30)
+All 4 failure scenarios verified at round-timeout=1200ms:
+- **gen-0 down**: T2 maintained lag=0 (main+gen-1 quorum)
+- **gen-1 down**: T2 maintained lag=0 (main+gen-0 quorum)
+- **both down**: FairPoS continued (+3 blocks), T2 paused (no quorum)
+- **both restored**: T2 self-healed to lag=0 within 3 min
+
+### Item 5 — round-timeout-ms tuned ✅ DONE
+5000ms → 1200ms (p99 ~1000ms + 20% margin). Deployed to main node and gen nodes via Flux.
 
 ---
 
