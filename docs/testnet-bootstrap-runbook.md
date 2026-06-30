@@ -8,27 +8,26 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 8355+, advancing ~30-60s/block |
-| Main node (Newark 66.228.55.154) | ⚠️ CI deploying `ad5cae94` — ext.jar disabled, node restarting |
+| Chain height | 8556+, advancing ~30-60s/block |
+| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
 | blockchain-postgres-sync | ✅ Healthy, syncing |
 | matcher | ✅ Healthy (port 6886) |
 | T0 DeterministicFinality | ✅ Active |
-| T2 HotStuff | ⚠️ Paused (node restarting) — resumes after deploy |
+| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (lag=0) |
 | CurGens | 3 — main + gen-0 + gen-1 |
 | NextGens | 3 — all committed |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
 | File | Source | Purpose |
 |------|--------|---------|
-| `ext.jar` (184KB) | `Ecosystem/matcher` @ `117020ce` | Registers BlockchainUpdates + DEXExtension; NodeBlockchainApiGrpcService |
-| `grpc.jar` (4.6MB) | `Ecosystem/matcher` @ `117020ce` | DccBlockchainApiGrpc stubs + DEX gRPC service classes |
+| `ext.jar` (184KB) | `Ecosystem/matcher` @ `0767d246` | Registers BlockchainUpdates + DEXExtension; NodeBlockchainApiGrpcService |
+| `grpc.jar` (4.6MB) | `Ecosystem/matcher` @ `0767d246` | DccBlockchainApiGrpc stubs + DEX gRPC + 14-field Block$Header |
 
-Both JARs are freshly built from source and committed to `infra/plugins/testnet/`. `update-node-image.yml` deploys them on every node update.
-
-**Classpath:** `lib/*:lib/plugins/*` — node proto classes (14-field Block$Header) take priority over plugin JARs.
+Both JARs built from source, committed to `infra/plugins/testnet/`, deployed by `update-node-image.yml`.
+**Classpath:** `lib/plugins/*:lib/*` — plugins first so extension `application.conf` registers both extensions. 14-field `Block$Header` in `grpc.jar` (matcher updated to match protobuf-schemas 1.6.3).
 
 ---
 
