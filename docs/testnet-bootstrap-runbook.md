@@ -66,6 +66,13 @@ All 4 failure scenarios verified at round-timeout=1200ms:
 ### Item 5 — round-timeout-ms tuned ✅ DONE
 5000ms → 1200ms (p99 ~1000ms + 20% margin). Deployed to main node and gen nodes via Flux.
 
+### Item 6 — Stress test baseline ✅ MEASURED (2026-06-30)
+Single funded sender (gen-0, nonce=0), 50 TPS sustained 120s, **zero errors**:
+- p50=33ms, p95=36ms, p99=67ms, p99.9=107ms, max=145ms
+- UTX pool limit reached at 50 TPS/sender — fund secondary senders to scale
+- 100 TPS test in progress (single sender → will show error rate at saturation)
+- Workflow: `DecentralChain/.github/workflows/stress-test.yml`
+
 ---
 
 ## All Credentials — KeeWeb Backup Location
