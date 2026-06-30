@@ -99,3 +99,81 @@ state transitions, or consensus rules.
 
 * `sbt node-tests/test` — **no new failures introduced**
 * 5 pre-existing failures (from DCC-146/147 and JDK 25 incompatibility) remain unchanged
+
+---
+
+## 2026-06-28 to 2026-06-30 patches (T2 soak window)
+
+Applied immediately before and during the T2 testnet soak. All patches are production-merged.
+
+### BPS: dedup + upsert in `insert_blocks_or_microblocks`
+
+| Field | Value |
+|-------|-------|
+| Repo | `Decentral-America/DecentralChain` (BPS) |
+| Category | Bug fix / correctness |
+| Status | Deployed |
+
+**Problem:** Duplicate block/microblock rows could be inserted on rapid re-org or replay, causing constraint violations.
+**Fix:** Changed the insert strategy to dedup before write and upsert on conflict, making the operation idempotent.
+
+---
+
+### BPS `fbece975a`: Loader.scala RocksDB re-seek bug fix
+
+| Field | Value |
+|-------|-------|
+| Repo | `Decentral-America/DecentralChain` (BPS) |
+| Commit | `fbece975a` |
+| Category | Bug fix / correctness |
+| Status | Deployed — type-19 enabled |
+
+**Problem:** The Loader's RocksDB iterator did not re-seek to the correct position after a compaction or snapshot boundary crossing, causing the BlockchainUpdates extension (T0 DeterministicFinality feed) to stall.
+**Fix:** Added explicit re-seek to the iterator before consuming the next batch. The fix also enables type-19 transaction processing in BPS.
+**Observable effect:** T0 DeterministicFinality lag self-heals; `CurGens` and `NextGens` remain stable at 3.
+
+---
+
+### node-scala `ff9d86ae`: Loader.scala (BlockchainUpdates extension) re-seek fix
+
+| Field | Value |
+|-------|-------|
+| Repo | `node-scala` |
+| Commit | `ff9d86ae` |
+| Category | Bug fix / correctness |
+| Status | Deployed |
+
+**Problem:** Mirror of the BPS Loader.scala issue. The BlockchainUpdates extension in node-scala had the same RocksDB re-seek omission, causing the extension to stop emitting events after iterator exhaustion.
+**Fix:** Explicit re-seek added at the same iterator boundary as the BPS fix. Paired with `fbece975a` for full end-to-end coverage.
+
+---
+
+### Infra: `round-timeout-ms` 5000 → 1200 ms
+
+| Field | Value |
+|-------|-------|
+| Scope | Infrastructure / node config |
+| Category | Performance tuning |
+| Status | Applied to all testnet nodes |
+
+**Change:** Reduced `round-timeout-ms` from 5000 ms to 1200 ms on all generator and main nodes.
+**Rationale:** Under a 3-generator testnet topology, 5000 ms produced unnecessary pause windows between mining rounds. At 1200 ms, T2 finality lag dropped to 0 and block production became continuous.
+
+---
+
+### Infra: T2 soak PASSED (all 4 phases)
+
+| Field | Value |
+|-------|-------|
+| Scope | Infrastructure / QA |
+| Category | Validation |
+| Date | 2026-06-30 |
+| Result | PASSED |
+
+**Summary:** All 4 soak phases completed successfully:
+1. Single-generator baseline — chain advancing, no stalls
+2. Multi-generator handoff — `CurGens` / `NextGens` transitions correct
+3. Round-timeout stress — 1200 ms sustained, T2 lag = 0
+4. BPS replay integrity — no duplicate rows, type-19 events delivered
+
+Chain height at soak end: **9733+**. T0 DeterministicFinality transient lag at block 9668 resolved via self-heal (Loader re-seek fix).

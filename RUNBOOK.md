@@ -1,5 +1,7 @@
 # DecentralChain Node — Operator Runbook
 
+> Last updated: **2026-06-30**
+
 This runbook covers day-to-day operational tasks for a DecentralChain (`node-scala`) validator or full-node operator.
 
 ---
@@ -18,6 +20,7 @@ This runbook covers day-to-day operational tasks for a DecentralChain (`node-sca
 10. [Known peer list](#known-peer-list)
 11. [Go/No-Go checklist](#gono-go-checklist)
 12. [Escalation contacts](#escalation-contacts)
+13. [Testnet soak results](#testnet-soak-results)
 
 ---
 
@@ -244,6 +247,15 @@ Mainnet seed peers (as of release 1.6.1):
 52.48.34.89:6868
 ```
 
+Testnet nodes (as of 2026-06-30, image `v1.6.3-be2dcfc0`):
+
+| Role | Host | P2P | API |
+|------|------|-----|-----|
+| Main node (Newark) | 66.228.55.154 | 6868 | 6869 |
+| Gen nodes (LKE Frankfurt) | 172.105.64.89 | 6863 | 6864 |
+
+All 3 generator nodes are active: `CurGens=3`, `NextGens=3`.
+
 These are configured in `node/decentralchain-mainnet.conf`. To add additional peers at runtime:
 
 ```sh
@@ -278,3 +290,27 @@ Before declaring a node production-ready:
 | On-call engineer | See internal PagerDuty rotation |
 | Security issues | security@decentral.exchange |
 | Public discussion | https://github.com/Decentral-America/DecentralChain/discussions |
+
+---
+
+## Testnet soak results
+
+**Soak completed: 2026-06-30 — PASSED (all 4 phases)**
+
+| Metric | Value |
+|--------|-------|
+| Chain height at soak end | 9733+ |
+| T2 finality lag | 0 blocks |
+| Round-timeout | 1200 ms (tuned down from 5000 ms) |
+| Generators online | 3 / 3 (CurGens=3, NextGens=3) |
+| BPS commit | `fbece975a` |
+| Type-19 transactions | Enabled |
+| Node image | `v1.6.3-be2dcfc0` |
+
+**Known transient issue (self-healing):** T0 DeterministicFinality was lagging at block 9668 during the soak window. No operator action required — the extension catches up automatically once its internal re-seek completes (fixed in BPS `fbece975a` and node-scala `ff9d86ae`).
+
+**Patches applied before soak:**
+- BPS: dedup + upsert in `insert_blocks_or_microblocks`
+- BPS `fbece975a`: Loader.scala RocksDB re-seek bug fix (DecentralChain)
+- node-scala `ff9d86ae`: Loader.scala (BlockchainUpdates extension) re-seek fix
+- Infra: `round-timeout-ms` reduced from 5000 → 1200 ms
