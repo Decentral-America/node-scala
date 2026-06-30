@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+    tags:
+      # Semver release tags: node-scala/v1.2.3
+      # Triggers the release-image job below to build and push a versioned image.
+      - 'node-scala/v*.*.*'
 
 # Minimal permissions at workflow level; jobs that need more declare explicitly.
 permissions:
@@ -314,3 +318,94 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-results.sarif
+
+  # ── Semver Release Image ───────────────────────────────────────────────────
+  # Triggered only when a node-scala/vX.Y.Z tag is pushed.
+  # Builds and pushes images tagged with the semver version for all networks,
+  # e.g.:
+  #   ghcr.io/decentral-america/node-scala:1.2.3-testnet
+  #   ghcr.io/decentral-america/node-scala:1.2.3-mainnet
+  #   ghcr.io/decentral-america/node-scala:1.2.3-stagenet
+  #
+  # To create a release:
+  #   git tag node-scala/v1.2.3
+  #   git push origin node-scala/v1.2.3
+  #
+  # The infra update-node-image.yml workflow can then be pointed at a specific
+  # semver tag instead of <network>-latest for pinned, rollback-safe deploys.
+  release-image:
+    name: Release Image (${{ matrix.network }})
+    needs: package
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/node-scala/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        network: [mainnet, testnet, stagenet]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
+      - name: Extract semver from tag
+        id: semver
+        run: |
+          # Tag format: node-scala/v1.2.3 -> VERSION=1.2.3
+          VERSION="${GITHUB_REF_NAME#node-scala/v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Build tarballs for docker
+        run: sbt --batch buildTarballsForDocker
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
+        id: meta
+        with:
+          images: ghcr.io/decentral-america/node-scala
+          tags: |
+            type=raw,value=${{ steps.semver.outputs.version }}-${{ matrix.network }}
+            type=raw,value=node-scala-${{ matrix.network }}-${{ steps.semver.outputs.version }}
+      - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
+        with:
+          context: ./docker
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
