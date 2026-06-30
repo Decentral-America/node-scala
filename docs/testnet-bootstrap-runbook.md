@@ -8,22 +8,23 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 8043+, advancing ~30-60s/block |
-| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-c8eaacee |
+| Chain height | 8245+, advancing ~30-60s/block |
+| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-2dbc88ac |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
 | blockchain-postgres-sync | ✅ Healthy, syncing |
 | matcher | ✅ Healthy (port 6886) |
-| T0 DeterministicFinality | ✅ finalizedHeight = 8000 |
-| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (8043) |
+| T0 DeterministicFinality | ✅ finalizedHeight ~8200 |
+| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (lag=0) |
 | CurGens | ✅ 3 — main + gen-0 + gen-1 |
 | NextGens | ✅ 3 — all committed |
 
-### Plugin JAR state on VPS (needs proper CI pipeline — deferred)
-- `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept ⚠️
-- `dcc-ext.jar` (184KB) — original
-- **Proper fix:** Add CI step to build thin extension JAR from `grpc-server` module and deploy as part of `update-node-image.yml`. Currently working but not built from clean sources.
+### Plugin JAR state on VPS
+- `dcc-grpc.jar` (2.2MB) — **fresh thin JAR** from CI build `2dbc88ac`, contains BlockchainUpdates + GRPCServerExtension
+- `dcc-ext.jar.disabled` — **disabled** — contains NodeBlockchainApiGrpcService which references `DccBlockchainApiGrpc` (legacy DEX class not in current repos)
+- **Blocker for DEX matching:** `DccBlockchainApiGrpc` is generated from DEX proto files not in current repos. Must port DEX gRPC protos to monorepo before re-enabling `dcc-ext.jar`.
+- **Chain/T2/T0 unaffected** — DEX extension is only needed for matcher order execution.
 
 ### Plugin JAR state on VPS (changed during debugging)
 - `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept
