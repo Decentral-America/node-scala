@@ -13,8 +13,9 @@
 
 Report vulnerabilities privately to the security team:
 
-- **Email:** security@decentral.exchange  
-- **PGP:** Available on request via the above address.
+- **Email:** security@decentral.exchange
+- **Secondary contact:** josue.rojas@sdbullion.com
+- **PGP:** Available on request via the above addresses.
 
 Please include:
 
@@ -63,12 +64,42 @@ Out of scope:
 The node container runs with the following hardening applied:
 
 - Non-root user (`dcc`, UID 999) at runtime.
+- `no-new-privileges: true` — privilege escalation is blocked at the kernel level.
+- All Linux capabilities dropped (`cap_drop: ALL`); none re-added.
 - Wallet seed injected via environment variable; written to a `chmod 600`
   temporary file at startup and removed on exit via `trap`.
 - AmazonCorrettoCryptoProvider (ACCP) loaded for hardware-accelerated crypto.
 - HTTPS enforced for all outbound API calls in production configurations.
-- REST API should be placed behind a reverse proxy in production — never expose
-  port 6869 directly to the internet without authentication.
+- REST API (port 6869) is localhost-only in the Docker Compose configuration —
+  never expose it to the internet without authentication.
+
+### Kubernetes (LKE) hardening (gen/val nodes)
+
+Gen and validator nodes run on LKE (not public-facing) with additional pod-level
+security context:
+
+- `fsGroup` set to restrict filesystem ownership.
+- `allowPrivilegeEscalation: false`.
+- All capabilities dropped at pod level.
+
+## API key hashing algorithm
+
+The node's REST API uses a **double hash**: `secureHash = Keccak256(Blake2b256(key))`,
+then base58-encoded. This is **not SHA-256**. Always use the node's own utility to
+generate the hash for a new API key:
+
+```bash
+curl -s -X POST http://localhost:6869/utils/hash/secure \
+  -H "Content-Type: application/json" \
+  -d '{"message":"YOUR_NEW_KEY"}' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['hash'])"
+```
+
+## Known patched vulnerabilities
+
+| CVE | Component | Status |
+|-----|-----------|--------|
+| CVE-2026-44249 | node-scala Docker image | ✅ Patched in current image |
 
 ## Dependency scanning
 
@@ -79,3 +110,7 @@ This repository uses:
 - **Trivy** (container image scanning) on every Docker build.
 - **SBOM** (SPDX format) generated and attached to every release via
   `anchore/sbom-action`.
+
+---
+
+_Last reviewed: 2026-06-30_
