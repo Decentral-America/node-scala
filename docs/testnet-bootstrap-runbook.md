@@ -8,17 +8,17 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 7948+, advancing |
-| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-c8eaacee, mining from period 80 |
+| Chain height | 8009+, advancing ~30-60s/block |
+| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-c8eaacee |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
 | val-0 (LKE 172.105.64.89:6865) | ✅ Synced |
-| blockchain-postgres-sync | ⚠️ Restarting — connecting to gRPC (self-heals) |
+| blockchain-postgres-sync | ✅ Healthy, syncing from height 0 |
 | matcher | ✅ Healthy (port 6886) |
-| T0 DeterministicFinality | ✅ finalizedHeight ~7901 |
-| T2 HotStuff | ⚠️ None — resumes when main enters CurGens at height 8001 |
-| CurGens | 2 — gen-0 + gen-1 (main joins at period 80 = height 8001) |
-| NextGens | 3 — all committed |
+| T0 DeterministicFinality | ✅ finalizedHeight = 8000 |
+| T2 HotStuff | ✅ ACTIVE — finalizing at chain tip (8009) |
+| CurGens | ✅ 3 — main + gen-0 + gen-1 |
+| NextGens | ✅ 3 — all committed |
 
 ### Plugin JAR state on VPS (changed during debugging)
 - `dcc-grpc.jar` (2.1MB) — modified: stale proto/scalapb/events classes removed, extension classes kept
