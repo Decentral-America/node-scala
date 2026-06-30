@@ -169,15 +169,35 @@ docker restart matcher-testnet
 ### Check T2 HotStuff finality
 ```bash
 curl http://localhost:6869/blockchain/finality
-# hotStuffFinalizedHeight advances when gen nodes are connected during 5s round window
-# CurGens must be >= 1 for rounds to start
+# Expected healthy state:
+#   hotStuffFinalizedHeight lag < 10 blocks — T2 at tip
+#   hotStuffFinalizedHeight lag > 50 blocks for 10 min — ALERT: T2 stalled, check generators
+#   finalizedHeight (T0) lag < 200 blocks — normal (T0 advances in batches)
+#   finalizedHeight (T0) lag > 200 blocks for 30 min — ALERT: T0 stalled, generators missing
 # Quorum: 2/3 of ~80M total. Each node ~26.7M. Any 2-of-3 = 53.4M > 53.3M threshold.
+# round-timeout-ms = 1200 (p99 ~1000ms + 20%)
 ```
 
 ### Verify generators committed for current period
 ```bash
 gh workflow run peer-check.yml --repo Decentral-America/infra
-# Look for CurGens >= 2 and NextGens >= 2
+# Look for CurGens >= 2 AND NextGens >= 2
+# NextGens < 2 means T2 WILL stop after current period ends (every ~50 min)
+# auto-commit-generators.yml runs every 17-35 min (dual schedule for redundancy)
+
+# Emergency manual commit:
+gh workflow run auto-commit-generators.yml --repo Decentral-America/infra
+```
+
+### Deploy monitoring config (Prometheus alerts)
+```bash
+gh workflow run deploy-monitoring.yml --repo Decentral-America/infra
+# Alerts configured in monitoring/alerts.yml:
+#   BlockProductionStalled — no block in 5 min (CRITICAL)
+#   T2FinalizationStalled — lag >50 blocks for 10 min (HIGH)
+#   T2GeneratorsNotCommitted — NextGens <2 for 15 min (HIGH)
+#   NodePeersLow — <1 peer for 5 min (HIGH)
+#   T0FinalizationStalled — T0 lag >200 blocks for 30 min (MEDIUM)
 ```
 
 ---
