@@ -66,11 +66,19 @@ All 4 failure scenarios verified at round-timeout=1200ms:
 ### Item 5 — round-timeout-ms tuned ✅ DONE
 5000ms → 1200ms (p99 ~1000ms + 20% margin). Deployed to main node and gen nodes via Flux.
 
-### Item 6 — Stress test baseline ✅ MEASURED (2026-06-30)
-Single funded sender (gen-0, nonce=0), 50 TPS sustained 120s, **zero errors**:
-- p50=33ms, p95=36ms, p99=67ms, p99.9=107ms, max=145ms
-- UTX pool limit reached at 50 TPS/sender — fund secondary senders to scale
-- 100 TPS test in progress (single sender → will show error rate at saturation)
+### Item 6 — Stress test ✅ COMPLETE (2026-06-30)
+Single funded sender (gen-0 nonce=0), various TPS targets:
+
+| TPS target | Achieved | Error rate | p50 | p99 | p99.9 | Verdict |
+|-----------|---------|-----------|-----|-----|-------|---------|
+| 50 TPS | 50.0 | **0.00%** | 33ms | 67ms | 107ms | ✅ Healthy |
+| 100 TPS | 99.9 | **0.00%** | 18ms | 104ms | 163ms | ✅ Healthy |
+| 500 TPS | 469.7 | **0.00%** | 34ms | 786ms | 11,415ms | ⚠️ Accepted but tail latency blows out |
+
+**Conclusions:**
+- Node accepts up to ~470 TPS with zero rejections (UTX pool accepts but queues)
+- Healthy operation: ≤100 TPS per sender account (p99 < 200ms)
+- To scale beyond 100 TPS: fund secondary sender accounts (derived from seed nonce 1, 2, ...)
 - Workflow: `DecentralChain/.github/workflows/stress-test.yml`
 
 ---
