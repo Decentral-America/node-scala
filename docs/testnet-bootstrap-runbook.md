@@ -239,6 +239,35 @@ gh workflow run deploy-monitoring.yml --repo Decentral-America/infra
 
 ---
 
+## Disaster Recovery
+
+### Main Node Loss (Newark VPS)
+If the Newark VPS becomes unavailable, T2 quorum drops to gen-0+gen-1 only (2/3 ✓). Chain production continues via FairPoS. T2 finalization continues if gen nodes stay connected.
+
+**Recovery procedure:**
+1. Provision new VPS (same region, same specs): `gh workflow run provision.yml --repo Decentral-America/infra`
+2. Bootstrap new VPS: `gh workflow run push-secrets.yml --repo Decentral-America/infra`
+3. Restore chain state from latest R2 snapshot:
+   ```bash
+   rclone copy r2:pg-backups-testnet/chain-state/node-state-LATEST.tar.gz /tmp/ --config /opt/dcc/rclone.conf
+   docker volume create node-state-testnet
+   docker run --rm -v node-state-testnet:/data -v /tmp:/backup alpine tar xzf /backup/node-state-LATEST.tar.gz -C /data
+   ```
+4. Deploy node: `gh workflow run update-node-image.yml --repo Decentral-America/infra`
+5. Restore BPS database: `pg_restore` from latest pg_dump
+6. **RTO target:** ~30 minutes | **RPO target:** 24 hours (daily backup schedule)
+
+### Chain State Backup Schedule
+Automated daily backups via `backup-chain-state.yml` (03:00 UTC):
+- Destination: `r2:pg-backups-testnet/chain-state/` — 7-day retention
+- Includes: full RocksDB volume (blocks, state, blockchain-updates)
+- Verify: `gh workflow run backup-chain-state.yml --repo Decentral-America/infra`
+
+### Gen Node Loss
+LKE auto-reschedules pods. If both gen nodes go offline temporarily, FairPoS continues (main node mines solo). T2 pauses until quorum is restored. No manual action needed — Flux monitors and restarts.
+
+---
+
 ## ⚠️ Security: API Keys in Git History
 Node REST API keys are in git history of `infra` repo (commits Jun 25-27). Keys must be **rotated before mainnet**:
 1. Generate new API keys (random alphanumeric, 32+ chars)
