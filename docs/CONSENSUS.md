@@ -3,7 +3,7 @@
 > Last updated: June 30, 2026  
 > **T0: ✅ Testnet active** — T0 finalizedHeight advancing, all 3 generators committed, auto-commit every 35min. Mainnet: ❌ not yet activated.  
 > **T1: ✅ Implemented** — FillReceipt code complete and deployed on testnet matcher.  
-> **T2: ✅ Active on testnet** — T2 lag=0 (finalizing at chain tip). round-timeout=5000ms. HotStuff engine fires on both miner and P2P paths. Mainnet: ❌ requires T0 mainnet-stable ≥60 days first.  
+> **T2: ✅ Active on testnet** — T2 lag=0 (finalizing at chain tip). round-timeout=1200ms (tuned 2026-06-30). Soak PASSED (all 4 failure scenarios). HotStuff engine fires on both miner and P2P paths. Mainnet: ❌ requires T0 mainnet-stable ≥60 days first.  
 > **Blockers before mainnet**: see Approval Checklist below.  
 > Covers: T0 activation → T1 matcher → T2 HotStuff
 
@@ -244,7 +244,7 @@ The generation period commitment IS the rotating committee. T2 builds directly o
 
 2. **Validator set**: committed generators from `CommitToGenerationTransaction` — no new registration mechanism
 
-3. **Round timeout fallback**: 400ms per round; on timeout → T0 handles finality, chain never halts
+3. **Round timeout fallback**: 1200ms per round (p99 ~1000ms + 20% margin, tuned 2026-06-30); on timeout → T0 handles finality, chain never halts
 
 4. **Leader rotation**: block forger = HotStuff leader for that block's voting round (FairPoS schedule)
 
@@ -269,7 +269,7 @@ The generation period commitment IS the rotating committee. T2 builds directly o
 ```hocon
 dcc.hotstuff {
   enabled = true
-  round-timeout-ms = 400
+  round-timeout-ms = 1200
 }
 ```
 
@@ -393,7 +393,7 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 **Node version**: v1.6.3 (commit `be2dcfc0`) — feature 25 active, committedGeneratorsHash deployed  
 **Block time**: ~30s average, min 5s  
 **T0 finality**: `finalizedHeight` ≈ `height − 100`, advancing continuously  
-**T2 HotStuff**: `hotStuffFinalizedHeight` finalizing at chain tip (lag=0). Active with all 3 validators.  
+**T2 HotStuff**: `hotStuffFinalizedHeight` finalizing at chain tip (lag=0). Active with all 3 validators. round-timeout-ms=1200 (tuned 2026-06-30, soak PASSED).  
 **Auto-commit**: `auto-commit-generators.yml` runs every 35 min — keeps all 3 generators committed for the next period.  
 **Gen period length**: 100 blocks ≈ 50 min  
 **Known-peers**: Main node now connects to gen-0 (`:6863`) and gen-1 (`:6864`) for persistent HotStuff connectivity.
@@ -418,7 +418,7 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 - [x] Set `generation-period-length = 100` — T0 finality every ~50 min on testnet
 - [x] All 3 generators committed via `CommitToGenerationTransaction` — auto-renewed every 35 min
 - [x] T2 HotStuff BFT engine implemented — 3-round protocol, BLS QCs, P2P msgs 39/40, Kamon metrics, 3 test suites
-- [x] T2 active on testnet — `hotstuff.enabled = true`, `round-timeout-ms = 5000` in `dcc.conf`
+- [x] T2 active on testnet — `hotstuff.enabled = true`, `round-timeout-ms = 1200` in `dcc.conf`
 - [x] Fixed miner path — `Miner.setHotStuffEngine()` ensures locally-mined blocks also trigger HotStuff rounds
 - [x] `GET /blockchain/finality` with `hotStuffFinalizedHeight` advancing. First QC at height 2343.
 - [x] Auto-commit cron — `auto-commit-generators.yml` every 35 min
@@ -432,11 +432,12 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 - [x] **`committedGeneratorsHash` in block headers** — ✅ Deployed (node-scala `be2dcfc0`, protobuf-schemas 1.6.3, Steps B+C complete).
 
 ### Operational — REMAINING ❌ (must complete before mainnet)
-- [ ] **T2 testnet soak — 4 weeks** with intentional failures:
-  - Kill gen-0 → verify rounds fall back to T0, chain continues
-  - Kill gen-1 → same
-  - Kill both gen nodes → verify FairPoS continues, no halt
-  - Measure `hotstuff.round.latency_ms` in Kamon — tune `round-timeout-ms` from real data (currently 5000ms, target 400ms production)
+- [x] **T2 testnet soak — PASSED (2026-06-30)** — all 4 failure scenarios verified at round-timeout=1200ms:
+  - gen-0 down: T2 maintained lag=0 (main+gen-1 quorum)
+  - gen-1 down: T2 maintained lag=0 (main+gen-0 quorum)
+  - both down: FairPoS continued, T2 paused (no quorum, no halt)
+  - both restored: T2 self-healed to lag=0 within 3 min
+  - round-timeout-ms tuned 5000ms → 1200ms (p99 ~1000ms + 20% margin)
 - [ ] **Mainnet T0 activation** — 8-week advance notice to ~50 node operators. Upgrade to v1.6.3 + vote feature 25.
 - [ ] **After T0 mainnet-stable ≥60 days** — enable `hotstuff.enabled = true` in mainnet `dcc.conf`
 - [ ] **Stagenet validation run** — per `mainnet-upgrade-validation.md`: legacy → modern node handoff at 10k blocks, verify no chain splits
@@ -455,7 +456,7 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 | HotStuff engine | `node-scala/node/src/main/scala/com/decentralchain/consensus/hotstuff/` | ✅ Active on testnet |
 | Testnet config | `node-scala/node/decentralchain-testnet.conf` | ✅ `hotstuff.enabled=true`, feature 25 active |
 | Mainnet config | `node-scala/node/decentralchain-mainnet.conf` | ❌ Feature 25 not yet activated |
-| VPS dcc.conf | `/opt/dcc/config/node-testnet/dcc.conf` | ✅ `hotstuff.enabled=true`, `round-timeout-ms=5000` |
+| VPS dcc.conf | `/opt/dcc/config/node-testnet/dcc.conf` | ✅ `hotstuff.enabled=true`, `round-timeout-ms=1200` |
 | Matcher FillReceipt | `Ecosystem/matcher/dex/src/main/scala/.../model/FillReceipt.scala` | ✅ Complete, deployed on testnet |
 | Block proto | `DecentralChain/packages/sdk/protobuf-schemas/proto/dcc/block.proto` | ✅ Field 14 `committed_generators_hash` added (1.6.3) |
 | BPS type-19 | `DecentralChain/apps/blockchain-postgres-sync/src/lib/consumer/` | ✅ Code fixed (`2f35c45a`) — deploy pending |

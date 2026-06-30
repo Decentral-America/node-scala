@@ -215,10 +215,24 @@ gh workflow run deploy-monitoring.yml --repo Decentral-America/infra
 
 ## ⚠️ Security: API Keys in Git History
 Node REST API keys are in git history of `infra` repo (commits Jun 25-27). Keys must be **rotated before mainnet**:
-1. Generate new API keys
-2. Hash them: `sha256(key)` base58-encoded
-3. Update `api-key-hash` in `dcc.conf` for each node via `deploy-node-config.yml`
+1. Generate new API keys (random alphanumeric, 32+ chars)
+2. Compute hash using `secureHash = Keccak256(Blake2b256(key))` then base58-encode.
+   **CRITICAL: NOT SHA256** — node uses `crypto.secureHash` per `ApiRoute.scala:27`. Use the node's own utility:
+   ```bash
+   curl -s -X POST http://localhost:6869/utils/hash/secure \
+     -H "Content-Type: application/json" -d '{"message":"YOUR_NEW_KEY"}' | python3 -c "import json,sys; print(json.load(sys.stdin)['hash'])"
+   ```
+3. Update `api-key-hash` in `dcc.conf` for each node:
+   - Main: `infra/node-config/testnet/dcc.conf` → deploy via `deploy-node-config.yml`
+   - Gen/val: `infra/clusters/testnet/apps/nodes.yaml` → Flux auto-applies within 10 min
 4. Update GitHub Actions secrets: `MAIN_NODE_REST_API_KEY`, `GEN_0_NODE_REST_API_KEY`, `GEN_1_NODE_REST_API_KEY`, `VAL_0_NODE_REST_API_KEY`
+5. Verify each node: `curl -H "X-API-Key: NEW_KEY" http://localhost:6869/peers/connected` → expect 200
+
+**Current api-key-hash values** (in git — source of the rotation requirement):
+- main: `5gZJk3xTibMQ65CvKeBzoHR4pY5h7EYmAc87ZZcLW7ps`
+- gen-0: `9JJ6P8coxQdrRS9XWyxwPgbF1zCL6NGMoAjwmaLDEimY`
+- gen-1: `2dee71STxrm5YNC8RDSAkaxCMKSoYBAw2pfwFk8TdT2S`
+- val-0: `FMb13YEvv9XBgbRcP4SosJVWf5X2i8iTG9H2ZEswaTLE`
 
 ---
 
@@ -273,4 +287,4 @@ curl -X POST http://localhost:6869/transactions/sign \
 - Quorum threshold: 2/3 of total committed balance
 - Main: ~26.7M DCC, gen-0: ~26.7M DCC, gen-1: ~26.7M DCC (total ~80M, equal share)
 - Any 2-of-3 = ~53.4M > 53.3M threshold → QC possible with any majority
-- Round timeout: 5000ms
+- Round timeout: 1200ms (tuned 2026-06-30, p99 ~1000ms + 20% margin)
