@@ -12,7 +12,7 @@
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
-| val-0 (LKE 172.105.64.89:6865) | ⏳ Upgrading to T2 validator (miner+hotstuff enabled, Flux deploying) |
+| val-0 (LKE 172.105.64.89:6865) | ⚠️ miner+hotstuff enabled via Flux — needs funding (0 DCC) + address verification |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
 | admin-dashboard | ✅ Healthy — E2E crash fixed (E2E_SUITE_PATH=/dev/null/disabled) |
