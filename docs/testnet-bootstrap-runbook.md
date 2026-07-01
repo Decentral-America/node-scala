@@ -24,7 +24,6 @@
 | Log aggregation | ✅ LIVE — Loki 3.3.2 + Promtail running on VPS |
 | Alertmanager | ✅ LIVE — routes alerts → GitHub Issues webhook |
 | Alert webhook | ✅ LIVE — alert-webhook-testnet running |
-| Chain state backup | ⚠️ BLOCKED — `BACKUP_OBJ_ENDPOINT` secret set; `pg-backups-testnet` R2 bucket not yet created; `BACKUP_OBJ_ACCESS_KEY`/`SECRET_KEY` not yet set. **ACTION REQUIRED**: create bucket + R2 API token in Cloudflare Dashboard |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
 | File | Source | Purpose |
@@ -148,7 +147,6 @@ Key entries:
 |-----------|----------|----------|---------|
 | Auto-commit generators | Every 5 min (staggered dual cron: `*/10 * * * *` + `:05/:15/:25/:35/:45/:55`) | `auto-commit-generators.yml` | Keep all 3 generators committed for next period — 12 fire attempts/hour survives GitHub cron outages |
 | Peer reconnection watchdog | Every 15 min | `peer-watchdog.yml` | Force-reconnect gen nodes to main node if peers drop |
-| Chain state backup | Daily 03:00 UTC | `backup-chain-state.yml` | Snapshot node-state volume → Cloudflare R2 (7-day retention) |
 
 ---
 
@@ -271,17 +269,6 @@ Working dispatch-able workflows:
 - `vps-node-status.yml` — "VPS Node Status" (node finality, BPS blocks, service health)
 - `tune-hotstuff-round-timeout.yml` — "Tune HotStuff Round Timeout" (Kamon p99 → round-timeout-ms)
 
-### Add BACKUP_OBJ_ENDPOINT GitHub Secret (required for backup)
-```bash
-# The chain state backup fails without this secret.
-# Format: https://<cloudflare_account_id>.r2.cloudflarestorage.com
-# Add via GitHub: Settings → Environments → testnet → Add secret → BACKUP_OBJ_ENDPOINT
-# OR via CLI (requires the actual endpoint URL):
-gh secret set BACKUP_OBJ_ENDPOINT --repo Decentral-America/infra --env testnet
-# Then verify:
-gh workflow run backup-chain-state.yml --repo Decentral-America/infra
-```
-
 ---
 
 ## Incident Log
@@ -339,25 +326,9 @@ If the Newark VPS becomes unavailable, T2 quorum drops to gen-0+gen-1 only (2/3 
 **Recovery procedure:**
 1. Provision new VPS (same region, same specs): `gh workflow run provision.yml --repo Decentral-America/infra`
 2. Bootstrap new VPS: `gh workflow run push-secrets.yml --repo Decentral-America/infra`
-3. Restore chain state from latest R2 snapshot:
-   ```bash
-   rclone copy r2:pg-backups-testnet/chain-state/node-state-LATEST.tar.gz /tmp/ --config /opt/dcc/rclone.conf
-   docker volume create node-state-testnet
-   docker run --rm -v node-state-testnet:/data -v /tmp:/backup alpine tar xzf /backup/node-state-LATEST.tar.gz -C /data
-   ```
-4. Deploy node: `gh workflow run update-node-image.yml --repo Decentral-America/infra`
-5. Restore BPS database: `pg_restore` from latest pg_dump
-6. **RTO target:** ~30 minutes | **RPO target:** 24 hours (daily backup schedule)
-
-### Chain State Backup Schedule
-Automated daily backups via `backup-chain-state.yml` (03:00 UTC):
-- Destination: `r2:pg-backups-testnet/chain-state/` — 7-day retention
-- Includes: full RocksDB volume (blocks, state, blockchain-updates)
-- R2 credentials: `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (repo-level GitHub secrets, already configured)
-- **REQUIRED to activate:** set GitHub secret `BACKUP_OBJ_ENDPOINT` in the testnet environment (format: `https://<account_id>.r2.cloudflarestorage.com`)
-- Verify: `gh workflow run backup-chain-state.yml --repo Decentral-America/infra`
-
-**NOTE:** As of 2026-07-01 the backup workflow has been updated to read the endpoint from the GitHub secret `BACKUP_OBJ_ENDPOINT` (no longer requires the VPS testnet.env to have this value). The secret must be added before backups will succeed.
+3. Deploy node: `gh workflow run update-node-image.yml --repo Decentral-America/infra`
+4. Chain state syncs automatically from gen-0/gen-1 peers — no backup needed, this is the standard blockchain recovery path.
+5. **RTO target:** ~2 hours (includes chain sync time from genesis) | **RPO target:** 0 (chain is the distributed backup)
 
 ### Gen Node Loss
 LKE auto-reschedules pods. If both gen nodes go offline temporarily, FairPoS continues (main node mines solo). T2 pauses until quorum is restored. No manual action needed — Flux monitors and restarts.
