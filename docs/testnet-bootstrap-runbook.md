@@ -1,30 +1,30 @@
 # Testnet Bootstrap Runbook
 
-> **Single Source of Truth.** Last updated: 2026-06-30. Supersedes all prior STATUS/HANDOFF/TODO docs.
+> **Single Source of Truth.** Last updated: 2026-07-01. Supersedes all prior STATUS/HANDOFF/TODO docs.
 
 ---
 
-## Current Testnet State (2026-06-30)
+## Current Testnet State (2026-07-01)
 
 | Item | Status |
 |------|--------|
-| Chain height | 10344+, advancing ~30-60s/block |
-| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
-| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
-| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
-| val-0 (LKE 172.105.64.89:6865) | ⚠️ Observer-only — height ~9899 (syncing), 0 DCC balance, no wallet address configured |
+| Chain height | 12155+, advancing ~2 blocks/min |
+| Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3, all extensions running |
+| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining — height 12155 |
+| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining — height 12155, 13 restarts (normal) |
+| val-0 (LKE 172.105.64.89:6865) | ⚠️ CrashLoopBackOff fixed 2026-07-01 — memory increased 620Mi→880Mi, heap 512m→768m; was crash-looping 148 times in 4 days due to OOM; Flux rolling update in progress |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
 | admin-dashboard | ✅ Healthy — E2E crash fixed (E2E_SUITE_PATH=/dev/null/disabled) |
-| T0 DeterministicFinality | ✅ Advancing — recovered to 10237 (was stuck at 9668, self-healed) |
-| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, validators=3 |
-| CurGens | 3 — main + gen-0 + gen-1 |
-| NextGens | 0 → auto-commit running |
+| T0 DeterministicFinality | ✅ Advancing — at 11960 (self-healed from 9668 gap) |
+| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, validators=2 (val-0 not yet participating) |
+| CurGens | 3 committed (main + gen-0 + gen-1) per auto-commit every 5 min |
+| NextGens | 3 committed — auto-commit cron stable |
 | Prometheus monitoring | ✅ LIVE — 2 rule groups (alerts.yml loaded), 7 alert rules |
 | Log aggregation | ✅ LIVE — Loki 3.3.2 + Promtail running on VPS |
 | Alertmanager | ✅ LIVE — routes alerts → GitHub Issues webhook |
 | Alert webhook | ✅ LIVE — alert-webhook-testnet running |
-| Chain state backup | ✅ Daily 03:00 UTC → Cloudflare R2 (7-day retention) |
+| Chain state backup | ⚠️ FAILING — workflow fixed 2026-07-01 but GitHub secret `BACKUP_OBJ_ENDPOINT` not yet set; **ACTION REQUIRED**: add to GitHub testnet environment |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
 | File | Source | Purpose |
@@ -37,13 +37,13 @@ Both JARs built from source, committed to `infra/plugins/testnet/`, deployed by 
 
 ---
 
-## T0 DeterministicFinality — Known Lag (Self-Healing)
+## T0 DeterministicFinality — Status (2026-07-01)
 
-**Status:** T0 finalizedHeight stuck at ~9668. Root cause: during T2 soak Phase C (both gen nodes killed), no CommitToGeneration transactions were signed for those blocks. `BlockEndorser` requires `committedGenerators()` to return a valid set for each block — without it, no endorsements flow → T0 cannot advance past the last block with valid endorsements.
+**Status:** ✅ Self-healed. T0 finalizedHeight was stuck at ~9668 after the T2 soak test (Phase C killed both gen nodes; no CommitToGeneration transactions were signed for those blocks). T0 resumed advancing once endorsements accumulated and now sits at ~11960, lagging T2 (12100+) by ~140 blocks (~70 min) — this is normal and expected.
 
-**Self-healing:** T0 will resume advancing as generators consistently commit for each new period. The dual-cron `auto-commit-generators.yml` (every 35min + :17 hourly) ensures no periods are missed going forward. T0 may remain lagged through the gap period but will catch up once endorsements accumulate.
+**Root cause of prior stall:** `BlockEndorser` requires `committedGenerators()` to return a valid set for each block. During the gap period (blocks where no generators were committed), no endorsements could flow. Once the generators committed consistently again, T0 caught up block-by-block.
 
-**Not a chain safety issue:** T2 HotStuff provides finality at lag=0. T0 is an additional finality layer; its temporary lag does not affect block production or T2.
+**Not a chain safety issue:** T2 HotStuff provides finality at lag=0. T0 is an additional finality layer. A T0 lag ≤200 blocks is expected and normal; only a stall >200 blocks for >30 min should trigger investigation.
 
 ---
 
@@ -146,7 +146,9 @@ Key entries:
 
 | Automation | Schedule | Workflow | Purpose |
 |-----------|----------|----------|---------|
-| Auto-commit generators | Every 35 min | `auto-commit-generators.yml` | Keep all 3 generators committed for next period |
+| Auto-commit generators | Every 5 min (staggered dual cron: `*/10 * * * *` + `:05/:15/:25/:35/:45/:55`) | `auto-commit-generators.yml` | Keep all 3 generators committed for next period — 12 fire attempts/hour survives GitHub cron outages |
+| Peer reconnection watchdog | Every 15 min | `peer-watchdog.yml` | Force-reconnect gen nodes to main node if peers drop |
+| Chain state backup | Daily 03:00 UTC | `backup-chain-state.yml` | Snapshot node-state volume → Cloudflare R2 (7-day retention) |
 
 ---
 
@@ -214,9 +216,9 @@ curl http://localhost:6869/blockchain/finality
 gh workflow run peer-check.yml --repo Decentral-America/infra
 # Look for CurGens >= 2 AND NextGens >= 2
 # NextGens < 2 means T2 WILL stop after current period ends (every ~50 min)
-# auto-commit-generators.yml runs every 17-35 min (dual schedule for redundancy)
+# auto-commit-generators.yml fires every 5 min (staggered dual cron, 12 attempts/hr)
 
-# Emergency manual commit:
+# Emergency manual commit (if cron is down):
 gh workflow run auto-commit-generators.yml --repo Decentral-America/infra
 ```
 
@@ -254,6 +256,35 @@ GitHub silently fails to register `workflow_dispatch` triggers under two conditi
 
 Working dispatch-able workflows: `dispatch-test-5.yml` (Deploy Monitoring Stack), `dispatch-test-6.yml` (Check Val-0 Node Address).
 
+### Add BACKUP_OBJ_ENDPOINT GitHub Secret (required for backup)
+```bash
+# The chain state backup fails without this secret.
+# Format: https://<cloudflare_account_id>.r2.cloudflarestorage.com
+# Add via GitHub: Settings → Environments → testnet → Add secret → BACKUP_OBJ_ENDPOINT
+# OR via CLI (requires the actual endpoint URL):
+gh secret set BACKUP_OBJ_ENDPOINT --repo Decentral-America/infra --env testnet
+# Then verify:
+gh workflow run backup-chain-state.yml --repo Decentral-America/infra
+```
+
+---
+
+## Incident Log
+
+### INC-001: 7-Hour GitHub Actions Cron Outage (2026-07-01 01:41–08:57 UTC)
+**Impact:** T2 HotStuff stalled — CurGens=0/NextGens=0 at height ~11437. Chain block production via FairPoS continued unaffected.
+**Root cause:** GitHub Actions cron scheduler silently stopped firing all scheduled workflows in the `Decentral-America/infra` repo for 7h 16m.
+**Detection:** Manual check of chain finality showed T2 lag growing; last auto-commit was at 01:41 UTC.
+**Recovery:** Manually dispatched `auto-commit-generators.yml` → NextGens=3 → T2 resumed at next period boundary (~11500).
+**Mitigation applied:** Increased cron frequency from `*/35 * * * *` to dual staggered schedule (`*/10 * * * *` + `:05/:15/:25/:35/:45/:55`), giving 12 fire attempts per hour. A 3.5-hour cron gap cannot stall T2 again — worst case is one missed 5-min window.
+**Long-term gap:** The VPS can commit the main node generator locally (no LKE access needed), but gen-0/gen-1 require GitHub Actions + kubectl. Consider a VPS-side cron for main node as a secondary failsafe.
+
+### INC-002: val-0 CrashLoopBackOff (2026-07-01, 148 restarts over 4 days)
+**Impact:** val-0 not participating in T2 HotStuff consensus (validators=2 not 3). Reduces fault tolerance; mainnet requires all validators stable.
+**Root cause:** JVM OOM kill — val-0 had 512m heap / 620Mi container limit while gen-0 (768m / 880Mi) and gen-1 (640m / 750Mi) ran stably. Node started successfully (~35 min uptime), memory grew, OOM killed the container.
+**Fix applied 2026-07-01:** Increased val-0 to 768m heap / 880Mi limit (matching gen-0) via `clusters/testnet/apps/nodes.yaml`. Flux applied within ~1 min.
+**Verification:** Watch for restarts to stop; val-0 height should catch up to chain; validators count should rise to 3 after next generator commit period.
+
 ---
 
 ## What NOT to Do
@@ -289,7 +320,11 @@ If the Newark VPS becomes unavailable, T2 quorum drops to gen-0+gen-1 only (2/3 
 Automated daily backups via `backup-chain-state.yml` (03:00 UTC):
 - Destination: `r2:pg-backups-testnet/chain-state/` — 7-day retention
 - Includes: full RocksDB volume (blocks, state, blockchain-updates)
+- R2 credentials: `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (repo-level GitHub secrets, already configured)
+- **REQUIRED to activate:** set GitHub secret `BACKUP_OBJ_ENDPOINT` in the testnet environment (format: `https://<account_id>.r2.cloudflarestorage.com`)
 - Verify: `gh workflow run backup-chain-state.yml --repo Decentral-America/infra`
+
+**NOTE:** As of 2026-07-01 the backup workflow has been updated to read the endpoint from the GitHub secret `BACKUP_OBJ_ENDPOINT` (no longer requires the VPS testnet.env to have this value). The secret must be added before backups will succeed.
 
 ### Gen Node Loss
 LKE auto-reschedules pods. If both gen nodes go offline temporarily, FairPoS continues (main node mines solo). T2 pauses until quorum is restored. No manual action needed — Flux monitors and restarts.
