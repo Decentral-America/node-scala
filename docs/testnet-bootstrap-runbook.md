@@ -12,7 +12,7 @@
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining — height 13200+ (2 restarts, stable) |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining — height 13200+ (2 restarts, stable) |
-| val-0 (LKE 172.105.64.89:6865) | ⚠️ CrashLoopBackOff (63 restarts in 8h) — crashing every ~7-8 min during bulk sync; suspected OOM: 880Mi limit - 768m heap = only 112MB JVM overhead (insufficient during sync); fix: increase limit to 1024Mi. Generator committed (CurGens=3) but intermittent. |
+| val-0 (LKE 172.105.64.89:6865) | ⚠️ CrashLoop fix in progress — OOM kill confirmed, memory limit increased 880Mi→1024Mi (infra commit `0954455`, Flux applying). Was 63+ restarts; should stabilize once Flux rolls out. Generator committed (CurGens=3), auto-commit every 5 min. |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy — **in-mem account storage** (no account.dat), seed via MATCHER_SEED env var |
 | admin-dashboard | ✅ Healthy |
@@ -302,7 +302,7 @@ gh workflow run backup-chain-state.yml --repo Decentral-America/infra
 ### INC-002b: val-0 CrashLoopBackOff — Phase 2 (2026-07-01 cont., 63+ restarts in 8h)
 **Impact:** val-0 crashing every ~7-8 min during bulk sync (9899 → 13200+). validators oscillates 2-3. CurGens=3 maintained by intermittent auto-commit windows.
 **Root cause:** 880Mi container limit - 768m heap = only ~112MB for JVM overhead (metaspace + thread stacks + native). Insufficient during aggressive block sync where non-heap can exceed 200MB. Gen-0 survives same config because it is at chain tip (no bulk sync pressure).
-**Pending fix:** Increase memory limit from 880Mi to 1024Mi in `clusters/testnet/apps/nodes.yaml` (pending confirmation of OOM vs other crash cause from `cluster-diagnostics --previous` logs).
+**Fix applied 2026-07-01:** Confirmed OOM kill via `--previous` logs — last entry 20:03:07 (liveness probe HTTP 200), then sudden silence (no Java exception = Linux cgroup SIGKILL). Increased memory limit 880Mi→1024Mi in `clusters/testnet/apps/nodes.yaml` (infra commit `0954455`). Flux will apply within ~1 min. Verification: run cluster-diagnostics and confirm restarts stop climbing.
 
 ### INC-003: VPS disk full (2026-07-01) + matcher account.dat switch to in-mem
 **Impact:** VPS `/tmp` filled to 100% — `push-secrets.yml` failed with `tee: /tmp/secrets-patch.env: No space left on device`. Additionally, 3 stray matcher containers running for 2+ hours were consuming disk.
