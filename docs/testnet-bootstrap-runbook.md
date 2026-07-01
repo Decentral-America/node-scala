@@ -263,13 +263,13 @@ on:
 ```
 Rules: (1) `workflow_dispatch:` must come before `workflow_call:` in the `on:` block. (2) `workflow_dispatch:` must have at least one input defined — `workflow_dispatch: {}` (empty) breaks registration. (3) Replace any `docker ps --format "{{...}}"` with `docker ps | grep`.
 
-**CRITICAL:** GitHub caches broken trigger state at first registration — editing the file never fixes it. A new file path is required. Broken files deleted: `dispatch-test.yml`, `dispatch-test-3.yml`, `dispatch-test-4.yml`, `infra-mon.yml`, `infra-val0.yml`, `raw-node-logs.yml`, `tune-round-timeout.yml`.
+**CRITICAL:** GitHub caches broken trigger state at first registration — editing the file never fixes it. A new file path is required. Git rename detection (≥50% similarity between a deleted file and new file in the same commit) causes GitHub to migrate broken state to the new path — always create replacement files in a separate commit containing only additions. Broken files deleted: `dispatch-test.yml`, `dispatch-test-3.yml`, `dispatch-test-4.yml`, `infra-mon.yml`, `infra-val0.yml`, `raw-node-logs.yml`, `tune-round-timeout.yml`, `vps-health-check.yml`, `tune-hotstuff-timeout.yml`, `tune-consensus-timeout.yml`.
 
 Working dispatch-able workflows:
 - `dispatch-test-5.yml` — "Deploy Monitoring Stack"
 - `dispatch-test-6.yml` — "Check Val-0 Node Address"
-- `vps-health-check.yml` — "VPS Health Check" (node finality, BPS blocks, admin dashboard)
-- `tune-hotstuff-timeout.yml` — "Tune HotStuff Round Timeout" (Kamon p99 → round-timeout-ms)
+- `vps-node-status.yml` — "VPS Node Status" (node finality, BPS blocks, service health)
+- `tune-hotstuff-round-timeout.yml` — "Tune HotStuff Round Timeout" (Kamon p99 → round-timeout-ms)
 
 ### Add BACKUP_OBJ_ENDPOINT GitHub Secret (required for backup)
 ```bash
