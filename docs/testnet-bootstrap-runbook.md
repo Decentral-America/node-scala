@@ -254,7 +254,11 @@ GitHub silently fails to register `workflow_dispatch` triggers under two conditi
 
 **CRITICAL:** GitHub caches broken trigger state at first registration — editing the file never fixes it. A new file path is required. Broken files deleted: `dispatch-test.yml`, `dispatch-test-3.yml`, `dispatch-test-4.yml`, `infra-mon.yml`, `infra-val0.yml`.
 
-Working dispatch-able workflows: `dispatch-test-5.yml` (Deploy Monitoring Stack), `dispatch-test-6.yml` (Check Val-0 Node Address).
+Working dispatch-able workflows:
+- `dispatch-test-5.yml` — "Deploy Monitoring Stack"
+- `dispatch-test-6.yml` — "Check Val-0 Node Address"
+- `vps-health-check.yml` — "VPS Health Check" (node finality, BPS blocks, admin dashboard)
+- `tune-hotstuff-timeout.yml` — "Tune HotStuff Round Timeout" (Kamon p99 → round-timeout-ms)
 
 ### Add BACKUP_OBJ_ENDPOINT GitHub Secret (required for backup)
 ```bash
