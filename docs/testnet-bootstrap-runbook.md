@@ -250,9 +250,20 @@ GitHub silently fails to register `workflow_dispatch` triggers under two conditi
 
 **Symptoms:** workflow shows as file path (e.g. `.github/workflows/foo.yml`) in `gh workflow list` instead of its `name:` field; `gh workflow run` returns HTTP 422 "Workflow does not have 'workflow_dispatch' trigger"
 
-**Fix:** Add `workflow_call:` as a second trigger. Replace `docker ps --format "{{...}}"` with `docker ps | grep`.
+**Fix (exact working pattern):**
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual run'
+        required: false
+        default: 'manual'
+  workflow_call:    # MUST come after workflow_dispatch, not before
+```
+Rules: (1) `workflow_dispatch:` must come before `workflow_call:` in the `on:` block. (2) `workflow_dispatch:` must have at least one input defined — `workflow_dispatch: {}` (empty) breaks registration. (3) Replace any `docker ps --format "{{...}}"` with `docker ps | grep`.
 
-**CRITICAL:** GitHub caches broken trigger state at first registration — editing the file never fixes it. A new file path is required. Broken files deleted: `dispatch-test.yml`, `dispatch-test-3.yml`, `dispatch-test-4.yml`, `infra-mon.yml`, `infra-val0.yml`.
+**CRITICAL:** GitHub caches broken trigger state at first registration — editing the file never fixes it. A new file path is required. Broken files deleted: `dispatch-test.yml`, `dispatch-test-3.yml`, `dispatch-test-4.yml`, `infra-mon.yml`, `infra-val0.yml`, `raw-node-logs.yml`, `tune-round-timeout.yml`.
 
 Working dispatch-able workflows:
 - `dispatch-test-5.yml` — "Deploy Monitoring Stack"
