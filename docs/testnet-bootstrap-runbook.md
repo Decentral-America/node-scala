@@ -12,7 +12,7 @@
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining — height 13200+ (2 restarts, stable) |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining — height 13200+ (2 restarts, stable) |
-| val-0 (LKE 172.105.64.89:6865) | ⚠️ CrashLoop fix in progress — OOM kill confirmed, memory limit increased 880Mi→1024Mi (infra commit `0954455`, Flux applying). Was 63+ restarts; should stabilize once Flux rolls out. Generator committed (CurGens=3), auto-commit every 5 min. |
+| val-0 (LKE 172.105.64.89:6865) | ⚠️ Recovering — OOM kill fixed (880Mi→1024Mi, infra `0954455`). Flux restarted val-0 at 20:19 UTC with 0 restarts. Still syncing (height 9899 → 13232). Verify stabilization at T+10 min from 20:19. |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy — **in-mem account storage** (no account.dat), seed via MATCHER_SEED env var |
 | admin-dashboard | ✅ Healthy |
