@@ -298,7 +298,15 @@ gh workflow run backup-chain-state.yml --repo Decentral-America/infra
 **Impact:** val-0 not participating in T2 HotStuff consensus (validators=2 not 3). Reduces fault tolerance; mainnet requires all validators stable.
 **Root cause:** JVM OOM kill — val-0 had 512m heap / 620Mi container limit while gen-0 (768m / 880Mi) and gen-1 (640m / 750Mi) ran stably. Node started successfully (~35 min uptime), memory grew, OOM killed the container.
 **Fix applied 2026-07-01:** Increased val-0 to 768m heap / 880Mi limit (matching gen-0) via `clusters/testnet/apps/nodes.yaml`. Flux applied within ~1 min.
-**Verification:** Watch for restarts to stop; val-0 height should catch up to chain; validators count should rise to 3 after next generator commit period.
+**Verification:** Pod restarts dropped to 2 (startup restarts only). val-0 Running 1/1 confirmed by cluster-diagnostics 19 min after Flux applied.
+
+### INC-003: BPS crash-loop — txs_19 FK missing ON DELETE CASCADE (2026-07-01)
+**Impact:** `blockchain-postgres-sync-testnet` crash-looping. API service degraded (BPS DB stale).
+**Root cause:** Migration `20260628000000_add_txs_19_commit_to_generation` created `txs_19.block_uid` FK as `REFERENCES blocks_microblocks(uid)` without `ON DELETE CASCADE`. When the node sends a blockchain rollback event, BPS tries to `DELETE FROM blocks_microblocks` but Postgres blocks it with `txs_19_block_uid_fkey` violation.
+**Fix applied 2026-07-01:**
+1. `restart-services.yml` now runs an idempotent `ALTER TABLE` to add CASCADE before restarting BPS.
+2. Migration source fixed in `DecentralChain/apps/blockchain-postgres-sync/migrations/2026-06-28-000000_add_txs_19_commit_to_generation/up.sql` (new deployments unaffected).
+**Recovery:** `gh workflow run restart-services.yml --repo Decentral-America/infra` — it auto-fixes the constraint and restarts BPS.
 
 ---
 
