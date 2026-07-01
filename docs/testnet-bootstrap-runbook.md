@@ -12,7 +12,7 @@
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3-be2dcfc0, all extensions running |
 | gen-0 (LKE 172.105.64.89:6863) | ✅ Mining |
 | gen-1 (LKE 172.105.64.89:6864) | ✅ Mining |
-| val-0 (LKE 172.105.64.89:6865) | ⚠️ miner+hotstuff enabled via Flux — needs funding (0 DCC) + address verification |
+| val-0 (LKE 172.105.64.89:6865) | ⚠️ Observer-only — height ~9899 (syncing), 0 DCC balance, no wallet address configured |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
 | matcher | ✅ Healthy (port 6886) |
 | admin-dashboard | ✅ Healthy — E2E crash fixed (E2E_SUITE_PATH=/dev/null/disabled) |
@@ -20,8 +20,10 @@
 | T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, validators=3 |
 | CurGens | 3 — main + gen-0 + gen-1 |
 | NextGens | 0 → auto-commit running |
-| Prometheus monitoring | ✅ 7 alerts, 10 metrics + Loki log aggregation deployed |
-| Log aggregation | ✅ Loki + Promtail running (committed, deploying) |
+| Prometheus monitoring | ✅ LIVE — 2 rule groups (alerts.yml loaded), 7 alert rules |
+| Log aggregation | ✅ LIVE — Loki 3.3.2 + Promtail running on VPS |
+| Alertmanager | ✅ LIVE — routes alerts → GitHub Issues webhook |
+| Alert webhook | ✅ LIVE — alert-webhook-testnet running |
 | Chain state backup | ✅ Daily 03:00 UTC → Cloudflare R2 (7-day retention) |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
@@ -218,9 +220,10 @@ gh workflow run peer-check.yml --repo Decentral-America/infra
 gh workflow run auto-commit-generators.yml --repo Decentral-America/infra
 ```
 
-### Deploy monitoring config (Prometheus alerts)
+### Deploy monitoring config (Prometheus alerts + Loki + Alertmanager)
 ```bash
-gh workflow run deploy-monitoring.yml --repo Decentral-America/infra
+gh workflow run dispatch-test-5.yml --repo Decentral-America/infra
+# "Deploy Monitoring Stack" — deploys prometheus.yml, alerts.yml, loki, promtail, alertmanager
 # Alerts configured in monitoring/alerts.yml:
 #   BlockProductionStalled — no block in 5 min (CRITICAL)
 #   T2FinalizationStalled — lag >50 blocks for 10 min (HIGH)
@@ -228,6 +231,28 @@ gh workflow run deploy-monitoring.yml --repo Decentral-America/infra
 #   NodePeersLow — <1 peer for 5 min (HIGH)
 #   T0FinalizationStalled — T0 lag >200 blocks for 30 min (MEDIUM)
 ```
+
+### Check val-0 node address and height
+```bash
+gh workflow run dispatch-test-6.yml --repo Decentral-America/infra
+# "Check Val-0 Node Address" — kubectl port-forward to val-0, checks /addresses and /node/status
+```
+
+---
+
+## GitHub Actions Workflow Trigger Bug (Discovered 2026-06-30)
+
+GitHub silently fails to register `workflow_dispatch` triggers under two conditions:
+1. **`workflow_dispatch:` + `environment:` in jobs** — GitHub's parser fails to register the trigger when these appear together without a second `on:` trigger
+2. **Go template syntax `{{.Names}}`** in `run:` blocks — `docker ps --format "{{...}}"` breaks the entire file's trigger registration
+
+**Symptoms:** workflow shows as file path (e.g. `.github/workflows/foo.yml`) in `gh workflow list` instead of its `name:` field; `gh workflow run` returns HTTP 422 "Workflow does not have 'workflow_dispatch' trigger"
+
+**Fix:** Add `workflow_call:` as a second trigger. Replace `docker ps --format "{{...}}"` with `docker ps | grep`.
+
+**CRITICAL:** GitHub caches broken trigger state at first registration — editing the file never fixes it. A new file path is required. Broken files deleted: `dispatch-test.yml`, `dispatch-test-3.yml`, `dispatch-test-4.yml`, `infra-mon.yml`, `infra-val0.yml`.
+
+Working dispatch-able workflows: `dispatch-test-5.yml` (Deploy Monitoring Stack), `dispatch-test-6.yml` (Check Val-0 Node Address).
 
 ---
 
