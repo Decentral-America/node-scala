@@ -8,23 +8,23 @@
 
 | Item | Status |
 |------|--------|
-| Chain height | 12155+, advancing ~2 blocks/min |
+| Chain height | 13200+, advancing ~2 blocks/min |
 | Main node (Newark 66.228.55.154) | ✅ Healthy — v1.6.3, all extensions running |
-| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining — height 12155 |
-| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining — height 12155, 13 restarts (normal) |
-| val-0 (LKE 172.105.64.89:6865) | ⚠️ CrashLoopBackOff fixed 2026-07-01 — memory increased 620Mi→880Mi, heap 512m→768m; was crash-looping 148 times in 4 days due to OOM; Flux rolling update in progress |
+| gen-0 (LKE 172.105.64.89:6863) | ✅ Mining — height 13200+ (2 restarts, stable) |
+| gen-1 (LKE 172.105.64.89:6864) | ✅ Mining — height 13200+ (2 restarts, stable) |
+| val-0 (LKE 172.105.64.89:6865) | ⚠️ CrashLoopBackOff (63 restarts in 8h) — crashing every ~7-8 min during bulk sync; suspected OOM: 880Mi limit - 768m heap = only 112MB JVM overhead (insufficient during sync); fix: increase limit to 1024Mi. Generator committed (CurGens=3) but intermittent. |
 | blockchain-postgres-sync | ✅ Healthy, syncing (fbece975a, type-19 enabled) |
-| matcher | ✅ Healthy (port 6886) |
-| admin-dashboard | ✅ Healthy — E2E crash fixed (E2E_SUITE_PATH=/dev/null/disabled) |
-| T0 DeterministicFinality | ✅ Advancing — at 11960 (self-healed from 9668 gap) |
-| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, validators=2 (val-0 not yet participating) |
-| CurGens | 3 committed (main + gen-0 + gen-1) per auto-commit every 5 min |
-| NextGens | 3 committed — auto-commit cron stable |
+| matcher | ✅ Healthy — **in-mem account storage** (no account.dat), seed via MATCHER_SEED env var |
+| admin-dashboard | ✅ Healthy |
+| T0 DeterministicFinality | ✅ Advancing — at 13109 (T0 lag ~50 blocks = normal) |
+| T2 HotStuff | ✅ ACTIVE — lag=0, round-timeout=1200ms, validators=2-3 (val-0 intermittent due to CrashLoop) |
+| CurGens | 3 committed (main + gen-0 + gen-1 + val-0) per auto-commit every 5 min |
+| NextGens | 3 committed — auto-commit cron running every 5 min |
 | Prometheus monitoring | ✅ LIVE — 2 rule groups (alerts.yml loaded), 7 alert rules |
 | Log aggregation | ✅ LIVE — Loki 3.3.2 + Promtail running on VPS |
 | Alertmanager | ✅ LIVE — routes alerts → GitHub Issues webhook |
 | Alert webhook | ✅ LIVE — alert-webhook-testnet running |
-| Chain state backup | ⚠️ FAILING — workflow fixed 2026-07-01 but GitHub secret `BACKUP_OBJ_ENDPOINT` not yet set; **ACTION REQUIRED**: add to GitHub testnet environment |
+| Chain state backup | ⚠️ BLOCKED — `BACKUP_OBJ_ENDPOINT` secret set; `pg-backups-testnet` R2 bucket not yet created; `BACKUP_OBJ_ACCESS_KEY`/`SECRET_KEY` not yet set. **ACTION REQUIRED**: create bucket + R2 API token in Cloudflare Dashboard |
 
 ### Plugin JARs (`/opt/dcc/plugins/testnet/`)
 | File | Source | Purpose |
@@ -294,13 +294,23 @@ gh workflow run backup-chain-state.yml --repo Decentral-America/infra
 **Mitigation applied:** Increased cron frequency from `*/35 * * * *` to dual staggered schedule (`*/10 * * * *` + `:05/:15/:25/:35/:45/:55`), giving 12 fire attempts per hour. A 3.5-hour cron gap cannot stall T2 again — worst case is one missed 5-min window.
 **Long-term gap:** The VPS can commit the main node generator locally (no LKE access needed), but gen-0/gen-1 require GitHub Actions + kubectl. Consider a VPS-side cron for main node as a secondary failsafe.
 
-### INC-002: val-0 CrashLoopBackOff (2026-07-01, 148 restarts over 4 days)
-**Impact:** val-0 not participating in T2 HotStuff consensus (validators=2 not 3). Reduces fault tolerance; mainnet requires all validators stable.
-**Root cause:** JVM OOM kill — val-0 had 512m heap / 620Mi container limit while gen-0 (768m / 880Mi) and gen-1 (640m / 750Mi) ran stably. Node started successfully (~35 min uptime), memory grew, OOM killed the container.
-**Fix applied 2026-07-01:** Increased val-0 to 768m heap / 880Mi limit (matching gen-0) via `clusters/testnet/apps/nodes.yaml`. Flux applied within ~1 min.
-**Verification:** Pod restarts dropped to 2 (startup restarts only). val-0 Running 1/1 confirmed by cluster-diagnostics 19 min after Flux applied.
+### INC-002: val-0 CrashLoopBackOff — Phase 1 (2026-07-01, 148 restarts over 4 days)
+**Impact:** val-0 not participating in T2 HotStuff consensus (validators=2 not 3).
+**Root cause:** JVM OOM kill — val-0 had 512m heap / 620Mi container limit.
+**Fix applied 2026-07-01:** Increased val-0 to 768m heap / 880Mi limit via `clusters/testnet/apps/nodes.yaml`. Flux applied within ~1 min. Restarts dropped to 2.
 
-### INC-003: BPS crash-loop — txs_19 FK missing ON DELETE CASCADE (2026-07-01)
+### INC-002b: val-0 CrashLoopBackOff — Phase 2 (2026-07-01 cont., 63+ restarts in 8h)
+**Impact:** val-0 crashing every ~7-8 min during bulk sync (9899 → 13200+). validators oscillates 2-3. CurGens=3 maintained by intermittent auto-commit windows.
+**Root cause:** 880Mi container limit - 768m heap = only ~112MB for JVM overhead (metaspace + thread stacks + native). Insufficient during aggressive block sync where non-heap can exceed 200MB. Gen-0 survives same config because it is at chain tip (no bulk sync pressure).
+**Pending fix:** Increase memory limit from 880Mi to 1024Mi in `clusters/testnet/apps/nodes.yaml` (pending confirmation of OOM vs other crash cause from `cluster-diagnostics --previous` logs).
+
+### INC-003: VPS disk full (2026-07-01) + matcher account.dat switch to in-mem
+**Impact:** VPS `/tmp` filled to 100% — `push-secrets.yml` failed with `tee: /tmp/secrets-patch.env: No space left on device`. Additionally, 3 stray matcher containers running for 2+ hours were consuming disk.
+**Root cause:** `restart-services.yml` cleanup used `docker ps -q --filter "ancestor=ghcr.io/decentral-america/matcher"` which defaults to `:latest` tag and never matched SHA-tagged stray containers. Also `docker image prune -a -f` (before fix) removed the `:latest` matcher tag.
+**Fix applied:** (1) Replaced ancestor filter with `docker inspect --format '{{.Config.Image}}'` grep loop to match SHA-tagged containers. (2) Changed `docker image prune -a -f` → `-f` (dangling only). (3) Added log truncation + journald vacuum to `restart-services.yml`. (4) Switched matcher `local.conf` from `encrypted-file` to `in-mem` account storage — no `account.dat` needed. Matcher seed injected via `MATCHER_SEED` env var from `/opt/dcc/secrets/testnet.env`.
+**Important:** Config mount is `/opt/dcc/config/matcher-testnet → /var/lib/decentralchain-dex/config:ro`. Writing to the data dir is silently ignored.
+
+### INC-004: BPS crash-loop — txs_19 FK missing ON DELETE CASCADE (2026-07-01)
 **Impact:** `blockchain-postgres-sync-testnet` crash-looping. API service degraded (BPS DB stale).
 **Root cause:** Migration `20260628000000_add_txs_19_commit_to_generation` created `txs_19.block_uid` FK as `REFERENCES blocks_microblocks(uid)` without `ON DELETE CASCADE`. When the node sends a blockchain rollback event, BPS tries to `DELETE FROM blocks_microblocks` but Postgres blocks it with `txs_19_block_uid_fkey` violation.
 **Fix applied 2026-07-01:**
