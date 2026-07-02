@@ -18,6 +18,7 @@ jobs:
   check-pr:
     name: Check PR
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     outputs:
       lang-changed: ${{ steps.filter.outputs.lang == 'true' }}
     steps:
@@ -33,7 +34,9 @@ jobs:
       - uses: proudust/gh-describe@d2398810d922ababf1ec0efb454e42953dfdc460 # v2.1.2
         id: ghd
       - name: Check PR
-        run: sbt -Dproject.version=$(echo ${{ steps.ghd.outputs.describe }} | cut -c 2-) -J-Xlog:gc*=debug:file=./gc.log --batch checkPR
+        env:
+          GH_DESCRIBE: ${{ steps.ghd.outputs.describe }}
+        run: sbt -Dproject.version=$(echo "$GH_DESCRIBE" | cut -c 2-) -J-Xlog:gc*=debug:file=./gc.log --batch checkPR
       - uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
         if: always()
         with:
@@ -85,6 +88,7 @@ jobs:
   compile-contracts:
     name: Compile ${{ matrix.repo }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: check-pr
     if: needs.check-pr.outputs.lang-changed == 'true'
     strategy:
