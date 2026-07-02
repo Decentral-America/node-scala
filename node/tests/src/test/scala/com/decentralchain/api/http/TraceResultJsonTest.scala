@@ -21,7 +21,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
   private val tx = (
     for {
       publicKey <- PublicKey.fromBase58String("9utotH1484Hb1WdAHuAKLjuGAmocPZg7jZDtnc35MuqT")
-      address   <- Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU")
+      address   <- Address.fromString("3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB")
       proof = ByteStr.decodeBase58("4scXzk4WiKMXG8p7V6J2pmznNZCgMjADbbZPSDGg28YLMKgshBmNFNzgYg2TwfKN3wMtgLiNQB77iQQZkH3roUyJ").get
       tx <- InvokeScriptTransaction.create(
         1.toByte,
@@ -75,8 +75,8 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
     val result = TracedResult(Right(tx), trace)
     json(result) should matchJson("""{
                                     |  "type": 16,
-                                    |  "id": "2hoMeTHAneLExjFo2a9ei7D4co5zzr9VyT7tmBmAGmeu",
-                                    |  "sender": "3MvtiFpnSA7uYKXV3myLwRK3u2NEV91iJYW",
+                                    |  "id": "ABnmHLeEZ1nJTtvcKdU5jbcfUoSgnCq6ExrbBywfsHBD",
+                                    |  "sender": "3DUo3aYXPFLB99RZEGAMFEgLNompgDdZ3ix",
                                     |  "senderPublicKey": "9utotH1484Hb1WdAHuAKLjuGAmocPZg7jZDtnc35MuqT",
                                     |  "fee": 10000000,
                                     |  "feeAssetId": null,
@@ -85,7 +85,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
                                     |    "4scXzk4WiKMXG8p7V6J2pmznNZCgMjADbbZPSDGg28YLMKgshBmNFNzgYg2TwfKN3wMtgLiNQB77iQQZkH3roUyJ"
                                     |  ],
                                     |  "version": 1,
-                                    |  "dApp": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+                                    |  "dApp": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
                                     |  "payment": [
                                     |    {
                                     |      "amount": 1,
@@ -108,7 +108,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
                                     |  "trace": [
                                     |    {
                                     |      "type": "dApp",
-                                    |      "id": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+                                    |      "id": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
                                     |      "function": "func",
                                     |      "args": [
                                     |        "param",
@@ -125,7 +125,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
                                     |        ],
                                     |        "transfers": [
                                     |          {
-                                    |            "address": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+                                    |            "address": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
                                     |            "asset": null,
                                     |            "amount": 1
                                     |          }
@@ -146,8 +146,8 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
     loggedJson(result) should matchJson(
       """{
         |  "type": 16,
-        |  "id": "2hoMeTHAneLExjFo2a9ei7D4co5zzr9VyT7tmBmAGmeu",
-        |  "sender": "3MvtiFpnSA7uYKXV3myLwRK3u2NEV91iJYW",
+        |  "id": "ABnmHLeEZ1nJTtvcKdU5jbcfUoSgnCq6ExrbBywfsHBD",
+        |  "sender": "3DUo3aYXPFLB99RZEGAMFEgLNompgDdZ3ix",
         |  "senderPublicKey": "9utotH1484Hb1WdAHuAKLjuGAmocPZg7jZDtnc35MuqT",
         |  "fee": 10000000,
         |  "feeAssetId": null,
@@ -156,7 +156,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
         |    "4scXzk4WiKMXG8p7V6J2pmznNZCgMjADbbZPSDGg28YLMKgshBmNFNzgYg2TwfKN3wMtgLiNQB77iQQZkH3roUyJ"
         |  ],
         |  "version": 1,
-        |  "dApp": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+        |  "dApp": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
         |  "payment": [
         |    {
         |      "amount": 1,
@@ -179,7 +179,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
         |  "trace": [
         |    {
         |      "type": "dApp",
-        |      "id": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+        |      "id": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
         |      "function": "func",
         |      "args": [
         |        "param",
@@ -196,7 +196,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
         |        ],
         |        "transfers": [
         |          {
-        |            "address": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+        |            "address": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
         |            "asset": null,
         |            "amount": 1
         |          }
@@ -253,8 +253,8 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
                                     |  "message": "Error while executing account-script: error reason",
                                     |  "transaction": {
                                     |    "type": 16,
-                                    |    "id": "2hoMeTHAneLExjFo2a9ei7D4co5zzr9VyT7tmBmAGmeu",
-                                    |    "sender": "3MvtiFpnSA7uYKXV3myLwRK3u2NEV91iJYW",
+                                    |    "id": "ABnmHLeEZ1nJTtvcKdU5jbcfUoSgnCq6ExrbBywfsHBD",
+                                    |    "sender": "3DUo3aYXPFLB99RZEGAMFEgLNompgDdZ3ix",
                                     |    "senderPublicKey": "9utotH1484Hb1WdAHuAKLjuGAmocPZg7jZDtnc35MuqT",
                                     |    "fee": 10000000,
                                     |    "feeAssetId": null,
@@ -263,7 +263,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
                                     |      "4scXzk4WiKMXG8p7V6J2pmznNZCgMjADbbZPSDGg28YLMKgshBmNFNzgYg2TwfKN3wMtgLiNQB77iQQZkH3roUyJ"
                                     |    ],
                                     |    "version": 1,
-                                    |    "dApp": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+                                    |    "dApp": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
                                     |    "payment": [
                                     |      {
                                     |        "amount": 1,
@@ -287,7 +287,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
                                     |  "trace": [
                                     |    {
                                     |      "type": "dApp",
-                                    |      "id": "3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU",
+                                    |      "id": "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB",
                                     |      "function": "func",
                                     |      "args": [
                                     |        "param",

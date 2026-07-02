@@ -65,7 +65,7 @@ class SubInvokeStateChangesSpec extends FlatSpec with WithDomain with JsonMatche
           |  "leases" : [ ],
           |  "leaseCancels" : [ ],
           |  "invokes" : [ {
-          |    "dApp" : "3N4DiVEiZHzcjEhoBx2kmoKKCH7GBZMim3L",
+          |    "dApp" : "3Dc83oxTWPCtL4bsNSDm5cgbg4WrNgVM3gY",
           |    "call" : {
           |      "function" : "default",
           |      "args" : [ ]
@@ -84,7 +84,7 @@ class SubInvokeStateChangesSpec extends FlatSpec with WithDomain with JsonMatche
           |      "leases" : [ ],
           |      "leaseCancels" : [ ],
           |      "invokes" : [ {
-          |        "dApp" : "3MvAdB2DFMf6unzX6czVGgco5rA24End8Jn",
+          |        "dApp" : "3DU4xVjxCSsNWctbH7BVaVz5ZdZcFFH2DX2",
           |        "call" : {
           |          "function" : "default",
           |          "args" : [ ]
@@ -107,7 +107,7 @@ class SubInvokeStateChangesSpec extends FlatSpec with WithDomain with JsonMatche
           |      } ]
           |    }
           |  }, {
-          |    "dApp" : "3MsY23LPQnvPZnBKpvs6YcnCvGjLVD42pSy",
+          |    "dApp" : "3DRSMN48Mt8fAc5Q1R46rS9VQ48vgBoraFt",
           |    "call" : {
           |      "function" : "default",
           |      "args" : [ ]
@@ -126,7 +126,7 @@ class SubInvokeStateChangesSpec extends FlatSpec with WithDomain with JsonMatche
           |      "leases" : [ ],
           |      "leaseCancels" : [ ],
           |      "invokes" : [ {
-          |        "dApp" : "3N87Qja7rNj8z6H7nG9EYtjCXQtZLawaxyM",
+          |        "dApp" : "3Dg1k4HroTwQavBBxkLEri6V1CJ9XhKpa1Z",
           |        "call" : {
           |          "function" : "default",
           |          "args" : [ ]

@@ -6,13 +6,13 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.api.TransactionInfo
-import com.decentralchain.it.{BaseFreeSpec, WaitForHeight2}
+import com.decentralchain.it.BaseFreeSpec
 import com.decentralchain.state.Height
 import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.Dcc
-import com.decentralchain.transaction.transfer.TransferTransaction
+import com.decentralchain.transaction.TxHelpers
 
-class NodeRestartTestSuite extends BaseFreeSpec with WaitForHeight2 {
+class NodeRestartTestSuite extends BaseFreeSpec {
   import NodeRestartTestSuite.*
 
   override protected def nodeConfigs: Seq[Config] = Configs
@@ -34,19 +34,18 @@ class NodeRestartTestSuite extends BaseFreeSpec with WaitForHeight2 {
   }
 
   "after restarting all the nodes, the duplicate transaction cannot be put into the blockchain" in {
-    val txJson = TransferTransaction
-      .selfSigned(
-        1.toByte,
-        nodeB.keyPair,
-        AddressOrAlias.fromString(nodeA.address).explicitGet(),
-        Dcc,
-        1.dcc,
-        Dcc,
-        minFee,
-        ByteStr.empty,
-        System.currentTimeMillis()
+    val txJson = TxHelpers
+      .transfer(
+        from = nodeB.keyPair,
+        to = AddressOrAlias.fromString(nodeA.address).explicitGet(),
+        amount = 1.dcc,
+        asset = Dcc,
+        fee = minFee,
+        feeAsset = Dcc,
+        attachment = ByteStr.empty,
+        timestamp = System.currentTimeMillis(),
+        version = 1.toByte
       )
-      .explicitGet()
       .json()
 
     val tx = nodeB.signedBroadcast(txJson, waitForTx = true)

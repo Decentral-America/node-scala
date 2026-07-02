@@ -78,7 +78,7 @@ class SignedRequestsTest extends FunSuite {
     val json =
       """
         |{
-        |   "recipient":"3Myss6gmMckKYtka3cKCM563TBJofnxvfD7",
+        |   "recipient":"3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
         |   "timestamp":1479462208828,
         |   "assetId":"GAXAj8T4pSjunDqpz6Q3bit4fJJN9PD4t8AK8JZVSa5u",
         |   "amount":100000,
@@ -89,7 +89,7 @@ class SignedRequestsTest extends FunSuite {
         |}
       """.stripMargin
     val req = Json.parse(json).validate[SignedTransferV1Request].get
-    req.recipient shouldBe "3Myss6gmMckKYtka3cKCM563TBJofnxvfD7"
+    req.recipient shouldBe "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab"
     req.timestamp shouldBe 1479462208828L
     req.assetId shouldBe Some("GAXAj8T4pSjunDqpz6Q3bit4fJJN9PD4t8AK8JZVSa5u")
     req.amount shouldBe 100000
@@ -113,7 +113,7 @@ class SignedRequestsTest extends FunSuite {
       """
         |{
         |   "senderPublicKey":"FJuErRxhV9JaFUwcYLabFK5ENvDRfyJbRz8FeVfYpBLn",
-        |   "recipient":"3N9UuGeWuDt9NfWbC5oEACHyRoeEMApXAeq",
+        |   "recipient":"3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
         |   "timestamp":1489054107569,
         |   "assetId":"6MPKrD5B7GrfbciHECg1MwdvRUhRETApgNZspreBJ8JL",
         |   "amount":1000,
@@ -124,7 +124,7 @@ class SignedRequestsTest extends FunSuite {
         |}
       """.stripMargin
     val req = Json.parse(json).validate[SignedTransferV1Request].get
-    req.recipient shouldBe "3N9UuGeWuDt9NfWbC5oEACHyRoeEMApXAeq"
+    req.recipient shouldBe "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab"
     req.timestamp shouldBe 1489054107569L
     req.assetId shouldBe Some("6MPKrD5B7GrfbciHECg1MwdvRUhRETApgNZspreBJ8JL")
     req.feeAssetId shouldBe Some("6MPKrD5B7GrfbciHECg1MwdvRUhRETApgNZspreBJ8JL")
@@ -170,7 +170,7 @@ class SignedRequestsTest extends FunSuite {
     val js1 = s"""{
   "type": 14,
   "id": "Gobt7AiyQAfduRkW8Mk3naWbzH67Zsv9rdmgRNmon1Mb",
-  "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+  "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
   "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
   "fee": $One,
   "timestamp": 1520945679531,
@@ -184,7 +184,7 @@ class SignedRequestsTest extends FunSuite {
     val js2 = s"""{
   "type": 14,
   "id": "Gobt7AiyQAfduRkW8Mk3naWbzH67Zsv9rdmgRNmon1Mb",
-  "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+  "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
   "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
   "fee": $One,
   "timestamp": 1520945679531,
@@ -197,7 +197,7 @@ class SignedRequestsTest extends FunSuite {
     val js3 = s"""{
   "type": 14,
   "id": "Gobt7AiyQAfduRkW8Mk3naWbzH67Zsv9rdmgRNmon1Mb",
-  "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+  "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
   "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
   "fee": $One,
   "timestamp": 1520945679531,
@@ -211,7 +211,7 @@ class SignedRequestsTest extends FunSuite {
     val js4 = s"""{
   "type": 14,
   "id": "Gobt7AiyQAfduRkW8Mk3naWbzH67Zsv9rdmgRNmon1Mb",
-  "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+  "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
   "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
   "fee": $One,
   "timestamp": 1520945679531,

@@ -175,7 +175,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
         )
         val invokeTx = invoke()
         d.appendBlock(setScript(secondSigner, dApp))
-        d.appendBlockE(invokeTx) should produce("Address belongs to another network: expected: 84(T), actual: 87(W)")
+        d.appendBlockE(invokeTx) should produce("Address belongs to another network: expected: 63(?), actual: 87(W)")
       }
     }
   }
@@ -197,9 +197,9 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
         d.appendBlock(setScript(secondSigner, dApp))
         val invokeTx = invoke()
         if (complex) {
-          d.appendAndAssertFailed(invokeTx, "Address belongs to another network: expected: 84(T), actual: 87(W)")
+          d.appendAndAssertFailed(invokeTx, "InvalidAddress(Address belongs to another network: expected: 63(?), actual: 87(W))")
         } else
-          d.appendBlockE(invokeTx) should produce("Address belongs to another network: expected: 84(T), actual: 87(W)")
+          d.appendBlockE(invokeTx) should produce("Address belongs to another network: expected: 63(?), actual: 87(W)")
       }
     }
   }

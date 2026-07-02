@@ -23,7 +23,7 @@ import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import com.decentralchain.transaction.utils.Signed
+import com.decentralchain.transaction.{Proofs, TxHelpers}
 import org.scalatest.EitherValues
 
 class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with WithState with DBCacheSettings with EitherValues {
@@ -105,18 +105,35 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
 
         scriptMain   = Some(contractMain(secondAcc.toAddress))
         scriptSecond = Some(contractSecond())
-        ssTxMain     = SetScriptTransaction.selfSigned(1.toByte, mainAcc, scriptMain, fee, ts + 5).explicitGet()
-        ssTxSecond   = SetScriptTransaction.selfSigned(1.toByte, secondAcc, scriptSecond, fee, ts + 5).explicitGet()
+        ssTxMain     = SetScriptTransaction.create(1.toByte, mainAcc.publicKey, scriptMain, fee, ts + 5, Proofs.empty).map(_.signWith(mainAcc.privateKey)).explicitGet()
+        ssTxSecond = SetScriptTransaction
+          .create(1.toByte, secondAcc.publicKey, scriptSecond, fee, ts + 5, Proofs.empty)
+          .map(_.signWith(secondAcc.privateKey))
+          .explicitGet()
 
-        dataEntry    = StringDataEntry(invokeEntry2Key, "strData")
-        dataTxSecond = DataTransaction.selfSigned(1.toByte, secondAcc, Seq(dataEntry), fee, ts + 6).explicitGet()
+        dataEntry = StringDataEntry(invokeEntry2Key, "strData")
+        dataTxSecond = DataTransaction
+          .create(1.toByte, secondAcc.publicKey, Seq(dataEntry), fee, ts + 6)
+          .map(_.signWith(secondAcc.privateKey))
+          .explicitGet()
 
-        dataEntry2    = StringDataEntry(invokeEntry3Key, "deleted entry")
-        dataTxSecond2 = DataTransaction.selfSigned(1.toByte, secondAcc, Seq(dataEntry2), fee, ts + 6).explicitGet()
+        dataEntry2 = StringDataEntry(invokeEntry3Key, "deleted entry")
+        dataTxSecond2 = DataTransaction
+          .create(1.toByte, secondAcc.publicKey, Seq(dataEntry2), fee, ts + 6)
+          .map(_.signWith(secondAcc.privateKey))
+          .explicitGet()
 
-        fc       = Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)
         payments = List(Payment(10L, Dcc))
-        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee, Dcc, ts + 10)
+        invokeTx = TxHelpers.invoke(
+          dApp = mainAcc.toAddress,
+          func = Some("foo"),
+          payments = payments,
+          invoker = invoker,
+          fee = fee,
+          feeAssetId = Dcc,
+          version = TxVersion.V3,
+          timestamp = ts + 10
+        )
       } yield (Seq(gTx1, gTx2, gTx3, ssTxMain, ssTxSecond, dataTxSecond, dataTxSecond2), invokeTx, secondAcc.toAddress)
 
     forAll(scenario) { case (genesisTxs, invokeTx, secondDApp) =>
@@ -184,17 +201,34 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         gTx1 = GenesisTransaction.create(mainAcc.toAddress, ENOUGH_AMT, ts).explicitGet()
         gTx2 = GenesisTransaction.create(invoker.toAddress, ENOUGH_AMT, ts).explicitGet()
 
-        ssTxMain = SetScriptTransaction.selfSigned(1.toByte, mainAcc, Some(contractMain), fee, ts + 5).explicitGet()
+        ssTxMain = SetScriptTransaction
+          .create(1.toByte, mainAcc.publicKey, Some(contractMain), fee, ts + 5, Proofs.empty)
+          .map(_.signWith(mainAcc.privateKey))
+          .explicitGet()
 
-        dataEntry  = StringDataEntry(invokeEntry2Key, "strData")
-        dataTxMain = DataTransaction.selfSigned(1.toByte, mainAcc, Seq(dataEntry), fee, ts + 6).explicitGet()
+        dataEntry = StringDataEntry(invokeEntry2Key, "strData")
+        dataTxMain = DataTransaction
+          .create(1.toByte, mainAcc.publicKey, Seq(dataEntry), fee, ts + 6)
+          .map(_.signWith(mainAcc.privateKey))
+          .explicitGet()
 
-        dataEntry2  = StringDataEntry(invokeEntry3Key, "deleted entry")
-        dataTxMain2 = DataTransaction.selfSigned(1.toByte, mainAcc, Seq(dataEntry2), fee, ts + 6).explicitGet()
+        dataEntry2 = StringDataEntry(invokeEntry3Key, "deleted entry")
+        dataTxMain2 = DataTransaction
+          .create(1.toByte, mainAcc.publicKey, Seq(dataEntry2), fee, ts + 6)
+          .map(_.signWith(mainAcc.privateKey))
+          .explicitGet()
 
-        fc       = Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)
         payments = List(Payment(10L, Dcc))
-        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee, Dcc, ts + 10)
+        invokeTx = TxHelpers.invoke(
+          dApp = mainAcc.toAddress,
+          func = Some("foo"),
+          payments = payments,
+          invoker = invoker,
+          fee = fee,
+          feeAssetId = Dcc,
+          version = TxVersion.V3,
+          timestamp = ts + 10
+        )
       } yield (Seq(gTx1, gTx2, ssTxMain, dataTxMain, dataTxMain2), invokeTx, mainAcc.toAddress)
 
     forAll(scenario) { case (genesisTxs, invokeTx, mainDApp) =>
@@ -320,9 +354,9 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         fee       <- ciFee(1)
 
         paymentIssue = IssueTransaction
-          .selfSigned(
+          .create(
             2.toByte,
-            mainAcc,
+            mainAcc.publicKey,
             "Payment asset",
             "",
             ENOUGH_AMT,
@@ -332,11 +366,12 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
             fee,
             ts + 1
           )
+          .map(_.signWith(mainAcc.privateKey))
           .explicitGet()
         transferIssue = IssueTransaction
-          .selfSigned(
+          .create(
             2.toByte,
-            secondAcc,
+            secondAcc.publicKey,
             "Transfer asset",
             "",
             ENOUGH_AMT,
@@ -346,6 +381,7 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
             fee,
             ts + 2
           )
+          .map(_.signWith(secondAcc.privateKey))
           .explicitGet()
 
         gTx1 = GenesisTransaction.create(mainAcc.toAddress, ENOUGH_AMT, ts).explicitGet()
@@ -356,13 +392,27 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         scriptMain   = Some(contractMain(secondAcc.toAddress, thirdAcc.toAddress, paymentIssue.id()))
         scriptSecond = Some(contractSecond(thirdAcc.toAddress, transferIssue.id()))
         scriptThird  = Some(contractThird)
-        ssTxMain     = SetScriptTransaction.selfSigned(1.toByte, mainAcc, scriptMain, fee, ts + 5).explicitGet()
-        ssTxSecond   = SetScriptTransaction.selfSigned(1.toByte, secondAcc, scriptSecond, fee, ts + 5).explicitGet()
-        ssTxThird    = SetScriptTransaction.selfSigned(1.toByte, thirdAcc, scriptThird, fee, ts + 5).explicitGet()
+        ssTxMain     = SetScriptTransaction.create(1.toByte, mainAcc.publicKey, scriptMain, fee, ts + 5, Proofs.empty).map(_.signWith(mainAcc.privateKey)).explicitGet()
+        ssTxSecond = SetScriptTransaction
+          .create(1.toByte, secondAcc.publicKey, scriptSecond, fee, ts + 5, Proofs.empty)
+          .map(_.signWith(secondAcc.privateKey))
+          .explicitGet()
+        ssTxThird = SetScriptTransaction
+          .create(1.toByte, thirdAcc.publicKey, scriptThird, fee, ts + 5, Proofs.empty)
+          .map(_.signWith(thirdAcc.privateKey))
+          .explicitGet()
 
-        fc       = Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List.empty)
         payments = List(Payment(10L, Dcc))
-        invokeTx = Signed.invokeScript(TxVersion.V3, invoker, mainAcc.toAddress, Some(fc), payments, fee * 100, Dcc, ts + 10)
+        invokeTx = TxHelpers.invoke(
+          dApp = mainAcc.toAddress,
+          func = Some("foo"),
+          payments = payments,
+          invoker = invoker,
+          fee = fee * 100,
+          feeAssetId = Dcc,
+          version = TxVersion.V3,
+          timestamp = ts + 10
+        )
       } yield (
         Seq(gTx1, gTx2, gTx3, gTx4, ssTxMain, ssTxSecond, ssTxThird, paymentIssue, transferIssue),
         invokeTx,

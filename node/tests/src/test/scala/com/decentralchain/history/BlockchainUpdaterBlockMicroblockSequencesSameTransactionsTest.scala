@@ -53,7 +53,10 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
       domain.blockchainUpdater.processMicroBlock(micros.head, None) should beRight
       domain.blockchainUpdater.processBlock(emptyBlock) should beRight
 
-      domain.balance(miner.toAddress) shouldBe payment.fee.value
+      // NG without FeeSponsorship activated: miner immediately receives only the 40% current-block
+      // share of the fee (BlockDiffer.CurrentBlockFeePart); the remaining 60% carry requires
+      // sponsorship to be active (BlockDiffer.computeTxFeeInfo) and is not credited to anyone here.
+      domain.balance(miner.toAddress) shouldBe BlockDiffer.CurrentBlockFeePart(payment.fee.value)
       domain.balance(genesis.recipient) shouldBe (genesis.amount.value - payment.fee.value)
     }
   }

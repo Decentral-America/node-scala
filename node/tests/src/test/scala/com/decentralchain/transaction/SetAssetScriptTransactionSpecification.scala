@@ -1,5 +1,6 @@
 package com.decentralchain.transaction
 
+import com.decentralchain.TestValues
 import com.decentralchain.account.{AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
@@ -90,8 +91,20 @@ class SetAssetScriptTransactionSpecification extends GenericTransactionSpecifica
   def transactionName: String = "SetAssetScriptTransaction"
 
   override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
+    // Bypasses SetAssetScriptTransaction.create's "Cannot set empty script" validation on purpose:
+    // this checks that pre-existing serialized transactions with a null script (predating that
+    // validation) still parse and round-trip correctly.
     val asset = IssuedAsset(ByteStr(Array.fill(32)(3: Byte)))
-    val tx = TxHelpers.setAssetScript(TxHelpers.defaultSigner, asset, script = None, version = TxVersion.V1)
+    val tx = SetAssetScriptTransaction(
+      TxVersion.V1,
+      TxHelpers.defaultSigner.publicKey,
+      asset,
+      None,
+      TxPositiveAmount.unsafeFrom(TestValues.fee),
+      TxHelpers.timestamp,
+      Proofs.empty,
+      AddressScheme.current.chainId
+    ).signWith(TxHelpers.defaultSigner.privateKey)
     Some(tx.bytes() -> tx.json())
   }
 }

@@ -63,10 +63,11 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
       )
         .explicitGet()
 
-    val seed     = Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet()
-    val master   = Address.fromString("3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu").explicitGet()
+    val seed     = Address.fromString("3DUo3aYXPFLB99RZEGAMFEgLNompgDdZ3ix").explicitGet()
+    val master   = Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet()
     val genesis1 = TxHelpers.genesis(master, 1000000000, timestamp = 0)
     val genesis2 = TxHelpers.genesis(KeyPair(master.bytes).toAddress, 1000000000, timestamp = 0)
+    val genesis3 = TxHelpers.genesis(KeyPair(seed.bytes).toAddress, 1000000000, timestamp = 0)
 
     val issueTransaction = TxHelpers.issue(
       issuer = KeyPair(seed.bytes),
@@ -98,7 +99,7 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
     val transferTransaction = TxHelpers.transfer(KeyPair(master.bytes), master, 1, issueTransaction.asset, fee = 10000000, timestamp = 0)
 
     assertDiffEi(
-      Seq(TestBlock.create(Seq(genesis1, genesis2, issueTransaction, preTransferTransaction, preSetAssetScriptTransaction))),
+      Seq(TestBlock.create(Seq(genesis1, genesis2, genesis3, issueTransaction, preTransferTransaction, preSetAssetScriptTransaction))),
       TestBlock.create(Seq(transferTransaction)),
       RideV6.blockchainSettings.functionalitySettings,
       enableExecutionLog = true
@@ -108,38 +109,38 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
           f"""
              |	$$match0 = TransferTransaction(
              |		recipient = Address(
-             |			bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |			bytes = base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |		)
              |		timestamp = 0
-             |		bodyBytes = base58'ZFDBCm7WGpX1zYwdAbbbk2XHyDz2urZGfPHjeiPWuGuemeYsL5YvfH7Nf87ebWwX4AhbnuXaNDARaLnSTc42SZbKPXkcbs3ZHNsoF9bRQK5Aw7KjHg7P7Sinbq4wfQWhjbnQNJTQjkfZjX7BNZQ4LnquL9LVyPmXJBh'
-             |		assetId = base58'BG6TEE8VmtvkiVLwc4XmmW7yjiFWezGChTM2tFCNa69B'
+             |		bodyBytes = base58'ZEFLEsXocCjCzcC774iqMLxj5aDbVfQvZg5vNQQePJ8wguKk1ApXm45bn7LXPRoi6hqX5uney6fPove7RLKXpXj7qpiZgBaLYqMJKbwh94cRfTgKfkvSZjRbfQVmgkLBftKXR11BUaRbYzXrJL2Wav26CFCYF8gUZx3'
+             |		assetId = base58'xN34bJHzk62RRXVK19r4twCdTJeC8eegTKjBaYLqTJ2'
              |		feeAssetId = Unit
              |		amount = 1
              |		version = 2
-             |		id = base58'H7eZ7bbbga3rhD6LaUiAiaDZrHGU9ibggsqC1HpZCQjj'
-             |		senderPublicKey = base58'EbxDdqXBhj3TEd1UFoi1UE1vm1k7gM9EMYAuLr62iaZF'
+             |		id = base58'HDj3q744uQUU8U2i6Fnt7rEtxHKDg8xxCvfmruJutYuw'
+             |		senderPublicKey = base58'5VhP2NA8GKYaDvnPVcSuRxSEX5jscMW2PP5ZwmzsBonA'
              |		attachment = base58''
              |		sender = Address(
-             |			bytes = base58'3Mrt6Y1QweDrKRRNuhhHGdHpu2kXLXq2QK5'
+             |			bytes = base58'3DVyt7N97dZ3HDarL64SGmaXVKsdobGnrBi'
              |		)
              |		fee = 10000000
              |	)
              |	$$isInstanceOf.@args = [
              |		TransferTransaction(
              |			recipient = Address(
-             |				bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |				bytes = base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |			)
              |			timestamp = 0
-             |			bodyBytes = base58'ZFDBCm7WGpX1zYwdAbbbk2XHyDz2urZGfPHjeiPWuGuemeYsL5YvfH7Nf87ebWwX4AhbnuXaNDARaLnSTc42SZbKPXkcbs3ZHNsoF9bRQK5Aw7KjHg7P7Sinbq4wfQWhjbnQNJTQjkfZjX7BNZQ4LnquL9LVyPmXJBh'
-             |			assetId = base58'BG6TEE8VmtvkiVLwc4XmmW7yjiFWezGChTM2tFCNa69B'
+             |			bodyBytes = base58'ZEFLEsXocCjCzcC774iqMLxj5aDbVfQvZg5vNQQePJ8wguKk1ApXm45bn7LXPRoi6hqX5uney6fPove7RLKXpXj7qpiZgBaLYqMJKbwh94cRfTgKfkvSZjRbfQVmgkLBftKXR11BUaRbYzXrJL2Wav26CFCYF8gUZx3'
+             |			assetId = base58'xN34bJHzk62RRXVK19r4twCdTJeC8eegTKjBaYLqTJ2'
              |			feeAssetId = Unit
              |			amount = 1
              |			version = 2
-             |			id = base58'H7eZ7bbbga3rhD6LaUiAiaDZrHGU9ibggsqC1HpZCQjj'
-             |			senderPublicKey = base58'EbxDdqXBhj3TEd1UFoi1UE1vm1k7gM9EMYAuLr62iaZF'
+             |			id = base58'HDj3q744uQUU8U2i6Fnt7rEtxHKDg8xxCvfmruJutYuw'
+             |			senderPublicKey = base58'5VhP2NA8GKYaDvnPVcSuRxSEX5jscMW2PP5ZwmzsBonA'
              |			attachment = base58''
              |			sender = Address(
-             |				bytes = base58'3Mrt6Y1QweDrKRRNuhhHGdHpu2kXLXq2QK5'
+             |				bytes = base58'3DVyt7N97dZ3HDarL64SGmaXVKsdobGnrBi'
              |			)
              |			fee = 10000000
              |		),
@@ -185,19 +186,19 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
              |	@complexityLimit = 2147483629
              |	t = TransferTransaction(
              |		recipient = Address(
-             |			bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |			bytes = base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |		)
              |		timestamp = 0
-             |		bodyBytes = base58'ZFDBCm7WGpX1zYwdAbbbk2XHyDz2urZGfPHjeiPWuGuemeYsL5YvfH7Nf87ebWwX4AhbnuXaNDARaLnSTc42SZbKPXkcbs3ZHNsoF9bRQK5Aw7KjHg7P7Sinbq4wfQWhjbnQNJTQjkfZjX7BNZQ4LnquL9LVyPmXJBh'
-             |		assetId = base58'BG6TEE8VmtvkiVLwc4XmmW7yjiFWezGChTM2tFCNa69B'
+             |		bodyBytes = base58'ZEFLEsXocCjCzcC774iqMLxj5aDbVfQvZg5vNQQePJ8wguKk1ApXm45bn7LXPRoi6hqX5uney6fPove7RLKXpXj7qpiZgBaLYqMJKbwh94cRfTgKfkvSZjRbfQVmgkLBftKXR11BUaRbYzXrJL2Wav26CFCYF8gUZx3'
+             |		assetId = base58'xN34bJHzk62RRXVK19r4twCdTJeC8eegTKjBaYLqTJ2'
              |		feeAssetId = Unit
              |		amount = 1
              |		version = 2
-             |		id = base58'H7eZ7bbbga3rhD6LaUiAiaDZrHGU9ibggsqC1HpZCQjj'
-             |		senderPublicKey = base58'EbxDdqXBhj3TEd1UFoi1UE1vm1k7gM9EMYAuLr62iaZF'
+             |		id = base58'HDj3q744uQUU8U2i6Fnt7rEtxHKDg8xxCvfmruJutYuw'
+             |		senderPublicKey = base58'5VhP2NA8GKYaDvnPVcSuRxSEX5jscMW2PP5ZwmzsBonA'
              |		attachment = base58''
              |		sender = Address(
-             |			bytes = base58'3Mrt6Y1QweDrKRRNuhhHGdHpu2kXLXq2QK5'
+             |			bytes = base58'3DVyt7N97dZ3HDarL64SGmaXVKsdobGnrBi'
              |		)
              |		fee = 10000000
              |	)
@@ -259,23 +260,23 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
              |	recipientAddressFromPublicKey = base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
              |	addressFromRecipient.@args = [
              |		Address(
-             |			bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |			bytes = base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |		)
              |	]
              |	addressFromRecipient.@complexity = 5
              |	@complexityLimit = 2147482940
-             |	recipientAddressFromTx = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |	recipientAddressFromTx = base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |	!=.@args = [
              |		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs',
-             |		base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |		base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |	]
              |	!=.@complexity = 1
              |	@complexityLimit = 2147482939
              |	@a = base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
-             |	@b = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |	@b = base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |	==.@args = [
              |		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs',
-             |		base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
+             |		base58'3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH'
              |	]
              |	==.@complexity = 1
              |	@complexityLimit = 2147482938

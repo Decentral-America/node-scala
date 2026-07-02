@@ -15,8 +15,8 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 class StateHashSpec extends FreeSpec {
   "state hash" - {
     val stateHash = new StateHashBuilder
-    val address   = Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet()
-    val address1  = Address.fromString("3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh").explicitGet()
+    val address   = Address.fromString("3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB").explicitGet()
+    val address1  = Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet()
     val assetId   = IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get)
     val testScript = ScriptCompiler
       .compile(
@@ -64,11 +64,12 @@ class StateHashSpec extends FreeSpec {
       }
 
       "asset balance" in {
+        // TreeMap entries are ordered by key bytes (address prefix here), and address1 < address.
         sect(AssetBalance) shouldBe hash(
-          address.bytes,
+          address1.bytes,
           assetId.id.arr,
           Longs.toByteArray(2000),
-          address1.bytes,
+          address.bytes,
           assetId.id.arr,
           Longs.toByteArray(2000)
         )
@@ -96,13 +97,14 @@ class StateHashSpec extends FreeSpec {
       }
 
       "alias" in {
+        // TreeMap entries are ordered by key bytes (address prefix here), and address1 < address.
         sect(Alias) shouldBe hash(
+          address1.bytes,
+          "test2".getBytes(),
           address.bytes,
           "test".getBytes(),
           address.bytes,
-          "test1".getBytes(),
-          address1.bytes,
-          "test2".getBytes()
+          "test1".getBytes()
         )
       }
 

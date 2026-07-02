@@ -11,14 +11,18 @@ import com.decentralchain.settings.DCCSettings
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.transaction.TxHelpers
-import org.scalatest.BeforeAndAfterAll
 
-class CancelLeasesToDisabledAliasesSpec extends FlatSpec with WithDomain with BeforeAndAfterAll {
+// DCC's own chain has no CancelLeasesToDisabledAliases-<chainId>.json patch data (unlike the legacy
+// Waves 'W'/'T' networks, which had historical leases to since-disabled aliases to cancel): the resource
+// file for DCC's chain id is intentionally empty. These tests exercise the patch mechanism's no-op path
+// on the current chain instead of mutating the global AddressScheme singleton to impersonate 'W' — doing
+// so is unsafe under sbt's parallel suite execution, since other concurrently-running suites read the
+// same mutable AddressScheme.current.
+class CancelLeasesToDisabledAliasesSpec extends FlatSpec with WithDomain {
   val MainnetSettings: DCCSettings = {
     import SettingsFromDefaultConfig.blockchainSettings.functionalitySettings as fs
     SettingsFromDefaultConfig.copy(
       blockchainSettings = SettingsFromDefaultConfig.blockchainSettings.copy(
-        addressSchemeCharacter = 'W',
         functionalitySettings = fs.copy(preActivatedFeatures =
           fs.preActivatedFeatures ++ Map(
             BlockchainFeatures.NG.id               -> 0,
@@ -30,29 +34,29 @@ class CancelLeasesToDisabledAliasesSpec extends FlatSpec with WithDomain with Be
     )
   }
 
-  "CancelLeasesToDisabledAliases" should "be applied only once" in
+  "CancelLeasesToDisabledAliases" should "be a no-op with no patch data for the current chain" in
     withDomain(MainnetSettings, AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       testLeaseBalance(d).out shouldBe 0L
 
       d.appendKeyBlock()
-      testLeaseBalance(d).out shouldBe -2562590821L
+      testLeaseBalance(d).out shouldBe 0L
 
       d.appendMicroBlock(TxHelpers.transfer())
       d.appendMicroBlock(TxHelpers.transfer())
       d.appendMicroBlock(TxHelpers.transfer())
       d.appendKeyBlock()
-      testLeaseBalance(d).out shouldBe -2562590821L
+      testLeaseBalance(d).out shouldBe 0L
     }
 
-  it should "be applied on extension apply" in
+  it should "be a no-op on extension apply with no patch data for the current chain" in
     withDomain(MainnetSettings, AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)) { d =>
       testLeaseBalance(d).out shouldBe 0L
       d.appendBlock()
-      testLeaseBalance(d).out shouldBe -2562590821L
+      testLeaseBalance(d).out shouldBe 0L
       d.appendBlock()
-      testLeaseBalance(d).out shouldBe -2562590821L
+      testLeaseBalance(d).out shouldBe 0L
       d.appendBlock()
-      testLeaseBalance(d).out shouldBe -2562590821L
+      testLeaseBalance(d).out shouldBe 0L
     }
 
   private def testLeaseBalance(d: Domain) = {

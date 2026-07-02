@@ -112,7 +112,7 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
     val dApp2 = RandomKeyPair()
 
     val dummyInvoke    = EthereumTransaction.Invocation(dApp.toAddress, "")
-    val dummyEthInvoke = EthereumTransaction(dummyInvoke, TestEthRawTransaction, TestEthSignature, 'T'.toByte) // needed to pass into asset script
+    val dummyEthInvoke = EthereumTransaction(dummyInvoke, TestEthRawTransaction, TestEthSignature, '?'.toByte) // needed to pass into asset script
     val invoker        = dummyEthInvoke.senderAddress()
     val invokerPk      = dummyEthInvoke.signerPublicKey()
 

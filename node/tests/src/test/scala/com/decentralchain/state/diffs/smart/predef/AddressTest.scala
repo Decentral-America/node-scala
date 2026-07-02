@@ -80,8 +80,8 @@ class AddressTest extends PropSpec {
   }
 
   property("RIDE addressFromString V4 success") {
-    val base58 = """3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU"""
-    val result = runScript(s""" addressFromString("$base58") """, ctxV = V4, chainId = 'T': Byte)
+    val base58 = """3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab"""
+    val result = runScript(s""" addressFromString("$base58") """, ctxV = V4, chainId = '?': Byte)
       .explicitGet()
       .asInstanceOf[CaseObj]
     result.caseType.name shouldBe "Address"

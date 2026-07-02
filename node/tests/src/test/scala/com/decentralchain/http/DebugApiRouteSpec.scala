@@ -500,7 +500,7 @@ class DebugApiRouteSpec
              |      "value" : null
              |    } ],
              |    "transfers" : [ {
-             |      "address" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+             |      "address" : "${TxHelpers.secondAddress}",
              |      "asset" : "${issue.asset}",
              |      "amount" : 1
              |    } ],
@@ -643,7 +643,7 @@ class DebugApiRouteSpec
              |    "type" : "Array",
              |    "value" : [ {
              |      "type" : "ByteVector",
-             |      "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |      "value" : "${TxHelpers.secondAddress}"
              |    } ]
              |  }, {
              |    "name" : "Address.@complexity",
@@ -661,7 +661,7 @@ class DebugApiRouteSpec
              |      "value" : {
              |        "bytes" : {
              |          "type" : "ByteVector",
-             |          "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |          "value" : "${TxHelpers.secondAddress}"
              |        }
              |      }
              |    }, {
@@ -690,7 +690,7 @@ class DebugApiRouteSpec
              |          "value" : {
              |            "bytes" : {
              |              "type" : "ByteVector",
-             |              "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |              "value" : "${TxHelpers.secondAddress}"
              |            }
              |          }
              |        },
@@ -736,7 +736,7 @@ class DebugApiRouteSpec
              |            "value" : {
              |              "bytes" : {
              |                "type" : "ByteVector",
-             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |                "value" : "${TxHelpers.secondAddress}"
              |              }
              |            }
              |          },
@@ -792,7 +792,7 @@ class DebugApiRouteSpec
              |            "value" : {
              |              "bytes" : {
              |                "type" : "ByteVector",
-             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |                "value" : "${TxHelpers.secondAddress}"
              |              }
              |            }
              |          },
@@ -860,7 +860,7 @@ class DebugApiRouteSpec
              |            "value" : {
              |              "bytes" : {
              |                "type" : "ByteVector",
-             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |                "value" : "${TxHelpers.secondAddress}"
              |              }
              |            }
              |          },
@@ -940,7 +940,7 @@ class DebugApiRouteSpec
              |            "value" : {
              |              "bytes" : {
              |                "type" : "ByteVector",
-             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |                "value" : "${TxHelpers.secondAddress}"
              |              }
              |            }
              |          },
@@ -1032,7 +1032,7 @@ class DebugApiRouteSpec
              |            "value" : {
              |              "bytes" : {
              |                "type" : "ByteVector",
-             |                "value" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+             |                "value" : "${TxHelpers.secondAddress}"
              |              }
              |            }
              |          },
@@ -1553,7 +1553,7 @@ class DebugApiRouteSpec
       val canceledLeaseId = originalLease.id()
 
       val amount1    = 100
-      val recipient1 = Recipient.Address(ByteStr.decodeBase58("3NAgxLPGnw3RGv9JT6NTDaG5D1iLUehg2xd").get)
+      val recipient1 = Recipient.Address(ByteStr.decodeBase58("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").get)
       val nonce1     = 0
       val leaseId1   = Lease.calculateId(Lease(recipient1, amount1, nonce1), invoke.id())
 
@@ -1575,7 +1575,7 @@ class DebugApiRouteSpec
           TestCompiler(V6).compileContract(s"""@Callable(i)
                                               |func default() = [
                                               |  LeaseCancel(base58'$canceledLeaseId'),
-                                              |  Lease(Address(base58'3NAgxLPGnw3RGv9JT6NTDaG5D1iLUehg2xd'), 100, 0),
+                                              |  Lease(Address(base58'3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab'), 100, 0),
                                               |  Lease(Alias("some_alias"), 20, 2)
                                               |]
                                               |""".stripMargin)
@@ -2050,13 +2050,13 @@ class DebugApiRouteSpec
              |  "trace": [
              |    {
              |      "type": "dApp",
-             |      "id": "3N79VJyPMGWTf1mgfqUZw3Ce6GKoERBoc6Y",
+             |      "id": "3Df3pdh8JMijFqfkrKfaErZva3jPRXy5DnE",
              |      "function": "default",
              |      "args": [],
              |      "invocations": [
              |        {
              |          "type": "dApp",
-             |          "id": "3NCMNUhdTDxGv1Q21ZC6Kuk6hGuPNFoMvmh",
+             |          "id": "3DkFhoRNQKAYWqJ6C3P6dj7PB4JyZMsq14N",
              |          "function": "default",
              |          "args": [],
              |          "invocations": [],
@@ -2146,7 +2146,7 @@ class DebugApiRouteSpec
              |                  "value": {
              |                    "bytes": {
              |                      "type": "ByteVector",
-             |                      "value": "3N79VJyPMGWTf1mgfqUZw3Ce6GKoERBoc6Y"
+             |                      "value": "3Df3pdh8JMijFqfkrKfaErZva3jPRXy5DnE"
              |                    }
              |                  }
              |                },
@@ -2501,7 +2501,7 @@ class DebugApiRouteSpec
              |        "type" : "Array",
              |        "value" : [ {
              |          "type" : "ByteVector",
-             |          "value" : "3NCMNUhdTDxGv1Q21ZC6Kuk6hGuPNFoMvmh"
+             |          "value" : "3DkFhoRNQKAYWqJ6C3P6dj7PB4JyZMsq14N"
              |        } ]
              |      }, {
              |        "name" : "Address.@complexity",
@@ -2519,7 +2519,7 @@ class DebugApiRouteSpec
              |          "value" : {
              |            "bytes" : {
              |              "type" : "ByteVector",
-             |              "value" : "3NCMNUhdTDxGv1Q21ZC6Kuk6hGuPNFoMvmh"
+             |              "value" : "3DkFhoRNQKAYWqJ6C3P6dj7PB4JyZMsq14N"
              |            }
              |          }
              |        }, {
@@ -2609,11 +2609,11 @@ class DebugApiRouteSpec
              |    "feeAssetId": null,
              |    "timestamp": ${invoke.timestamp},
              |    "version": 2,
-             |    "chainId": 84,
+             |    "chainId": 63,
              |    "sender": "${invoke.senderAddress}",
              |    "senderPublicKey": "${invoke.sender}",
              |    "proofs": [ "${(json \ "transaction" \ "proofs" \ 0).as[String]}" ],
-             |    "dApp": "3N79VJyPMGWTf1mgfqUZw3Ce6GKoERBoc6Y",
+             |    "dApp": "3Df3pdh8JMijFqfkrKfaErZva3jPRXy5DnE",
              |    "payment": [],
              |    "call": {
              |      "function": "default",

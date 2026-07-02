@@ -82,8 +82,8 @@ class DebugApiRouteStateHashGenesisSpec
         val genesisHeight      = 1
         val genesisBlockHeader = domain.blockchain.blockHeader(genesisHeight).value
         val expectedResponse = Json.obj(
-          "stateHash"         -> "79a65a809de9879bb8010d308333961c34764ff65444ff0028a982ca0cdd6732",
-          "dccBalanceHash"  -> "a3766f502f4bba124d9f6fff49adcac44e309bdbc72c437a0607de9c315bcdfa",
+          "stateHash"         -> "c14b7b14aaee11890fc243342c2bc36640f287da21bb891906c56c4bef094348",
+          "dccBalanceHash"  -> "f5f5d3d02528e2f4708b23b1410aae4eca91e333846552db57c75a62da7c36f4",
           "assetBalanceHash"  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"     -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -95,7 +95,7 @@ class DebugApiRouteStateHashGenesisSpec
           // Note: "nextCommittedGeneratorsHash" and "committedGeneratorBalancesHash" fields are present
           "nextCommittedGeneratorsHash"    -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "committedGeneratorBalancesHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
-          "snapshotHash"                   -> "2ydpHRFSFwcaQ8s9hPyZwcmJFk4cKDNFcb3DRcvyrXZ9",
+          "snapshotHash"                   -> "BBYVevXs4DtP5q8bpRHUyhHv5fmhVVhcniQa79B3s4Ar",
           "blockId"                        -> genesisBlockHeader.id().toString,
           "baseTarget"                     -> genesisBlockHeader.header.baseTarget,
           "height"                         -> genesisHeight,

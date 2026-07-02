@@ -20,6 +20,7 @@ import play.api.libs.json.Json.toJson
 import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.Future
+import scala.util.Random
 
 object TransferSending {
   case class Req(senderSeed: String, targetAddress: String, amount: Long, fee: Long)

@@ -1,5 +1,7 @@
 package com.decentralchain.it.sync.transactions
 
+import java.util.concurrent.ThreadLocalRandom
+
 import com.google.common.primitives.Longs
 import com.typesafe.config.Config
 

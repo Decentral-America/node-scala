@@ -309,7 +309,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
       Json.toJson(snapshot.scriptResults.values.head) should matchJson("""{
                                                                          |  "data" : [ ],
                                                                          |  "transfers" : [ {
-                                                                         |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                                                         |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                                                          |    "asset" : null,
                                                                          |    "amount" : 123
                                                                          |  } ],
@@ -398,7 +398,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
       Json.toJson(snapshot.scriptResults.values.head) should matchJson("""{
                                                                          |  "data" : [ ],
                                                                          |  "transfers" : [ {
-                                                                         |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                                                         |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                                                          |    "asset" : null,
                                                                          |    "amount" : 123
                                                                          |  } ],
@@ -443,7 +443,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
         """ {
           |   "data" : [ ],
           |   "transfers" : [ {
-          |     "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+          |     "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
           |     "asset" : null,
           |     "amount" : 123
           |   } ],
@@ -532,7 +532,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
       Json.toJson(snapshot.scriptResults.values.head) should matchJson("""{
                                                                          |  "data" : [ ],
                                                                          |  "transfers" : [ {
-                                                                         |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                                                         |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                                                          |    "asset" : null,
                                                                          |    "amount" : 123
                                                                          |  } ],
@@ -586,12 +586,12 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
       Json.toJson(snapshot.scriptResults.values.head) should matchJson(s"""{
                                                                           |  "data" : [ ],
                                                                           |  "transfers" : [ {
-                                                                          |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                                                          |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                                                           |    "asset" : null,
                                                                           |    "amount" : 123
                                                                           |  },
                                                                           |   {
-                                                                          |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                                                          |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                                                           |    "asset" : "${issue.asset}",
                                                                           |    "amount" : 123
                                                                           |  }],

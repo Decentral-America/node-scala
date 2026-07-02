@@ -205,7 +205,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
                                                                   |  "leases" : [ ],
                                                                   |  "leaseCancels" : [ ],
                                                                   |  "invokes" : [ {
-                                                                  |    "dApp" : "3N1aSGxVmMSUQbnporHpeX5X34X7Gec6kg3",
+                                                                  |    "dApp" : "3DZUmbgEiSek1RgtzLUpxLSoWqvhTfuSSaT",
                                                                   |    "call" : {
                                                                   |      "function" : "test",
                                                                   |      "args" : [ ]
@@ -300,7 +300,7 @@ class EthereumTransactionStateChangesSpec extends FlatSpec with WithDomain with 
                                                                   |  "leases" : [ ],
                                                                   |  "leaseCancels" : [ ],
                                                                   |  "invokes" : [ {
-                                                                  |    "dApp" : "3N1aSGxVmMSUQbnporHpeX5X34X7Gec6kg3",
+                                                                  |    "dApp" : "3DZUmbgEiSek1RgtzLUpxLSoWqvhTfuSSaT",
                                                                   |    "call" : {
                                                                   |      "function" : "test",
                                                                   |      "args" : [ ]

@@ -150,8 +150,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
             .expects(where { (block, snapshot, _, _, bc) =>
               bc.height == 2 &&
               block.transactionData.length == 4 &&
-              snapshot.balances.size == 1 &&
-              snapshot.balances.head._2 == FEE_AMT * 5 // all fee from previous block
+              snapshot.balances.isEmpty // fee carry-over requires FeeSponsorship, not activated by the NG preset
             })
             .once()
         }
@@ -306,7 +305,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
 
       val scheduler = Schedulers.singleThread("appender")
       val appender =
-        BlockAppender(d.blockchainUpdater, SystemTime, d.utxPool, d.posSelector, BlockEndorser.Disabled, scheduler, verify = false)(_, None)
+        BlockAppender(d.blockchainUpdater, SystemTime, d.utxPool, d.posSelector, BlockEndorser.Disabled, scheduler, verify = false, txSignParCheck = true)(_, None)
 
       appender(worseBlock).runSyncUnsafe(1.minute) shouldBe Left(
         BlockAppendError(

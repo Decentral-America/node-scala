@@ -73,7 +73,7 @@ class PBOrdersSpecification extends FlatSpec {
     val signed = PBOrders
       .vanilla(
         protoOrder.copy(
-          proofs = Seq(ByteString.copyFrom(Base58.decode("5f5irpd67tknEkHr9GejWSC7poZGfdaZabV84GjxifxqdtMKfcU8QnhZYBQR9F54GjfTcA8a91DSAb79CTtFoxnd")))
+          proofs = Seq(ByteString.copyFrom(Base58.decode("3YknX7Xd5DkQhVGanCStNPFULqGLfVcpgsu67izfoyTTU72746qohp1t6Kuctx58g3JnF5WyK51wfVGvsACYB3WJ")))
         )
       )
       .explicitGet()
@@ -83,7 +83,7 @@ class PBOrdersSpecification extends FlatSpec {
       .vanilla(
         protoOrder.copy(
           version = Order.V4,
-          proofs = Seq(ByteString.copyFrom(Base58.decode("2kRQDV8TbSEVe9B2yy8XR8XijYrbxEXTvptxuCr42Vp6u1psZyEzaRj6eAb267zA2Tm5D8EGN8FTMQFGdQDcyNT8")))
+          proofs = Seq(ByteString.copyFrom(Base58.decode("4crjRpfLj7HCk41hyxtiiTsVgSdx4ZKz8D4DmyrCGutwgq1T34inp8quXauExChkSkbJsSbE6uamK5sYiNbDgFjw")))
         )
       )
       .explicitGet()

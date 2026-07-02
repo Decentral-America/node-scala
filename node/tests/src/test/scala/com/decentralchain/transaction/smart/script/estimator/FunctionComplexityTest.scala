@@ -68,7 +68,7 @@ class FunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
       )
       .explicitGet()
 
-    val recipient = Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet()
+    val recipient = Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet()
     val ttx = TransferTransaction(
       2.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),

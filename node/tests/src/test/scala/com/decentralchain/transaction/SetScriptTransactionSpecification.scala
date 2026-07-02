@@ -71,7 +71,7 @@ class SetScriptTransactionSpecification extends GenericTransactionSpecification[
   }
 
   override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
-    val tx = TxHelpers.setScript(TxHelpers.defaultSigner, script = None, version = TxVersion.V1)
+    val tx = TxHelpers.removeScript(TxHelpers.defaultSigner, version = TxVersion.V1)
     Some(tx.bytes() -> tx.json())
   }
 }

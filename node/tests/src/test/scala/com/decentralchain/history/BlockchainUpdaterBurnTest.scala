@@ -9,7 +9,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.test.*
 import com.decentralchain.transaction.assets.{BurnTransaction, IssueTransaction, ReissueTransaction}
 import com.decentralchain.transaction.transfer.TransferTransaction
-import com.decentralchain.transaction.{Asset, GenesisTransaction, TxVersion}
+import com.decentralchain.transaction.{Asset, GenesisTransaction, TxHelpers, TxVersion}
 import org.scalacheck.Gen
 
 class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenPropertyCheck {
@@ -25,27 +25,39 @@ class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenProper
     alice                                                    <- accountGen
     (_, assetName, description, quantity, decimals, _, _, _) <- issueParamGen
     genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-    masterToAlice: TransferTransaction = TransferTransaction
-      .selfSigned(1.toByte, master, alice.toAddress, Asset.Dcc, 3 * Dcc, Asset.Dcc, transferAssetDccFee, ByteStr.empty, ts + 1)
-      .explicitGet()
-    issue: IssueTransaction = IssueTransaction
-      .selfSigned(
-        TxVersion.V1,
-        alice,
-        new String(assetName),
-        new String(description),
-        quantity,
-        decimals,
-        false,
-        script = None,
-        Dcc,
-        ts + 100
-      )
-      .explicitGet()
-    burn: BurnTransaction = BurnTransaction.selfSigned(1.toByte, alice, issue.asset, quantity / 2, Dcc, ts + 200).explicitGet()
-    reissue: ReissueTransaction = ReissueTransaction
-      .selfSigned(1.toByte, alice, issue.asset, burn.quantity.value, true, Dcc, ts + 300)
-      .explicitGet()
+    masterToAlice: TransferTransaction = TxHelpers.transfer(
+      from = master,
+      to = alice.toAddress,
+      amount = 3 * Dcc,
+      asset = Asset.Dcc,
+      fee = transferAssetDccFee,
+      feeAsset = Asset.Dcc,
+      attachment = ByteStr.empty,
+      timestamp = ts + 1,
+      version = 1.toByte
+    )
+    issue: IssueTransaction = TxHelpers.issue(
+      issuer = alice,
+      amount = quantity,
+      decimals = decimals,
+      name = new String(assetName),
+      description = new String(description),
+      fee = Dcc,
+      script = None,
+      reissuable = false,
+      timestamp = ts + 100,
+      version = TxVersion.V1
+    )
+    burn: BurnTransaction = TxHelpers.burn(asset = issue.asset, amount = quantity / 2, sender = alice, fee = Dcc, timestamp = ts + 200, version = 1.toByte)
+    reissue: ReissueTransaction = TxHelpers.reissue(
+      asset = issue.asset,
+      sender = alice,
+      amount = burn.quantity.value,
+      reissuable = true,
+      fee = Dcc,
+      timestamp = ts + 300,
+      version = 1.toByte
+    )
   } yield (ts, genesis, masterToAlice, issue, burn, reissue)
 
   val localBlockchainSettings: BlockchainSettings = DefaultBlockchainSettings.copy(

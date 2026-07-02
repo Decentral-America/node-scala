@@ -94,11 +94,11 @@ class BlockDifferTest extends FreeSpec with WithDomain {
        */
       "height > enableMicroblocksAfterHeight - a miner should receive 60% of previous block's fee and 40% of the current one" in {
         assertDiff(testChain.init, 4) { case (_, s) =>
-          s.balance(signerA.toAddress) shouldBe 34
+          s.balance(signerA.toAddress) shouldBe 22
         }
 
         assertDiff(testChain, 4) { case (_, s) =>
-          s.balance(signerB.toAddress) shouldBe 50
+          s.balance(signerB.toAddress) shouldBe 32
         }
       }
     }

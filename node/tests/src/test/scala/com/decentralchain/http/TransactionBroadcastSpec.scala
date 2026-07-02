@@ -95,14 +95,14 @@ class TransactionBroadcastSpec2
         s"""{
            |  "type": 7,
            |  "id": "${transaction.id()}",
-           |  "sender": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |  "sender": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |  "senderPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |  "fee": 1000000,
            |  "feeAssetId": null,
            |  "timestamp": ${transaction.timestamp},
            |  "proofs": [ "${transaction.proofs.base58.value().head}" ],
            |  "version": 3,
-           |  "chainId": 84,
+           |  "chainId": 63,
            |  "order1": {
            |    "version": 4,
            |    "id": "${ethBuyOrder.id()}",
@@ -184,7 +184,7 @@ class TransactionBroadcastSpec2
 
       val amount1    = 100
       val nonce1     = 0
-      val recipient1 = Recipient.Address(ByteStr.decodeBase58("3NAgxLPGnw3RGv9JT6NTDaG5D1iLUehg2xd").get)
+      val recipient1 = Recipient.Address(ByteStr.decodeBase58("3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB").get)
       val leaseId1   = Lease.calculateId(Lease(recipient1, amount1, nonce1), invoke.id())
 
       val amount2    = 20
@@ -230,10 +230,10 @@ class TransactionBroadcastSpec2
            |    "feeAssetId" : null,
            |    "timestamp" : ${invoke.timestamp},
            |    "version" : 1,
-           |    "sender" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |    "sender" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |    "senderPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |    "proofs" : [ "${invoke.signature}" ],
-           |    "dApp" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |    "dApp" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |    "payment" : [ ],
            |    "call" : {
            |      "function" : "test",
@@ -242,12 +242,12 @@ class TransactionBroadcastSpec2
            |  },
            |  "trace" : [ {
            |    "type" : "verifier",
-           |    "id" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |    "id" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |    "result" : "success",
            |    "error" : null
            |  }, {
            |    "type" : "dApp",
-           |    "id" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |    "id" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |    "function" : "test",
            |    "args" : [ ],
            |    "invocations" : [ ],
@@ -264,7 +264,7 @@ class TransactionBroadcastSpec2
            |        "nonce" : $nonce1,
            |        "id" : "$leaseId1"
            |      }, {
-           |        "recipient" : "alias:T:${recipient2.name}",
+           |        "recipient" : "alias:?:${recipient2.name}",
            |        "amount" : $amount2,
            |        "nonce" : $nonce2,
            |        "id" : "$leaseId2"
@@ -284,7 +284,7 @@ class TransactionBroadcastSpec2
            |          "value" : {
            |            "bytes" : {
            |              "type" : "ByteVector",
-           |              "value" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+           |              "value" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
            |            }
            |          }
            |        },
@@ -313,7 +313,7 @@ class TransactionBroadcastSpec2
            |          "value" : {
            |            "bytes" : {
            |              "type" : "ByteVector",
-           |              "value" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+           |              "value" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
            |            }
            |          }
            |        },
@@ -353,7 +353,7 @@ class TransactionBroadcastSpec2
            |      "type" : "Array",
            |      "value" : [ {
            |        "type" : "ByteVector",
-           |        "value" : "3NAgxLPGnw3RGv9JT6NTDaG5D1iLUehg2xd"
+           |        "value" : "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB"
            |      } ]
            |    }, {
            |      "name" : "Address.@complexity",
@@ -371,7 +371,7 @@ class TransactionBroadcastSpec2
            |        "value" : {
            |          "bytes" : {
            |            "type" : "ByteVector",
-           |            "value" : "3NAgxLPGnw3RGv9JT6NTDaG5D1iLUehg2xd"
+           |            "value" : "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB"
            |          }
            |        }
            |      }, {
@@ -523,7 +523,7 @@ class TransactionBroadcastSpec2
            |            "value" : {
            |              "bytes" : {
            |                "type" : "ByteVector",
-           |                "value" : "3NAgxLPGnw3RGv9JT6NTDaG5D1iLUehg2xd"
+           |                "value" : "3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB"
            |              }
            |            }
            |          },

@@ -110,7 +110,7 @@ class OrderJsonSpecification extends PropSpec with JsonMatchers with EthHelpers 
       case JsError(e) =>
         fail("Error: " + e.toString())
       case JsSuccess(o, _) =>
-        o.id().toString shouldBe "BVJs4ip16nbh2vmuZkQmg8TMbN4vhnRAiACAfffQxSr7"
+        o.id().toString shouldBe "4j27CsCHLEEcEo7KPTHKFSzB5ZAshvCPbSHFvKaBe7uW"
         o.senderPublicKey shouldBe keyPair.publicKey
         o.matcherPublicKey shouldBe PublicKey(Base58.tryDecodeWithLimit("DZUxn4pC7QdYrRqacmaAJghatvnn1Kh1mkE2scZoLuGJ").get)
         o.assetPair.amountAsset shouldBe IssuedAsset(ByteStr.decodeBase58("29ot86P3HoUZXH1FCoyvff7aeZ3Kt7GqPwBWXncjRF2b").get)
@@ -147,10 +147,10 @@ class OrderJsonSpecification extends PropSpec with JsonMatchers with EthHelpers 
       case JsError(e) =>
         fail("Error: " + e.toString())
       case JsSuccess(o, _) =>
-        o.id().toString shouldBe "FU8kLN9rRXCYjUDVUg914L3rdKNbgqpcfPmzXV7kLSJZ"
+        o.id().toString shouldBe "G2v16x8VtoSHShYDTCFtsm1gtyj1cPm3qzuE9KKjPReG"
         o.withProofs(Proofs.empty).id() shouldNot be(o.id())
         o.senderPublicKey shouldBe PublicKey(
-          ByteStr.decodeBase58("4LySXRvAsKTfhvabypvFUwYT3cvUFyZBhzFhq9UUDfzDmM4wDEmu3m5xPSD7iZrm7Zg4mmUXAkEQmodGgrdCAic7").get
+          ByteStr.decodeBase58("BcF6XUyJ8rEBqEgen3wMg1V4Gi472yPhDEwUCST51m9GePsCpmsFhtHaCP395XAhb818AmKoczkmMR6iDi6xq2x").get
         )
         o.matcherPublicKey shouldBe PublicKey(Base58.tryDecodeWithLimit("DZUxn4pC7QdYrRqacmaAJghatvnn1Kh1mkE2scZoLuGJ").get)
         o.assetPair.amountAsset shouldBe IssuedAsset(ByteStr.decodeBase58("29ot86P3HoUZXH1FCoyvff7aeZ3Kt7GqPwBWXncjRF2b").get)

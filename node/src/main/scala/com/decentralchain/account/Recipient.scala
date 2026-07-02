@@ -80,7 +80,7 @@ object Address {
 
   def apply(publicKeyHash: Array[Byte], chainId: Byte = AddressScheme.current.chainId): Address = {
     require(publicKeyHash.length == HashLength, "Public key hash should be 20 bytes long")
-    val checksumPayload = Bytes.concat(Array(1.toByte, AddressScheme.current.chainId), publicKeyHash)
+    val checksumPayload = Bytes.concat(Array(1.toByte, chainId), publicKeyHash)
     val checksum        = crypto.secureHash(checksumPayload)
     new Address(chainId, publicKeyHash, checksum.take(4))
   }

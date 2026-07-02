@@ -183,138 +183,138 @@ class TxStateSnapshotHashSpec extends PropSpec {
     (
       "dcc balances",
       dccBalances,
-      "CiQKGgFUYP1Q7yDeRXEgffuciL58HC+KIscK2I+1EgYQgJTr3AMKJAoaAVRCxcljc/UP2BNQYE8cFPKmySVq2v0ZsCoSBhCAqNa5Bw==",
+      "CiQKGgE/YP1Q7yDeRXEgffuciL58HC+KIsfiO6liEgYQgJTr3AMKJAoaAT9Cxcljc/UP2BNQYE8cFPKmySVq2tQdw/8SBhCAqNa5Bw==",
       ByteStr.empty,
       Hex.toHexString(TxStateSnapshotHashBuilder.InitStateHash.arr),
-      "f0a8b6745534c2d20412f40cdb097b7050898e44531a661ef64fc5be0744ac72"
+      "c853259dbc792e9e6006432744c6ed95c27d3f64936e7235c63b276351a63538"
     ),
     (
       "asset balances",
       assetBalances,
-      "CkMKGgFUYP1Q7yDeRXEgffuciL58HC+KIscK2I+1EiUKIF5mn4IKZ9CIbYdHjPBDoqx4XMevVdwxzhB1OUvTUKJbEJBOCkQKGgFUQsXJY3P1D9gTUGBPHBTypsklatr9GbAqEiYKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEKCcAQ==",
+      "CkMKGgE/YP1Q7yDeRXEgffuciL58HC+KIsfiO6liEiUKIF5mn4IKZ9CIbYdHjPBDoqx4XMevVdwxzhB1OUvTUKJbEJBOCkQKGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EiYKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEKCcAQ==",
       ByteStr.empty,
-      "f0a8b6745534c2d20412f40cdb097b7050898e44531a661ef64fc5be0744ac72",
-      "16c4803d12ee8e9d6c705ca6334fd84f57c0e78c4ed8a9a3dc6c28dcd9b29a34"
+      "c853259dbc792e9e6006432744c6ed95c27d3f64936e7235c63b276351a63538",
+      "1a9f931b184922a5050196c29d0e07e61882c01caa252d9f5807a39b1b4d67bb"
     ),
     (
       "data entries",
       dataEntries,
-      "YloKGgFUYP1Q7yDeRXEgffuciL58HC+KIscK2I+1EgUKA2ZvbxISCgNiYXJqC1N0cmluZ1ZhbHVlEiEKA2JhemIaAVRg/VDvIN5FcSB9+5yIvnwcL4oixwrYj7ViLwoaAVRCxcljc/UP2BNQYE8cFPKmySVq2v0ZsCoSCAoDZm9vULAJEgcKA2JhclgB",
+      "YloKGgE/YP1Q7yDeRXEgffuciL58HC+KIsfiO6liEgUKA2ZvbxISCgNiYXJqC1N0cmluZ1ZhbHVlEiEKA2JhemIaAT9g/VDvIN5FcSB9+5yIvnwcL4oix+I7qWJiLwoaAT9Cxcljc/UP2BNQYE8cFPKmySVq2tQdw/8SCAoDZm9vULAJEgcKA2JhclgB",
       ByteStr.empty,
-      "16c4803d12ee8e9d6c705ca6334fd84f57c0e78c4ed8a9a3dc6c28dcd9b29a34",
-      "d33269372999bfd8f7afdf97e23bc343bcf3812f437e8971681a37d56868ec8a"
+      "1a9f931b184922a5050196c29d0e07e61882c01caa252d9f5807a39b1b4d67bb",
+      "c2f2021567946781155cbb13cee9bb02f93e20200f7d4a3ffe6d9fdffb506216"
     ),
     (
       "account script",
       accountScript,
       "Wi4KIFDHWa9Cd6VU8M20LLFHzbBTveERf1sEOw19SUS40GBoEgcGAQaw0U/PGPoB",
       ByteStr.empty,
-      "d33269372999bfd8f7afdf97e23bc343bcf3812f437e8971681a37d56868ec8a",
-      "dcdf7df91b11fdbeb2d99c4fd64abb4657adfda15eed63b1d4730aa2b6275ee2"
+      "c2f2021567946781155cbb13cee9bb02f93e20200f7d4a3ffe6d9fdffb506216",
+      "f63cf7cf61a522efbf465c762f839d87ab2247dc53e5192511a147fef10ffcf7"
     ),
     (
       "asset script",
       assetScript,
       "QisKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEgcGAQaw0U/P",
       ByteStr.empty,
-      "dcdf7df91b11fdbeb2d99c4fd64abb4657adfda15eed63b1d4730aa2b6275ee2",
-      "d3c7f2aeb1d978ecebc2fe1f0555e4378cef5171db460d8bbfebef0e59c3a44c"
+      "f63cf7cf61a522efbf465c762f839d87ab2247dc53e5192511a147fef10ffcf7",
+      "278cb87062504e53008c74b7fdfb23de56c1012c8918f87f131429c4e668bb18"
     ),
     (
       "new lease",
       newLease,
-      "EiIKGgFUYP1Q7yDeRXEgffuciL58HC+KIscK2I+1GICa4uEQEiIKGgFUQsXJY3P1D9gTUGBPHBTypsklatr9GbAqEICuzb4UGmYKILiCMyyFggW8Zd2LGt/AtMr7WWp+kfWbzlN93pXZqzqNEiBQx1mvQnelVPDNtCyxR82wU73hEX9bBDsNfUlEuNBgaBoaAVRCxcljc/UP2BNQYE8cFPKmySVq2v0ZsCoggPKLqAk=",
+      "EiIKGgE/YP1Q7yDeRXEgffuciL58HC+KIsfiO6liGICa4uEQEiIKGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EICuzb4UGmYKILiCMyyFggW8Zd2LGt/AtMr7WWp+kfWbzlN93pXZqzqNEiBQx1mvQnelVPDNtCyxR82wU73hEX9bBDsNfUlEuNBgaBoaAT9Cxcljc/UP2BNQYE8cFPKmySVq2tQdw/8ggPKLqAk=",
       ByteStr.empty,
-      "d3c7f2aeb1d978ecebc2fe1f0555e4378cef5171db460d8bbfebef0e59c3a44c",
-      "2665ce187b867f2dae95699882d9fd7c31039c505b8af93ed22cada90524ff37"
+      "278cb87062504e53008c74b7fdfb23de56c1012c8918f87f131429c4e668bb18",
+      "36bca35a1a9eb275aaf9864a2b58b9e2ba41e553065c7102ab47ba37b7ada799"
     ),
     (
       "cancelled lease",
       cancelledLease,
-      "EiIKGgFUMCPLqLW81X2Atgaj2KwF9QkaJq47Cev9GICo1rkHEhwKGgFUYSJd8vzI9rq7GdIuDy65JMc8zi497E98IiIKILiCMyyFggW8Zd2LGt/AtMr7WWp+kfWbzlN93pXZqzqN",
+      "EiIKGgE/MCPLqLW81X2Atgaj2KwF9QkaJq6fMkwsGICo1rkHEhwKGgE/YSJd8vzI9rq7GdIuDy65JMc8zi7sC+xrIiIKILiCMyyFggW8Zd2LGt/AtMr7WWp+kfWbzlN93pXZqzqN",
       ByteStr.empty,
-      "2665ce187b867f2dae95699882d9fd7c31039c505b8af93ed22cada90524ff37",
-      "dafc56fb4f5e13ddd3e82547874e154c5c61ac556e76e9e9766b5d7ccbc1e1be"
+      "36bca35a1a9eb275aaf9864a2b58b9e2ba41e553065c7102ab47ba37b7ada799",
+      "807cf805c8efda28203c89bd37aef45cde80a2fef73f1bc1cb2a3f521ab441de"
     ),
     (
       "sponsorship",
       sponsorship,
       "aiUKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEPwq",
       ByteStr.empty,
-      "dafc56fb4f5e13ddd3e82547874e154c5c61ac556e76e9e9766b5d7ccbc1e1be",
-      "d9eab5091d57c18c38e0a8702e7cbe6f133e109281f2ef0f2bc88686b458f31f"
+      "807cf805c8efda28203c89bd37aef45cde80a2fef73f1bc1cb2a3f521ab441de",
+      "0a118e7d96fd0dab0b7d83775a1c63319c8cce5c00557178e9b085f7e3979b5d"
     ),
     (
       "alias",
       alias,
-      "SiYKGgFUQsXJY3P1D9gTUGBPHBTypsklatr9GbAqEgh3YXZlc2V2bw==",
+      "SiQKGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EgZkY2Nldm8=",
       ByteStr.empty,
-      "d9eab5091d57c18c38e0a8702e7cbe6f133e109281f2ef0f2bc88686b458f31f",
-      "eaa251c161cfe875932275ce6ff8873cd169099e021f09245f4069ccd58d6669"
+      "0a118e7d96fd0dab0b7d83775a1c63319c8cce5c00557178e9b085f7e3979b5d",
+      "488ecb9bebd49b9a3248f0ffe88e6704bba95b96842ef6b50b35a1be285c1fa7"
     ),
     (
       "order fill",
       volumeAndFee,
       "UisKIMkknO8yHpMUT/XKkkdlrbYCG0Dt+qvVgphfgtRbyRDMEICU69wDGNAPUisKIJZ9YwvJObbWItHAD2zhbaFOTFx2zQ4p0Xbo81GXHKeEEICU69wDGNAP",
       ByteStr.empty,
-      "eaa251c161cfe875932275ce6ff8873cd169099e021f09245f4069ccd58d6669",
-      "de22575b5c2ef7de6388c0ea96e6d0f172802f4c8e33684473c91af65866b1d4"
+      "488ecb9bebd49b9a3248f0ffe88e6704bba95b96842ef6b50b35a1be285c1fa7",
+      "606040cfd0ed302569278b5075e229f9f2c434ec64736da98c2ff78ae0268e9f"
     ),
     (
       "new asset",
       newAsset,
       "KkYKIF5mn4IKZ9CIbYdHjPBDoqx4XMevVdwxzhB1OUvTUKJbEiDcYGFqY9MotHTpDpskoycN/Mt62bZfPxIC4fpU0ZTBniABKkYKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEiDcYGFqY9MotHTpDpskoycN/Mt62bZfPxIC4fpU0ZTBnhgIMi8KIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEAEaCQT/////////9jIlCiBeZp+CCmfQiG2HR4zwQ6KseFzHr1XcMc4QdTlL01CiWxoBAQ==",
       ByteStr.empty,
-      "de22575b5c2ef7de6388c0ea96e6d0f172802f4c8e33684473c91af65866b1d4",
-      "5f09358e944a386ad12b4f6e22c79a5c614967f6da40465e30d878e9b58e75e2"
+      "606040cfd0ed302569278b5075e229f9f2c434ec64736da98c2ff78ae0268e9f",
+      "e0075ecbb87aeca1eea7256aae3b894ed795aad80d2ecfc9d525804167cae964"
     ),
     (
       "reissued asset",
       reissuedAsset,
       "MigKIDhvjT3TTlJ+v4Ni205vcYc1m9WWgnQPFovjmJI1H62yGgQ7msoA",
       ByteStr.empty,
-      "5f09358e944a386ad12b4f6e22c79a5c614967f6da40465e30d878e9b58e75e2",
-      "6d5e0f4e2a4b650541b66711bbc687f51fea7bc3aa35b43642e21ab3dd064743"
+      "e0075ecbb87aeca1eea7256aae3b894ed795aad80d2ecfc9d525804167cae964",
+      "9807f42797b35db6a1c21d51be43961fe55cf912a368dc74a2ebe2549422d0ef"
     ),
     (
       "renamed asset",
       renamedAsset,
       "OkMKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEgduZXduYW1lGhZzb21lIGZhbmN5IGRlc2NyaXB0aW9u",
       ByteStr.empty,
-      "6d5e0f4e2a4b650541b66711bbc687f51fea7bc3aa35b43642e21ab3dd064743",
-      "885ac4b03397e63cdc1a2e3fe60d2aae0d4701e5cfb8c19ca80feb912a028a48"
+      "9807f42797b35db6a1c21d51be43961fe55cf912a368dc74a2ebe2549422d0ef",
+      "ee972aa9b1a869fada95bf13559f263f04d2072c1a59166742e4a864ed5f4720"
     ),
     (
       "failed transaction",
       failedTransaction,
-      "CiQKGgFUQsXJY3P1D9gTUGBPHBTypsklatr9GbAqEgYQ4PHE1wlwAQ==",
+      "CiQKGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EgYQ4PHE1wlwAQ==",
       ByteStr(fastHash(Ints.toByteArray(0xaabbef20))),
-      "885ac4b03397e63cdc1a2e3fe60d2aae0d4701e5cfb8c19ca80feb912a028a48",
-      "4185fb099c6dd4f483d4488045cc0912f02b9c292128b90142367af680ce2a32"
+      "ee972aa9b1a869fada95bf13559f263f04d2072c1a59166742e4a864ed5f4720",
+      "d9f27e87a1424536610025ae664804c62d80aa925540c9eb42aeded06b45305d"
     ),
     (
       "elided transaction",
       elidedTransaction,
       "cAI=",
       ByteStr(fastHash(Ints.toByteArray(0xaabbef40))),
-      "4185fb099c6dd4f483d4488045cc0912f02b9c292128b90142367af680ce2a32",
-      "7a15507d73ff9f98c3c777e687e23a4c8b33d02212203be73f0518403e91d431"
+      "d9f27e87a1424536610025ae664804c62d80aa925540c9eb42aeded06b45305d",
+      "58d597e570a9a06555d60f86cbecee11399829d0da879d4070ae9d1a336a56e4"
     ),
     (
       "with generation commitment",
       withCommitment,
       "elQKIFDHWa9Cd6VU8M20LLFHzbBTveERf1sEOw19SUS40GBoEjCtMabxDUdbtJ7shen9xp6fdysl8gapeJylu5iJR4Jzxq24ikwORqZLNx+7yclBPNc=",
       ByteStr.empty,
-      "7a15507d73ff9f98c3c777e687e23a4c8b33d02212203be73f0518403e91d431",
-      "d1c70160c781e977203a7450f5478945fce259a657950775e1920099c57bc434"
+      "58d597e570a9a06555d60f86cbecee11399829d0da879d4070ae9d1a336a56e4",
+      "4f3d99e3fbfc41eb6f36cbd4570a4366500e2556237bce863b40ca913c680aa4"
     ),
     (
       "all together",
       all,
-      "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",
+      "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",
       ByteStr(fastHash(Ints.toByteArray(0xaabbef50))),
-      "9ef6a85dd20ebb3834bcf391baff065803ba90e8cc3db1ff81062466a866d56f",
-      "1baa059a1e12ee2a7fc3793ec2bd877b7981e925602b7b8b6dd1aadf0d78ec56"
+      "4f3d99e3fbfc41eb6f36cbd4570a4366500e2556237bce863b40ca913c680aa4",
+      "4cd8597554633813c65b9712c09a38dfb6d574db54405952f88255f9d77db9b5"
     )
   )
 

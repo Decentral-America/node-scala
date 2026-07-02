@@ -124,7 +124,7 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
     val recipient = RandomKeyPair()
 
     val dummyTransfer    = EthereumTransaction.Transfer(None, transferAmount, recipient.toAddress)
-    val dummyEthTransfer = EthereumTransaction(dummyTransfer, TestEthRawTransaction, TestEthSignature, 'T'.toByte) // needed to pass into asset script
+    val dummyEthTransfer = EthereumTransaction(dummyTransfer, TestEthRawTransaction, TestEthSignature, '?'.toByte) // needed to pass into asset script
     val ethSender        = dummyEthTransfer.senderAddress()
 
     DirectiveDictionary[StdLibVersion].all

@@ -2,6 +2,7 @@ package com.decentralchain.it.sync
 
 import java.util.concurrent.ThreadLocalRandom
 import scala.util.Try
+
 import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr

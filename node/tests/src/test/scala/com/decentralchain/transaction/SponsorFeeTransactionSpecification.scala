@@ -44,7 +44,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val json = Json.parse("""
                             |{
                             |  "senderPublicKey" : "DFefQsRMtXtTKtpVBwsrD3mPAzerWxLXWHPEe9ANc548",
-                            |  "sender" : "3N3dKf1VfhfF6QuxeyBcKL73czXE6nys27u",
+                            |  "sender" : "3DbXeyjEcnsWhEp2qTNcd9UL6mvpHmUcUEc",
                             |  "feeAssetId" : null,
                             |  "proofs" : [ "k1ve9smBuVvEiRHGjVSpBwtUfPG4yETrxpXWPGEu83ddo5DdycGcEY4qfav8A1Ej9reCEdEivwRpWZ72zZ12X54" ],
                             |  "assetId" : "HyAkA27DbuhLcFmimoSXoD9H5FP99JX5PcSXvMni4UWM",
@@ -73,7 +73,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val js = Json.parse(s"""{
  "type": 14,
  "id": "Gobt7AiyQAfduRkW8Mk3naWbzH67Zsv9rdmgRNmon1Mb",
- "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+ "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
  "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
  "fee": $One,
  "feeAssetId": null,
@@ -105,7 +105,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val js = Json.parse(s"""{
  "type": 14,
  "id": "HsEHzgJEkmjy2aenmbNVFrK1Na9rz4V4p7o2fY9eB9za",
- "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+ "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
  "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
  "fee": $One,
  "feeAssetId":null,

@@ -141,7 +141,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               |        },
               |        "value" : {
               |          "type" : "ByteVector",
-              |          "value" : "3MuPKL2kQz1Gp9t7QwrDZN5F8m3u5Uzzo3e"
+              |          "value" : "3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG"
               |        }
               |      }
               |    } ]
@@ -150,11 +150,11 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
           )
           (result \ "complexity").as[Int] shouldBe 5
           (result \ "expr").as[String] shouldBe "testCallable()"
-          (result \ "address").as[String] shouldBe "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+          (result \ "address").as[String] shouldBe "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
           (result \ "stateChanges").as[JsObject] shouldBe Json.parse(
             """
               |{
-              |    "data" : [ {"key":"test","type":"binary","value":"base64:AVQ7/yyDy88aPjf+qhzZz/b3yDC2lXyJwWk="} ],
+              |    "data" : [ {"key":"test","type":"binary","value":"base64:AT87/yyDy88aPjf+qhzZz/b3yDC2le2GFD8="} ],
               |    "transfers" : [ ],
               |    "issues" : [ ],
               |    "reissues" : [ ],
@@ -171,7 +171,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
         evalScript("testThis()") ~> route ~> check {
           responseJson shouldBe Json.obj(
             "type"  -> "Address",
-            "value" -> Json.obj("bytes" -> Json.obj("type" -> "ByteVector", "value" -> "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"))
+            "value" -> Json.obj("bytes" -> Json.obj("type" -> "ByteVector", "value" -> "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"))
           )
         }
 
@@ -261,14 +261,14 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               |        },
               |        "value" : {
               |          "type" : "ByteVector",
-              |          "value" : "3MuPKL2kQz1Gp9t7QwrDZN5F8m3u5Uzzo3e"
+              |          "value" : "3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG"
               |        }
               |      }
               |    } ]
               |  },
               |  "complexity" : 92,
               |  "expr" : " testSyncInvoke() ",
-              |  "address" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+              |  "address" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
               |}
             """.stripMargin
           )
@@ -278,7 +278,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               |  "data" : [ {
               |    "key" : "testSyncInvoke",
               |    "type" : "binary",
-              |    "value" : "base64:AVQ7/yyDy88aPjf+qhzZz/b3yDC2lXyJwWk="
+              |    "value" : "base64:AT87/yyDy88aPjf+qhzZz/b3yDC2le2GFD8="
               |  } ],
               |  "transfers" : [ ],
               |  "issues" : [ ],
@@ -288,7 +288,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               |  "leases" : [ ],
               |  "leaseCancels" : [ ],
               |  "invokes" : [ {
-              |    "dApp" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+              |    "dApp" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
               |    "call" : {
               |      "function" : "testCallable",
               |      "args" : [ ]
@@ -298,7 +298,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
               |      "data" : [ {
               |        "key" : "test",
               |        "type" : "binary",
-              |        "value" : "base64:AVQv1P2H4On4q9JvwDzjIpknHO4wLHCiOl4="
+              |        "value" : "base64:AT8v1P2H4On4q9JvwDzjIpknHO4wLLORpdc="
               |      } ],
               |      "transfers" : [ ],
               |      "issues" : [ ],
@@ -320,25 +320,25 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
         evalScript(""" testSyncCallComplexityExcess() """) ~> customApi.route ~> check {
           val response = responseAs[JsValue]
           val message =
-            "InvokeRejectError(error = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded), log = \n\ttestSyncCallComplexityExcess.@args = []\n\tinvoke.@args = [\n\t\tAddress(\n\t\t\tbytes = base58'3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9'\n\t\t),\n\t\t\"testSyncCallComplexityExcess\",\n\t\t[],\n\t\t[]\n\t]\n\tinvoke.@complexity = 75\n\t@complexityLimit = 122\n\tr = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded, log = \n\t\t@invokedDApp = Address(\n\t\t\tbytes = base58'3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9'\n\t\t)\n\t\t@invokedFuncName = \"testSyncCallComplexityExcess\"\n\t\ti = Invocation(\n\t\t\toriginCaller = Address(\n\t\t\t\tbytes = base58'3MuPKL2kQz1Gp9t7QwrDZN5F8m3u5Uzzo3e'\n\t\t\t)\n\t\t\tpayments = []\n\t\t\tcallerPublicKey = base58'9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ'\n\t\t\tfeeAssetId = Unit\n\t\t\toriginCallerPublicKey = base58'11111111111111111111111111111111'\n\t\t\ttransactionId = base58''\n\t\t\tcaller = Address(\n\t\t\t\tbytes = base58'3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9'\n\t\t\t)\n\t\t\tfee = 2000000\n\t\t)\n\t\ttestSyncCallComplexityExcess.@args = []\n\t\tinvoke.@args = [\n\t\t\tAddress(\n\t\t\t\tbytes = base58'3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9'\n\t\t\t),\n\t\t\t\"testSyncCallComplexityExcess\",\n\t\t\t[],\n\t\t\t[]\n\t\t]\n\t\tinvoke.@complexity = 75\n\t\t@complexityLimit = 44\n\t\tr = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded, log = \n\t\t\t@invokedDApp = Address(\n\t\t\t\tbytes = base58'3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9'\n\t\t\t)\n\t\t\t@invokedFuncName = \"testSyncCallComplexityExcess\"\n\t\t\ti = Invocation(\n\t\t\t\toriginCaller = Address(\n\t\t\t\t\tbytes = base58'3MuPKL2kQz1Gp9t7QwrDZN5F8m3u5Uzzo3e'\n\t\t\t\t)\n\t\t\t\tpayments = []\n\t\t\t\tcallerPublicKey = base58'9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ'\n\t\t\t\tfeeAssetId = Unit\n\t\t\t\toriginCallerPublicKey = base58'11111111111111111111111111111111'\n\t\t\t\ttransactionId = base58''\n\t\t\t\tcaller = Address(\n\t\t\t\t\tbytes = base58'3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9'\n\t\t\t\t)\n\t\t\t\tfee = 2000000\n\t\t\t)\n\t\t\ttestSyncCallComplexityExcess.@args = []\n\t\t)\n\t)\n)"
+            "InvokeRejectError(error = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded), log = \n\ttestSyncCallComplexityExcess.@args = []\n\tinvoke.@args = [\n\t\tAddress(\n\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t),\n\t\t\"testSyncCallComplexityExcess\",\n\t\t[],\n\t\t[]\n\t]\n\tinvoke.@complexity = 75\n\t@complexityLimit = 122\n\tr = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded, log = \n\t\t@invokedDApp = Address(\n\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t)\n\t\t@invokedFuncName = \"testSyncCallComplexityExcess\"\n\t\ti = Invocation(\n\t\t\toriginCaller = Address(\n\t\t\t\tbytes = base58'3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG'\n\t\t\t)\n\t\t\tpayments = []\n\t\t\tcallerPublicKey = base58'9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ'\n\t\t\tfeeAssetId = Unit\n\t\t\toriginCallerPublicKey = base58'11111111111111111111111111111111'\n\t\t\ttransactionId = base58''\n\t\t\tcaller = Address(\n\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t)\n\t\t\tfee = 2000000\n\t\t)\n\t\ttestSyncCallComplexityExcess.@args = []\n\t\tinvoke.@args = [\n\t\t\tAddress(\n\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t),\n\t\t\t\"testSyncCallComplexityExcess\",\n\t\t\t[],\n\t\t\t[]\n\t\t]\n\t\tinvoke.@complexity = 75\n\t\t@complexityLimit = 44\n\t\tr = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded, log = \n\t\t\t@invokedDApp = Address(\n\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t)\n\t\t\t@invokedFuncName = \"testSyncCallComplexityExcess\"\n\t\t\ti = Invocation(\n\t\t\t\toriginCaller = Address(\n\t\t\t\t\tbytes = base58'3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG'\n\t\t\t\t)\n\t\t\t\tpayments = []\n\t\t\t\tcallerPublicKey = base58'9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ'\n\t\t\t\tfeeAssetId = Unit\n\t\t\t\toriginCallerPublicKey = base58'11111111111111111111111111111111'\n\t\t\t\ttransactionId = base58''\n\t\t\t\tcaller = Address(\n\t\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t\t)\n\t\t\t\tfee = 2000000\n\t\t\t)\n\t\t\ttestSyncCallComplexityExcess.@args = []\n\t\t)\n\t)\n)"
           (response \ "message").as[String] shouldBe message
           (response \ "error").as[Int] shouldBe ScriptExecutionError.Id
         }
 
         evalScript(""" testWriteEntryType("abc") """) ~> route ~> check {
           (responseAs[JsObject] - "stateChanges") should matchJson(
-            """{"error":306,"message":"InvokeRejectError(error = Passed args (bytes, abc) are unsuitable for constructor BinaryEntry(String, ByteVector), log = \n\ttestWriteEntryType.@args = [\n\t\t\"abc\"\n\t]\n\tb = \"abc\"\n\tBinaryEntry.@args = [\n\t\t\"bytes\",\n\t\t\"abc\"\n\t]\n)","expr":" testWriteEntryType(\"abc\") ","address":"3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"}"""
+            """{"error":306,"message":"InvokeRejectError(error = Passed args (bytes, abc) are unsuitable for constructor BinaryEntry(String, ByteVector), log = \n\ttestWriteEntryType.@args = [\n\t\t\"abc\"\n\t]\n\tb = \"abc\"\n\tBinaryEntry.@args = [\n\t\t\"bytes\",\n\t\t\"abc\"\n\t]\n)","expr":" testWriteEntryType(\"abc\") ","address":"3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"}"""
           )
         }
         evalScript(""" testWriteEntryType(base58'aaaa') """) ~> route ~> check {
           (responseAs[JsObject] - "stateChanges") should matchJson(
-            """{"result":{"type":"Array","value":[{"type":"BinaryEntry","value":{"key":{"type":"String","value":"bytes"},"value":{"type":"ByteVector","value":"aaaa"}}}]},"complexity":3,"expr":" testWriteEntryType(base58'aaaa') ","address":"3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"}"""
+            """{"result":{"type":"Array","value":[{"type":"BinaryEntry","value":{"key":{"type":"String","value":"bytes"},"value":{"type":"ByteVector","value":"aaaa"}}}]},"complexity":3,"expr":" testWriteEntryType(base58'aaaa') ","address":"3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"}"""
           )
         }
 
         evalScript(s"""parseBigIntValue("${PureContext.BigIntMax}")""") ~> route ~> check {
           (responseAs[JsObject] - "stateChanges") should matchJson(
-            s"""{"result":{"type":"BigInt","value":${PureContext.BigIntMax}},"complexity":65,"expr":"parseBigIntValue(\\"${PureContext.BigIntMax}\\")","address":"3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"}"""
+            s"""{"result":{"type":"BigInt","value":${PureContext.BigIntMax}},"complexity":65,"expr":"parseBigIntValue(\\"${PureContext.BigIntMax}\\")","address":"3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"}"""
           )
         }
         evalScript(s"""parseBigIntValue("${PureContext.BigIntMax}")""") ~> Accept(CustomJson.jsonWithNumbersAsStrings) ~> route ~> check {
@@ -349,7 +349,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
             },
             "complexity":65,
             "expr":"parseBigIntValue(\\"${PureContext.BigIntMax}\\")",
-            "address":"3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+            "address":"3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
             }""")
         }
 
@@ -368,7 +368,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
         evalScript(""" callable() """, dAppAddress2) ~> route ~> check {
           (responseAs[JsObject] - "stateChanges") should matchJson(
-            """{"result":{"type":"Array","value":[{"type":"BinaryEntry","value":{"key":{"type":"String","value":"testSyncInvoke"},"value":{"type":"ByteVector","value":"3MuPKL2kQz1Gp9t7QwrDZN5F8m3u5Uzzo3e"}}}]},"complexity":297,"expr":" callable() ","address":"3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"}"""
+            """{"result":{"type":"Array","value":[{"type":"BinaryEntry","value":{"key":{"type":"String","value":"testSyncInvoke"},"value":{"type":"ByteVector","value":"3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG"}}}]},"complexity":297,"expr":" callable() ","address":"3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"}"""
           )
         }
 
@@ -1249,7 +1249,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |    "value": [
          |      {
          |        "type": "ByteVector",
-         |        "value": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+         |        "value": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
          |      }
          |    ]
          |  },
@@ -1272,7 +1272,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+         |            "value": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
          |          }
          |        }
          |      },
@@ -1281,7 +1281,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9"
+         |            "value": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY"
          |          }
          |        }
          |      }
@@ -1306,7 +1306,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |            "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |          }
          |        }
          |      },
@@ -1349,7 +1349,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |            "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |          }
          |        }
          |      },
@@ -1365,7 +1365,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |    "value": [
          |      {
          |        "type": "ByteVector",
-         |        "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |        "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |      }
          |    ]
          |  },
@@ -1388,7 +1388,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |            "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |          }
          |        }
          |      },
@@ -1397,7 +1397,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |            "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |          }
          |        }
          |      }
@@ -1419,7 +1419,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |    "value": [
          |      {
          |        "type": "ByteVector",
-         |        "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |        "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |      }
          |    ]
          |  },
@@ -1442,7 +1442,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |            "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |          }
          |        }
          |      },
@@ -1451,7 +1451,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
          |        "value": {
          |          "bytes": {
          |            "type": "ByteVector",
-         |            "value": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC"
+         |            "value": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L"
          |          }
          |        }
          |      }

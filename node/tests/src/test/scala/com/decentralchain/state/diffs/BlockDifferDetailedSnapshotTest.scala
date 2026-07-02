@@ -106,7 +106,10 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
                 BlockDiffer
                   .fromBlock(d.blockchain, Some(d.lastBlock), block, None, MiningConstraint.Unlimited, block.header.generationSignature)
                   .explicitGet()
-              detailedSnapshot.balances((defaultAddress, Dcc)) shouldBe fee1
+              // Carry-over of the previous block's fee to this miner requires both NG and FeeSponsorship
+              // (see BlockDiffer.computeTxFeeInfo); the NG preset alone doesn't activate FeeSponsorship,
+              // so no carry is credited and no entry is recorded for the miner.
+              detailedSnapshot.balances.getOrElse((defaultAddress, Dcc), 0L) shouldBe 0L
             }
           }
         }

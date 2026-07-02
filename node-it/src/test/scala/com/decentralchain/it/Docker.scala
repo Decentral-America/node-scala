@@ -3,7 +3,11 @@ package com.decentralchain.it
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper
 import com.github.dockerjava.api.command.WaitContainerResultCallback
-import com.github.dockerjava.api.model.*
+// `Node` excluded: docker-java's own Swarm-node model class shadows
+// com.decentralchain.it.Node (same package as this file, so it loses to any
+// wildcard import per Scala's binding precedence) — every bare `Node`
+// reference in this file needs to mean our domain type, not docker-java's.
+import com.github.dockerjava.api.model.{Node as _, *}
 import com.github.dockerjava.core.{DefaultDockerClientConfig, DockerClientImpl}
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.google.common.primitives.Ints.*
@@ -19,7 +23,7 @@ import com.decentralchain.settings.*
 import com.decentralchain.utils.ScorexLogging
 import monix.eval.Coeval
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveInputStream}
 import org.apache.commons.io.IOUtils
 import org.asynchttpclient.Dsl.*
 import pureconfig.ConfigSource
@@ -481,10 +485,17 @@ class Docker(
 
   private def saveProfile(node: DockerNode): Unit = if (enableProfiling) {
     try {
-      val profilerDirStream = client.copyArchiveFromContainerCmd(node.containerId, ContainerRoot.resolve("profiler").toString).exec()
+      // Explicit type: CopyArchiveFromContainerCmd has both an abstract
+      // `InputStream exec()` and an inherited generic default `Object exec()`;
+      // without a hint Scala can resolve the ambiguity to the wrong overload.
+      val profilerDirStream: java.io.InputStream =
+        client.copyArchiveFromContainerCmd(node.containerId, ContainerRoot.resolve("profiler").toString).exec()
 
       try {
-        val archiveStream = new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.TAR, profilerDirStream)
+        // Explicit type param: createArchiveInputStream's return type is a Java
+        // generic <I extends ArchiveInputStream<?>> I resolved from the call-site
+        // expected type — Scala has no expected type here without a hint.
+        val archiveStream = new ArchiveStreamFactory().createArchiveInputStream[TarArchiveInputStream](ArchiveStreamFactory.TAR, profilerDirStream)
         val snapshotFile = Iterator
           .continually(Option(archiveStream.getNextEntry))
           .takeWhile(_.nonEmpty)

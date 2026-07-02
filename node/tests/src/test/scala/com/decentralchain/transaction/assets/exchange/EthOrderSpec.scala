@@ -24,7 +24,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val testOrder = Order(
       Order.V4,
       EthSignature(
-        "0xfe56e1cbd6945f1e17ce9f9eb21172dd7810bcc74651dd7d3eaeca5d9ae0409113e5236075841af8195cb4dba3947ae9b99dbd560fd0c43afe89cc0b648690321c"
+        "0x7e343fa223b43facdaff270b126fd1b8b06eaf01a21fe9b523c28832a8f5b9720db8092fe064e204ab5533c2271434255c1e61da17f4023351a0ecbfb420167b1c"
       ),
       PublicKey(EthStubBytes32),
       AssetPair(IssuedAsset(ByteStr(EthStubBytes32)), IssuedAsset(ByteStr(EthStubBytes32))),
@@ -64,7 +64,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     val resultFixed = EthOrders.recoverEthSignerKey(testOrder, testOrder.eip712Signature.get.arr)
     EthEncoding.toHexString(
       resultFixed.arr
-    ) shouldBe "0x00d7cf9ff594b07273228e7dd591707d38a1dba0a39492fd64445ba9cbb3bf66c862b9752f02bf8d1a0f00ccb11ae550a7616bd965c10f0101202d75580786ee"
+    ) shouldBe "0x0584ee3df86cd860796f12ba4574e851935ccc02b2762e0e5e2f1af2b9732fa10e7eade2f9b49beb4616c0e8e9bc2e2548f12056152e996794423c7efade16af"
   }
 
   it should "recover signer public key when v < 27 in signature data" in {
@@ -86,7 +86,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     )
 
     val result = EthOrders.recoverEthSignerKey(testOrder, testOrder.eip712Signature.get.arr)
-    result.toAddress.toString shouldBe "3N8HNri7zQXVw8Bn9BZKGRpsznNUFXM24zL"
+    result.toAddress.toString shouldBe "3DWknCAFKfbv6K14nY3v1cZie85iT1TpFLF"
   }
 
   it should "recover public key at json parse stage" in {
@@ -264,14 +264,14 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
            |  "feeAssetId": null,
            |  "timestamp": ${transaction.timestamp},
            |  "version": 3,
-           |  "chainId": 84,
-           |  "sender": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |  "chainId": 63,
+           |  "sender": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |  "senderPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |  "proofs": [ "${transaction.proofs.base58.value().head}" ],
            |  "order1": {
            |    "version": 3,
            |    "id": "${buyOrder.id().toString}",
-           |    "sender": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+           |    "sender": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L",
            |    "senderPublicKey": "8h47fXqSctZ6sb3q6Sst9qH1UNzR5fjez2eEP6BvEfcr",
            |    "matcherPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |    "assetPair": {
@@ -291,7 +291,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
            |  "order2": {
            |    "version": 4,
            |    "id": "${ethSellOrder.id().toString}",
-           |    "sender": "3N6Kr345mXL1NJGm7g4fd83BwLCb5wcfqiG",
+           |    "sender": "3DeEBMmpicYGy8AqJAFfvwQUR7cBH3BazXJ",
            |    "senderPublicKey": "3bw8NgoV6fE6JnX1mBhggFZH12SyEw4rCfLG9ZVyLNRahwhC2qPW4xJwBawBB1n9gfDkg2bwr3wTtZ4vTjfiXgEv",
            |    "matcherPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |    "assetPair": {

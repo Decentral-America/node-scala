@@ -17,8 +17,8 @@ import org.scalatest.{EitherValues, Inside}
 class InvokeAssetChecksTest extends PropSpec with Inside with WithState with DBCacheSettings with WithDomain with EitherValues {
   import DomainPresets.*
 
-  private val invalidLengthAsset = IssuedAsset(ByteStr.decodeBase58("DCC").get)
-  private val nonExistentAsset   = IssuedAsset(ByteStr.decodeBase58("DCCdccDCCdccDCCdccDCCdcc123").get)
+  private val invalidLengthAsset = IssuedAsset(ByteStr.decodeBase58("WAVES").get)
+  private val nonExistentAsset   = IssuedAsset(ByteStr.decodeBase58("DCCdccDCCdccDCCdccDCCdcc1111111111111111111").get)
 
   private val lengthError      = s"Transfer error: invalid asset ID '$invalidLengthAsset' length = 4 bytes, must be 32"
   private val nonExistentError = s"Transfer error: asset '$nonExistentAsset' is not found on the blockchain"

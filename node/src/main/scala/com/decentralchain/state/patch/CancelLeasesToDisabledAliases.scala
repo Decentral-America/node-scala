@@ -48,8 +48,11 @@ case object CancelLeasesToDisabledAliases extends PatchOnFeature(BlockchainFeatu
           )
         )
       }.unzip
-    val combinedLeaseBalances = leaseBalances.reduce(Portfolio.combine(_, _).explicitGet())
-    val leaseBalancesSnapshot = StateSnapshot.ofLeaseBalances(combinedLeaseBalances.view.mapValues(_.lease).toMap, blockchain)
-    leaseBalancesSnapshot.explicitGet() |+| leaseStates.combineAll
+    if (leaseBalances.isEmpty) StateSnapshot.empty
+    else {
+      val combinedLeaseBalances = leaseBalances.reduce(Portfolio.combine(_, _).explicitGet())
+      val leaseBalancesSnapshot = StateSnapshot.ofLeaseBalances(combinedLeaseBalances.view.mapValues(_.lease).toMap, blockchain)
+      leaseBalancesSnapshot.explicitGet() |+| leaseStates.combineAll
+    }
   }
 }

@@ -1,7 +1,7 @@
 package com.decentralchain.state.diffs.smart.predef
 
 import cats.syntax.either.*
-import com.decentralchain.account.{Address, Alias, KeyPair}
+import com.decentralchain.account.{Address, AddressScheme, Alias, KeyPair}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
@@ -43,6 +43,10 @@ import java.util.concurrent.ThreadLocalRandom
 
 class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   private val T = 'T'.toByte
+  // ExchangeTransaction/Order bindings check `addressFromPublicKey(...)` (built with the current chain scheme)
+  // against order.sender addresses built by TxHelpers using AddressScheme.current.chainId, so those two
+  // properties must run the script under the real chain id rather than the Waves-testnet 'T' constant.
+  private val currentChainId = AddressScheme.current.chainId
 
   property("TransferTransaction binding") {
     Seq(
@@ -674,7 +678,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val result = runScript[CONST_BOOLEAN](
       s,
       tx,
-      T
+      currentChainId
     )
     result shouldBe evaluated(true)
   }
@@ -715,7 +719,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val result = runScript[CONST_BOOLEAN](
       s,
       order,
-      T
+      currentChainId
     )
     result shouldBe evaluated(true)
   }

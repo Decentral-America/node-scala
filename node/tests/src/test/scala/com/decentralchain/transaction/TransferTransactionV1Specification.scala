@@ -44,15 +44,15 @@ class TransferTransactionV1Specification extends PropSpec {
   property("JSON format validation") {
     val js = Json.parse("""{
                         "type": 4,
-                        "id": "FLszEaqasJptohmP6zrXodBwjaEYq4jRP2BzdPPjvukk",
-                        "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                        "id": "9h8ZFor6z2dEBYs6LJDMV5kkrwUpwjCQyQZqnYppoXem",
+                        "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                         "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                         "fee": 100000,
                         "timestamp": 1526552510868,
                         "signature": "eaV1i3hEiXyYQd6DQY7EnPg9XzpAvB9VA3bnpin2qJe4G36GZXaGnYKCgSf9xiQ61DcAwcBFzjSXh6FwCgazzFz",
                         "proofs": ["eaV1i3hEiXyYQd6DQY7EnPg9XzpAvB9VA3bnpin2qJe4G36GZXaGnYKCgSf9xiQ61DcAwcBFzjSXh6FwCgazzFz"],
                         "version": 1,
-                        "recipient": "3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8",
+                        "recipient": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                         "assetId": null,
                         "feeAsset":null,
                         "feeAssetId":null,
@@ -61,7 +61,7 @@ class TransferTransactionV1Specification extends PropSpec {
                         }
     """)
 
-    val recipient = Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet()
+    val recipient = Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet()
     val tx = TransferTransaction(
       1.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),

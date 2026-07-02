@@ -93,8 +93,8 @@ class DebugApiRouteStateHashSpec
         val beforeFinalityHeight = domain.blockchain.height - 1
         val beforeFinalityHeader = domain.blockchain.blockHeader(beforeFinalityHeight).value
         val expectedResponseBefore = Json.obj(
-          "stateHash"         -> "9a4cde77f9ae2207e23e94457dceb4fa8826a0c8a56466c1e28d83d35e087588",
-          "dccBalanceHash"  -> "6bb9f756054493145441eb34bb09d0c26ae78ab09e25c9061b11dbac756b9b65",
+          "stateHash"         -> "8655f9cfbfd3fca3df1f05392d419aeee2aded1998f6f15f572e27e7ee50bb39",
+          "dccBalanceHash"  -> "5dc9606d7c9c26b124dd7e70e1b633a84fa08cf9c5bc2b040f55fd31a898900e",
           "assetBalanceHash"  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"     -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -104,7 +104,7 @@ class DebugApiRouteStateHashSpec
           "sponsorshipHash"   -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "aliasHash"         -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           // Note: "nextCommittedGeneratorsHash" and "committedGeneratorBalancesHash" fields are not present
-          "snapshotHash" -> "GfGLptLRk1pw9fcYL3qyCzN7XWsnqftkGmX4zsWnHvoD",
+          "snapshotHash" -> "HPpCdizo6ZjPbWx3hYM1jSh5b42TWUmvPykJM6faYGy8",
           "blockId"      -> beforeFinalityHeader.id().toString,
           "baseTarget"   -> beforeFinalityHeader.header.baseTarget,
           "height"       -> beforeFinalityHeight,
@@ -143,8 +143,8 @@ class DebugApiRouteStateHashSpec
         val afterGeneratingBalanceUpdateHeight = domain.blockchain.height - 1
         val afterGeneratingBalanceUpdateHeader = domain.blockchain.blockHeader(afterGeneratingBalanceUpdateHeight).value
         val expectedResponseAfter = Json.obj(
-          "stateHash"                      -> "b0a55af162af037a8980b2c284bdb8faf3e08a470f768a15e862633a93e2857d",
-          "dccBalanceHash"               -> "b00aadcea779b68ff76fe9cfac28f48786a299a856cd9fa42fc82bcab5149400",
+          "stateHash"                      -> "7443f1249c09078bacd3f06c608e686706528f7331f27a32dc8b6fdd2f1122bd",
+          "dccBalanceHash"               -> "72c993833df29fc305a3faa497ca40c34edb1f1278b281f1d28db73f1777decc",
           "assetBalanceHash"               -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"                  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash"              -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -153,9 +153,9 @@ class DebugApiRouteStateHashSpec
           "leaseStatusHash"                -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "sponsorshipHash"                -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "aliasHash"                      -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
-          "nextCommittedGeneratorsHash"    -> "0c081cdc089066b9679d6a6abe7e30f415dca425a8d4442062748a73013a5aa9", // Note: non-empty
+          "nextCommittedGeneratorsHash"    -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8", // Note: non-empty
           "committedGeneratorBalancesHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
-          "snapshotHash"                   -> "88DmToc9xC1dtxk2QYbx5Y42YwA6woGC9PFJ6DYioCqr",
+          "snapshotHash"                   -> "GJ1tToyV2fEX1kRhZUYy6gtXkmD16ndM5Y9TLWSWEcg1",
           "blockId"                        -> afterGeneratingBalanceUpdateHeader.id().toString,
           "baseTarget"                     -> afterGeneratingBalanceUpdateHeader.header.baseTarget,
           "height"                         -> afterGeneratingBalanceUpdateHeight,
@@ -168,9 +168,9 @@ class DebugApiRouteStateHashSpec
         }
 
         // Note: the generating balances are used on this height (parent block for heightOnGenerationPeriod)
-        domain.blockchain.generatingBalance(TxHelpers.defaultSigner.toAddress) shouldBe 991202000000L
-        domain.blockchain.generatingBalance(secondGenerator.toAddress) shouldBe 1089990000000L
-        domain.blockchain.generatingBalance(thirdGenerator.toAddress) shouldBe 1189990000000L
+        domain.blockchain.generatingBalance(TxHelpers.defaultSigner.toAddress) shouldBe 991200200000L
+        domain.blockchain.generatingBalance(secondGenerator.toAddress) shouldBe 1089999000000L
+        domain.blockchain.generatingBalance(thirdGenerator.toAddress) shouldBe 1189999000000L
 
         // Fast-forward to generation period change
         domain.appendBlock() // heightOnGenerationPeriod
@@ -180,8 +180,8 @@ class DebugApiRouteStateHashSpec
         val heightOnGenerationPeriod = domain.blockchain.height - 1
         val headerOnGenerationPeriod = domain.blockchain.blockHeader(heightOnGenerationPeriod).value
         val expectedResponseAfter2 = Json.obj(
-          "stateHash"                      -> "6bca7f4bd0390ad787d11d45048f1b6306d9492d8419dda28409683836b2ebf5",
-          "dccBalanceHash"               -> "0bd486480e3b07b95227f0c5e6d132aff5c98491d2f60b97c4cc43a8e7aa375b",
+          "stateHash"                      -> "91ecedce64382f2c61f027e986c814f426d3daa77a081c58f940e352905996dc",
+          "dccBalanceHash"               -> "3c69d657237b1a63da4eba0364a557ff1b5920b305f731efba1c947412b38cc5",
           "assetBalanceHash"               -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"                  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash"              -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -191,8 +191,8 @@ class DebugApiRouteStateHashSpec
           "sponsorshipHash"                -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "aliasHash"                      -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "nextCommittedGeneratorsHash"    -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
-          "committedGeneratorBalancesHash" -> "ea4322a8f09a9d010956932ebde7b98a703f5679b85df9c29a44d0de254f705e", // Note: non-empty
-          "snapshotHash"                   -> "rNcJukRBu5xcLBKPzdK9qyTgRsPdmhYMbsaSBSXiY49",
+          "committedGeneratorBalancesHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8", // Note: non-empty
+          "snapshotHash"                   -> "GFsyAuxu5E4GMWmxCTA6s7ViMrL7UvuAVqbfQ941q2QJ",
           "blockId"                        -> headerOnGenerationPeriod.id().toString,
           "baseTarget"                     -> headerOnGenerationPeriod.header.baseTarget,
           "height"                         -> heightOnGenerationPeriod,

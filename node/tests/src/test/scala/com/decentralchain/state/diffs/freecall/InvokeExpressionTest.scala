@@ -127,7 +127,7 @@ class InvokeExpressionTest extends PropSpec with ScalaCheckPropertyChecks with W
                                              |  "leases" : [ ],
                                              |  "leaseCancels" : [ ],
                                              |  "invokes" : [ {
-                                             |    "dApp" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+                                             |    "dApp" : "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L",
                                              |    "call" : {
                                              |      "function" : "test",
                                              |      "args" : [ ]
