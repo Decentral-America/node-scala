@@ -48,16 +48,10 @@ class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenProper
       timestamp = ts + 100,
       version = TxVersion.V1
     )
-    burn: BurnTransaction = TxHelpers.burn(asset = issue.asset, amount = quantity / 2, sender = alice, fee = Dcc, timestamp = ts + 200, version = 1.toByte)
-    reissue: ReissueTransaction = TxHelpers.reissue(
-      asset = issue.asset,
-      sender = alice,
-      amount = burn.quantity.value,
-      reissuable = true,
-      fee = Dcc,
-      timestamp = ts + 300,
-      version = 1.toByte
-    )
+    burn: BurnTransaction = BurnTransaction.selfSigned(1.toByte, alice, issue.asset, quantity / 2, Dcc, ts + 200).explicitGet()
+    reissue: ReissueTransaction = ReissueTransaction
+      .selfSigned(1.toByte, alice, issue.asset, burn.quantity.value, reissuable = true, Dcc, ts + 300)
+      .explicitGet()
   } yield (ts, genesis, masterToAlice, issue, burn, reissue)
 
   val localBlockchainSettings: BlockchainSettings = DefaultBlockchainSettings.copy(

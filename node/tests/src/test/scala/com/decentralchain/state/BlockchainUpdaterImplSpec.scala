@@ -150,7 +150,8 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
             .expects(where { (block, snapshot, _, _, bc) =>
               bc.height == 2 &&
               block.transactionData.length == 4 &&
-              snapshot.balances.isEmpty // fee carry-over requires FeeSponsorship, not activated by the NG preset
+              snapshot.balances.size == 1 &&
+              snapshot.balances.head._2 == FEE_AMT * 5 // all fee from previous block
             })
             .once()
         }

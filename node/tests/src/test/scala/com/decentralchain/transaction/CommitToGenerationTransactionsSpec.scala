@@ -42,7 +42,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     (json \ "fee").as[Long] shouldBe 100000000L
     (json \ "feeAssetId").asOpt[String] shouldBe None
     (json \ "timestamp").as[Long] shouldBe 1526287561757L
-    (json \ "sender").as[String] shouldBe origTx.sender.toString
+    (json \ "sender").as[String] shouldBe origTx.sender.toAddress.toString
     (json \ "senderPublicKey").as[String] shouldBe "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z"
     (json \ "generationPeriodStart").as[Int] shouldBe 3000
     (json \ "endorserPublicKey").as[String] shouldBe "6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU"

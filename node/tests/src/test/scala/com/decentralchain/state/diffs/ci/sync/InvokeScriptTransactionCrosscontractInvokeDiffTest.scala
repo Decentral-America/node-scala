@@ -23,7 +23,7 @@ import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.InvokeScriptTransaction.Payment
 import com.decentralchain.transaction.smart.SetScriptTransaction
 import com.decentralchain.transaction.smart.script.ScriptCompiler
-import com.decentralchain.transaction.{Proofs, TxHelpers}
+import com.decentralchain.transaction.{Proofs, TransactionSignOps, TxHelpers}
 import org.scalatest.EitherValues
 
 class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with WithState with DBCacheSettings with EitherValues {
@@ -113,13 +113,13 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
 
         dataEntry = StringDataEntry(invokeEntry2Key, "strData")
         dataTxSecond = DataTransaction
-          .create(1.toByte, secondAcc.publicKey, Seq(dataEntry), fee, ts + 6)
+          .create(1.toByte, secondAcc.publicKey, Seq(dataEntry), fee, ts + 6, Proofs.empty)
           .map(_.signWith(secondAcc.privateKey))
           .explicitGet()
 
         dataEntry2 = StringDataEntry(invokeEntry3Key, "deleted entry")
         dataTxSecond2 = DataTransaction
-          .create(1.toByte, secondAcc.publicKey, Seq(dataEntry2), fee, ts + 6)
+          .create(1.toByte, secondAcc.publicKey, Seq(dataEntry2), fee, ts + 6, Proofs.empty)
           .map(_.signWith(secondAcc.privateKey))
           .explicitGet()
 
@@ -208,13 +208,13 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
 
         dataEntry = StringDataEntry(invokeEntry2Key, "strData")
         dataTxMain = DataTransaction
-          .create(1.toByte, mainAcc.publicKey, Seq(dataEntry), fee, ts + 6)
+          .create(1.toByte, mainAcc.publicKey, Seq(dataEntry), fee, ts + 6, Proofs.empty)
           .map(_.signWith(mainAcc.privateKey))
           .explicitGet()
 
         dataEntry2 = StringDataEntry(invokeEntry3Key, "deleted entry")
         dataTxMain2 = DataTransaction
-          .create(1.toByte, mainAcc.publicKey, Seq(dataEntry2), fee, ts + 6)
+          .create(1.toByte, mainAcc.publicKey, Seq(dataEntry2), fee, ts + 6, Proofs.empty)
           .map(_.signWith(mainAcc.privateKey))
           .explicitGet()
 
@@ -364,7 +364,8 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
             reissuable = true,
             Some(paymentAssetScript(thirdAcc.toAddress)),
             fee,
-            ts + 1
+            ts + 1,
+            Proofs.empty
           )
           .map(_.signWith(mainAcc.privateKey))
           .explicitGet()
@@ -379,7 +380,8 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
             reissuable = true,
             Some(transferAssetScript(thirdAcc.toAddress)),
             fee,
-            ts + 2
+            ts + 2,
+            Proofs.empty
           )
           .map(_.signWith(secondAcc.privateKey))
           .explicitGet()

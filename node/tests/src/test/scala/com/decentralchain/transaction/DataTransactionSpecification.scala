@@ -2,7 +2,7 @@ package com.decentralchain.transaction
 
 import com.google.common.primitives.Shorts
 import com.decentralchain.account.PublicKey
-import com.decentralchain.api.http.requests.DataRequest
+import com.decentralchain.api.http.requests.SignedDataRequest
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.{Base58, Base64}
 import com.decentralchain.common.utils.EitherExt2.*
@@ -78,7 +78,7 @@ class DataTransactionSpecification extends PropSpec {
       val json = tx.json()
       json.toString shouldEqual tx.toString
 
-      val req = json.as[DataRequest]
+      val req = json.as[SignedDataRequest]
       req.senderPublicKey shouldEqual Base58.encode(tx.sender.arr)
       req.fee shouldEqual tx.fee.value
       req.timestamp shouldEqual tx.timestamp

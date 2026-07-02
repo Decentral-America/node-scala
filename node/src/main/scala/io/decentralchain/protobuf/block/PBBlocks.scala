@@ -71,7 +71,8 @@ object PBBlocks {
         ch.finalizationVoting.map(PBFinalizationVotings.protobuf)
       )
     },
-    header.finalizationVoting.map(PBFinalizationVotings.protobuf)
+    header.finalizationVoting.map(PBFinalizationVotings.protobuf),
+    ByteString.EMPTY
   )
 
   def protobuf(block: VanillaBlock): PBBlock = {
