@@ -23,6 +23,16 @@ jobs:
       lang-changed: ${{ steps.filter.outputs.lang == 'true' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
@@ -31,6 +41,14 @@ jobs:
           gpg-private-key: ${{ secrets.OSSRH_GPG_KEY }}
           gpg-passphrase: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
       - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1.1.22
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - uses: proudust/gh-describe@d2398810d922ababf1ec0efb454e42953dfdc460 # v2.1.2
         id: ghd
       - name: Check PR
@@ -118,12 +136,30 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1.1.22
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Run Integration Tests
         run: sbt --batch "node-it/docker;node-it/test"
         env:
