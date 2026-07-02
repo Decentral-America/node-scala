@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - dev
 
 # Minimal permissions at workflow level; jobs that need more declare explicitly.
 permissions:
@@ -125,8 +126,6 @@ jobs:
           (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Run unit tests with coverage
-        # node-tests excluded pending DCC-143: 3 pre-existing failures from
-        # Dcc blockchain settings that require updating for DCC chain config.
         # lang-tests run WITHOUT coverage: scoverage instrumentation causes
         # BoxedUnit ClassCastException in the evaluator's function call runtime
         # (Scala 3 + scoverage interop issue with boxed unit returns).
@@ -139,6 +138,7 @@ jobs:
             "repl/test" \
             "grpc-server/test" \
             "ride-runner/test" \
+            "node-tests/test" \
             coverageAggregate
       - name: Upload coverage to Codecov
         if: always()
