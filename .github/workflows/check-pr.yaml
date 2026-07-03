@@ -24,6 +24,16 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -32,6 +42,31 @@ jobs:
           # GPG keys are NOT needed for scalafmt/compile checks.
           # Only publish-snapshots (below) requires GPG.
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - name: Install Rust stable (for groth16 JNI native lib)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6  # v2.7.8
+        with:
+          workspaces: _dcc-monorepo/packages/jvm/groth16
+      - name: Build groth16_jni native library (linux/amd64)
+        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Stage groth16 native lib into Maven resources
+        run: |
+          set -euo pipefail
+          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Check PR
         run: sbt --batch checkPR
       - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
@@ -96,12 +131,47 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - name: Install Rust stable (for groth16 JNI native lib)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6  # v2.7.8
+        with:
+          workspaces: _dcc-monorepo/packages/jvm/groth16
+      - name: Build groth16_jni native library (linux/amd64)
+        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Stage groth16 native lib into Maven resources
+        run: |
+          set -euo pipefail
+          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Run Integration Tests
         run: sbt --batch "node-it/docker;node-it/test"
         env:
@@ -137,6 +207,16 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:
           distribution: 'temurin'
@@ -147,6 +227,31 @@ jobs:
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - name: Install Rust stable (for groth16 JNI native lib)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6  # v2.7.8
+        with:
+          workspaces: _dcc-monorepo/packages/jvm/groth16
+      - name: Build groth16_jni native library (linux/amd64)
+        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Stage groth16 native lib into Maven resources
+        run: |
+          set -euo pipefail
+          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - run: sbt -Dproject.version=$(awk -F '[".]' '{print $3"."$4"."$5+1}' version.sbt)-$PR_NUMBER-SNAPSHOT --batch publish
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
