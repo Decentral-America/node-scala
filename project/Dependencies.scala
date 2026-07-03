@@ -6,7 +6,7 @@ import scalapb.compiler.Version.scalapbVersion
 object Dependencies {
   private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.15.Final" // CVE-2026-44249 patch
 
-  val gProtoVersion = "4.35.0"
+  val gProtoVersion = "4.35.1"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
   val overrides = Def.setting(
     Seq(
@@ -50,14 +50,14 @@ object Dependencies {
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
-  private def grpcModule(module: String) = "io.grpc" % module % "1.81.0"
+  private def grpcModule(module: String) = "io.grpc" % module % "1.82.1"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.6.0-jre"
   val kamonCore       = kamonModule("core")
   val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
-  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.34"
-  val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.10"
+  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.37"
+  val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.11"
   val curve25519      = "io.decentralchain"  % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
 
@@ -137,8 +137,8 @@ object Dependencies {
   lazy val node = Def.setting(
     Seq(
       rocksdb,
-      "commons-net"            % "commons-net"               % "3.12.0",
-      "commons-io"             % "commons-io"                % "2.21.0",
+      "commons-net"            % "commons-net"               % "3.13.0",
+      "commons-io"             % "commons-io"                % "2.22.0",
       "com.github.pureconfig" %% "pureconfig-core"           % "0.17.10",
       "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.10",
       "net.logstash.logback"   % "logstash-logback-encoder"  % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
@@ -155,7 +155,7 @@ object Dependencies {
       monixModule("reactive").value,
       nettyHandler,
       scalaLogging,
-      "eu.timepit"        %% "refined"  % "0.11.3" exclude ("org.scala-lang.modules", "scala-xml_2.13"),
+      "eu.timepit"        %% "refined"  % "0.11.4" exclude ("org.scala-lang.modules", "scala-xml_2.13"),
       "com.esaulpaugh"     % "headlong" % "13.3.1",
       "com.github.jbellis" % "jamm"     % "0.4.0", // Weighing caches
       web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
