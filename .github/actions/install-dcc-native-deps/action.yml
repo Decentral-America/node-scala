@@ -1,0 +1,72 @@
+name: Install DCC native/protobuf JVM dependencies
+description: >
+  Checks out the DecentralChain monorepo (sparse: curve25519, blst, groth16,
+  protobuf-schemas) and installs those artifacts into the local Maven repo
+  via mvnw — node-scala's sbt build resolves them via Resolver.mavenLocal,
+  since they're not published to Maven Central. Optionally builds groth16's
+  Rust JNI native library first, for jobs that actually run node/node-tests
+  (as opposed to jobs that only need `sbt compile`).
+  Must run after actions/checkout (self) and setup-java + sbt/setup-sbt.
+
+inputs:
+  build-groth16-native:
+    description: >
+      Build and stage groth16's linux/amd64 JNI native library before the
+      mvnw install. Required for any job that runs node/node-tests/grpc-server
+      code paths that call into groth16 at runtime; not needed for a plain
+      `sbt compile`.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout DecentralChain monorepo (JVM dependencies)
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        repository: Decentral-America/DecentralChain
+        path: _dcc-monorepo
+        persist-credentials: false
+        sparse-checkout: |
+          packages/jvm/curve25519
+          packages/jvm/blst
+          packages/jvm/groth16
+          packages/sdk/protobuf-schemas
+
+    - name: Install Rust stable (for groth16 JNI native lib)
+      if: inputs.build-groth16-native == 'true'
+      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      with:
+        toolchain: stable
+        targets: x86_64-unknown-linux-gnu
+
+    - name: Cache groth16 Rust build
+      if: inputs.build-groth16-native == 'true'
+      uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+      with:
+        workspaces: _dcc-monorepo/packages/jvm/groth16
+
+    - name: Build groth16_jni native library (linux/amd64)
+      if: inputs.build-groth16-native == 'true'
+      shell: bash
+      working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+      run: cargo build --release --target x86_64-unknown-linux-gnu
+
+    - name: Stage groth16 native lib into Maven resources
+      if: inputs.build-groth16-native == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+        cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+           _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
+
+    - name: Install JVM dependencies from DecentralChain monorepo
+      shell: bash
+      run: |
+        set -euo pipefail
+        MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+        (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+        (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+        (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+        (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
