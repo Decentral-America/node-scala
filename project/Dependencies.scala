@@ -46,7 +46,7 @@ object Dependencies {
 
   private def jacksonModule(group: String, module: String, version: String = "2.22.0") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
-  private def web3jModule(module: String) = "org.web3j" % module % "5.0.3" // requires Java 21+; safe on JDK 25 (was 4.13.0)
+  private def web3jModule(module: String) = "org.web3j" % module % "6.0.0" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
 
