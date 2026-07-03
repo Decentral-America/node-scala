@@ -40,7 +40,12 @@ jobs:
           path: |
             ~/.cache/coursier
             ~/.ivy2/cache
-            ~/.sbt
+          # ~/.sbt (the launcher boot dir) is deliberately NOT cached: a loose
+          # restore-keys prefix match after an sbt.version bump mixed old and
+          # new compiler-bridge jars in the same boot subdirectory, causing
+          # sbt.internal.inc.InvalidComponent ("found: 2 files") on every
+          # subsequent run sharing that cache generation, including reruns.
+          # ~/.sbt/boot re-downloads are small and fast; not worth the risk.
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
@@ -69,7 +74,12 @@ jobs:
           path: |
             ~/.cache/coursier
             ~/.ivy2/cache
-            ~/.sbt
+          # ~/.sbt (the launcher boot dir) is deliberately NOT cached: a loose
+          # restore-keys prefix match after an sbt.version bump mixed old and
+          # new compiler-bridge jars in the same boot subdirectory, causing
+          # sbt.internal.inc.InvalidComponent ("found: 2 files") on every
+          # subsequent run sharing that cache generation, including reruns.
+          # ~/.sbt/boot re-downloads are small and fast; not worth the risk.
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
@@ -135,7 +145,12 @@ jobs:
           path: |
             ~/.cache/coursier
             ~/.ivy2/cache
-            ~/.sbt
+          # ~/.sbt (the launcher boot dir) is deliberately NOT cached: a loose
+          # restore-keys prefix match after an sbt.version bump mixed old and
+          # new compiler-bridge jars in the same boot subdirectory, causing
+          # sbt.internal.inc.InvalidComponent ("found: 2 files") on every
+          # subsequent run sharing that cache generation, including reruns.
+          # ~/.sbt/boot re-downloads are small and fast; not worth the risk.
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
@@ -173,7 +188,12 @@ jobs:
           path: |
             ~/.cache/coursier
             ~/.ivy2/cache
-            ~/.sbt
+          # ~/.sbt (the launcher boot dir) is deliberately NOT cached: a loose
+          # restore-keys prefix match after an sbt.version bump mixed old and
+          # new compiler-bridge jars in the same boot subdirectory, causing
+          # sbt.internal.inc.InvalidComponent ("found: 2 files") on every
+          # subsequent run sharing that cache generation, including reruns.
+          # ~/.sbt/boot re-downloads are small and fast; not worth the risk.
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
