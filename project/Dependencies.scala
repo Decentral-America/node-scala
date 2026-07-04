@@ -91,7 +91,7 @@ object Dependencies {
       monixModule("eval").value,
       "org.typelevel" %%% s"cats-core" % "2.13.0",
       "com.lihaoyi"   %%% "fastparse"  % "3.1.1",
-      "org.typelevel" %%% "cats-mtl"   % "1.6.0",
+      "org.typelevel" %%% "cats-mtl"   % "1.7.0",
       "ch.obermuhlner"  % "big-math"   % "2.3.2",
       googleGuava, // BaseEncoding.base16()
       curve25519,
@@ -110,7 +110,7 @@ object Dependencies {
 
   lazy val it = scalaTest +: Seq(
     logback,
-    "com.github.jnr"       % "jnr-unixsocket"                    % "0.38.24", // To support Apple ARM
+    "com.github.jnr"       % "jnr-unixsocket"                    % "0.39.1", // To support Apple ARM
     "com.github.docker-java" % "docker-java-core"                 % "3.7.1",
     "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
     jacksonModule("dataformat", "dataformat-properties", "2.22.0"),
@@ -206,7 +206,7 @@ object Dependencies {
   )
 
   lazy val circe = Def.setting {
-    val circeVersion = "0.14.15"
+    val circeVersion = "0.14.16"
     Seq(
       "io.circe" %%% "circe-core",
       "io.circe" %%% "circe-generic",
