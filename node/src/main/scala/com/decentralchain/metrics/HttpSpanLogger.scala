@@ -76,12 +76,8 @@ class HttpSpanLogger extends CombinedReporter with LazyLogging {
 object HttpSpanLogger {
   val ProcessingStartMark = "processing.start"
   val ResponseEndMark     = "http.response.ready"
-  val ExecutorEnqueueMark = "executor.enqueue"
-  val ExecutorStartMark   = "executor.start"
 
   val TimeInQueueMetricKey = "executor.time-in-queue"
-
-  case class Mark(key: String, durationMillis: Long)
 
   def millisBetween(from: Instant, to: Instant): Long = Duration.between(from, to).toMillis
   implicit class FinishedSpanExt(val span: Span.Finished) extends AnyVal {

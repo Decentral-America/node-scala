@@ -24,7 +24,6 @@ import monix.reactive.subjects.ConcurrentSubject
 
 import java.util.concurrent.{CountDownLatch, ThreadLocalRandom}
 import scala.concurrent.duration.*
-import scala.util.Random
 
 class MicroBlockMinerSpec extends FlatSpec with WithDomain {
   "Micro block miner" should "generate microblocks in flat interval" in {

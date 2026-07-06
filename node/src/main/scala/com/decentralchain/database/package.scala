@@ -28,7 +28,6 @@ import com.decentralchain.utils.*
 import monix.eval.Task
 import monix.reactive.Observable
 import org.rocksdb.*
-import sun.nio.ch.Util
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -408,14 +407,14 @@ package object database {
   def getKeyBuffersFromKeys(keys: collection.IndexedSeq[Key[?]]): collection.IndexedSeq[ByteBuffer] =
     keys.map { k =>
       val arr = k.keyBytes
-      val b   = Util.getTemporaryDirectBuffer(arr.length)
+      val b   = DirectBufferPool.get(arr.length)
       b.put(k.keyBytes).flip()
       b
     }
 
   def getKeyBuffers(keys: collection.IndexedSeq[Array[Byte]]): collection.IndexedSeq[ByteBuffer] =
     keys.map { k =>
-      val b = Util.getTemporaryDirectBuffer(k.length)
+      val b = DirectBufferPool.get(k.length)
       b.put(k).flip()
       b
     }
@@ -423,14 +422,14 @@ package object database {
   def getValueBuffers(amount: Int, bufferSize: Int): IndexedSeq[ByteBuffer] =
     IndexedSeq
       .fill(amount) {
-        val buf = Util.getTemporaryDirectBuffer(bufferSize)
+        val buf = DirectBufferPool.get(bufferSize)
         buf.limit(buf.capacity())
         buf
       }
 
   def getValueBuffers(bufferSizes: collection.IndexedSeq[Int]): collection.IndexedSeq[ByteBuffer] =
     bufferSizes.map { size =>
-      val buf = Util.getTemporaryDirectBuffer(size)
+      val buf = DirectBufferPool.get(size)
       buf.limit(buf.capacity())
       buf
     }
@@ -505,13 +504,13 @@ package object database {
           if (value.status.getCode == Status.Code.Ok) {
             val arr = new Array[Byte](value.requiredSize)
             value.value.get(arr)
-            Util.releaseTemporaryDirectBuffer(value.value)
+            DirectBufferPool.release(value.value)
             Some(parser.parse(arr))
           } else None
         }
         .toSeq
 
-      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      keyBufs.foreach(DirectBufferPool.release)
       result
     }
 
@@ -527,13 +526,13 @@ package object database {
         .map { value =>
           if (value.status.getCode == Status.Code.Ok) {
             val h = Some(value.value.getInt)
-            Util.releaseTemporaryDirectBuffer(value.value)
+            DirectBufferPool.release(value.value)
             h
           } else None
         }
         .toSeq
 
-      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      keyBufs.foreach(DirectBufferPool.release)
       result
     }
 
@@ -548,13 +547,13 @@ package object database {
           if (value.status.getCode == Status.Code.Ok) {
             val arr = new Array[Byte](value.requiredSize)
             value.value.get(arr)
-            Util.releaseTemporaryDirectBuffer(value.value)
+            DirectBufferPool.release(value.value)
             parser.parse(arr)
           } else None
         }
         .toSeq
 
-      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      keyBufs.foreach(DirectBufferPool.release)
       result
     }
 
@@ -616,13 +615,13 @@ package object database {
           if (value.status.getCode == Status.Code.Ok) {
             val arr = new Array[Byte](value.requiredSize)
             value.value.get(arr)
-            Util.releaseTemporaryDirectBuffer(value.value)
+            DirectBufferPool.release(value.value)
             parser.parse(arr)
           } else None
         }
         .toSeq
 
-      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      keyBufs.foreach(DirectBufferPool.release)
       result
     }
 
@@ -639,12 +638,12 @@ package object database {
           if (value.status.getCode == Status.Code.Ok) {
             val arr = new Array[Byte](value.requiredSize)
             value.value.get(arr)
-            Util.releaseTemporaryDirectBuffer(value.value)
+            DirectBufferPool.release(value.value)
             Some(parser.parse(arr))
           } else None
         }
 
-      keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
+      keyBufs.foreach(DirectBufferPool.release)
       result
     }
   }

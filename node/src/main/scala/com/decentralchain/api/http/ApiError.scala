@@ -139,11 +139,9 @@ object ApiError {
     override val message          = "invalid public key"
   }
 
-  case object InvalidMessage extends ApiError {
-    override val id               = 110
-    override val code: StatusCode = StatusCodes.BadRequest
-    override val message          = "invalid message"
-  }
+  // id 110 (InvalidMessage) removed: never thrown anywhere, not documented
+  // in openapi.yaml, no test references it. The gap in the numbering is
+  // intentional -- ids are a stable historical catalog, not resequenced.
 
   case object InvalidName extends ApiError {
     override val id: Int          = 111

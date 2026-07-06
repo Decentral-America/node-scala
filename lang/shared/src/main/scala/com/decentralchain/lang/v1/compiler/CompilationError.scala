@@ -21,22 +21,6 @@ object CompilationError {
     s"${ce.message} in ${ce.start}-${ce.end}"
   }
 
-  case object TooManyExpressions extends CompilationError {
-
-    override def start: Int = 0
-
-    override def end: Int = 0
-
-    val message = "Too many expressions"
-  }
-  case object NoExpressions extends CompilationError {
-    override def start: Int = 0
-
-    override def end: Int = 0
-
-    val message = "No expressions"
-  }
-
   final case class MatchNotExhaustive(start: Int, end: Int, possible: List[TYPE], matched: List[TYPE]) extends CompilationError {
     val message = s"Matching not exhaustive: " +
       s"possibleTypes are ${possible.mkString(", ")}, " +

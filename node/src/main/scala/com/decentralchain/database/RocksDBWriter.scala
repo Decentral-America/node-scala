@@ -39,7 +39,6 @@ import com.decentralchain.utils.ScorexLogging
 import io.netty.util.concurrent.DefaultThreadFactory
 import org.rocksdb.Status
 import org.slf4j.LoggerFactory
-import sun.nio.ch.Util
 
 import java.nio.ByteBuffer
 import java.time.Duration
@@ -119,7 +118,7 @@ object RocksDBWriter extends ScorexLogging {
     loop(whs.head, whs.tail, lhs.head, lhs.tail, dhs.head, dhs.tail, ArrayBuffer.empty).toSeq
   }
 
-  private implicit val buffersReleaseable: Releasable[collection.IndexedSeq[ByteBuffer]] = _.foreach(Util.releaseTemporaryDirectBuffer)
+  private implicit val buffersReleaseable: Releasable[collection.IndexedSeq[ByteBuffer]] = _.foreach(DirectBufferPool.release)
 
   def apply(
       rdb: RDB,
@@ -243,8 +242,8 @@ class RocksDBWriter(
       }
       .toMap
 
-    keyBufs.foreach(Util.releaseTemporaryDirectBuffer)
-    valBufs.foreach(Util.releaseTemporaryDirectBuffer)
+    keyBufs.foreach(DirectBufferPool.release)
+    valBufs.foreach(DirectBufferPool.release)
 
     result
   }

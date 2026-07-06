@@ -3,7 +3,6 @@ package com.decentralchain.transaction
 import com.google.protobuf.ByteString
 import com.decentralchain.account.*
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto
 import io.decentralchain.protobuf.transaction.{PBTransactions, SignedTransaction as PBSignedTransaction}

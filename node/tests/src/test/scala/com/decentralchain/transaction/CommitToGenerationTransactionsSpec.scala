@@ -14,7 +14,6 @@ import com.decentralchain.state.Height
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.{DeterministicFinality, DCCSettingsOps}
 import com.decentralchain.transaction.serialization.impl.PBTransactionSerializer
-import play.api.libs.json.Json
 
 import scala.util.{Failure, Success}
 

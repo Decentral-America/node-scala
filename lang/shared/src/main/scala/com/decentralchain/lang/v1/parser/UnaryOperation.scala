@@ -20,14 +20,6 @@ object UnaryOperation {
     NOT_OP
   )
 
-  case object POSITIVE_OP extends UnaryOperation {
-    val func                          = "+"
-    override def parser[A: P]: P[Any] = P("+" ~ !CharIn("0-9"))
-    override def expr(start: Int, end: Int, op: EXPR)(implicit offset: LibrariesOffset): EXPR = {
-      FUNCTION_CALL(Pos(start, end), PART.VALID(Pos(start, end), "+"), List(op))
-    }
-  }
-
   case object NEGATIVE_OP extends UnaryOperation {
     val func                          = "-"
     override def parser[A: P]: P[Any] = P("-" ~ !CharIn("0-9"))

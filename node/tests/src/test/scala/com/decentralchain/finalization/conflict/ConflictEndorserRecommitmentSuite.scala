@@ -12,7 +12,6 @@ import com.decentralchain.test.FreeSpec
 import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.TxHelpers
 import org.scalactic.source.Position
-import org.scalatest.Assertion
 
 class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
   private val validGenerator = TxHelpers.signer(0)

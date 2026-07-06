@@ -9,8 +9,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.lang.directives.values.V5
 import com.decentralchain.lang.script.Script
-import com.decentralchain.lang.v1.FunctionHeader
-import com.decentralchain.lang.v1.compiler.{Terms, TestCompiler}
+import com.decentralchain.lang.v1.compiler.TestCompiler
 import com.decentralchain.lang.v1.estimator.v3.ScriptEstimatorV3
 import com.decentralchain.settings.TestFunctionalitySettings
 import com.decentralchain.state.{IntegerDataEntry, StringDataEntry}

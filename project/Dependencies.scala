@@ -55,7 +55,6 @@ object Dependencies {
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.6.0-jre"
   val kamonCore       = kamonModule("core")
-  val machinist       = "org.typelevel"      %% "machinist"         % "0.6.8"
   val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.37"
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.11"
   val curve25519      = "io.decentralchain"  % "curve25519"        % "1.0.0"
@@ -121,7 +120,6 @@ object Dependencies {
     logback,
     "org.scalatestplus" %% "scalacheck-1-19" % "3.2.20.0",
     "org.scalacheck"    %% "scalacheck"      % "1.19.0",
-    "org.mockito"        % "mockito-core"    % "5.23.0",
     "org.scalamock"     %% "scalamock"       % "7.5.5"
   ).map(_ % Test)
 

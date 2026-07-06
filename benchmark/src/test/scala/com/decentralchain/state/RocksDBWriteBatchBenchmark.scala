@@ -20,8 +20,6 @@ import org.openjdk.jmh.infra.Blackhole
 import org.rocksdb.{WriteBatch, WriteOptions}
 import com.decentralchain.utils.byteStrOrdering
 
-import java.util.concurrent.ThreadLocalRandom
-
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
 @Threads(1)
