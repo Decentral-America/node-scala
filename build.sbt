@@ -16,6 +16,15 @@ ThisBuild / PB.protocVersion   := Dependencies.gProtoVersion
 
 ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
 
+// Coverage regression gate. Measured baseline statement coverage was 43.04%
+// via `sbt coverage repl/test grpc-server/test ride-runner/test node-tests/test
+// coverageAggregate` on 2026-07-05 (lang-tests excluded from coverage — see
+// ci.yml comment on the Scala 3 + scoverage boxed-unit interop issue). The
+// threshold below is set a few points under that baseline so it fails CI on a
+// real regression without being flaky, not as an aspirational target.
+ThisBuild / coverageMinimumStmtTotal := 40
+ThisBuild / coverageFailOnMinimum    := true
+
 ThisBuild / pomIncludeRepository := { _ => false }
 ThisBuild / publishMavenStyle    := true
 ThisBuild / organization         := "io.decentralchain"
