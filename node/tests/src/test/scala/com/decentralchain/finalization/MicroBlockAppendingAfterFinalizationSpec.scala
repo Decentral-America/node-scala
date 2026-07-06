@@ -4,7 +4,6 @@ import com.decentralchain.block.Block
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
-import com.decentralchain.history.Domain
 import com.decentralchain.state.{GeneratorIndex, GenesisBlockHeight, Height}
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{NumericExt, produce}

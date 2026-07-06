@@ -1,6 +1,6 @@
 package com.decentralchain.database.patch
 
-import com.decentralchain.account.{AddressScheme, Alias}
+import com.decentralchain.account.Alias
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.database.{Keys, RW}
 import com.decentralchain.state.patch.PatchDataLoader

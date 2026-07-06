@@ -2,7 +2,6 @@ package com.decentralchain.it
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper
-import com.github.dockerjava.api.command.WaitContainerResultCallback
 // `Node` excluded: docker-java's own Swarm-node model class shadows
 // com.decentralchain.it.Node (same package as this file, so it loses to any
 // wildcard import per Scala's binding precedence) — every bare `Node`
@@ -33,10 +32,9 @@ import java.net.{InetAddress, InetSocketAddress, URI, URL}
 import java.nio.file.{Files, Path, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, Duration as JDuration}
-import java.util.Collections.*
 import java.util.concurrent.{ConcurrentHashMap, ThreadLocalRandom}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-import java.util.{Properties, List as JList, Map as JMap}
+import java.util.Properties
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.*

@@ -4,13 +4,12 @@ import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.ConfigFactory
-import com.decentralchain.database.RDB
+import com.decentralchain.database.{DirectBufferPool, RDB}
 import com.decentralchain.settings.{DCCSettings, loadConfig}
 import com.decentralchain.state.RocksDBGetBenchmark.*
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.Blackhole
 import org.rocksdb.{ReadOptions, WriteBatch, WriteOptions}
-import sun.nio.ch.Util
 
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @BenchmarkMode(Array(Mode.AverageTime))
@@ -30,14 +29,14 @@ class RocksDBGetBenchmark {
   def byteBufferGet(st: BaseSt, bh: Blackhole): Unit = {
     bh.consume {
       st.kvs.foreach { case (key, value) =>
-        val keyBuffer = Util.getTemporaryDirectBuffer(key.length)
+        val keyBuffer = DirectBufferPool.get(key.length)
         keyBuffer.put(key).flip()
-        val valBuffer = Util.getTemporaryDirectBuffer(value.length)
+        val valBuffer = DirectBufferPool.get(value.length)
 
         st.rdb.db.get(st.readOptions, keyBuffer, valBuffer)
 
-        Util.releaseTemporaryDirectBuffer(keyBuffer)
-        Util.releaseTemporaryDirectBuffer(valBuffer)
+        DirectBufferPool.release(keyBuffer)
+        DirectBufferPool.release(valBuffer)
       }
     }
   }

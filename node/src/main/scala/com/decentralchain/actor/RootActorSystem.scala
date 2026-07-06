@@ -2,22 +2,12 @@ package com.decentralchain.actor
 
 import com.typesafe.config.Config
 import com.decentralchain.utils.ScorexLogging
-import org.apache.pekko.actor.{ActorSystem, AllForOneStrategy, SupervisorStrategy, SupervisorStrategyConfigurator}
+import org.apache.pekko.actor.ActorSystem
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 object RootActorSystem extends ScorexLogging {
-  @volatile private var failed = false
-
-  final class EscalatingStrategy extends SupervisorStrategyConfigurator {
-    override def create(): SupervisorStrategy = AllForOneStrategy(loggingEnabled = false) { case t: Throwable =>
-      failed = true
-      log.error("Root actor got exception, escalate", t)
-      SupervisorStrategy.Escalate
-    }
-  }
-
   def start(id: String, config: Config)(init: ActorSystem => Unit): Unit = {
     val system = ActorSystem(id, config)
     try {
@@ -29,10 +19,6 @@ object RootActorSystem extends ScorexLogging {
     }
 
     Await.result(system.whenTerminated, Duration.Inf)
-    if (failed) {
-      sys.exit(1)
-    } else {
-      sys.exit(0)
-    }
+    sys.exit(0)
   }
 }
