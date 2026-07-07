@@ -100,6 +100,25 @@ class Repo(db: RocksDB, blocksApi: CommonBlocksApi)(implicit s: Scheduler)
     handlers.forEach(_.handleUpdate(mba))
   }
 
+  // Used when the extension's own persisted height has fallen behind the
+  // main chain with no way to backfill the gap (the trigger hooks that
+  // populate this DB only fire as blocks are processed live, so historical
+  // blocks that predate this DB falling behind can never be replayed into
+  // it after the fact). Wipes all persisted updates and clears in-memory
+  // liquid state so tracking can resume cleanly from the next live block.
+  def resetToEmpty(): Unit = monitor.synchronized {
+    db.readWrite { rw =>
+      Using(rw.newIterator) { iter =>
+        iter.seekToFirst()
+        while (iter.isValid) {
+          rw.delete(iter.key())
+          iter.next()
+        }
+      }
+    }
+    liquidState = None
+  }
+
   def rollbackData(toHeight: Height): Seq[BlockAppended] =
     db.readWrite { rw =>
       log.debug(s"Rolling back to $toHeight")

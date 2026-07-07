@@ -60,21 +60,38 @@ class BlockchainUpdates(private val context: Context) extends Extension with Sco
     val nodeHeight      = context.blockchain.height
     val extensionHeight = repo.height
 
-    if (extensionHeight < nodeHeight)
-      throw new IllegalStateException(s"BlockchainUpdates height $extensionHeight is lower than node height $nodeHeight")
+    if (extensionHeight < nodeHeight) {
+      // The extension's persisted height can fall behind the main chain's
+      // (e.g. an ungraceful shutdown that skipped its last flush, a disk
+      // issue isolated to this RocksDB instance, or a fresh/transplanted
+      // main chain state with no matching extension history at all). There
+      // is no supported way to backfill the gap after the fact -- the
+      // trigger hooks that populate this DB only fire as blocks are
+      // processed live. Previously this threw and crash-looped the entire
+      // node over a downstream indexer being behind. Instead, reset and
+      // resume tracking from the next live block; consumers of this
+      // extension (e.g. blockchain-postgres-sync, websocket-api) will see
+      // a gap for [extensionHeight, nodeHeight] and must backfill from
+      // another source if they need that range.
+      log.warn(
+        s"BlockchainUpdates height $extensionHeight is lower than node height $nodeHeight -- " +
+          "resetting and resuming from the next block. Historical updates for the gap are unavailable."
+      )
+      repo.resetToEmpty()
+    } else {
+      if (extensionHeight > nodeHeight) {
+        log.info(s"Rolling back from $extensionHeight to node height $nodeHeight")
+        repo.rollbackData(Height(nodeHeight))
+      }
 
-    if (extensionHeight > nodeHeight) {
-      log.info(s"Rolling back from $extensionHeight to node height $nodeHeight")
-      repo.rollbackData(Height(nodeHeight))
+      val lastUpdateId = Try(ByteStr(repo.getBlockUpdate(Height(nodeHeight)).getUpdate.id.toByteArray)).toOption
+      val lastBlockId  = context.blockchain.blockHeader(nodeHeight).map(_.id())
+
+      if (lastUpdateId != lastBlockId)
+        throw new IllegalStateException(s"Last update ID $lastUpdateId does not match last block ID $lastBlockId at height $nodeHeight")
+
+      log.info(s"BlockchainUpdates startup check successful at height $nodeHeight")
     }
-
-    val lastUpdateId = Try(ByteStr(repo.getBlockUpdate(Height(nodeHeight)).getUpdate.id.toByteArray)).toOption
-    val lastBlockId  = context.blockchain.blockHeader(nodeHeight).map(_.id())
-
-    if (lastUpdateId != lastBlockId)
-      throw new IllegalStateException(s"Last update ID $lastUpdateId does not match last block ID $lastBlockId at height $nodeHeight")
-
-    log.info(s"BlockchainUpdates startup check successful at height $nodeHeight")
 
     grpcServer.start()
     log.info(s"BlockchainUpdates extension started gRPC API on port ${settings.grpcPort}")
