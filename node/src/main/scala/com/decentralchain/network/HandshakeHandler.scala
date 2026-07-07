@@ -118,7 +118,21 @@ abstract class HandshakeHandler(
 
           case Some(key) =>
             val previousPeer = peerConnections.putIfAbsent(key, ctx.channel())
-            if (previousPeer == null) {
+            // A previous entry can be a channel that has already died (TCP
+            // drop, remote reset) but whose closeFuture listener has not
+            // run yet -- that removal and this handshake are racing on
+            // separate event loops. Treating a dead previousPeer as a live
+            // duplicate closed the new, working channel and kept the dead
+            // one registered, so the connection never became usable and
+            // the only trace was a debug-level log line. Evict a dead
+            // previousPeer and let the new channel take its place instead.
+            val acceptedAsNew = previousPeer == null || (!previousPeer.isActive && peerConnections.replace(key, previousPeer, ctx.channel()))
+            if (acceptedAsNew) {
+              if (previousPeer != null) {
+                log.info(s"${id(ctx)} Replacing dead connection to peer with nonce ${remoteHandshake.nodeNonce} (stale channel ${id(previousPeer)} was inactive)")
+                establishedConnections.remove(previousPeer)
+                allChannels.remove(previousPeer)
+              }
               log.info(s"${id(ctx)} Accepted handshake $remoteHandshake")
               removeHandshakeHandlers(ctx, this)
               establishedConnections.put(ctx.channel(), peerInfo(remoteHandshake, ctx.channel()))
@@ -138,6 +152,9 @@ abstract class HandshakeHandler(
               connectionNegotiated(ctx)
               ctx.fireChannelRead(msg)
             } else {
+              log.info(
+                s"${id(ctx)} Already connected to peer with nonce ${remoteHandshake.nodeNonce} on live channel ${id(previousPeer)} -- closing this duplicate"
+              )
               suspendAndClose(
                 s"${id(ctx)} Already connected to peer with nonce ${remoteHandshake.nodeNonce} on channel ${id(previousPeer)}",
                 verifiedDeclaredAddress,
