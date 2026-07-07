@@ -73,7 +73,10 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   override def suspend(socketAddress: InetSocketAddress): Unit = getAddress(socketAddress).foreach { address =>
     unverifiedPeers.synchronized {
-      log.trace(s"Suspending $socketAddress")
+      // Bumped from trace to info (INCIDENT-GEN0-PEERS.md #11, 2026-07-07) --
+      // this fires on every connection close for any reason and was
+      // invisible at every log level actually tested.
+      log.info(s"Suspending $socketAddress for ${settings.suspensionResidenceTime}")
       unverifiedPeers.removeIf(_ == socketAddress)
       suspension.put(address, System.currentTimeMillis())
     }

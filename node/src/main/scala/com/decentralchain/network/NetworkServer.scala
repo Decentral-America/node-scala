@@ -133,10 +133,15 @@ object NetworkServer extends ScorexLogging {
       outgoingChannels.remove(remoteAddress, closeFuture.channel())
       if (!shutdownInitiated) peerDatabase.suspend(remoteAddress)
 
+      // Bumped from trace/debug to info (INCIDENT-GEN0-PEERS.md #11, 2026-07-07):
+      // this is the only place that logs why an outbound peer connection
+      // actually closed, and it was invisible at every log level tested,
+      // including targeted TRACE overrides -- made diagnosing repeated
+      // gen-0/gen-1/val-0 disconnects from main impossible without a rebuild.
       if (closeFuture.isSuccess)
-        log.trace(formatOutgoingChannelEvent(closeFuture.channel(), "Channel closed (expected)"))
+        log.info(formatOutgoingChannelEvent(closeFuture.channel(), "Channel closed (expected)"))
       else
-        log.debug(
+        log.info(
           formatOutgoingChannelEvent(
             closeFuture.channel(),
             s"Channel closed: ${Option(closeFuture.cause()).map(_.getMessage).getOrElse("no message")}"
@@ -148,7 +153,7 @@ object NetworkServer extends ScorexLogging {
 
     def handleConnectionAttempt(remoteAddress: InetSocketAddress)(thisConnFuture: ChannelFuture): Unit = {
       if (thisConnFuture.isSuccess) {
-        log.trace(formatOutgoingChannelEvent(thisConnFuture.channel(), "Connection established"))
+        log.info(formatOutgoingChannelEvent(thisConnFuture.channel(), "Connection established"))
         thisConnFuture.channel().closeFuture().addListener((f: ChannelFuture) => handleOutgoingChannelClosed(remoteAddress)(f))
       } else if (thisConnFuture.cause() != null) {
         peerDatabase.suspend(remoteAddress)
@@ -156,13 +161,13 @@ object NetworkServer extends ScorexLogging {
         thisConnFuture.cause() match {
           case e: ClosedChannelException =>
             // this can happen when the node is shut down before connection attempt succeeds
-            log.trace(
+            log.info(
               formatOutgoingChannelEvent(
                 thisConnFuture.channel(),
                 s"Channel closed by connection issue: ${Option(e.getMessage).getOrElse("no message")}"
               )
             )
-          case other => log.debug(formatOutgoingChannelEvent(thisConnFuture.channel(), other.getMessage))
+          case other => log.info(formatOutgoingChannelEvent(thisConnFuture.channel(), other.getMessage))
         }
       }
       logConnections()

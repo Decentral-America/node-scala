@@ -13,9 +13,12 @@ class FatalErrorHandler extends ChannelInboundHandlerAdapter with ScorexLogging 
     case ioe: IOException if ioe.getMessage == "Connection reset by peer" =>
       // https://stackoverflow.com/q/9829531
       // https://stackoverflow.com/q/1434451
-      log.trace(s"${id(ctx)} Connection reset by peer")
+      // Bumped from trace to info (INCIDENT-GEN0-PEERS.md #11, 2026-07-07) --
+      // was invisible at every log level actually tested; this is the exact
+      // exception a raw TCP RST surfaces as.
+      log.info(s"${id(ctx)} Connection reset by peer")
     case NonFatal(_) =>
-      log.debug(s"${id(ctx)} Exception caught", cause)
+      log.info(s"${id(ctx)} Exception caught", cause)
     case _ =>
       new Thread(
         () => {
