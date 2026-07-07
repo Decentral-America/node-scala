@@ -121,7 +121,23 @@ object NetworkServer extends ScorexLogging {
           Seq(
             new BrokenConnectionDetector(networkSettings.breakIdleConnectionsTimeout),
             new HandshakeDecoder(peerDatabase),
-            new HandshakeTimeoutHandler(if (peerConnectionsMap.isEmpty) AverageHandshakePeriod else networkSettings.handshakeTimeout),
+            // Was `if (peerConnectionsMap.isEmpty) AverageHandshakePeriod else
+            // networkSettings.handshakeTimeout` -- AverageHandshakePeriod is
+            // 1 second, meant for how *often* to retry connecting while
+            // disconnected (see scheduleConnectTask below), not for how long
+            // an in-flight handshake gets before being killed. Reusing it
+            // here gave every reconnect attempt only 1s to complete a full
+            // TCP + DCC handshake round trip -- exactly when reconnecting
+            // after losing all peers, the worst possible moment to make the
+            // timeout 30x tighter than normal. Any attempt slower than 1s
+            // (routine for a cross-region path, e.g. LKE Frankfurt <-> a
+            // Newark VPS) got suspended for 300s and retried into the same
+            // 1s ceiling again -- a self-reinforcing connect/suspend loop.
+            // Confirmed live via INCIDENT-GEN0-PEERS.md #11: newly-added
+            // info-level logging caught a connection established then
+            // suspended+closed 1.5s later with no successful handshake ever
+            // logged in between. Always use the real handshake-timeout.
+            new HandshakeTimeoutHandler(networkSettings.handshakeTimeout),
             clientHandshakeHandler
           ) ++ pipelineTail
         )
