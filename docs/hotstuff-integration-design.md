@@ -53,7 +53,12 @@ advances and **feature-25 Deterministic Finality continues underneath — the ch
 | Tally COMMIT → `commitQC`; **finalize N** | each | `onVote` → `onQC` → `committedBlock` → `HotStuffAction.Committed` → shell applies | core+4c |
 | Leader silent → rotate leader, next view | all | `HotStuffEngine.onTimeout` → `leaderFor(v+1)`; shell timer | core+4c |
 
-## 5. Step 4c — the shell to build (integration seams)
+## 5. Step 4c — the shell (integration seams)
+**Landed (gated, compiled, additive — zero behaviour change):** `NodeHotStuffEffects` (broadcast via
+`allChannels`, BLS-sign via `wallet`, observational commit) and `MessageObserver` inbound routing for
+codes 39/40/41. **Remaining (deliberate, harness-validated):** Application subscription lifecycle,
+per-period committee refresh, leader↔forger mapping, pacemaker timer, Miner proposing hook.
+
 Mirror the existing feature-25 endorsement path:
 - **Construct & wire** a `HotStuffEngine` shell/actor in `Application.scala` next to
   `BlockEndorser.InMemory` (`Application.scala:147-148`) — needs `wallet`, `allChannels`, `blockchain`,
@@ -64,8 +69,15 @@ Mirror the existing feature-25 endorsement path:
   domain → `onProposal`/`onVote`/`onQC`. Mirror `EndorseBlockSpec` consumption.
 - **Committee/stake:** `CommonGeneratorsApi.generators(h)` / `blockchain.committedGenerators(period)` /
   `currentGeneratorSet`.
-- **Commit application:** `HotStuffAction.Committed(id, h)` → advance finalized height via the same
-  machinery feature-25 uses (`Blockchain.finalizedHeightOrFallback`, `BlockchainUpdater`).
+- **Commit application (⚠️ the hard part / design decision):** there is **no external setter** for
+  finalized height — it is computed internally by feature-25's `FinalizationState` inside
+  `BlockchainUpdaterImpl` (see `:395`, `:440-447`). Applying a HotStuff commit therefore requires an
+  invasive, reviewed change to the node's core state machine. **Decision needed:** does the HotStuff
+  fast-commit (a) *raise* `finalizedHeight` ahead of feature-25 when a `commitQC` lands (HotStuff as the
+  faster finality source, feature-25 as fallback), or (b) run purely observational (expose a separate
+  `hotStuffFinalizedHeight`, leave feature-25 authoritative) for the first soak? Recommend **(b) for the
+  initial testnet soak** (zero risk to the authoritative finalized height), then **(a)** after the soak +
+  external audit. Either way this is core-state work validated only by step 5, not a plug-in effect.
 - **Pacemaker timer:** monix `Scheduler` task firing `onTimeout` at `hotStuffSettings.roundTimeout`,
   reset on each QC.
 - **Gate:** everything behind `settings.hotStuffSettings.enabled`.
