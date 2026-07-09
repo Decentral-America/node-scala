@@ -12,7 +12,16 @@ import com.decentralchain.mining.Miner.MaxTransactionsPerMicroblock
 import com.decentralchain.mining.MiningConstraints
 import com.decentralchain.network.message.*
 import com.decentralchain.network.message.Message.*
-import io.decentralchain.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, SignedMicroBlock, EndorseBlock as PBEndorseBlock}
+import io.decentralchain.protobuf.block.{
+  PBBlock,
+  PBBlocks,
+  PBMicroBlocks,
+  SignedMicroBlock,
+  EndorseBlock as PBEndorseBlock,
+  HotStuffVote as PBHotStuffVote,
+  QuorumCertificate as PBQuorumCertificate,
+  HotStuffProposal as PBHotStuffProposal
+}
 import io.decentralchain.protobuf.snapshot.{BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
 import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.decentralchain.transaction.{DataTransaction, EthereumTransaction, Transaction, TransactionParsers}
@@ -374,6 +383,42 @@ object EndorseBlockSpec extends MessageSpec[EndorseBlock] {
   override val maxLength: Int = 238 // 4 + 32*2 (or 64*2 for old blocks) + 4 + 96 + 4 tags + 2 varint max overhead
 }
 
+// --- T2 HotStuff BFT fast-finality (see CONSENSUS.md). Gated behind dcc.hotstuff.enabled. ---
+object HotStuffVoteSpec extends MessageSpec[HotStuffVote] {
+  override val messageCode: MessageCode = 39: Byte
+
+  override def deserializeData(bytes: Array[Byte]): Try[HotStuffVote] =
+    Try(HotStuffVote.fromProtobuf(PBHotStuffVote.parseFrom(bytes)))
+
+  override def serializeData(data: HotStuffVote): Array[Byte] = data.toProtobuf.toByteArray
+
+  override val maxLength: Int = 256 // view + phase + blockId(32) + height + voterIndex + BLS sig(96) + tags/varints
+}
+
+object QuorumCertificateSpec extends MessageSpec[QuorumCertificate] {
+  override val messageCode: MessageCode = 40: Byte
+
+  override def deserializeData(bytes: Array[Byte]): Try[QuorumCertificate] =
+    Try(QuorumCertificate.fromProtobuf(PBQuorumCertificate.parseFrom(bytes)))
+
+  override def serializeData(data: QuorumCertificate): Array[Byte] = data.toProtobuf.toByteArray
+
+  // signer_indexes may be up to the committed-committee size; bounded by the network frame limit.
+  override val maxLength: Int = NetworkServer.MaxFrameLength
+}
+
+object HotStuffProposalSpec extends MessageSpec[HotStuffProposal] {
+  override val messageCode: MessageCode = 41: Byte
+
+  override def deserializeData(bytes: Array[Byte]): Try[HotStuffProposal] =
+    Try(HotStuffProposal.fromProtobuf(PBHotStuffProposal.parseFrom(bytes)))
+
+  override def serializeData(data: HotStuffProposal): Array[Byte] = data.toProtobuf.toByteArray
+
+  // carries a full QuorumCertificate (justify); bounded by the network frame limit.
+  override val maxLength: Int = NetworkServer.MaxFrameLength
+}
+
 // Virtual, only for logs
 object HandshakeSpec {
   val messageCode: MessageCode = 101: Byte
@@ -403,7 +448,10 @@ object BasicMessagesRepo {
     MicroSnapshotRequestSpec,
     BlockSnapshotResponseSpec,
     MicroBlockSnapshotResponseSpec,
-    EndorseBlockSpec
+    EndorseBlockSpec,
+    HotStuffVoteSpec,
+    QuorumCertificateSpec,
+    HotStuffProposalSpec
   )
 
   val specsByCodes: Map[Byte, Spec]       = specs.map(s => s.messageCode -> s).toMap

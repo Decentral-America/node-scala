@@ -6,7 +6,13 @@ import com.decentralchain.block.{Block, BlockEndorsement, MicroBlock}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto
 import com.decentralchain.network.message.MessageSpec
-import io.decentralchain.protobuf.block.EndorseBlock as PBEndorseBlock
+import io.decentralchain.protobuf.block.{
+  EndorseBlock as PBEndorseBlock,
+  HotStuffVote as PBHotStuffVote,
+  QuorumCertificate as PBQuorumCertificate,
+  HotStuffProposal as PBHotStuffProposal,
+  HotStuffPhase
+}
 import io.decentralchain.protobuf.snapshot.{TransactionStateSnapshot, BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
 import com.decentralchain.state.{GeneratorIndex, Height}
 import com.decentralchain.transaction.{Signed, Transaction}
@@ -138,4 +144,59 @@ object EndorseBlock {
 
   def from(x: BlockEndorsement): EndorseBlock =
     EndorseBlock(x.endorserIndex.toInt, x.finalizedId, x.finalizedHeight, x.endorsedId, x.signature.byteStr)
+}
+
+// --- T2 HotStuff BFT fast-finality wire messages (see CONSENSUS.md) ---
+// Gated behind dcc.hotstuff.enabled (default off). Carried only when the engine (later steps) is
+// wired in; defining the message types here does not by itself change any consensus behaviour.
+
+/** A committed generator's vote for `blockId` in the given `view` and `phase`.
+  * `signature` is a BLS signature over the canonical encoding of (view, phase, blockId, blockHeight).
+  */
+case class HotStuffVote(view: Int, phase: HotStuffPhase, blockId: BlockId, blockHeight: Height, voterIndex: Int, signature: ByteStr)
+    extends Message {
+  def toProtobuf: PBHotStuffVote =
+    PBHotStuffVote(view, phase, blockId.toByteString, blockHeight.toInt, voterIndex, signature.toByteString)
+
+  override def toString: String = s"HotStuffVote(view=$view, phase=$phase, block=$blockId, h=$blockHeight, voter=$voterIndex)"
+}
+
+object HotStuffVote {
+  def fromProtobuf(x: PBHotStuffVote): HotStuffVote =
+    HotStuffVote(x.view, x.phase, x.blockId.toByteStr, Height(x.blockHeight), x.voterIndex, x.signature.toByteStr)
+}
+
+/** Aggregated proof that ≥ 2/3 of committed stake voted for (`view`, `phase`, `blockId`).
+  * `aggregatedSignature` is the BLS aggregate of the votes from `signerIndexes`.
+  */
+case class QuorumCertificate(
+    view: Int,
+    phase: HotStuffPhase,
+    blockId: BlockId,
+    blockHeight: Height,
+    signerIndexes: Seq[Int],
+    aggregatedSignature: ByteStr
+) extends Message {
+  def toProtobuf: PBQuorumCertificate =
+    PBQuorumCertificate(view, phase, blockId.toByteString, blockHeight.toInt, signerIndexes, aggregatedSignature.toByteString)
+
+  override def toString: String = s"QuorumCertificate(view=$view, phase=$phase, block=$blockId, h=$blockHeight, signers=${signerIndexes.size})"
+}
+
+object QuorumCertificate {
+  def fromProtobuf(x: PBQuorumCertificate): QuorumCertificate =
+    QuorumCertificate(x.view, x.phase, x.blockId.toByteStr, Height(x.blockHeight), x.signerIndexes, x.aggregatedSignature.toByteStr)
+}
+
+/** A leader's HotStuff proposal: extend `blockId` at `view`, justified by `justify` (the highQC the
+  * leader is extending). The justify linkage is what lets replicas check the 3-chain commit rule. */
+case class HotStuffProposal(view: Int, blockId: BlockId, justify: Option[QuorumCertificate]) extends Message {
+  def toProtobuf: PBHotStuffProposal = PBHotStuffProposal(view, blockId.toByteString, justify.map(_.toProtobuf))
+
+  override def toString: String = s"HotStuffProposal(view=$view, block=$blockId, justify=${justify.map(_.view)})"
+}
+
+object HotStuffProposal {
+  def fromProtobuf(x: PBHotStuffProposal): HotStuffProposal =
+    HotStuffProposal(x.view, x.blockId.toByteStr, x.justify.map(QuorumCertificate.fromProtobuf))
 }
