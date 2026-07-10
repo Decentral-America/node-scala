@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
   * thread. `committee` is the committed set for the current generation period; reconstruct per period.
   */
 final class NodeHotStuffEffects(
-    committee: GeneratorSet,
+    committeeProvider: () => GeneratorSet,
     wallet: Wallet,
     allChannels: ChannelGroup
 ) extends HotStuffEffects
@@ -36,11 +36,12 @@ final class NodeHotStuffEffects(
 
   override def broadcast(message: Message): Unit = allChannels.broadcast(message)
 
-  override val myVoterIndexes: Set[Int] =
-    committee.iterator.filter(gi => wallet.privateKeyAccount(gi.address).isRight).map(_.index.toInt).toSet
+  // Committee rotates per generation period, so read it fresh (not a cached val).
+  override def myVoterIndexes: Set[Int] =
+    committeeProvider().iterator.filter(gi => wallet.privateKeyAccount(gi.address).isRight).map(_.index.toInt).toSet
 
   override def signVote(voteMessage: Array[Byte], voterIndex: Int): Option[BlsSignature] =
-    committee
+    committeeProvider()
       .find(_.index.toInt == voterIndex)
       .flatMap(gi => wallet.privateKeyAccount(gi.address).toOption)
       .map(account => BlsKeyPair(account.privateKey).sign(voteMessage))

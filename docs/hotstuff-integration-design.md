@@ -54,10 +54,19 @@ advances and **feature-25 Deterministic Finality continues underneath — the ch
 | Leader silent → rotate leader, next view | all | `HotStuffEngine.onTimeout` → `leaderFor(v+1)`; shell timer | core+4c |
 
 ## 5. Step 4c — the shell (integration seams)
-**Landed (gated, compiled, additive — zero behaviour change):** `NodeHotStuffEffects` (broadcast via
-`allChannels`, BLS-sign via `wallet`, observational commit) and `MessageObserver` inbound routing for
-codes 39/40/41. **Remaining (deliberate, harness-validated):** Application subscription lifecycle,
-per-period committee refresh, leader↔forger mapping, pacemaker timer, Miner proposing hook.
+**Landed (compiled, gated OFF — zero behaviour change when disabled):** `NodeHotStuffEffects`
+(broadcast/BLS-sign/observational commit), `MessageObserver` inbound routing (39/40/41), **and the full
+`Application` wiring** — gated coordinator construction, a dynamic per-period committee provider
+(`blockchain.currentGeneratorSet`), inbound subscriptions on a dedicated single-thread scheduler, the
+pacemaker timer (`round-timeout` → `onTimeout`), and the propose-if-we-forged hook via `lastBlockInfo`.
+Implementer decision: **view = block height, leader = FairPoS forger** (3 phases within one view; views
+advance with heights). Commit is **observational** (feature-25 stays authoritative).
+
+⚠️ **RUNTIME-UNVALIDATED:** compiled + unit/simulation-tested only. Correctness on a live ≥4-node
+network is **step 5**; the view=height mapping, cross-period state, and proposing all need harness
+validation + external audit before `hotstuff.enabled` is ever set true on mainnet.
+
+**Remaining:** step-5 multi-node IT + testnet soak; external audit.
 
 Mirror the existing feature-25 endorsement path:
 - **Construct & wire** a `HotStuffEngine` shell/actor in `Application.scala` next to

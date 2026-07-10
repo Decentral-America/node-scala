@@ -36,7 +36,7 @@ class HotStuffSimulationSpecification extends FlatSpec {
     }
 
     val nodes: Map[Int, HotStuffCoordinator.Enabled] =
-      live.map(i => i -> new HotStuffCoordinator.Enabled(committee, new SimEffects(i), (_, _) => true)).toMap
+      live.map(i => i -> new HotStuffCoordinator.Enabled(() => committee, new SimEffects(i), (_, _) => true)).toMap
 
     // View-0 leader (node 0) forges block B at height H and proposes.
     nodes(0).onLeaderTurn(0, B, H)

@@ -93,6 +93,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   private val scoreObserverScheduler  = singleThread("rx-score-observer", reporter = log.error("Error in Score Observer", _))
   private val historyRepliesScheduler = fixedPool(poolSize = 2, "history-replier", reporter = log.error("Error in History Replier", _))
   private val minerScheduler          = singleThread("block-miner", reporter = log.error("Error in Miner", _))
+  private val hotStuffScheduler       = singleThread("hotstuff-coordinator", reporter = log.error("Error in HotStuff coordinator", _))
 
   private val utxEvents = ConcurrentSubject.publish[UtxEvent](using scheduler)
 
@@ -200,6 +201,52 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       .foreach { x =>
         allChannels.broadcast(LocalScoreChanged(x))
       }(using scheduler)
+
+    // ---- T2 HotStuff (gated behind dcc.hotstuff.enabled; observational commit). ----
+    // See docs/hotstuff-integration-design.md. Skipped entirely when disabled (the default) => zero
+    // behaviour change. When enabled: a single-thread scheduler confines all coordinator state; the
+    // committee is read fresh per period; view = block height, leader = FairPoS forger. NOT validated
+    // on a running multi-node network yet (that is step 5) -- must not be enabled on mainnet before
+    // step 5 + an external audit. Commit is observational only (feature-25 stays authoritative).
+    if (settings.hotStuffSettings.enabled) {
+      import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, NodeHotStuffEffects}
+      import com.decentralchain.block.Block.BlockId
+      import com.decentralchain.state.GeneratorSet
+
+      val committee: () => GeneratorSet = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
+      val extendsBranch: (BlockId, BlockId) => Boolean = (child, ancestor) =>
+        child == ancestor || (for {
+          hc <- blockchainUpdater.heightOf(child)
+          ha <- blockchainUpdater.heightOf(ancestor)
+        } yield hc >= ha).getOrElse(false)
+
+      val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
+      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch)
+
+      messageObserver.hotStuffProposals.observeOn(hotStuffScheduler).foreach { case (_, p) =>
+        hsCoordinator.onProposal(p, blockchainUpdater.height)
+      }(using hotStuffScheduler)
+      messageObserver.hotStuffVotes.observeOn(hotStuffScheduler).foreach { case (_, v) =>
+        hsCoordinator.onVote(v)
+      }(using hotStuffScheduler)
+      messageObserver.hotStuffQCs.observeOn(hotStuffScheduler).foreach { case (_, qc) =>
+        hsCoordinator.onQC(qc)
+      }(using hotStuffScheduler)
+
+      // Leader = FairPoS forger: when a block we produced is applied, propose it at view = height.
+      lastBlockInfo.observeOn(hotStuffScheduler).foreach { info =>
+        val h = info.height.toInt
+        blockchainUpdater.blockHeader(h).foreach { sbh =>
+          if (wallet.privateKeyAccount(sbh.header.generator.toAddress).isRight)
+            hsCoordinator.onLeaderTurn(h, info.id, h)
+        }
+      }(using hotStuffScheduler)
+
+      // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
+      val rt = settings.hotStuffSettings.roundTimeout.toMillis
+      hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onTimeout())
+      log.info("T2 HotStuff coordinator ENABLED (observational, view=height). Not audited/soaked — testnet only.")
+    }
 
     val history = History(
       blockchainUpdater,

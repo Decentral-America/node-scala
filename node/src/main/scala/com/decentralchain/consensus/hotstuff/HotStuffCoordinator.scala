@@ -52,13 +52,17 @@ object HotStuffCoordinator {
     * step-5 multi-node IT + external audit before mainnet enablement.
     */
   final class Enabled(
-      committee: GeneratorSet,
+      committeeProvider: () => GeneratorSet,
       effects: HotStuffEffects,
       extendsBranch: (BlockId, BlockId) => Boolean
   ) extends HotStuffCoordinator {
-    private var engine = EngineState(committee)
+    private var engine = EngineState(committeeProvider())
     private var pool   = VotePool()
     private var voted  = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
+
+    // The committed-generator committee rotates per generation period; refresh it from the chain at
+    // the start of each event so reducers always see the current period's set.
+    private def refreshCommittee(): Unit = engine = engine.copy(committee = committeeProvider())
 
     /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool. */
     private def castVotes(view: Int, phase: HotStuffPhase, blockId: BlockId, height: Int): Unit = {
@@ -77,13 +81,15 @@ object HotStuffCoordinator {
     }
 
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
+      refreshCommittee()
       val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
       engine = nextEngine
       if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
     }
 
     def onVote(vote: HotStuffVote): Unit = {
-      val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, committee)
+      refreshCommittee()
+      val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
       pool = nextPool
       maybeQC.foreach { qc =>
         effects.broadcast(qc)
@@ -92,6 +98,7 @@ object HotStuffCoordinator {
     }
 
     def onQC(qc: QuorumCertificate): Unit = {
+      refreshCommittee()
       val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
       engine = nextEngine
       val rejected = actions.exists { case _: HotStuffAction.Rejected => true; case _ => false }
@@ -111,6 +118,7 @@ object HotStuffCoordinator {
     }
 
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = {
+      refreshCommittee()
       val proposal = HotStuffProposal(view, blockId, engine.safety.prepareQC)
       effects.broadcast(proposal)
       onProposal(proposal, blockHeight) // the leader also votes for its own proposal
