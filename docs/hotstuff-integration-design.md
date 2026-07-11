@@ -1,8 +1,9 @@
 # T2 HotStuff — Implementation & Integration Design (SSOT)
 
 > **Status:** in implementation on `feature/hotstuff-t2`. Pure BFT core complete + unit-tested; the
-> side-effecting shell (step 4c) and multi-node validation (step 5) remain. **Gated behind
-> `dcc.hotstuff.enabled` (default `false`) — zero behaviour change on any node today.**
+> side-effecting shell (step 4c) has **landed and been smoke-run on a real 4-node docker cluster**
+> (non-destructive confirmed — see §5); a **green** multi-node finality run (step 5) still remains.
+> **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change on any node today.**
 > **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
 > node-scala *implementation* of T2. Keep it updated as code lands.
 >
@@ -62,11 +63,29 @@ pacemaker timer (`round-timeout` → `onTimeout`), and the propose-if-we-forged 
 Implementer decision: **view = block height, leader = FairPoS forger** (3 phases within one view; views
 advance with heights). Commit is **observational** (feature-25 stays authoritative).
 
-⚠️ **RUNTIME-UNVALIDATED:** compiled + unit/simulation-tested only. Correctness on a live ≥4-node
-network is **step 5**; the view=height mapping, cross-period state, and proposing all need harness
-validation + external audit before `hotstuff.enabled` is ever set true on mainnet.
+⚠️ **RUNTIME-PARTIALLY-VALIDATED:** compiled + unit/simulation-tested, **plus a real 4-node docker
+cluster smoke run** (`FourNodeHotStuffTestSuite`). What the live run established:
+- **Non-destructive / no crash:** with `dcc.hotstuff.enabled = true` the 4 nodes start, the coordinator
+  initialises (`T2 HotStuff coordinator ENABLED`), blocks + microblocks keep being produced, and there
+  are **zero** exceptions, decode/serialization errors, or netty pipeline failures. Enabling HotStuff
+  behaves **identically** to the disabled baseline on the same cluster — the gated wiring does not alter
+  node behaviour, which is exactly what step 5 must confirm before mainnet.
+- **Finality-advances assertion is environment-flaky and NOT yet a clean green.** On a resource-
+  constrained host (Docker capped at ~7.75 GiB shared with other containers) the node-it peer mesh
+  fragments (asymmetric peer suspensions; some nodes hold only 2–3 of 3 links), so cross-node feature-25
+  endorsements never reach the 2/3 committed-stake quorum and `finalizedHeight` stalls at 1. **This was
+  reproduced with HotStuff DISABLED as well** → it is a node-it mesh/resource-stability issue, **not**
+  caused by HotStuff. `known-peers` is correctly wired to all peers (Docker.scala:215), so it is runtime
+  instability, not config. The definitive "finality advances under HotStuff" gate must run where node-it
+  has adequate resources (CI Linux runner / dedicated host), not a memory-pressured laptop sandbox.
+- **Harness prerequisite fixed:** node-it published the image's EXPOSE'd P2P port (6868) instead of the
+  node's configured port (`dcc.network.port = 6863`), NPE-ing on every container start. Fixed in
+  Docker.scala (publish the resolved-config ports; wait for host bindings). Benefits all node-it suites.
 
-**Remaining:** step-5 multi-node IT + testnet soak; external audit.
+The view=height mapping, cross-period state, and proposing still need a **green** multi-node run +
+external audit before `hotstuff.enabled` is ever set true on mainnet.
+
+**Remaining:** a clean green step-5 finality run (adequately-resourced node-it) + testnet soak; external audit.
 
 Mirror the existing feature-25 endorsement path:
 - **Construct & wire** a `HotStuffEngine` shell/actor in `Application.scala` next to
@@ -97,18 +116,25 @@ Mirror the existing feature-25 endorsement path:
 - **Unit (done):** 45 tests — the 7 core modules (adversarial: forged aggregate sig, below-quorum,
   stale-justify no-vote, monotonic commit, equivocation, invalid-vote drop) plus a deterministic
   in-process 4-node coordinator simulation (happy path + one crashed node).
-- **Step 5 (required):** `node-it` multi-node suites (pattern: `node-it/.../sync/finalization/*`) —
-  agreement under crashed leader, network partition, equivocating validator — then testnet soak
-  behind the flag. BFT safety/liveness only manifest across ≥4 nodes; no unit test substitutes.
+- **Step 5 (in progress):** `node-it` multi-node suites (pattern: `node-it/.../sync/finalization/*`).
+  `FourNodeHotStuffTestSuite` exists and has been **run on a real 4-node docker cluster** — it confirmed
+  the enabled wiring is non-destructive (no crash/errors; identical to the disabled baseline) but the
+  finality-advances assertion is **environment-flaky** on a memory-pressured host (node-it mesh
+  fragmentation, reproduced with HotStuff disabled too — see §5). A clean green requires an adequately-
+  resourced runner. Still TODO once green: crashed-leader, network-partition, equivocating-validator
+  scenarios, then testnet soak behind the flag. BFT safety/liveness only manifest across ≥4 nodes; no
+  unit test substitutes.
 
 ## 7. Wire format (schemas 1.6.4, `dcc/block.proto`)
 `HotStuffPhase{UNSPECIFIED,PREPARE,PRE_COMMIT,COMMIT}`;
 `HotStuffVote{view, phase, block_id, block_height, voter_index, signature(BLS)}`;
 `QuorumCertificate{view, phase, block_id, block_height, signer_indexes[], aggregated_signature(BLS)}`;
 `HotStuffProposal{view, block_id, justify:QuorumCertificate}`.
-**1.6.4 is unpublished** — built to local `~/.m2` for dev; must be published (Sonatype/GPG) before CI/merge.
+**1.6.4 is published** — live on Maven Central (`io.decentralchain:protobuf-schemas:1.6.4`, autoPublish
+via central-publishing-maven-plugin); node-scala CI resolves it. (Was the last pre-merge blocker.)
 
 ## 8. Open gates
-1. Publish `protobuf-schemas` 1.6.4 (credentialed release).
-2. Step 4c shell + step 5 multi-node validation + testnet soak.
-3. External audit before `hotstuff.enabled = true` on mainnet.
+1. ✅ Publish `protobuf-schemas` 1.6.4 (credentialed release) — **done**, live on Maven Central.
+2. ✅ Step 4c shell landed + smoke-run on a real 4-node cluster (non-destructive confirmed).
+   ◻ Remaining: a **green** step-5 finality run on an adequately-resourced runner, then testnet soak.
+3. ◻ External audit before `hotstuff.enabled = true` on mainnet.
