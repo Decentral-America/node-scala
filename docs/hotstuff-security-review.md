@@ -19,16 +19,31 @@
 | **Safety rule** | `safeToVote` implements the canonical HotStuff rule: vote iff `view > lastVotedView` AND (node extends `lockedQC` branch [safety] OR justify-QC newer than `lockedQC` [liveness]). Adversarially tested: **refuses** a conflicting branch with a stale justify; refuses double/regressive votes. |
 | **Lock rule** | `update` locks only on a higher-view `PRE_COMMIT` QC and never regresses (monotonic in view). `prepareQC` tracks the highest-view QC. |
 
-## Findings — must be enforced by the engine (step 3c) and covered by the external audit
+## Findings — engine status (step 3c now implemented) + external-audit focus
+
+> **Update 2026-07-11:** the engine (`HotStuffEngine`), vote pool (`HotStuffVotePool`), coordinator and
+> shell (`HotStuffCoordinator`/`NodeHotStuffEffects`) now exist and were built to close findings 1–3.
+> Status below reflects the current `dev` code. The external audit must still independently confirm
+> them on a live multi-node network — the dangerous surface is runtime, not the pure modules.
 
 1. **[HIGH — usage contract] Safety assumes QCs are already cryptographically verified.**
-   `HotStuffSafety.update`/`safeToVote` operate on `QuorumCertificate` values **without** re-verifying signatures — they trust the caller. The engine (3c) **MUST** run `HotStuffQuorum.verifyQC` on every QC before feeding it to the safety layer, or the safety guarantees are void. Enforce at the call site + add a test that unverified QCs never reach `update`.
+   ✅ **Addressed.** `HotStuffEngine.onQC` runs `HotStuffQuorum.verifyQC(qc, committee)` and only a
+   `true` result reaches `HotStuffSafety.update` (`HotStuffEngine.scala:44`); `onProposal` likewise
+   `verifyQC`-checks `proposal.justify` before it can advance safety state (`:70`). **Audit focus:**
+   confirm there is no path to `update`/`committedBlock` that bypasses `verifyQC`.
 
 2. **[MED-HIGH — engine invariant] Commit trusts the phase, not the chain.**
-   `committedBlock` finalizes on `phase == COMMIT` alone. The BFT commit guarantee depends on the engine enforcing full phase progression (prepare → pre-commit → commit for the **same** node across consecutive views). That 3-chain invariant lives in the engine (3c), not this pure module — it must be implemented and adversarially tested (attempt to present a COMMIT QC without the preceding chain).
+   ⚠️ **Partially addressed — primary audit target.** `onQC` commits only on a cryptographically-verified
+   `COMMIT`-phase QC for a higher block (`HotStuffEngine.scala:43–54`). The full 3-chain progression
+   (prepare → pre-commit → commit for the same node across consecutive views) is the single most
+   important thing for the auditor to scrutinize, plus the step-5 Byzantine test that presents a COMMIT
+   QC without the preceding chain.
 
 3. **[MED — liveness, not safety] `formQC` is all-or-nothing.**
-   A single invalid or mismatched vote makes `formQC` reject the entire set. A Byzantine voter could thus stall QC formation. The engine should filter to valid, same-target votes and form the QC from those if the quorum is met among them. (Does not affect safety; affects liveness.)
+   ✅ **Addressed.** `HotStuffVotePool.onVote` drops invalid votes on ingress (`verifyVote` gate,
+   `HotStuffVotePool.scala:26`) and per-voter-dedupes, so `formQC` only ever sees valid same-target
+   votes and forms a QC once the 2/3-stake quorum is met among them — a Byzantine voter can no longer
+   stall formation.
 
 4. **[LOW] Canonical vote-message framing.**
    `voteMessage = view(4) ++ phase(1) ++ blockId ++ height(4)`. Unambiguous because `blockId` is the only variable-width field and is bracketed by fixed-width fields — but this assumes `blockId` length is consistent within a context. If variable-length block ids are ever possible, length-prefix the field.
