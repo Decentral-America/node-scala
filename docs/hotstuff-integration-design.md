@@ -1,9 +1,10 @@
 # T2 HotStuff — Implementation & Integration Design (SSOT)
 
 > **Status:** in implementation on `feature/hotstuff-t2`. Pure BFT core complete + unit-tested; the
-> side-effecting shell (step 4c) has **landed and been smoke-run on a real 4-node docker cluster**
-> (non-destructive confirmed — see §5); a **green** multi-node finality run (step 5) still remains.
-> **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change on any node today.**
+> side-effecting shell (step 4c) has **landed**, and the step-5 multi-node finality smoke is **green on
+> CI** — `FourNodeHotStuffTestSuite` passes on ubuntu-latest (PR #17): a HotStuff-enabled 4-node cluster
+> finalizes on every node without halting or forking. Adversarial multi-node scenarios + soak + audit
+> still remain. **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change today.**
 > **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
 > node-scala *implementation* of T2. Keep it updated as code lands.
 >
@@ -70,14 +71,16 @@ cluster smoke run** (`FourNodeHotStuffTestSuite`). What the live run established
   are **zero** exceptions, decode/serialization errors, or netty pipeline failures. Enabling HotStuff
   behaves **identically** to the disabled baseline on the same cluster — the gated wiring does not alter
   node behaviour, which is exactly what step 5 must confirm before mainnet.
-- **Finality-advances assertion is environment-flaky and NOT yet a clean green.** On a resource-
-  constrained host (Docker capped at ~7.75 GiB shared with other containers) the node-it peer mesh
-  fragments (asymmetric peer suspensions; some nodes hold only 2–3 of 3 links), so cross-node feature-25
-  endorsements never reach the 2/3 committed-stake quorum and `finalizedHeight` stalls at 1. **This was
-  reproduced with HotStuff DISABLED as well** → it is a node-it mesh/resource-stability issue, **not**
-  caused by HotStuff. `known-peers` is correctly wired to all peers (Docker.scala:215), so it is runtime
-  instability, not config. The definitive "finality advances under HotStuff" gate must run where node-it
-  has adequate resources (CI Linux runner / dedicated host), not a memory-pressured laptop sandbox.
+- **Finality-advances assertion is GREEN on a properly-resourced runner.** On CI (ubuntu-latest, PR #17
+  run `29162581781`) `FourNodeHotStuffTestSuite` **passed**: *"a HotStuff-enabled 4-node cluster finalizes
+  on every node without halting or forking (12.8s)."* So with HotStuff enabled, feature-25 finality keeps
+  advancing on all 4 nodes — confirmed on real nodes, not just locally.
+  On a resource-constrained host (Docker capped at ~7.75 GiB shared with other containers) the same suite
+  is flaky: the node-it peer mesh fragments (asymmetric peer suspensions; some nodes hold only 2–3 of 3
+  links), so cross-node endorsements miss the 2/3 quorum and `finalizedHeight` stalls at 1. **That was
+  reproduced with HotStuff DISABLED too** → a node-it mesh/resource issue, **not** caused by HotStuff
+  (`known-peers` is correctly wired — Docker.scala:215). Lesson: run step 5 where node-it has real memory
+  headroom, never a memory-pressured laptop sandbox.
 - **Harness prerequisite fixed:** node-it published the image's EXPOSE'd P2P port (6868) instead of the
   node's configured port (`dcc.network.port = 6863`), NPE-ing on every container start. Fixed in
   Docker.scala (publish the resolved-config ports; wait for host bindings). Benefits all node-it suites.
@@ -116,14 +119,12 @@ Mirror the existing feature-25 endorsement path:
 - **Unit (done):** 45 tests — the 7 core modules (adversarial: forged aggregate sig, below-quorum,
   stale-justify no-vote, monotonic commit, equivocation, invalid-vote drop) plus a deterministic
   in-process 4-node coordinator simulation (happy path + one crashed node).
-- **Step 5 (in progress):** `node-it` multi-node suites (pattern: `node-it/.../sync/finalization/*`).
-  `FourNodeHotStuffTestSuite` exists and has been **run on a real 4-node docker cluster** — it confirmed
-  the enabled wiring is non-destructive (no crash/errors; identical to the disabled baseline) but the
-  finality-advances assertion is **environment-flaky** on a memory-pressured host (node-it mesh
-  fragmentation, reproduced with HotStuff disabled too — see §5). A clean green requires an adequately-
-  resourced runner. Still TODO once green: crashed-leader, network-partition, equivocating-validator
-  scenarios, then testnet soak behind the flag. BFT safety/liveness only manifest across ≥4 nodes; no
-  unit test substitutes.
+- **Step 5 (smoke green):** `node-it` multi-node suites (pattern: `node-it/.../sync/finalization/*`).
+  `FourNodeHotStuffTestSuite` **passes on CI** (ubuntu-latest, PR #17) — the enabled wiring is
+  non-destructive and feature-25 finality advances on all 4 nodes with HotStuff on. (Flaky only on a
+  memory-pressured host; see §5 — not a HotStuff issue.) Still TODO: crashed-leader, network-partition,
+  equivocating-validator scenarios, then testnet soak behind the flag. BFT safety/liveness only manifest
+  across ≥4 nodes; no unit test substitutes.
 
 ## 7. Wire format (schemas 1.6.4, `dcc/block.proto`)
 `HotStuffPhase{UNSPECIFIED,PREPARE,PRE_COMMIT,COMMIT}`;
@@ -135,6 +136,7 @@ via central-publishing-maven-plugin); node-scala CI resolves it. (Was the last p
 
 ## 8. Open gates
 1. ✅ Publish `protobuf-schemas` 1.6.4 (credentialed release) — **done**, live on Maven Central.
-2. ✅ Step 4c shell landed + smoke-run on a real 4-node cluster (non-destructive confirmed).
-   ◻ Remaining: a **green** step-5 finality run on an adequately-resourced runner, then testnet soak.
+2. ✅ Step 4c shell landed + step-5 smoke **green on CI** (`FourNodeHotStuffTestSuite` passes on
+   ubuntu-latest, PR #17: 4-node cluster finalizes with HotStuff enabled).
+   ◻ Remaining: crashed-leader / partition / equivocator scenarios + testnet soak.
 3. ◻ External audit before `hotstuff.enabled = true` on mainnet.
