@@ -48,6 +48,7 @@ final class NodeHotStuffEffects(
 
   override def onCommit(blockId: BlockId, height: Int): Unit = {
     hotStuffFinalized.updateAndGet(prev => math.max(prev, height))
+    HotStuffObservation.publish(height) // surface for /node/status + soak monitoring
     logger.info(s"[HotStuff] observational commit: block $blockId finalized at height $height (feature-25 remains authoritative)")
   }
 }
