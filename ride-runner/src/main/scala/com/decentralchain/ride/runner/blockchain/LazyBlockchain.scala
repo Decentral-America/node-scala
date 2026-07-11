@@ -194,7 +194,7 @@ class LazyBlockchain[TagT] private (
   // Ride: dccBalance (specifies to=None), "to" always None and means "to the end"
   override def balanceSnapshots(address: Address, from: Int, to: Option[BlockId]): Seq[BalanceSnapshot] = {
     // NOTE: This code leads to a wrong generating balance, but we see no use-cases for now
-    val lb           = leaseBalance(address)
+    val lb         = leaseBalance(address)
     val dccBalance = balance(address, Asset.Dcc)
     List(BalanceSnapshot(Height(height), dccBalance, lb.in, lb.out, 0))
   }
@@ -275,7 +275,7 @@ class LazyBlockchain[TagT] private (
     if (filteredFeatures.size != features.size) updateFeatures(filteredFeatures)
   }
 
-  private val empty = AffectedTags.empty[TagT]
+  private val empty                                         = AffectedTags.empty[TagT]
   def process(event: BlockchainUpdated): AffectedTags[TagT] =
     db.batchedReadWrite { implicit ctx =>
       val toHeight = Height(event.height)
@@ -316,7 +316,7 @@ class LazyBlockchain[TagT] private (
           updateFeatures(currentActivatedFeatures.get() ++ evt.getBlock.activatedFeatures.map(featureId => featureId.toShort -> atHeight))
 
         val setScriptTxSenderPublicKeys = mutable.Map.empty[Address, PublicKey]
-        val withTxAffectedTags = txs.view
+        val withTxAffectedTags          = txs.view
           .map(_.transaction)
           .foldLeft(initialAffectedTags) { case (r, tx) =>
             tx match {
@@ -367,7 +367,7 @@ class LazyBlockchain[TagT] private (
           } ++
           stateUpdate.flatMap(_.scripts).foldLeft(empty) { case (r, x) =>
             val cacheKey = conv.accountScriptKey(x)
-            val pk = setScriptTxSenderPublicKeys.getOrElse(
+            val pk       = setScriptTxSenderPublicKeys.getOrElse(
               x.address.toAddress(chainId),
               throw new RuntimeException("Impossible: there is a script, but no a corresponding transaction")
             )
@@ -462,7 +462,7 @@ class LazyBlockchain[TagT] private (
     }
 
     val setScriptTxSenderPublicKeys = mutable.Map.empty[Address, PublicKey]
-    val withTxAffectedTags = txs.view.map(_.transaction).foldLeft(empty) { case (r, tx) =>
+    val withTxAffectedTags          = txs.view.map(_.transaction).foldLeft(empty) { case (r, tx) =>
       tx match {
         case Transaction.DccTransaction(tx) =>
           tx.data match {
@@ -502,7 +502,7 @@ class LazyBlockchain[TagT] private (
       } ++
       stateUpdate.flatMap(_.scripts).foldLeft(empty) { case (r, x) =>
         val cacheKey = conv.accountScriptKey(x)
-        val pk = setScriptTxSenderPublicKeys.getOrElse(
+        val pk       = setScriptTxSenderPublicKeys.getOrElse(
           x.address.toAddress(chainId),
           throw new RuntimeException("Impossible: there is a script, but no a corresponding transaction")
         )

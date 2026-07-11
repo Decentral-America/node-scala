@@ -10,8 +10,8 @@ import io.grpc.Status.Code
 import scala.concurrent.duration.*
 
 class SetAssetScriptGrpcSuite extends GrpcBaseTransactionSuite {
-  var assetWOScript = ""
-  var assetWScript  = ""
+  var assetWOScript              = ""
+  var assetWScript               = ""
   private val unchangeableScript = TestCompiler.DefaultVersion.compileAsset(
     s"""
        |match tx {

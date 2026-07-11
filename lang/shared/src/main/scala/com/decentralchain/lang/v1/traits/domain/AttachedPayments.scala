@@ -20,7 +20,7 @@ object AttachedPayments {
 
   implicit class StdLibVersionMultiPaymentOps(version: StdLibVersion) {
     def supportsMultiPayment: Boolean = version >= MultiPaymentSupportedVersion
-    def maxPayments: Int = {
+    def maxPayments: Int              = {
       if (!supportsMultiPayment) {
         1
       } else if (version < V5) {

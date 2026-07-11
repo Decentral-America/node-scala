@@ -102,8 +102,8 @@ object UtilsEvaluator {
       wrapDAppEnv: DAppEnvironment => DAppEnvironmentInterface
   ): Either[ValidationError, ExecuteResult] =
     for {
-      _  <- InvokeScriptTxValidator.checkAmounts(invoke.payments).toEither.leftMap(_.head)
-      ds <- DirectiveSet(script.stdLibVersion, Account, DAppType).leftMap(GenericError(_))
+      _                <- InvokeScriptTxValidator.checkAmounts(invoke.payments).toEither.leftMap(_.head)
+      ds               <- DirectiveSet(script.stdLibVersion, Account, DAppType).leftMap(GenericError(_))
       paymentsSnapshot <- InvokeDiffsCommon.paymentsPart(
         blockchain,
         invoke,
@@ -140,7 +140,7 @@ object UtilsEvaluator {
           wrapDAppEnv = wrapDAppEnv
         )
       environment = wrapDAppEnv(underlyingEnvironment)
-      ctx = BlockchainContext.build(
+      ctx         = BlockchainContext.build(
         ds,
         environment,
         fixUnicodeFunctions = true,
@@ -150,7 +150,7 @@ object UtilsEvaluator {
         fixGroth16 = false
       )
       dApp = ContractScriptCompactor.decompact(script.expr.asInstanceOf[DApp])
-      expr <- dAppToExpr(dApp)
+      expr          <- dAppToExpr(dApp)
       limitedResult <- EvaluatorV2
         .applyLimitedCoeval(
           expr,

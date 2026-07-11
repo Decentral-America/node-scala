@@ -59,7 +59,7 @@ object Decompiler {
 
   private def extrTypes(Name: String, e: EXPR): Coeval[Option[List[String]]] = {
     e match {
-      case FUNCTION_CALL(FunctionHeader.Native(1), List(REF(Name), CONST_STRING(typeName))) => pure(Some(List(typeName)))
+      case FUNCTION_CALL(FunctionHeader.Native(1), List(REF(Name), CONST_STRING(typeName)))              => pure(Some(List(typeName)))
       case IF(FUNCTION_CALL(FunctionHeader.Native(1), List(REF(Name), CONST_STRING(typeName))), TRUE, t) =>
         extrTypes(Name, t) `map` (_.map(tl => typeName :: tl))
       case _ => pure(None)
@@ -134,7 +134,7 @@ object Decompiler {
       case _                     => ("", "")
     }
 
-    def argsStr(args: List[EXPR]) = args.map(argStr).toVector.sequence[Coeval, StringBuilder]
+    def argsStr(args: List[EXPR])  = args.map(argStr).toVector.sequence[Coeval, StringBuilder]
     def listStr(elems: List[EXPR]) = argsStr(elems).map { l =>
       if (elems.isEmpty) new StringBuilder("[]")
       else {
@@ -186,13 +186,13 @@ object Decompiler {
         case Terms.CONST_BOOLEAN(b)        => pureOut(b.toString.toLowerCase(), i)
         case Terms.CONST_LONG(t)           => pureOut(t.toString, i)
         case Terms.CONST_STRING(s)         => pureOut("\"" ++ EscapingSymbols.replaceAllIn(s, "\\\\$0") ++ "\"", i)
-        case Terms.CONST_BYTESTR(bs) =>
+        case Terms.CONST_BYTESTR(bs)       =>
           pureOut(
             if (bs.size <= 128) { "base58'" ++ bs.toString ++ "'" }
             else { "base64'" ++ bs.base64Raw ++ "'" },
             i
           )
-        case Terms.REF(ref) => pureOut(ref, i)
+        case Terms.REF(ref)             => pureOut(ref, i)
         case Terms.GETTER(getExpr, fld) =>
           val (bs, be) = checkBrackets(getExpr)
           expr(pure(getExpr), ctx, NoBraces, firstLinePolicy).map(a => new StringBuilder(bs).append(a).append(be).append(".").append(fld))
@@ -310,7 +310,7 @@ object Decompiler {
 
     import dApp.*
 
-    val decls: Seq[Coeval[StringBuilder]] = decs.map(expr => decl(pure(expr), ctx))
+    val decls: Seq[Coeval[StringBuilder]]     = decs.map(expr => decl(pure(expr), ctx))
     val callables: Seq[Coeval[StringBuilder]] = callableFuncs
       .map { case CallableFunction(annotation, u) =>
         Decompiler.decl(pure(u), ctx).map(out(NEWLINE + "@Callable(" + annotation.invocationArgName + ")" + NEWLINE, 0).append(_))

@@ -21,7 +21,7 @@ class UtilsSpecification extends FreeSpec {
     "handles functions that depend on each other" in {
       val callee = UserFunction[Environment]("callee", 0, BOOLEAN)(TRUE)
       val caller = UserFunction[Environment]("caller", 0, BOOLEAN)(FUNCTION_CALL(callee.header, List.empty))
-      val ctx = EvaluationContext.build[Id, Environment](
+      val ctx    = EvaluationContext.build[Id, Environment](
         environment,
         typeDefs = Map.empty,
         letDefs = Map.empty,

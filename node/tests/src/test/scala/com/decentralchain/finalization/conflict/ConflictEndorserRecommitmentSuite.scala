@@ -22,7 +22,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
   private val generators     = Seq(validGenerator, conflictGenerator)
   private val generatorAddrs = generators.map(_.toAddress)
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings.configure(
     _.copy(
       generationPeriodLength = 2,

@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit
 
 trait HasMonixHelpers { this: ScorexLogging =>
   def dumpTasks(label: String)(implicit testScheduler: TestScheduler): Unit = logWithClock(s"$label: $dumpedTasks")
-  def dumpedTasks(implicit testScheduler: TestScheduler): String = {
+  def dumpedTasks(implicit testScheduler: TestScheduler): String            = {
     val tasks    = testScheduler.state.tasks
     val currTime = testScheduler.state.clock
     tasks

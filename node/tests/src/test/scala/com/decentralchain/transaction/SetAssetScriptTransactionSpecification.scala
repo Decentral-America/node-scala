@@ -47,7 +47,7 @@ class SetAssetScriptTransactionSpecification extends GenericTransactionSpecifica
 
   override def updateProofs(tx: SetAssetScriptTransaction, p: Proofs): SetAssetScriptTransaction = tx.copy(1.toByte, proofs = p)
 
-  override def generator: Gen[(Seq[Transaction], SetAssetScriptTransaction)] = setAssetScriptTransactionGen
+  override def generator: Gen[(Seq[Transaction], SetAssetScriptTransaction)]                        = setAssetScriptTransactionGen
   override def assertTxs(first: SetAssetScriptTransaction, second: SetAssetScriptTransaction): Unit = {
     first.sender shouldEqual second.sender
     first.timestamp shouldEqual second.timestamp
@@ -95,7 +95,7 @@ class SetAssetScriptTransactionSpecification extends GenericTransactionSpecifica
     // this checks that pre-existing serialized transactions with a null script (predating that
     // validation) still parse and round-trip correctly.
     val asset = IssuedAsset(ByteStr(Array.fill(32)(3: Byte)))
-    val tx = SetAssetScriptTransaction(
+    val tx    = SetAssetScriptTransaction(
       TxVersion.V1,
       TxHelpers.defaultSigner.publicKey,
       asset,

@@ -19,7 +19,7 @@ package object estimator {
     PureContext.build(V3, useNewPowPrecision = true).withEnvironment[Environment] |+|
       DccContext.build(Global, DirectiveSet.contractDirectiveSet, fixBigScriptField = true)
 
-  private val environment = Common.emptyBlockchainEnvironment()
+  private val environment                              = Common.emptyBlockchainEnvironment()
   private def evaluator(overhead: Boolean, expr: EXPR) =
     EvaluatorV2.applyCompleted(
       ctx.evaluationContext(environment),

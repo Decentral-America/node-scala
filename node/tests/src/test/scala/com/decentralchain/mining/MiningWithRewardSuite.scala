@@ -73,7 +73,7 @@ class MiningWithRewardSuite extends AsyncFlatSpec with Matchers with WithNewDBFo
     val bps: Seq[BlockProducer] = Seq((ts, reference, account) => {
       val recipient1 = createAccount.toAddress
       val recipient2 = createAccount.toAddress
-      val tx1 = TransferTransaction
+      val tx1        = TransferTransaction
         .selfSigned(2.toByte, account, recipient1, Dcc, 10 * Constants.UnitsInDcc, Dcc, 400000, ByteStr.empty, ts)
         .explicitGet()
       val tx2 = TransferTransaction
@@ -118,7 +118,7 @@ class MiningWithRewardSuite extends AsyncFlatSpec with Matchers with WithNewDBFo
         scheduler   = Scheduler.singleThread("appender")
         allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
         wallet      = Wallet(WalletSettings(None, Some("123"), None))
-        miner = new MinerImpl(
+        miner       = new MinerImpl(
           allChannels,
           blockchainUpdater,
           settings,
@@ -183,7 +183,7 @@ object MiningWithRewardSuite {
   case class Env(blocks: Seq[Block], account: KeyPair, miner: MinerImpl, blockchain: Blockchain & BlockchainUpdater & NG)
 
   val settings: DCCSettings = {
-    val commonSettings: DCCSettings = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
+    val commonSettings: DCCSettings  = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
     val minerSettings: MinerSettings =
       commonSettings.minerSettings.copy(quorum = 0, intervalAfterLastBlockThenGenerationIsAllowed = 1 hour)
 

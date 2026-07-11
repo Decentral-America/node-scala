@@ -208,7 +208,7 @@ class ImmutableBlockchain(override val settings: BlockchainSettings, input: Ride
   override def transferById(id: ByteStr): Option[(Int, TransferTransactionLike)] =
     input.transactions.get(id).map { inputTx =>
       val meta = transactionMeta(id).getOrElse(throw new RuntimeException(s"Can't find a metadata of the transaction $id"))
-      val tx = TransferTransaction(
+      val tx   = TransferTransaction(
         version = inputTx.version,
         sender = inputTx.senderPublicKey,
         recipient = inputTx.recipient,

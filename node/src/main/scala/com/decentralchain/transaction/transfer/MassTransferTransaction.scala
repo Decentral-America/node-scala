@@ -31,7 +31,7 @@ case class MassTransferTransaction(
 ) extends Transaction(
       TransactionType.MassTransfer,
       assetId match {
-        case Dcc          => Seq()
+        case Dcc            => Seq()
         case a: IssuedAsset => Seq(a)
       }
     )

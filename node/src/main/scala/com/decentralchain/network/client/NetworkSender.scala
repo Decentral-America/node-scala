@@ -27,7 +27,7 @@ class NetworkSender(trafficLoggerSettings: TrafficLogger.Settings, chainId: Char
       else if (!channel.isWritable) Future.failed(new ClosedChannelException)
       else {
         val (send, keep) = messages.splitAt(MessagesBatchSize)
-        val futures = send.toVector.map { msg =>
+        val futures      = send.toVector.map { msg =>
           val result = Promise[Unit]()
           channel.write(msg).addListener { (f: ChannelFuture) =>
             if (!f.isSuccess) {

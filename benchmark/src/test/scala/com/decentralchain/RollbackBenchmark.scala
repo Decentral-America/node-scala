@@ -69,7 +69,7 @@ object RollbackBenchmark extends ScorexLogging {
       )
       .explicitGet()
 
-    val map = assets.map(it => IssuedAsset(it.id()) -> 1L).to(VectorMap)
+    val map        = assets.map(it => IssuedAsset(it.id()) -> 1L).to(VectorMap)
     val portfolios = for {
       address <- addresses
     } yield address -> Portfolio(assets = map)

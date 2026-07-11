@@ -83,10 +83,10 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
       .foreach { version =>
         val (_, _, _, _, tx, _, _) = preconditionsAndPayments
 
-        val int  = tx.data(0)
-        val bool = tx.data(1)
-        val bin  = tx.data(2)
-        val str  = tx.data(3)
+        val int    = tx.data(0)
+        val bool   = tx.data(1)
+        val bin    = tx.data(2)
+        val str    = tx.data(3)
         val result = runScript[CONST_BOOLEAN](
           s"""
              |match tx {
@@ -142,7 +142,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
     val bool = tx.data(1)
     val bin  = tx.data(2)
     val str  = tx.data(3)
-    val ok = runScript[CONST_BOOLEAN](
+    val ok   = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
          | case tx: DataTransaction => {
@@ -582,7 +582,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
         } shouldBe expectedResAfterBlockRewardDistribution
       }
 
-      val invoke = () => TxHelpers.invoke(dApp.toAddress, Some("foo"), invoker = invoker)
+      val invoke    = () => TxHelpers.invoke(dApp.toAddress, Some("foo"), invoker = invoker)
       val cleanData = () =>
         TxHelpers.data(
           dApp,
@@ -625,7 +625,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
     val miner      = TxHelpers.signer(1005)
     val invoker    = TxHelpers.signer(1006)
     val dapp       = TxHelpers.signer(1007)
-    val settings = ConsensusImprovements
+    val settings   = ConsensusImprovements
       .setFeaturesHeight(
         BlockchainFeatures.BlockRewardDistribution -> 0,
         BlockchainFeatures.CappedReward            -> 0,
@@ -842,7 +842,7 @@ class ContextFunctionsTest extends PropSpec with WithDomain with EthHelpers {
         append(Seq(transferTx)).explicitGet()
 
         val txBytesBase58 = Base58.encode(PBTransactionSerializer.bytes(transferTx))
-        val script = ScriptCompiler
+        val script        = ScriptCompiler
           .compile(
             s"""
                |

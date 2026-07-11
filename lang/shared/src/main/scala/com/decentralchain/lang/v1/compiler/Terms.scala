@@ -242,20 +242,20 @@ object Terms {
   }
 
   case class CONST_LONG(t: Long) extends EVALUATED {
-    override def toString: String = t.toString
-    override val weight: Long     = 8L
-    override val getType: REAL    = LONG
-    override def hashCode(): Int  = t.hashCode()
+    override def toString: String          = t.toString
+    override val weight: Long              = 8L
+    override val getType: REAL             = LONG
+    override def hashCode(): Int           = t.hashCode()
     override def equals(obj: Any): Boolean = obj match {
       case CONST_LONG(`t`) => true
       case _               => false
     }
   }
   case class CONST_BIGINT(t: BigInt) extends EVALUATED {
-    override def toString: String = t.toString
-    override val weight: Long     = 64L
-    override val getType: REAL    = BIGINT
-    override def hashCode(): Int  = t.hashCode()
+    override def toString: String          = t.toString
+    override val weight: Long              = 64L
+    override val getType: REAL             = BIGINT
+    override def hashCode(): Int           = t.hashCode()
     override def equals(obj: Any): Boolean = obj match {
       case CONST_BIGINT(`t`) => true
       case _                 => false

@@ -131,7 +131,7 @@ object StateSnapshot {
       }
       if (dccAmount != 0)
         for {
-          assetBalances   <- assetBalancesE
+          assetBalances <- assetBalancesE
           newDccBalance <- safeSum(blockchain.balance(address), dccAmount, s"$address -> Dcc balance")
         } yield assetBalances + ((address, Dcc) -> newDccBalance)
       else
@@ -177,7 +177,7 @@ object StateSnapshot {
       issuedAssets: Seq[(IssuedAsset, NewAssetInfo)],
       updatedAssets: Map[IssuedAsset, Ior[AssetInfo, AssetVolumeInfo]]
   ): Map[IssuedAsset, AssetVolumeInfo] = {
-    val issued = issuedAssets.view.map { case (id, nai) => id -> nai.volume }.toMap
+    val issued  = issuedAssets.view.map { case (id, nai) => id -> nai.volume }.toMap
     val updated = updatedAssets.collect {
       case (asset, Ior.Right(volume))   => (asset, volume)
       case (asset, Ior.Both(_, volume)) => (asset, volume)
@@ -194,7 +194,7 @@ object StateSnapshot {
       issuedAssets: Seq[(IssuedAsset, NewAssetInfo)],
       updatedAssets: Map[IssuedAsset, Ior[AssetInfo, AssetVolumeInfo]]
   ): Map[IssuedAsset, AssetInfo] = {
-    val issued = issuedAssets.view.map { case (id, nai) => id -> nai.dynamic }.toMap
+    val issued  = issuedAssets.view.map { case (id, nai) => id -> nai.dynamic }.toMap
     val updated = updatedAssets.collect {
       case (asset, Ior.Left(info))    => (asset, info)
       case (asset, Ior.Both(info, _)) => (asset, info)

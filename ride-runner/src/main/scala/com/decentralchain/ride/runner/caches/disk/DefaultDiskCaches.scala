@@ -53,9 +53,9 @@ class DefaultDiskCaches private (storage: RideDbAccess, initialBlockHeadersLastH
           address,
           { address =>
             val key = KvPairs.AddressToId.at(address)
-            val r = ctx.getOpt(key) match {
+            val r   = ctx.getOpt(key) match {
               case Some(r) => r
-              case None =>
+              case None    =>
                 val newId = AddressId(lastAddressId.incrementAndGet())
                 log.trace(s"New address $address is assigned to $newId")
                 ctx.put(key, newId)

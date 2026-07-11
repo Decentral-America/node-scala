@@ -23,11 +23,11 @@ object BalanceDiffValidation {
         newLease: LeaseBalance,
         additionalDeposit: Long
     ): Either[(Address, String), Unit] = {
-      val oldDcc   = b.balance(acc)
+      val oldDcc     = b.balance(acc)
       val oldDeposit = b.generationDeposit(acc)
       val oldLease   = b.leaseBalance(acc)
 
-      val newDeposit          = oldDeposit + additionalDeposit
+      val newDeposit        = oldDeposit + additionalDeposit
       val newDccWithDeposit = newDcc - newDeposit
 
       val leaseOutDiff = newLease.out - oldLease.out
@@ -53,7 +53,7 @@ object BalanceDiffValidation {
         .flatMap {
           case ((address, Dcc), balance) =>
             val currentLeaseBalance = snapshot.leaseBalances.getOrElse(address, b.leaseBalance(address))
-            val depositedOnNext = DepositInDcclets *
+            val depositedOnNext     = DepositInDcclets *
               snapshot.nextCommittedGenerators.find { case (pk, _) => pk.toAddress == address }.size
             checkDcc(address, balance, currentLeaseBalance, depositedOnNext).fold(error => List(error), _ => Nil)
           case _ =>

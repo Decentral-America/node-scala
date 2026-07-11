@@ -9,7 +9,7 @@ import com.decentralchain.transaction.{Asset, AssetIdLength}
 import com.decentralchain.utils.StringBytes
 
 class AccountDescriptionDiskCacheTestSuite extends DiskCacheWithHistoryTestSuite[IssuedAsset, WeighedAssetDescription] {
-  protected override val defaultKey = Asset.IssuedAsset(ByteStr(Array.fill[Byte](AssetIdLength)(0)))
+  protected override val defaultKey   = Asset.IssuedAsset(ByteStr(Array.fill[Byte](AssetIdLength)(0)))
   protected override val defaultValue = WeighedAssetDescription(
     scriptWeight = 0,
     assetDescription = AssetDescription(

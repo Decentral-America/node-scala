@@ -46,7 +46,7 @@ class RideV6FailRejectTest extends FreeSpec with WithDomain with OptionValues wi
   private val aliceNotReIssuableAssetTx = TxHelpers.issue(issuer = alice, amount = 100, reissuable = false)
   private val aliceLeasingTx            = TxHelpers.lease(sender = alice, recipient = bobAddr)
   private val aliceLeasingId            = aliceLeasingTx.id()
-  private val aliceInvokeTx = TxHelpers.invoke(
+  private val aliceInvokeTx             = TxHelpers.invoke(
     dApp = aliceAddr,
     invoker = invoker,
     func = Some("foo"),

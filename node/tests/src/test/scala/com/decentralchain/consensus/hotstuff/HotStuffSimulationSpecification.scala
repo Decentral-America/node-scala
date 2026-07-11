@@ -13,9 +13,10 @@ import scala.collection.mutable
 /** Deterministic in-process simulation of the full 3-phase HotStuff loop across 4 coordinators
   * exchanging messages over a fake bus. Validates the `HotStuffCoordinator` orchestration
   * (propose → PREPARE → PRE_COMMIT → COMMIT → finalize) without real network/timers. Multi-node
-  * IT under real faults/partitions is step 5. */
+  * IT under real faults/partitions is step 5.
+  */
 class HotStuffSimulationSpecification extends FlatSpec {
-  private val kps = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
+  private val kps                     = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
   private val committee: GeneratorSet = kps.zipWithIndex.map { case (kp, i) =>
     GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, 25L)
   }
@@ -29,10 +30,10 @@ class HotStuffSimulationSpecification extends FlatSpec {
     live.foreach(committed(_) = None)
 
     class SimEffects(self: Int) extends HotStuffEffects {
-      def broadcast(m: Message): Unit                              = inbox.enqueue((self, m))
-      def myVoterIndexes: Set[Int]                                 = Set(self)
+      def broadcast(m: Message): Unit                                = inbox.enqueue((self, m))
+      def myVoterIndexes: Set[Int]                                   = Set(self)
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
-      def onCommit(blockId: BlockId, height: Int): Unit            = committed(self) = Some((blockId, height))
+      def onCommit(blockId: BlockId, height: Int): Unit              = committed(self) = Some((blockId, height))
     }
 
     val nodes: Map[Int, HotStuffCoordinator.Enabled] =

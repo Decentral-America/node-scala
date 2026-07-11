@@ -29,7 +29,7 @@ final case class CommitToGenerationTransaction(
     with PBSince.V1 {
   override val bodyBytes: Coeval[Array[Byte]] = Coeval.evalOnce(PBTransactionSerializer.bodyBytes(this))
   override val bytes: Coeval[Array[Byte]]     = Coeval.evalOnce(PBTransactionSerializer.bytes(this))
-  override val json: Coeval[JsObject] =
+  override val json: Coeval[JsObject]         =
     Coeval.evalOnce(
       BaseTxJson.toJson(this) ++ Json.obj(
         "endorserPublicKey"     -> endorserPublicKey.base58,
@@ -65,7 +65,7 @@ object CommitToGenerationTransaction {
   ): Either[ValidationError, CommitToGenerationTransaction] =
     for {
       feeInDcc <- TxPositiveAmount(feeInDcc)(TxValidationError.InsufficientFee)
-      tx <- CommitToGenerationTransaction(
+      tx       <- CommitToGenerationTransaction(
         version,
         sender,
         endorserPublicKey,

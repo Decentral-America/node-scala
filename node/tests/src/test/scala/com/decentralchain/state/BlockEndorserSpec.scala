@@ -37,7 +37,7 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
       withDomain(defaultSettings, AddrWithBalance.enoughBalances(generator1, generator2)) { d =>
         val endorsementStorage = new EndorsementStorage {
           override def tryAdd(msg: EndorseBlock): Either[String, Boolean] = false.asRight
-          override def startVoting(filter: EndorsementFilter): Boolean = {
+          override def startVoting(filter: EndorsementFilter): Boolean    = {
             actualFilter = Some(filter)
             true
           }

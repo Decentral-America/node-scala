@@ -120,7 +120,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
     val height = nodes.head.height
     val block  = forgeBlock(height, signerPK)(updateBaseTarget = _ + 2)
 
-    val signature = crypto.sign(otherNodePK.privateKey, block.bytes())
+    val signature     = crypto.sign(otherNodePK.privateKey, block.bytes())
     val resignedBlock =
       block
         .copy(signature = signature)
@@ -227,7 +227,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
     val height = nodes.head.height
     val block  = forgeBlock(height, signerPK)(updateBaseTarget = _ + 2)
 
-    val signature = crypto.sign(otherNodePK.privateKey, block.bytes())
+    val signature     = crypto.sign(otherNodePK.privateKey, block.bytes())
     val resignedBlock =
       block
         .copy(signature = signature)
@@ -334,7 +334,7 @@ class PoSSuite extends BaseFunSuite with WaitForHeight2 {
       else None
 
     val (lastBlockId, lastBlockTS, lastBlockCData, lastBlockVRF) = blockInfo(height)
-    val genSig: ByteStr =
+    val genSig: ByteStr                                          =
       if (height + 1 < vrfActivationHeight)
         ByteStr(generatorSignature(lastBlockCData.generationSignature.arr, signerPK.publicKey))
       else

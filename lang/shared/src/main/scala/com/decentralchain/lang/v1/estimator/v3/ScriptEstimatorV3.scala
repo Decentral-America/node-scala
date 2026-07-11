@@ -78,7 +78,7 @@ case class ScriptEstimatorV3(fixOverflow: Boolean, overhead: Boolean, letFixes: 
         startCtx             <- get[Id, EstimatorContext, EstimationError]
         (bodyCost, usedRefs) <- withUsedRefs(evalExpr(let.value, activeFuncArgs))
         ctx                  <- get[Id, EstimatorContext, EstimationError]
-        letCosts <- usedRefs.toSeq.traverse { ref =>
+        letCosts             <- usedRefs.toSeq.traverse { ref =>
           local {
             for {
               _    <- update(ctx1 => ctx1.copy(funcs = startCtx.funcs))
@@ -89,7 +89,7 @@ case class ScriptEstimatorV3(fixOverflow: Boolean, overhead: Boolean, letFixes: 
       } yield bodyCost + letCosts.sum
     for {
       cost <- local(costEvaluation)
-      _ <- update(ctx =>
+      _    <- update(ctx =>
         ctx.copy(
           globalLetEvals = ctx.globalLetEvals + (let.name   -> costEvaluation),
           globalLetsCosts = ctx.globalLetsCosts + (let.name -> cost)

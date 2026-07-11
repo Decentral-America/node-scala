@@ -67,7 +67,7 @@ object TxValidationError {
       with WithLog {
     import FailedTransactionError.*
 
-    def code: Int = cause.code
+    def code: Int       = cause.code
     def message: String = cause match {
       case Cause.DAppExecution | Cause.FeeForActions     => error.get
       case Cause.AssetScriptInAction | Cause.AssetScript => assetScriptError(assetId.get, error)
@@ -142,8 +142,8 @@ object TxValidationError {
   }
 
   case class ScriptExecutionError(message: String, log: Log[Id], assetId: Option[ByteStr]) extends ValidationError with WithLog {
-    def isAssetScript: Boolean = assetId.isDefined
-    private val target: String = assetId.fold("Account")(_ => "Asset")
+    def isAssetScript: Boolean    = assetId.isDefined
+    private val target: String    = assetId.fold("Account")(_ => "Asset")
     override def toString: String =
       if (String.valueOf(message).startsWith("ScriptExecutionError"))
         message

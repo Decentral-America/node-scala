@@ -109,7 +109,7 @@ class DCCEnvironmentRebenchmark {
       val transactionNr = ThreadLocalRandom.current().nextInt(st.dataEntries.size)
       val dataEntry     = st.dataEntries(transactionNr)._1
       val address       = st.dataEntries(transactionNr)._2
-      val t =
+      val t             =
         dataEntry.`type` match {
           case "string"  => DataType.String
           case "integer" => Long

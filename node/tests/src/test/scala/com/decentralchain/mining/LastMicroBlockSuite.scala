@@ -28,7 +28,7 @@ class LastMicroBlockSuite extends FreeSpec with WithDomain with TestSchedulerOps
   private val baseSettings       = DomainPresets.TransactionStateSnapshot
   private val microBlockInterval = 5.seconds
   private val minMicroBlockAge   = 3.seconds
-  private val defaultSettings = baseSettings.copy(
+  private val defaultSettings    = baseSettings.copy(
     minerSettings = baseSettings.minerSettings.copy(quorum = 0, microBlockInterval = microBlockInterval, minMicroBlockAge = minMicroBlockAge)
   )
 

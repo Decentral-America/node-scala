@@ -207,8 +207,8 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
   test("accept invalid by asset script in payment InvokeScriptTransaction to utx and save it as failed after activation height") {
     sender.setAssetScript(asset, dAppKP, priorityFee, assetScript(true), waitForTx = true)
 
-    val invokesCount  = MaxTxsInMicroBlock * 2
-    val callerBalance = sender.balance(caller).balance
+    val invokesCount       = MaxTxsInMicroBlock * 2
+    val callerBalance      = sender.balance(caller).balance
     val callerAssetBalance = {
       val balance = sender.assetBalance(caller, asset).balance
       if (balance < invokesCount) {
@@ -293,7 +293,7 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
 
     val assetPair = AssetPair.createAssetPair("DCC", tradeAsset)
 
-    val ts = ntpTime.getTimestamp()
+    val ts       = ntpTime.getTimestamp()
     val buyOrder = Order
       .buy(
         Order.V4,
@@ -368,7 +368,7 @@ class AcceptFailedScriptActivationSuite extends BaseTransactionSuite with NTPTim
     val assetPair = AssetPair.createAssetPair("DCC", tradeAsset).get
 
     def orders: (Order, Order) = {
-      val ts = ntpTime.getTimestamp()
+      val ts  = ntpTime.getTimestamp()
       val buy = Order
         .buy(
           Order.V4,

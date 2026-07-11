@@ -24,7 +24,7 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
 
   test("able to make transfer with sponsored fee") {
     for (v <- sponsorFeeTxSupportedVersions) {
-      val minerDccBalance  = sender.dccBalance(ByteString.copyFrom(Base58.decode(miner.address)))
+      val minerDccBalance    = sender.dccBalance(ByteString.copyFrom(Base58.decode(miner.address)))
       val minerBalanceHeight = sender.height
 
       val sponsoredAssetId = PBTransactions
@@ -48,9 +48,9 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         waitForTx = true
       )
 
-      val aliceDccBalance   = sender.dccBalance(aliceAddress)
-      val bobDccBalance     = sender.dccBalance(bobAddress)
-      val sponsorDccBalance = sender.dccBalance(sponsorAddress)
+      val aliceDccBalance     = sender.dccBalance(aliceAddress)
+      val bobDccBalance       = sender.dccBalance(bobAddress)
+      val sponsorDccBalance   = sender.dccBalance(sponsorAddress)
       val aliceAssetBalance   = sender.assetsBalance(aliceAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val bobAssetBalance     = sender.assetsBalance(bobAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val sponsorAssetBalance = sender.assetsBalance(sponsorAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
@@ -176,9 +176,9 @@ class SponsorFeeTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         s"does not exceed minimal value of $minFee DCC or $largeFee $sponsoredAssetId",
         Code.INVALID_ARGUMENT
       )
-      val aliceDccBalance   = sender.dccBalance(aliceAddress)
-      val bobDccBalance     = sender.dccBalance(bobAddress)
-      val sponsorDccBalance = sender.dccBalance(sponsorAddress)
+      val aliceDccBalance     = sender.dccBalance(aliceAddress)
+      val bobDccBalance       = sender.dccBalance(bobAddress)
+      val sponsorDccBalance   = sender.dccBalance(sponsorAddress)
       val aliceAssetBalance   = sender.assetsBalance(aliceAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val bobAssetBalance     = sender.assetsBalance(bobAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)
       val sponsorAssetBalance = sender.assetsBalance(sponsorAddress, Seq(sponsoredAssetId)).getOrElse(sponsoredAssetId, 0L)

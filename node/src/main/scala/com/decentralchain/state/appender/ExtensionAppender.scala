@@ -47,7 +47,7 @@ object ExtensionAppender extends ScorexLogging {
 
                 val droppedBlocksEi = for {
                   commonBlockHeight <- blockchainUpdater.heightOf(lastCommonBlockId).toRight(GenericError("Fork contains no common parent"))
-                  droppedBlocks <- {
+                  droppedBlocks     <- {
                     if (commonBlockHeight < initialHeight)
                       blockchainUpdater.removeAfter(lastCommonBlockId)
                     else Right(Seq.empty)

@@ -37,22 +37,22 @@ class SponsorshipSuite extends BaseFreeSpec with IntegrationSuiteWithThreeAddres
   private lazy val bobAddress = bob.toAddress.toString
 
   val Dcc                                 = 100000000L
-  val Token                                 = 100L
-  val sponsorAssetTotal                     = 100 * Token
-  val minSponsorFee                         = Token
-  val TinyFee                               = Token / 2
-  val SmallFee                              = Token + Token / 2
-  val LargeFee                              = 10 * Token
+  val Token                               = 100L
+  val sponsorAssetTotal                   = 100 * Token
+  val minSponsorFee                       = Token
+  val TinyFee                             = Token / 2
+  val SmallFee                            = Token + Token / 2
+  val LargeFee                            = 10 * Token
   var sponsorDccBalance                   = 0L
   var minerDccBalance                     = 0L
   var minerDccBalanceAfterFirstXferTest   = 0L
   var sponsorDccBalanceAfterFirstXferTest = 0L
-  var firstSponsorAssetId: String           = ""
-  var secondSponsorAssetId: String          = ""
-  var firstTransferTxToAlice: String        = ""
-  var secondTransferTxToAlice: String       = ""
-  var firstSponsorTxId: String              = ""
-  var secondSponsorTxId: String             = ""
+  var firstSponsorAssetId: String         = ""
+  var secondSponsorAssetId: String        = ""
+  var firstTransferTxToAlice: String      = ""
+  var secondTransferTxToAlice: String     = ""
+  var firstSponsorTxId: String            = ""
+  var secondSponsorTxId: String           = ""
 
   def assertMinAssetFee(txId: String, sponsorship: Long): Assertion = {
     val txInfo = miner.transactionInfo[TransactionInfo](txId)
@@ -325,10 +325,10 @@ class SponsorshipSuite extends BaseFreeSpec with IntegrationSuiteWithThreeAddres
         val sponsorSecondAssetBalance = sender.assetBalance(sponsorAddress, secondSponsorAssetId).balance
         val aliceFirstAssetBalance    = sender.assetBalance(aliceAddress, firstSponsorAssetId).balance
         val aliceSecondAssetBalance   = sender.assetBalance(aliceAddress, secondSponsorAssetId).balance
-        val aliceDccBalance         = sender.accountBalances(aliceAddress)
+        val aliceDccBalance           = sender.accountBalances(aliceAddress)
         val bobFirstAssetBalance      = sender.assetBalance(bobAddress, firstSponsorAssetId).balance
         val bobSecondAssetBalance     = sender.assetBalance(bobAddress, secondSponsorAssetId).balance
-        val bobDccBalance           = sender.accountBalances(bobAddress)
+        val bobDccBalance             = sender.accountBalances(bobAddress)
         val minerBalance              = miner.accountBalances(miner.address)
         val minerFirstAssetBalance    = miner.assetBalance(miner.address, firstSponsorAssetId).balance
         val minerSecondAssetBalance   = miner.assetBalance(miner.address, secondSponsorAssetId).balance
@@ -401,8 +401,8 @@ class SponsorshipSuite extends BaseFreeSpec with IntegrationSuiteWithThreeAddres
         val sponsorSecondAssetBalance = sender.assetBalance(sponsorAddress, secondSponsorAssetId).balance
         val aliceFirstAssetBalance    = sender.assetBalance(aliceAddress, firstSponsorAssetId).balance
         val aliceSecondAssetBalance   = sender.assetBalance(aliceAddress, firstSponsorAssetId).balance
-        val aliceDccBalance         = sender.accountBalances(aliceAddress)
-        val bobDccBalance           = sender.accountBalances(bobAddress)
+        val aliceDccBalance           = sender.accountBalances(aliceAddress)
+        val bobDccBalance             = sender.accountBalances(bobAddress)
         val minerBalance              = miner.accountBalances(miner.address)
 
         val transferTxCustomFeeAlice1 = sender.transfer(alice, bobAddress, 1.dcc, LargeFee, None, Some(firstSponsorAssetId)).id
@@ -495,7 +495,7 @@ class SponsorshipSuite extends BaseFreeSpec with IntegrationSuiteWithThreeAddres
     }
 
     "miner is sponsor" in {
-      val minerBalance = miner.accountBalances(miner.address)
+      val minerBalance     = miner.accountBalances(miner.address)
       val firstMinersAsset =
         miner
           .issue(

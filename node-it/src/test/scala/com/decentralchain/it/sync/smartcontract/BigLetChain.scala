@@ -15,7 +15,7 @@ import org.scalatest.CancelAfterFailure
 
 class BigLetChain extends BaseTransactionSuite with CancelAfterFailure {
   test("big let assignment chain") {
-    val count = 280
+    val count      = 280
     val scriptText =
       s"""
          | {-# STDLIB_VERSION 3    #-}

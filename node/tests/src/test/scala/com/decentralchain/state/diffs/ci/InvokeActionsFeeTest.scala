@@ -20,7 +20,7 @@ class InvokeActionsFeeTest extends PropSpec with Inside with WithState with DBCa
   import DomainPresets.*
 
   private val activationHeight = 4
-  private val fsWithV5 =
+  private val fsWithV5         =
     RideV5
       .configure(_.copy(estimatorPreCheckHeight = Int.MaxValue))
       .setFeaturesHeight(SynchronousCalls -> activationHeight)
@@ -66,7 +66,7 @@ class InvokeActionsFeeTest extends PropSpec with Inside with WithState with DBCa
     withDomain(RideV4, AddrWithBalance.enoughBalances(secondSigner)) { d =>
       val issueTx = issue(script = Some(TestCompiler(V4).compileExpression("true")))
       val asset   = IssuedAsset(issueTx.id())
-      val dApp = TestCompiler(V4).compileContract(
+      val dApp    = TestCompiler(V4).compileContract(
         s"""
            | @Callable(i)
            | func transfer() = [ScriptTransfer(i.caller, 1, base58'$asset')]

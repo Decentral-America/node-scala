@@ -25,7 +25,7 @@ case class SignedIssueV1Request(
     for {
       _sender    <- PublicKey.fromBase58String(senderPublicKey)
       _signature <- parseBase58(signature, "invalid signature", SignatureStringLength)
-      _t <- IssueTransaction.create(
+      _t         <- IssueTransaction.create(
         TxVersion.V1,
         _sender,
         name,

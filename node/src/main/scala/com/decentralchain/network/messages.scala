@@ -153,8 +153,7 @@ object EndorseBlock {
 /** A committed generator's vote for `blockId` in the given `view` and `phase`.
   * `signature` is a BLS signature over the canonical encoding of (view, phase, blockId, blockHeight).
   */
-case class HotStuffVote(view: Int, phase: HotStuffPhase, blockId: BlockId, blockHeight: Height, voterIndex: Int, signature: ByteStr)
-    extends Message {
+case class HotStuffVote(view: Int, phase: HotStuffPhase, blockId: BlockId, blockHeight: Height, voterIndex: Int, signature: ByteStr) extends Message {
   def toProtobuf: PBHotStuffVote =
     PBHotStuffVote(view, phase, blockId.toByteString, blockHeight.toInt, voterIndex, signature.toByteString)
 
@@ -189,7 +188,8 @@ object QuorumCertificate {
 }
 
 /** A leader's HotStuff proposal: extend `blockId` at `view`, justified by `justify` (the highQC the
-  * leader is extending). The justify linkage is what lets replicas check the 3-chain commit rule. */
+  * leader is extending). The justify linkage is what lets replicas check the 3-chain commit rule.
+  */
 case class HotStuffProposal(view: Int, blockId: BlockId, justify: Option[QuorumCertificate]) extends Message {
   def toProtobuf: PBHotStuffProposal = PBHotStuffProposal(view, blockId.toByteString, justify.map(_.toProtobuf))
 

@@ -78,7 +78,7 @@ class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
     Using.resource {
       Exporter.IO.createOutputStream(outputFilename) match {
         case Success(output) => output
-        case Failure(ex) =>
+        case Failure(ex)     =>
           log.error(s"Failed to create file '$outputFilename': $ex")
           throw ex
       }
@@ -126,7 +126,7 @@ class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
       checkGenesis(settings, blockchain, Miner.StrictDisabledMiner)
       val result = genBlocks.foldLeft[Either[ValidationError, Unit]](Right(())) {
         case (res @ Left(_), _) => res
-        case (_, genBlock) =>
+        case (_, genBlock)      =>
           time.time = miner.nextBlockGenerationTime(blockchain, blockchain.lastBlockHeader.get, genBlock.signer).explicitGet()
           val correctedTimeTxs = genBlock.txs.map(correctTxTimestamp(_, time))
 
@@ -158,7 +158,7 @@ class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
       result match {
         case Right(_) =>
           if (blockchain.isFeatureActivated(BlockchainFeatures.NG) && blockchain.liquidBlockMeta.nonEmpty) {
-            val lastHeader = blockchain.lastBlockHeader.get.header
+            val lastHeader  = blockchain.lastBlockHeader.get.header
             val pseudoBlock = Block(
               BlockHeader(
                 blockchain.blockVersionAt(blockchain.height),
@@ -189,7 +189,7 @@ class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
       case GenTx(t: BurnTransaction, Right(signer))        => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
       case GenTx(t: CreateAliasTransaction, Right(signer)) => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
       case GenTx(t: DataTransaction, Right(signer))        => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
-      case GenTx(t: EthereumTransaction, Left(signer)) =>
+      case GenTx(t: EthereumTransaction, Left(signer))     =>
         val correctedTimeRawTx = RawTransaction.createTransaction(
           BigInt(time.getTimestamp()).bigInteger,
           t.underlying.getGasPrice,
@@ -205,7 +205,7 @@ class BlockchainGenerator(dccSettings: DCCSettings) extends ScorexLogging {
       case GenTx(t: LeaseCancelTransaction, Right(signer))  => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
       case GenTx(t: LeaseTransaction, Right(signer))        => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
       case GenTx(t: MassTransferTransaction, Right(signer)) => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
-      case GenTx(t: PaymentTransaction, Right(signer)) =>
+      case GenTx(t: PaymentTransaction, Right(signer))      =>
         t.copy(timestamp = time.getTimestamp(), signature = crypto.sign(signer.privateKey, t.bodyBytes()))
       case GenTx(t: ReissueTransaction, Right(signer))         => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)
       case GenTx(t: SetAssetScriptTransaction, Right(signer))  => t.copy(timestamp = time.getTimestamp()).signWith(signer.privateKey)

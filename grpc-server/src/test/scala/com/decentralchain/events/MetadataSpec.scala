@@ -33,7 +33,7 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
     )
 
     val ethOrderSender = TxHelpers.signer(202).toEthKeyPair
-    val ethOrder = Order(
+    val ethOrder       = Order(
       4.toByte,
       OrderAuthentication.Eip712Signature(ByteStr(new Array[Byte](64))),
       matcher.publicKey,
@@ -62,8 +62,8 @@ class MetadataSpec extends FreeSpec with WithBUDomain {
     val massTransfer = TxHelpers.massTransfer(
       genesisAddress,
       Seq(
-        issuer.toAddress              -> 100.dcc,
-        matcher.toAddress             -> 100.dcc,
+        issuer.toAddress            -> 100.dcc,
+        matcher.toAddress           -> 100.dcc,
         ethOrderSender.toDccAddress -> 100.dcc
       ),
       fee = 0.003.dcc

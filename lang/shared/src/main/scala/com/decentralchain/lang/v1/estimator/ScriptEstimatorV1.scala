@@ -18,7 +18,7 @@ object ScriptEstimatorV1 extends ScriptEstimator {
     ): Result[(Long, Map[String, (EXPR, Boolean)])] = t.flatMap {
 
       case _: EVALUATED => EitherT.pure((1, syms))
-      case t: GETTER => aux(EitherT.pure(t.expr), syms, funcs).map { case (comp, out) => (comp + 2, out) }
+      case t: GETTER    => aux(EitherT.pure(t.expr), syms, funcs).map { case (comp, out) => (comp + 2, out) }
 
       case LET_BLOCK(let: LET, body) =>
         aux(EitherT.pure(body), syms + ((let.name, (let.value, false))), funcs)

@@ -117,7 +117,7 @@ class DecompilerTest extends PropSpec {
       LET("vari", REF("p")),
       TRUE
     )
-    val actual = Decompiler(expr, decompilerContextV3)
+    val actual   = Decompiler(expr, decompilerContextV3)
     val expected = """|let vari = p
                       |true""".stripMargin
     actual `shouldEq` expected
@@ -663,7 +663,7 @@ class DecompilerTest extends PropSpec {
     val script =
       """let arr = [1, 2, 3]
         |arr[1]""".stripMargin
-    val expr = compileExpr(script).explicitGet()._1
+    val expr  = compileExpr(script).explicitGet()._1
     val expr2 = compileExpr(
       """let arr = [1, 2, 3]
         |arr.getElement(1)""".stripMargin
@@ -825,8 +825,8 @@ class DecompilerTest extends PropSpec {
   )
 
   property("V4 - new functions") {
-    val sizes  = Seq(16, 32, 64, 128)
-    val hashes = Seq("blake2b", "keccak", "sha")
+    val sizes      = Seq(16, 32, 64, 128)
+    val hashes     = Seq("blake2b", "keccak", "sha")
     val directives =
       """
         | {-# STDLIB_VERSION 4    #-}

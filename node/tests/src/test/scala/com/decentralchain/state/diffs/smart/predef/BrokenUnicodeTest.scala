@@ -171,7 +171,7 @@ class BrokenUnicodeTest extends PropSpec with WithDomain with EitherValues {
     val versionsBeforeActivation     = if (lastVersion < V8) DirectiveDictionary[StdLibVersion].all.filter(_ < V5) else Seq(V4)
     val dAppVersionsBeforeActivation = versionsBeforeActivation.filter(_ >= V3)
 
-    val accWithFix = (1 to availableVersions.size).map(idx => TxHelpers.signer(idx + 1)).zip(availableVersions).toList
+    val accWithFix   = (1 to availableVersions.size).map(idx => TxHelpers.signer(idx + 1)).zip(availableVersions).toList
     val accWithNoFix =
       (1 to versionsBeforeActivation.size).map(idx => TxHelpers.signer(idx + availableVersions.size + 1)).zip(versionsBeforeActivation).toList
     val dAppWithFix = (1 to availableDAppVersions.size)

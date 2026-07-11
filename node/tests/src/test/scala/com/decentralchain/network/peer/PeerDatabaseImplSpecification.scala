@@ -37,9 +37,9 @@ class PeerDatabaseImplSpecification extends FreeSpec {
     .resolve()
   private val settings2 = ConfigSource.fromConfig(config2).at("dcc.network").loadOrThrow[NetworkSettings]
 
-  private var ts                 = 0L
-  private def sleepLong(): Unit  = { ts += 2200.millis.toNanos }
-  private def sleepShort(): Unit = { ts += 200.millis.toNanos }
+  private var ts                                                                     = 0L
+  private def sleepLong(): Unit                                                      = { ts += 2200.millis.toNanos }
+  private def sleepShort(): Unit                                                     = { ts += 200.millis.toNanos }
   private def withDatabase(settings: NetworkSettings)(f: PeerDatabase => Unit): Unit = {
     val pdb = new PeerDatabaseImpl(
       settings,

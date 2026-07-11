@@ -28,7 +28,7 @@ def mkJavaOptions(forPackager: Boolean = false, extraOptions: Seq[String] = Seq.
       "-XX:+UseG1GC",
       "-XX:+ParallelRefProcEnabled",
       "-XX:+UseStringDeduplication",
-      "-Djdk.attach.allowAttachSelf=true",    // for ehcache/sizeoOf
+      "-Djdk.attach.allowAttachSelf=true", // for ehcache/sizeoOf
       // JVM default charset for proper and deterministic getBytes behaviour
       "-Dfile.encoding=UTF-8"
     ) ++ extraOptions

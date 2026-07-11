@@ -96,7 +96,7 @@ object Explorer extends ScorexLogging {
       flag match {
         case "WB" =>
           var accountsBaseTotalBalance = 0L
-          var dccBalanceRecords      = 0
+          var dccBalanceRecords        = 0
           rdb.db.iterateOver(KeyTag.DccBalance) { e =>
             val addressId = AddressId(Longs.fromByteArray(e.getKey.drop(Shorts.BYTES)))
             val key       = Keys.dccBalance(addressId)
@@ -298,7 +298,7 @@ object Explorer extends ScorexLogging {
           }
         case "ES" =>
           rdb.db.iterateOver(KeyTag.AddressScript) { e =>
-            val asi = readAccountScriptInfo(e.getValue)
+            val asi              = readAccountScriptInfo(e.getValue)
             val estimationResult = asi.script match {
               case ContractScript.ContractScriptImpl(stdLibVersion, expr) =>
                 SetScriptTransactionDiff.estimate(reader, stdLibVersion, expr)

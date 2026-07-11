@@ -92,7 +92,7 @@ object TransferTxSerializer {
     val data           = Data.Transfer(TransferTransactionData(Some(toProtobufRecipient(recipient)), Some(assetAmount), attachment))
     val feeAmount      = Amount().withAmount(fee)
     val feeAssetAmount = feeAssetId.fold(feeAmount)(feeAmount.withAssetId)
-    val transaction =
+    val transaction    =
       new SignedTransaction(
         SignedTransaction.Transaction.DccTransaction(Transaction(chainId, sender, Some(feeAssetAmount), timestamp, version, data)),
         proofs

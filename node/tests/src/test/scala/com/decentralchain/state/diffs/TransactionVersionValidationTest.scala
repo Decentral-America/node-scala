@@ -17,7 +17,7 @@ class TransactionVersionValidationTest extends PropSpec with WithDomain {
   private val issueTx1 = issue(script = Some(script))
   private val issueTx2 = issue()
   private val leaseTx  = lease()
-  private val setDApp = setScript(
+  private val setDApp  = setScript(
     secondSigner,
     TestCompiler(V6).compileContract(
       """

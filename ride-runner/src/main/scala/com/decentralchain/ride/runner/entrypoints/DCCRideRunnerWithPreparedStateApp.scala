@@ -75,20 +75,20 @@ object DCCRideRunnerWithPreparedStateApp {
     if (path.getFileName.toString.endsWith(".conf")) {
       // toAbsolutePath is required, otherwise Lightbend Config incorrectly resolve relative paths
       Try(RideRunnerInputParser.prepare(ConfigFactory.parseFile(path.toAbsolutePath.toFile))) match {
-        case Failure(e) => RunResultStatus.Error(new RuntimeException(s"Can't parse HOCON file: ${e.getMessage}", e))
+        case Failure(e)           => RunResultStatus.Error(new RuntimeException(s"Can't parse HOCON file: ${e.getMessage}", e))
         case Success(inputConfig) =>
           AppInitializer.setupChain(RideRunnerInputParser.getChainId(inputConfig)) // We must setup chain first to parse addresses
-          val input = RideRunnerInputParser.from(inputConfig)
+          val input       = RideRunnerInputParser.from(inputConfig)
           lazy val actual = {
             val r = run(input)
             input.postProcessing.foldLeft[JsValue](r) { case (r, x) => x.process(r) }
           }
 
           runMode match {
-            case RunMode.Run => RunResultStatus.Succeeded(actual)
+            case RunMode.Run     => RunResultStatus.Succeeded(actual)
             case _: RunMode.Test =>
               input.test match {
-                case None => RunResultStatus.Error(new RuntimeException("Is not a test: expected to have the 'test' field.") with NoStackTrace)
+                case None       => RunResultStatus.Error(new RuntimeException("Is not a test: expected to have the 'test' field.") with NoStackTrace)
                 case Some(test) =>
                   if (actual == test.expected) RunResultStatus.Succeeded(actual)
                   else RunResultStatus.Failed(actual, test.expected)
@@ -103,7 +103,7 @@ object DCCRideRunnerWithPreparedStateApp {
       case '?' => BlockchainSettings(input.chainId, FunctionalitySettings.MAINNET, GenesisSettings.MAINNET, RewardsSettings.MAINNET)
       case '!' => BlockchainSettings(input.chainId, FunctionalitySettings.TESTNET, GenesisSettings.TESTNET, RewardsSettings.TESTNET)
       case 'S' => BlockchainSettings(input.chainId, FunctionalitySettings.STAGENET, GenesisSettings.STAGENET, RewardsSettings.STAGENET)
-      case _ =>
+      case _   =>
         BlockchainSettings(
           addressSchemeCharacter = input.chainId,
           functionalitySettings = FunctionalitySettings(),
@@ -250,7 +250,7 @@ object DCCRideRunnerWithPreparedStateApp {
     private def render(testSuite: RideTestSuite): (Elem, FiniteDuration) = {
       val (childTestSuites, testSuitesTotalTime) = sumTime(testSuite.testSuites.view.map(render))
       val (childTestCases, testCasesTotalTime)   = sumTime(testSuite.testCases.view.map(path => render(testCases.get(path))))
-      val testSuiteName = Option(testSuite.path.getFileName).map(_.toString) match {
+      val testSuiteName                          = Option(testSuite.path.getFileName).map(_.toString) match {
         case Some("") => "."
         case Some(x)  => x
         case None     => "???"

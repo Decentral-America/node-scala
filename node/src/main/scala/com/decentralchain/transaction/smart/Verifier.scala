@@ -45,7 +45,7 @@ object Verifier extends ScorexLogging {
   ): TracedResult[ValidationError, Int] = (tx: @unchecked) match {
     case _: GenesisTransaction  => Right(0)
     case _: EthereumTransaction => Right(0)
-    case pt: ProvenTransaction =>
+    case pt: ProvenTransaction  =>
       (pt, blockchain.accountScript(pt.sender.toAddress)) match {
         case (stx: PaymentTransaction, None) =>
           stats.signatureVerification
@@ -180,7 +180,7 @@ object Verifier extends ScorexLogging {
     val senderAddress = transaction.asInstanceOf[Authorized].sender.toAddress
 
     val resultE = Try {
-      val containerAddress = assetIdOpt.fold(Recipient.Address(ByteStr(senderAddress.bytes)))(v => Environment.AssetId(v.arr))
+      val containerAddress                   = assetIdOpt.fold(Recipient.Address(ByteStr(senderAddress.bytes)))(v => Environment.AssetId(v.arr))
       val (log, evaluatedComplexity, result) =
         ScriptRunner(
           transaction,
@@ -192,7 +192,7 @@ object Verifier extends ScorexLogging {
           complexityLimit
         )
       val complexity = if (blockchain.storeEvaluatedComplexity) evaluatedComplexity else estimatedComplexity
-      val resultE = result match {
+      val resultE    = result match {
         case Left(execError) => Left(ScriptExecutionError(execError.message, log, assetIdOpt))
         case Right(FALSE)    => Left(TransactionNotAllowedByScript(log, assetIdOpt))
         case Right(TRUE)     => Right(complexity)
@@ -241,7 +241,7 @@ object Verifier extends ScorexLogging {
     ).toEither
       .leftMap(e => ScriptExecutionError(s"Uncaught execution error: $e", Nil, None))
       .flatMap { case (log, evaluatedComplexity, evaluationResult) =>
-        val complexity = if (blockchain.storeEvaluatedComplexity) evaluatedComplexity else script.verifierComplexity.toInt
+        val complexity     = if (blockchain.storeEvaluatedComplexity) evaluatedComplexity else script.verifierComplexity.toInt
         val verifierResult = evaluationResult match {
           case Left(execError) => Left(ScriptExecutionError(execError.message, log, None))
           case Right(FALSE)    => Left(TransactionNotAllowedByScript(log, None))

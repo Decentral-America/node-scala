@@ -76,7 +76,7 @@ object Evaluation {
       override def chainId: Byte                     = AddressScheme.current.chainId
       override def id: Coeval[ByteStr]               = Coeval(invocation.transactionId)
       override val tpe: TransactionType              = TransactionType.InvokeScript
-      override def payments: Seq[Payment] =
+      override def payments: Seq[Payment]            =
         invocation.payments.payments.map { case (amount, assetId) =>
           Payment(amount, Asset.fromCompatId(assetId))
         }

@@ -67,7 +67,7 @@ object ContractScriptCompactor {
   private def createCompName(oldName: String, state: State, dApp: DApp): CompactionResult[String] =
     state.originalNames.get(oldName) match {
       case Some(compName) => CompactionResult(compName, state)
-      case None =>
+      case None           =>
         val compactName = idxToName(state.counter)
         if (hasConflict(compactName, dApp)) {
           createCompName(oldName, State(state.counter + 1, state.originalNames, state.knownDecs), dApp)
@@ -104,7 +104,7 @@ object ContractScriptCompactor {
   }
 
   private def compact(dApp: DApp, state: State): DApp = {
-    val compDAppRes = processDappWithoutMeta(dApp, state, createCompName(_, _, dApp))
+    val compDAppRes  = processDappWithoutMeta(dApp, state, createCompName(_, _, dApp))
     val oldNameToIdx = compDAppRes.state.originalNames.map { case (oldName, compName) =>
       oldName -> nameToIdx(compName)
     }
@@ -199,13 +199,13 @@ object ContractScriptCompactor {
   }
 
   private def processDappWithoutMeta(dApp: DApp, state: State, replaceNameF: ReplaceNameF): CompactionResult[DApp] = {
-    val compDecsRes = processList[DECLARATION](dApp.decs, state, processDec(_, _, replaceNameF))
+    val compDecsRes          = processList[DECLARATION](dApp.decs, state, processDec(_, _, replaceNameF))
     val compCallableFuncsRes = dApp.callableFuncs.foldLeft(CompactionResult(Vector.empty[DApp.CallableFunction], compDecsRes.state)) {
       case (CompactionResult(compFuncs, state), func) =>
         val compInvArgNameRes = replaceNameF(func.annotation.invocationArgName, state)
         val compArgsRes       = processList(func.u.args, compInvArgNameRes.state, replaceNameF)
         val compBodyRes = processExpr(func.u.body, compArgsRes.state.addKnownDecs(func.annotation.invocationArgName +: func.u.args), replaceNameF)
-        val compFunc = func.copy(
+        val compFunc    = func.copy(
           annotation = func.annotation.copy(invocationArgName = compInvArgNameRes.value),
           u = func.u.copy(args = compArgsRes.value, body = compBodyRes.value)
         )
@@ -217,7 +217,7 @@ object ContractScriptCompactor {
       .fold[CompactionResult[Option[DApp.VerifierFunction]]](CompactionResult(None, compCallableFuncsRes.state)) { vFunc =>
         val compInvArgNameRes = replaceNameF(vFunc.annotation.invocationArgName, compCallableFuncsRes.state)
         val compFuncRes       = processFunc(vFunc.u, compInvArgNameRes.state.addKnownDecs(Seq(vFunc.annotation.invocationArgName)), replaceNameF)
-        val newVFunc = vFunc.copy(
+        val newVFunc          = vFunc.copy(
           annotation = vFunc.annotation.copy(invocationArgName = compInvArgNameRes.value),
           u = compFuncRes.value
         )
@@ -252,7 +252,7 @@ object ContractScriptCompactor {
     @tailrec
     def loop(list: List[A], compF: (A, State) => CompactionResult[A], acc: CompactionResult[Vector[A]]): CompactionResult[List[A]] = {
       list match {
-        case Nil => acc.copy(value = acc.value.toList)
+        case Nil          => acc.copy(value = acc.value.toList)
         case head :: tail =>
           val compArgRes = compF(head, acc.state)
           loop(tail, compF, CompactionResult(acc.value :+ compArgRes.value, compArgRes.state))

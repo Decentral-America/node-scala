@@ -81,9 +81,9 @@ class DebugApiRouteStateHashGenesisSpec
         domain.blockchain.isFeatureActivated(BlockchainFeatures.DeterministicFinality, domain.blockchain.height) shouldBe true
         val genesisHeight      = 1
         val genesisBlockHeader = domain.blockchain.blockHeader(genesisHeight).value
-        val expectedResponse = Json.obj(
+        val expectedResponse   = Json.obj(
           "stateHash"         -> "c14b7b14aaee11890fc243342c2bc36640f287da21bb891906c56c4bef094348",
-          "dccBalanceHash"  -> "f5f5d3d02528e2f4708b23b1410aae4eca91e333846552db57c75a62da7c36f4",
+          "dccBalanceHash"    -> "f5f5d3d02528e2f4708b23b1410aae4eca91e333846552db57c75a62da7c36f4",
           "assetBalanceHash"  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"     -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",

@@ -244,7 +244,7 @@ class ContractIntegrationTest extends PropSpec with Inside {
   }
 
   property("contract compiles if script uses InvokeScriptTransaction.fc field") {
-    val bytes = ByteStr.fill(1)(1)
+    val bytes        = ByteStr.fill(1)(1)
     val invokeScript = Tx.CI(
       p = Tx.Proven(
         h = Tx.Header(id = ByteStr.empty, fee = 0, timestamp = 0, version = 0),

@@ -79,7 +79,7 @@ class ExpressionCompilerV1Test extends PropSpec {
 
   property("expression compilation fails if function name length is longer than 255 bytes") {
     val tooLongName = "a" * (ContractLimits.MaxDeclarationNameInBytes + 1)
-    val funcExpr = {
+    val funcExpr    = {
       val script =
         s"""
            |func $tooLongName() = 1
@@ -101,7 +101,7 @@ class ExpressionCompilerV1Test extends PropSpec {
   }
 
   property("expression compiles if declaration name length is equal to 255 bytes") {
-    val maxName = "a" * ContractLimits.MaxDeclarationNameInBytes
+    val maxName  = "a" * ContractLimits.MaxDeclarationNameInBytes
     val funcExpr = {
       val script =
         s"""
@@ -309,7 +309,7 @@ class ExpressionCompilerV1Test extends PropSpec {
 
   property("JS API compile limit exceeding error") {
     val expr = s" ${"sigVerify(base58'', base58'', base58'') &&" * 350} true "
-    val ctx = Monoid
+    val ctx  = Monoid
       .combineAll(
         Seq(
           PureContext.build(V4, useNewPowPrecision = true).withEnvironment[Environment],

@@ -101,7 +101,7 @@ object AsyncGrpcApi {
       )
 
       script match {
-        case Left(_) => transactions.broadcast(SignedTransaction.of(SignedTransaction.Transaction.DccTransaction(unsigned), Seq(ByteString.EMPTY)))
+        case Left(_)   => transactions.broadcast(SignedTransaction.of(SignedTransaction.Transaction.DccTransaction(unsigned), Seq(ByteString.EMPTY)))
         case Right(sc) =>
           // IssueTxSerializer.bodyBytes can't be used here because we must be able to test broadcasting issue transaction with incorrect data
           val baseBytes = Bytes.concat(
@@ -314,7 +314,7 @@ object AsyncGrpcApi {
 
       script match {
         case Left(_) => transactions.broadcast(SignedTransaction.of(SignedTransaction.Transaction.DccTransaction(unsigned), Seq(ByteString.EMPTY)))
-        case _ =>
+        case _       =>
           val proofs =
             crypto.sign(
               sender.privateKey,
@@ -547,7 +547,7 @@ object AsyncGrpcApi {
 
       script match {
         case Left(_) => transactions.broadcast(SignedTransaction.of(SignedTransaction.Transaction.DccTransaction(unsigned), Seq(ByteString.EMPTY)))
-        case _ =>
+        case _       =>
           val proofs =
             crypto.sign(
               sender.privateKey,

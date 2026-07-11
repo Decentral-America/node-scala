@@ -55,7 +55,7 @@ object EndorsementStorage {
     override def tryAdd(msg: EndorseBlock): Either[String, Boolean] = synced {
       for {
         filter <- currentFilter.toRight("Voting hasn't started")
-        _ <- Either.raiseWhen(msg.finalizedHeight < GenesisBlockHeight || msg.finalizedHeight > filter.finalizedHeight) {
+        _      <- Either.raiseWhen(msg.finalizedHeight < GenesisBlockHeight || msg.finalizedHeight > filter.finalizedHeight) {
           s"Expected finalized height >= $GenesisBlockHeight and <= ${filter.finalizedHeight}"
         }
         _ <- Either.raiseWhen(msg.endorserIndex >= filter.normalizedGeneratorSet.size)(
@@ -68,7 +68,7 @@ object EndorsementStorage {
       } yield
         if (sharedWithNeighbors.contains(msg) || conflict.isDefinedAt(msg.endorserIndex) || filter.conflict.contains(endorserIndex)) false
         else {
-          val isValid = msg.finalizedHeight == filter.finalizedHeight && msg.finalizedId == filter.finalizedId
+          val isValid    = msg.finalizedHeight == filter.finalizedHeight && msg.finalizedId == filter.finalizedId
           val isConflict = !isValid && {
             msg.finalizedHeight == filter.finalizedHeight && msg.finalizedId != filter.finalizedId ||
             msg.finalizedHeight < filter.finalizedHeight && !blockAtHeight(msg.finalizedId, msg.finalizedHeight)
@@ -142,7 +142,7 @@ object EndorsementStorage {
 
         origResult = latestResult
         simulation = currentFilter.simulate(valid.keys, conflict.keySet)
-        _ = {
+        _          = {
           latestResult = createVoting(currentFilter, simulation)
         }
         changedFinalizationStatus = latestResult.reachedFinalization != origResult.reachedFinalization
@@ -175,7 +175,7 @@ object EndorsementStorage {
     private def verifySig(msg: EndorseBlock, pk: BlsPublicKey): Either[String, BlsSignature] =
       for {
         sig <- BlsSignature(msg.signature).leftMap(_.err)
-        _ <- Either.raiseUnless(pk.verify(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), sig)) {
+        _   <- Either.raiseUnless(pk.verify(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), sig)) {
           "BLS signature is invalid"
         }
       } yield sig

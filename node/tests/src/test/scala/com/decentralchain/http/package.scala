@@ -44,7 +44,7 @@ package object http {
     Reads {
       case JsArray(xs) =>
         xs.foldLeft[JsResult[Proofs]](JsSuccess(Proofs.empty)) {
-          case (r: JsError, _) => r
+          case (r: JsError, _)                       => r
           case (JsSuccess(r, _), JsString(rawProof)) =>
             ByteStr.decodeBase58(rawProof) match {
               case Failure(e) => JsError(e.toString)

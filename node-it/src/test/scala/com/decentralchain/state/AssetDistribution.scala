@@ -25,7 +25,7 @@ object AssetDistribution {
 type AssetDistributionPage = Paged[Address, AssetDistribution]
 object AssetDistributionPage {
   def apply(p: Paged[Address, AssetDistribution]): AssetDistributionPage = p
-  given Writes[AssetDistributionPage] = Writes { page =>
+  given Writes[AssetDistributionPage]                                    = Writes { page =>
     Json.obj(
       "hasNext"  -> JsBoolean(page.hasNext),
       "lastItem" -> Json.toJson(page.lastItem.map(_.toString)),

@@ -38,7 +38,7 @@ class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with
       withEnv { case Env(settings, pos, bcu, utxPoolStub, scheduler, account, lastBlock) =>
         val allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
         val wallet      = Wallet(WalletSettings(None, Some("123"), None))
-        val miner = new MinerImpl(
+        val miner       = new MinerImpl(
           allChannels,
           bcu,
           settings,
@@ -81,13 +81,13 @@ class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with
   def withEnv(f: Env => Unit): Unit = {
     val defaultWriter = TestRocksDB.withFunctionalitySettings(db, TestFunctionalitySettings.Stub)
 
-    val settings0     = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
-    val minerSettings = settings0.minerSettings.copy(quorum = 0)
+    val settings0           = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
+    val minerSettings       = settings0.minerSettings.copy(quorum = 0)
     val blockchainSettings0 = settings0.blockchainSettings.copy(
       functionalitySettings = settings0.blockchainSettings.functionalitySettings.copy(preActivatedFeatures = Map(BlockchainFeatures.FairPoS.id -> 1))
     )
     val synchronizationSettings0 = settings0.synchronizationSettings.copy(maxBaseTarget = Some(1L))
-    val settings = settings0.copy(
+    val settings                 = settings0.copy(
       blockchainSettings = blockchainSettings0,
       minerSettings = minerSettings,
       synchronizationSettings = synchronizationSettings0,
@@ -103,7 +103,7 @@ class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with
 
     try {
 
-      val ts = ntpTime.correctedTime() - 60000
+      val ts                                 = ntpTime.correctedTime() - 60000
       val (account, firstBlock, secondBlock) =
         Gen
           .containerOfN[Array, Byte](32, Arbitrary.arbitrary[Byte])
@@ -111,7 +111,7 @@ class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with
           .map { account =>
             val tx           = GenesisTransaction.create(account.toAddress, ENOUGH_AMT, ts + 1).explicitGet()
             val genesisBlock = TestBlock.create(ts + 2, List(tx)).block
-            val secondBlock = TestBlock
+            val secondBlock  = TestBlock
               .create(
                 ts + 3,
                 genesisBlock.id(),

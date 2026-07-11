@@ -63,7 +63,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
       }
       def block(height: Int) = d.blocksApi.blockAtHeight(Height(height)).get._1.header
       def appendBlock()      = append(miner.forgeBlock(defaultSigner).toEither.explicitGet().newBlock).explicitGet()
-      def appendMicro() = {
+      def appendMicro()      = {
         d.utxPool.putIfNew(transfer()).resultE.explicitGet()
         microBlockMiner.generateOneMicroBlockTask(defaultSigner, d.lastBlock, Unlimited, 0).runSyncUnsafe()
       }
@@ -141,7 +141,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         Observable.empty
       )
       def appendBlock(ref: Option[ByteStr]) = append(miner.forgeBlock(signer, ref).toEither.explicitGet().newBlock).explicitGet()
-      def appendMicro() = {
+      def appendMicro()                     = {
         d.utxPool.putIfNew(transfer(from = signer)).resultE.explicitGet()
         microBlockMiner.generateOneMicroBlockTask(signer, d.lastBlock, Unlimited, 0).runSyncUnsafe()
       }
@@ -177,8 +177,8 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
     ) { case (d, _, append) =>
       (1 to 9).foreach(_ => d.appendBlock())
       d.blockchain.height shouldBe 10
-      val challengedBlock  = d.createBlock(ProtoBlockVersion, Nil, strictTime = true, stateHash = invalidStateHash)
-      val challengingBlock = d.createChallengingBlock(secondSigner, challengedBlock, strictTime = true)
+      val challengedBlock                = d.createBlock(ProtoBlockVersion, Nil, strictTime = true, stateHash = invalidStateHash)
+      val challengingBlock               = d.createChallengingBlock(secondSigner, challengedBlock, strictTime = true)
       val blockWithOnlyChallengingHeader = {
         val challengedHeader = challengingBlock.header.challengedHeader.map(_.copy(stateHash = None))
         val block            = d.createBlock(ProtoBlockVersion, Nil, strictTime = true, challengedHeader = challengedHeader)

@@ -154,7 +154,7 @@ class SyncDAppLimits extends PropSpec with WithDomain with OptionValues with Eit
       if (restComplexity == 0) acc
       else
         restComplexityExamples match {
-          case Nil => loop(0, Nil, acc + " + 1" * restComplexity)
+          case Nil                              => loop(0, Nil, acc + " + 1" * restComplexity)
           case (exprComplexity, expr) :: restXs =>
             if (restComplexity >= exprComplexity) {
               val uncompletedExprComplexity = exprComplexity + 1 // 1 for "+"

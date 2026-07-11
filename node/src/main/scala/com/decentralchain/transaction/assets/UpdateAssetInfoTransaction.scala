@@ -70,7 +70,7 @@ object UpdateAssetInfoTransaction extends TransactionParser {
   ): Either[ValidationError, UpdateAssetInfoTransaction] =
     for {
       fee <- TxPositiveAmount(feeAmount)(TxValidationError.InsufficientFee)
-      tx <- UpdateAssetInfoTransaction(
+      tx  <- UpdateAssetInfoTransaction(
         version,
         sender,
         IssuedAsset(assetId),

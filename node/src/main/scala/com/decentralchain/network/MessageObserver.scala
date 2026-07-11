@@ -42,11 +42,11 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
 
   // T2 HotStuff (see docs/hotstuff-integration-design.md). Populated only when peers run a
   // HotStuff-enabled node; empty otherwise. Consumed by the coordinator wiring in Application (gated).
-  private val hotStuffVotesSubj                    = ConcurrentSubject.publish[(Channel, HotStuffVote)]
+  private val hotStuffVotesSubj                      = ConcurrentSubject.publish[(Channel, HotStuffVote)]
   val hotStuffVotes: ChannelObservable[HotStuffVote] = hotStuffVotesSubj
 
-  private val hotStuffQCsSubj                                = ConcurrentSubject.publish[(Channel, QuorumCertificate)]
-  val hotStuffQCs: ChannelObservable[QuorumCertificate]     = hotStuffQCsSubj
+  private val hotStuffQCsSubj                           = ConcurrentSubject.publish[(Channel, QuorumCertificate)]
+  val hotStuffQCs: ChannelObservable[QuorumCertificate] = hotStuffQCsSubj
 
   private val hotStuffProposalsSubj                          = ConcurrentSubject.publish[(Channel, HotStuffProposal)]
   val hotStuffProposals: ChannelObservable[HotStuffProposal] = hotStuffProposalsSubj

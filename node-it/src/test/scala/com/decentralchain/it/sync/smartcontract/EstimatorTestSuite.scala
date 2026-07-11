@@ -143,7 +143,7 @@ class EstimatorTestSuite extends BaseTransactionSuite with CancelAfterFailure {
     )
 
     val value = ByteStr(("4djidnqe9lK09le4FvgRD0BTok55nHP8MKFotfUeQOWEfBkp6MV4skCceWgDGBnc" * 512).dropRight(1).getBytes)
-    val data = List(
+    val data  = List(
       BinaryDataEntry(
         "v32767",
         value

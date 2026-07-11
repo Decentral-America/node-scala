@@ -14,7 +14,7 @@ trait JsonFormats {
   implicit lazy val functionSignaturesWrites: Writes[FunctionSignatures] =
     (o: FunctionSignatures) =>
       Json.obj(
-        "version" -> o.version.toString,
+        "version"           -> o.version.toString,
         "callableFuncTypes" -> Json.obj(
           o.argsWithFuncName.map { case (functionName, args) =>
             val functionArgs: JsValueWrapper =

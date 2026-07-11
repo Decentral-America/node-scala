@@ -22,7 +22,7 @@ class AssetsApiGrpcSuite extends BaseFreeSpec with ActivationStatusRequest with 
 
     val nonNftTx = sender.broadcastIssue(firstAcc, "non_nft_asset", 100, 8, reissuable = true, issueFee + smartFee)
 
-    val nftTxs = nftTxs1 ++ nftTxs2
+    val nftTxs        = nftTxs1 ++ nftTxs2
     val nftTxsHeights =
       nftTxs.map { case (_, tx) =>
         sender.waitForTransaction(tx.id)

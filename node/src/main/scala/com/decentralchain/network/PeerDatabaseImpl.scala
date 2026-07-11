@@ -120,7 +120,7 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     @tailrec
     def nextUnverified(): Option[InetSocketAddress] =
       unverifiedPeers.poll() match {
-        case null => None
+        case null    => None
         case nonNull =>
           if (!excludeAddress(nonNull)) Some(nonNull) else nextUnverified()
       }
@@ -131,8 +131,9 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     val selectedNextUnverified = nextUnverified()
 
     val filteredKnownPeers = knownPeers.keySet.filterNot(excludeAddress)
-    val randomKnownPeer =
-      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(ThreadLocalRandom.current().nextInt(filteredKnownPeers.size)) else filteredKnownPeers).headOption
+    val randomKnownPeer    =
+      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(ThreadLocalRandom.current().nextInt(filteredKnownPeers.size))
+       else filteredKnownPeers).headOption
 
     val selectedCandidate = resolvedPeersFromConfig
       .filterNot(excludeAddress)
@@ -176,7 +177,7 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   private def getRemoteAddress(channel: Channel): Option[InetSocketAddress] = channel match {
     case x: NioSocketChannel => Option(x.remoteAddress())
-    case x =>
+    case x                   =>
       log.debug(s"Doesn't know how to get a remoteAddress from $x")
       None
   }

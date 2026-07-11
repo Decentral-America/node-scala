@@ -33,8 +33,8 @@ class StateReaderEffectiveBalancePropertyTest extends PropSpec with WithDomain {
   }
 
   property("Negative generating balance case") {
-    val fs  = Enabled.copy(preActivatedFeatures = Map(SmartAccounts.id -> 0, SmartAccountTrading.id -> 0))
-    val Fee = 100000
+    val fs    = Enabled.copy(preActivatedFeatures = Map(SmartAccounts.id -> 0, SmartAccountTrading.id -> 0))
+    val Fee   = 100000
     val setup = {
       val master = TxHelpers.signer(1)
       val leaser = TxHelpers.signer(2)

@@ -111,7 +111,7 @@ private[repl] case class WebEnvironment(settings: NodeConnectionSettings, client
   ): Future[Either[String, Long]] =
     for {
       address <- extractAddress(recipient)
-      entity <- getEntity[[X] =>> Either[String, X], BalanceResponse, Long](assetId match {
+      entity  <- getEntity[[X] =>> Either[String, X], BalanceResponse, Long](assetId match {
         case Some(assetId) => s"/assets/balance/$address/${Base58.encode(assetId)}"
         case None          => s"/address/balance/$address"
       })

@@ -54,7 +54,7 @@ trait TransferSending extends ScorexLogging {
   }
 
   def generateTransfersBetweenAccounts(n: Int, balances: Map[Config, Long]): Seq[Req] = {
-    val fee = 100000
+    val fee     = 100000
     val srcDest = balances.toSeq
       .map { case (config, _) =>
         val accountSeed = config.getString("account-seed")
@@ -103,7 +103,7 @@ trait TransferSending extends ScorexLogging {
   def balanceForNode(n: Node): Future[(String, Long)] = n.balance(n.address).map(b => n.address -> b.balance)
 
   def processRequests(requests: Seq[Req], includeAttachment: Boolean = false): Future[Seq[Transaction]] = {
-    val start = System.currentTimeMillis() - requests.size
+    val start           = System.currentTimeMillis() - requests.size
     val signedTransfers = requests.zipWithIndex
       .map { case (x, i) =>
         createSignedTransferRequest(

@@ -8,7 +8,7 @@ object Dependencies {
 
   val gProtoVersion = "4.35.1"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
-  val overrides = Def.setting(
+  val overrides     = Def.setting(
     Seq(
       "org.scala-lang"           %% "scala3-library" % scalaVersion.value,
       "com.google.code.gson"      % "gson"           % "2.14.0",
@@ -44,7 +44,8 @@ object Dependencies {
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.8.1"
 
-  private def jacksonModule(group: String, module: String, version: String = "2.22.0") = s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
+  private def jacksonModule(group: String, module: String, version: String = "2.22.0") =
+    s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
   private def web3jModule(module: String) = "org.web3j" % module % "6.0.0" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
@@ -57,7 +58,7 @@ object Dependencies {
   val kamonCore       = kamonModule("core")
   val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.37"
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.11"
-  val curve25519      = "io.decentralchain"  % "curve25519"        % "1.0.0"
+  val curve25519      = "io.decentralchain"   % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
 
   val playJson = "org.playframework" %% "play-json" % "3.0.6"
@@ -109,8 +110,8 @@ object Dependencies {
 
   lazy val it = scalaTest +: Seq(
     logback,
-    "com.github.jnr"       % "jnr-unixsocket"                    % "0.39.1", // To support Apple ARM
-    "com.github.docker-java" % "docker-java-core"                 % "3.7.1",
+    "com.github.jnr"         % "jnr-unixsocket"                    % "0.39.1", // To support Apple ARM
+    "com.github.docker-java" % "docker-java-core"                  % "3.7.1",
     "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
     jacksonModule("dataformat", "dataformat-properties", "2.22.0"),
     asyncHttpClient
@@ -132,7 +133,7 @@ object Dependencies {
   private val rocksdb = "org.rocksdb" % "rocksdbjni" % "10.10.1.1"
 
   val scalaLogging: ModuleID = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6"
-  lazy val node = Def.setting(
+  lazy val node              = Def.setting(
     Seq(
       rocksdb,
       "commons-net"            % "commons-net"               % "3.13.0",
@@ -157,8 +158,8 @@ object Dependencies {
       "com.esaulpaugh"     % "headlong" % "13.3.1",
       "com.github.jbellis" % "jamm"     % "0.4.0", // Weighing caches
       web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
-      "io.decentralchain"        % "blst"                      % "0.3.16.0",
-      amazonCorretto("linux-x86_64") % Optional,
+      "io.decentralchain"              % "blst" % "0.3.16.0",
+      amazonCorretto("linux-x86_64")   % Optional,
       amazonCorretto("linux-aarch_64") % Optional
     ) ++ console ++ logDeps ++ protobuf.value
   )

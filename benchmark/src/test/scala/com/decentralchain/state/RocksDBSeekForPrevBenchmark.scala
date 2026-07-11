@@ -68,7 +68,7 @@ object RocksDBSeekForPrevBenchmark {
     val keyString                          = "key"
     val currentDataKey: Array[Byte]        = Keys.data(addressId, keyString).keyBytes
     val dataNodeKey: Height => Array[Byte] = Keys.dataAt(addressId, "key")(_).keyBytes
-    val dataNodeKeyPrefix: Array[Byte] =
+    val dataNodeKeyPrefix: Array[Byte]     =
       Bytes.concat(Shorts.toByteArray(KeyTag.DataHistory.ordinal.toShort), addressId.toByteArray, keyString.getBytes)
 
     private val dataEntry: StringDataEntry = StringDataEntry(keyString, "value")

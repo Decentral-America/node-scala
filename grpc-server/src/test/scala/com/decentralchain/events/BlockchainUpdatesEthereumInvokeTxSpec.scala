@@ -20,17 +20,17 @@ class BlockchainUpdatesEthereumInvokeTxSpec extends BlockchainUpdatesTestBase {
   val ethAddressBalanceAfterTx: Long = firstTxParticipantBalanceBefore - invokeFee
 
   "Simple invoke transaction" - {
-    val issue          = TxHelpers.issue(firstTxParticipant)
-    val asset: Asset   = issue.asset
-    val assetByteStr   = Arg.Bytes(asset.compatId.get)
-    val addressByteStr = Arg.Bytes(ByteStr.apply(secondTxParticipantAddress.bytes))
-    val args: Seq[Arg] = Seq(assetByteStr, addressByteStr)
+    val issue                       = TxHelpers.issue(firstTxParticipant)
+    val asset: Asset                = issue.asset
+    val assetByteStr                = Arg.Bytes(asset.compatId.get)
+    val addressByteStr              = Arg.Bytes(ByteStr.apply(secondTxParticipantAddress.bytes))
+    val args: Seq[Arg]              = Seq(assetByteStr, addressByteStr)
     val invoke: EthereumTransaction =
       EthTxGenerator.generateEthInvoke(firstTxParticipantEthereum, firstTxParticipantAddress, invokeFunctionName, args, Seq.empty, invokeFee)
-    val issuerAssetBalanceAfterTx: Long        = issue.quantity.value - burnNum - scriptTransferAssetNum + reissueNum
+    val issuerAssetBalanceAfterTx: Long      = issue.quantity.value - burnNum - scriptTransferAssetNum + reissueNum
     val secondAddressDccBalanceAfterTx: Long = secondTxParticipantBalanceBefore + scriptTransferUnitNum
-    val issuerBalanceBeforeInvoke: Long        = firstTxParticipantBalanceBefore - issue.fee.value - fee
-    val balances: Seq[AddrWithBalance] = Seq(
+    val issuerBalanceBeforeInvoke: Long      = firstTxParticipantBalanceBefore - issue.fee.value - fee
+    val balances: Seq[AddrWithBalance]       = Seq(
       AddrWithBalance(firstTxParticipantAddress, firstTxParticipantBalanceBefore),
       AddrWithBalance(firstTxParticipantEthereumAddress, firstTxParticipantBalanceBefore),
       AddrWithBalance(secondTxParticipantAddress, secondTxParticipantBalanceBefore)
@@ -39,8 +39,8 @@ class BlockchainUpdatesEthereumInvokeTxSpec extends BlockchainUpdatesTestBase {
       (firstTxParticipantEthereumAddress, Dcc) -> (firstTxParticipantBalanceBefore, ethAddressBalanceAfterTx),
       (firstTxParticipantAddress, Dcc)         -> (issuerBalanceBeforeInvoke, issuerBalanceBeforeInvoke - scriptTransferUnitNum),
       (secondTxParticipantAddress, Dcc)        -> (secondTxParticipantBalanceBefore, secondAddressDccBalanceAfterTx),
-      (firstTxParticipantAddress, asset)         -> (issue.quantity.value, issuerAssetBalanceAfterTx),
-      (secondTxParticipantAddress, asset)        -> (0L, scriptTransferAssetNum)
+      (firstTxParticipantAddress, asset)       -> (issue.quantity.value, issuerAssetBalanceAfterTx),
+      (secondTxParticipantAddress, asset)      -> (0L, scriptTransferAssetNum)
     )
 
     "BU-226. Invoke have to return correct data for subscribe" in {
@@ -85,7 +85,7 @@ class BlockchainUpdatesEthereumInvokeTxSpec extends BlockchainUpdatesTestBase {
     val issue: IssueTransaction         = TxHelpers.issue(assetDappAccount)
     val asset: Asset                    = issue.asset
     val issueAssetFee                   = issue.fee.value
-    val massTx = TxHelpers.massTransfer(
+    val massTx                          = TxHelpers.massTransfer(
       assetDappAccount,
       Seq(
         firstTxParticipantAddress -> amount,
@@ -109,7 +109,7 @@ class BlockchainUpdatesEthereumInvokeTxSpec extends BlockchainUpdatesTestBase {
     val secondAddressAssetBalanceForAll          = amount - scriptTransferAssetNum + paymentNum
     val dAppAddressAssetBalanceForCaller         = amount + scriptTransferAssetNum - paymentNum
     val dAppAddressAssetBalanceForOriginalCaller = amount - paymentNum
-    val balancesSeq = Seq(
+    val balancesSeq                              = Seq(
       AddrWithBalance(firstTxParticipantAddress, firstTxParticipantBalanceBefore),
       AddrWithBalance(firstTxParticipantEthereumAddress, firstTxParticipantBalanceBefore),
       AddrWithBalance(secondAddress, secondAddressBalance),
@@ -120,11 +120,11 @@ class BlockchainUpdatesEthereumInvokeTxSpec extends BlockchainUpdatesTestBase {
     val secondAddressDccBalanceAfter     = secondAddressDccBalanceBefore + scriptTransferUnitNum
     val assetDappAddressDccBalanceBefore = assetDappBalance - issueAssetFee - massTx.fee.value - fee
     val assetDappAddressDccBalanceAfter  = assetDappAddressDccBalanceBefore - scriptTransferUnitNum
-    val firstTxParticipantBalanceAfter     = ethAddressBalanceAfterTx + scriptTransferUnitNum
-    val callerBalancesMap = Map(
+    val firstTxParticipantBalanceAfter   = ethAddressBalanceAfterTx + scriptTransferUnitNum
+    val callerBalancesMap                = Map(
       (secondAddress, Dcc)                     -> (secondAddressDccBalanceBefore, secondAddressDccBalanceAfter),
-      (secondAddress, asset)                     -> (amount, secondAddressAssetBalanceForAll),
-      (firstTxParticipantAddress, asset)         -> (amount, dAppAddressAssetBalanceForCaller),
+      (secondAddress, asset)                   -> (amount, secondAddressAssetBalanceForAll),
+      (firstTxParticipantAddress, asset)       -> (amount, dAppAddressAssetBalanceForCaller),
       (assetDappAddress, Dcc)                  -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
       (firstTxParticipantEthereumAddress, Dcc) -> (firstTxParticipantBalanceBefore, ethAddressBalanceAfterTx)
     )
@@ -132,8 +132,8 @@ class BlockchainUpdatesEthereumInvokeTxSpec extends BlockchainUpdatesTestBase {
       (secondAddress, asset)                     -> (amount, secondAddressAssetBalanceForAll),
       (firstTxParticipantEthereumAddress, asset) -> (0L, scriptTransferAssetNum),
       (firstTxParticipantAddress, asset)         -> (amount, dAppAddressAssetBalanceForOriginalCaller),
-      (assetDappAddress, Dcc)                  -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
-      (firstTxParticipantEthereumAddress, Dcc) -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter)
+      (assetDappAddress, Dcc)                    -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
+      (firstTxParticipantEthereumAddress, Dcc)   -> (firstTxParticipantBalanceBefore, firstTxParticipantBalanceAfter)
     )
 
     "BU-227. doubles nested i.caller. Invoke have to return correct data for subscribe" in {

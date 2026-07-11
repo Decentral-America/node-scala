@@ -63,8 +63,8 @@ case class DebugApiRoute(
 
   import DebugApiRoute.*
 
-  private lazy val configStr             = configRoot.render(ConfigRenderOptions.concise().setJson(true).setFormatted(true))
-  private lazy val fullConfig: JsValue   = Json.parse(configStr)
+  private lazy val configStr           = configRoot.render(ConfigRenderOptions.concise().setJson(true).setFormatted(true))
+  private lazy val fullConfig: JsValue = Json.parse(configStr)
   private lazy val dccConfig: JsObject = Json.obj("dcc" -> (fullConfig \ "dcc").get)
 
   override val settings: RestAPISettings = ws.restAPISettings
@@ -173,8 +173,8 @@ case class DebugApiRoute(
   def configInfo: Route = (path("configInfo") & get & parameter("full".as[Boolean])) { full =>
     // Redact sensitive fields before returning
     val redactedConfig = if (full) {
-      val redacted = fullConfig.as[JsObject]
-      val dccObj = (redacted \ "dcc").asOpt[JsObject].getOrElse(Json.obj())
+      val redacted    = fullConfig.as[JsObject]
+      val dccObj      = (redacted \ "dcc").asOpt[JsObject].getOrElse(Json.obj())
       val redactedDcc = dccObj
         .transform((__ \ "wallet").json.prune)
         .getOrElse(dccObj)
@@ -249,7 +249,7 @@ case class DebugApiRoute(
       val response = Json.obj(
         "valid"          -> error.isEmpty,
         "validationTime" -> (System.nanoTime() - startTime) / 1000000,
-        "trace" -> tracedSnapshot.trace.map {
+        "trace"          -> tracedSnapshot.trace.map {
           case ist: InvokeScriptTrace => ist.maybeLoggedJson(logged = true)(using serializer.invokeScriptResultWrites)
           case trace                  => trace.loggedJson
         },
@@ -294,7 +294,7 @@ object DebugApiRoute {
     {
       case JsObject(m) =>
         m.foldLeft[JsResult[Map[ByteStr, Long]]](JsSuccess(Map.empty)) {
-          case (e: JsError, _) => e
+          case (e: JsError, _)                                  => e
           case (JsSuccess(m, _), (rawAssetId, JsNumber(count))) =>
             (ByteStr.decodeBase58(rawAssetId), count) match {
               case (Success(assetId), count) if count.isValidLong => JsSuccess(m.updated(assetId, count.toLong))

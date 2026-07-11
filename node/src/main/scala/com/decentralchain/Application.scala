@@ -85,7 +85,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
   private val appenderScheduler = singleThread("appender", stopOnAppendError)
 
-  private val extensionLoaderScheduler = singleThread("rx-extension-loader", reporter = log.error("Error in Extension Loader", _))
+  private val extensionLoaderScheduler        = singleThread("rx-extension-loader", reporter = log.error("Error in Extension Loader", _))
   private val microblockSynchronizerScheduler =
     singleThread("microblock-synchronizer", reporter = log.error("Error in Microblock Synchronizer", _))
   private val endorseBlockSynchronizerScheduler =
@@ -102,7 +102,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   private var triggers = Seq.empty[BlockchainUpdateTriggers]
 
   private var miner: Miner & MinerDebugInfo = Miner.StrictDisabledMiner
-  private val (blockchainUpdater, rocksDB) =
+  private val (blockchainUpdater, rocksDB)  =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
   private val messageObserver = new MessageObserver
@@ -125,13 +125,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
     val establishedConnections = new ConcurrentHashMap[Channel, PeerInfo]
     val allChannels            = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
-    val utxStorage =
+    val utxStorage             =
       new UtxPoolImpl(time, blockchainUpdater, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable, utxEvents.onNext)
     maybeUtx = Some(utxStorage)
 
     val timer                 = new HashedWheelTimer()
     val utxSynchronizerLogger = Logger(LoggerFactory.getLogger(classOf[TransactionPublisher]))
-    val timedTxValidator =
+    val timedTxValidator      =
       Schedulers.timeBoundedFixedPool(
         timer,
         5.seconds,
@@ -145,7 +145,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     val pos = PoSSelector(blockchainUpdater, settings.synchronizationSettings.maxBaseTarget)
 
     val endorsementStorage = EndorsementStorage.InMemory((blockId, height) => blockchainUpdater.blockId(height.toInt).contains(blockId))
-    val blockEndorser =
+    val blockEndorser      =
       new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchainUpdater, wallet, endorsementStorage, allChannels)
 
     if (settings.minerSettings.enable)
@@ -213,7 +213,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       import com.decentralchain.block.Block.BlockId
       import com.decentralchain.state.GeneratorSet
 
-      val committee: () => GeneratorSet = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
+      val committee: () => GeneratorSet                = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
       val extendsBranch: (BlockId, BlockId) => Boolean = (child, ancestor) =>
         child == ancestor || (for {
           hc <- blockchainUpdater.heightOf(child)
@@ -223,24 +223,32 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
       val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch)
 
-      messageObserver.hotStuffProposals.observeOn(hotStuffScheduler).foreach { case (_, p) =>
-        hsCoordinator.onProposal(p, blockchainUpdater.height)
-      }(using hotStuffScheduler)
-      messageObserver.hotStuffVotes.observeOn(hotStuffScheduler).foreach { case (_, v) =>
-        hsCoordinator.onVote(v)
-      }(using hotStuffScheduler)
-      messageObserver.hotStuffQCs.observeOn(hotStuffScheduler).foreach { case (_, qc) =>
-        hsCoordinator.onQC(qc)
-      }(using hotStuffScheduler)
+      messageObserver.hotStuffProposals
+        .observeOn(hotStuffScheduler)
+        .foreach { case (_, p) =>
+          hsCoordinator.onProposal(p, blockchainUpdater.height)
+        }(using hotStuffScheduler)
+      messageObserver.hotStuffVotes
+        .observeOn(hotStuffScheduler)
+        .foreach { case (_, v) =>
+          hsCoordinator.onVote(v)
+        }(using hotStuffScheduler)
+      messageObserver.hotStuffQCs
+        .observeOn(hotStuffScheduler)
+        .foreach { case (_, qc) =>
+          hsCoordinator.onQC(qc)
+        }(using hotStuffScheduler)
 
       // Leader = FairPoS forger: when a block we produced is applied, propose it at view = height.
-      lastBlockInfo.observeOn(hotStuffScheduler).foreach { info =>
-        val h = info.height.toInt
-        blockchainUpdater.blockHeader(h).foreach { sbh =>
-          if (wallet.privateKeyAccount(sbh.header.generator.toAddress).isRight)
-            hsCoordinator.onLeaderTurn(h, info.id, h)
-        }
-      }(using hotStuffScheduler)
+      lastBlockInfo
+        .observeOn(hotStuffScheduler)
+        .foreach { info =>
+          val h = info.height.toInt
+          blockchainUpdater.blockHeader(h).foreach { sbh =>
+            if (wallet.privateKeyAccount(sbh.header.generator.toAddress).isRight)
+              hsCoordinator.onLeaderTurn(h, info.id, h)
+          }
+        }(using hotStuffScheduler)
 
       // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
@@ -285,14 +293,17 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
     // Extensions start
     val extensionContext: Context = new Context {
-      override def settings: DCCSettings                                                        = app.settings
-      override def blockchain: Blockchain                                                       = app.blockchainUpdater
-      override def rollbackTo(blockId: ByteStr): Task[Either[ValidationError, DiscardedBlocks]] = rollbackTask(blockId, returnTxsToUtx = false)
-      override def time: Time                                                                   = app.time
-      override def wallet: Wallet                                                               = app.wallet
-      override def utx: UtxPool                                                                 = utxStorage
+      override def settings: DCCSettings                                                         = app.settings
+      override def blockchain: Blockchain                                                        = app.blockchainUpdater
+      override def rollbackTo(blockId: ByteStr): Task[Either[ValidationError, DiscardedBlocks]]  = rollbackTask(blockId, returnTxsToUtx = false)
+      override def time: Time                                                                    = app.time
+      override def wallet: Wallet                                                                = app.wallet
+      override def utx: UtxPool                                                                  = utxStorage
       override def broadcastTransaction(tx: Transaction): TracedResult[ValidationError, Boolean] =
-        Await.result(transactionPublisher.validateAndBroadcast(tx, None), Duration.Inf) // NOTE: Blocking call — async replacement requires significant refactor of tx publishing pipeline
+        Await.result(
+          transactionPublisher.validateAndBroadcast(tx, None),
+          Duration.Inf
+        ) // NOTE: Blocking call — async replacement requires significant refactor of tx publishing pipeline
       override def utxEvents: Observable[UtxEvent] = app.utxEvents
 
       override val transactionsApi: CommonTransactionsApi = CommonTransactionsApi(
@@ -540,7 +551,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       )
 
       val httpService = CompositeHttpService(apiRoutes, settings.restAPISettings)
-      val httpFuture =
+      val httpFuture  =
         Http().newServerAt(settings.restAPISettings.bindAddress, settings.restAPISettings.port).bindFlow(httpService.loggingCompositeRoute)
       serverBinding = Await.result(httpFuture, 20.seconds)
       serverBinding.whenTerminated.foreach(_ => heavyRequestScheduler.shutdown())

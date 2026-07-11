@@ -25,7 +25,7 @@ class RideV5LimitsChangeTest extends FlatSpec with WithDomain {
 
       val invokes = for (_ <- 1 to 277) yield TxHelpers.invoke(contractAddress) // 3620 complexity, 1002740 total
 
-      val block = d.createBlock(Block.ProtoBlockVersion, invokes, strictTime = true)
+      val block        = d.createBlock(Block.ProtoBlockVersion, invokes, strictTime = true)
       val differResult = BlockDiffer.fromBlock(
         d.blockchain,
         Some(d.lastBlock),
@@ -54,7 +54,7 @@ class RideV5LimitsChangeTest extends FlatSpec with WithDomain {
       val invokeComplexity = 3620
       val invokes          = for (_ <- 1 to invokesCount) yield TxHelpers.invoke(contractAddress)
 
-      val block = d.createBlock(Block.ProtoBlockVersion, invokes, strictTime = true)
+      val block        = d.createBlock(Block.ProtoBlockVersion, invokes, strictTime = true)
       val differResult = BlockDiffer
         .fromBlock(
           d.blockchain,

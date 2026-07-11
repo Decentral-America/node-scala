@@ -44,7 +44,7 @@ object NetworkServer extends ScorexLogging {
 
     val bossGroup   = new MultiThreadIoEventLoopGroup(0, new DefaultThreadFactory("nio-boss-group", true), NioIoHandler.newFactory());
     val workerGroup = new MultiThreadIoEventLoopGroup(0, new DefaultThreadFactory("nio-worker-group", true), NioIoHandler.newFactory());
-    val handshake = Handshake(
+    val handshake   = Handshake(
       applicationName,
       Version.VersionTuple,
       networkSettings.derivedNodeName,
@@ -54,7 +54,7 @@ object NetworkServer extends ScorexLogging {
 
     val excludedAddresses: Set[InetSocketAddress] =
       networkSettings.derivedBindAddress.fold(Set.empty[InetSocketAddress]) { bindAddress =>
-        val isLocal = Option(bindAddress.getAddress).exists(_.isAnyLocalAddress)
+        val isLocal        = Option(bindAddress.getAddress).exists(_.isAnyLocalAddress)
         val localAddresses = if (isLocal) {
           NetworkInterface.getNetworkInterfaces.asScala
             .flatMap(_.getInetAddresses.asScala.map(a => new InetSocketAddress(a, bindAddress.getPort)))

@@ -35,8 +35,8 @@ object Vals {
       override def liftF[F[_]: Monad](env: Environment[F]): Eval[Either[ExecutionError, EVALUATED]] =
         Eval.later(
           env.inputEntity match {
-            case tx: Tx => transactionObject(tx, proofsEnabled, version, fixBigScriptField).asRight[ExecutionError]
-            case o: Ord => orderObject(o, proofsEnabled, version).asRight[ExecutionError]
+            case tx: Tx        => transactionObject(tx, proofsEnabled, version, fixBigScriptField).asRight[ExecutionError]
+            case o: Ord        => orderObject(o, proofsEnabled, version).asRight[ExecutionError]
             case ptx: PseudoTx =>
               ptx match {
                 case b: BurnPseudoTx        => Bindings.mapBurnPseudoTx(b, version).asRight[ExecutionError]
@@ -115,7 +115,7 @@ object Vals {
 
   val height: (String, (LONG.type, ContextfulVal[Environment])) = (GlobalValNames.Height, (LONG, heightVal))
 
-  val accountThis: (String, (CASETYPEREF, ContextfulVal[Environment])) = (GlobalValNames.This, (addressType, accountThisVal))
+  val accountThis: (String, (CASETYPEREF, ContextfulVal[Environment]))                       = (GlobalValNames.This, (addressType, accountThisVal))
   def assetThis(version: StdLibVersion): (String, (CASETYPEREF, ContextfulVal[Environment])) =
     (GlobalValNames.This, (assetType(version), assetThisVal(version)))
 

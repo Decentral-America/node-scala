@@ -37,7 +37,7 @@ class TestBlockchainApi(implicit val scheduler: Scheduler) extends BlockchainApi
   override def getAssetDescription(asset: Asset.IssuedAsset): Option[AssetDescription] = kill(s"getAssetDescription(asset=$asset)")
   override def resolveAlias(alias: Alias): Option[Address]                             = kill(s"resolveAlias(alias=$alias)")
   override def getBalance(address: Address, asset: Asset): Long                        = kill(s"getBalance(address=$address, asset=$asset)")
-  override def getLeaseBalance(address: Address): BalanceResponse.DccBalances        = kill(s"getLeaseBalance(address=$address)")
+  override def getLeaseBalance(address: Address): BalanceResponse.DccBalances          = kill(s"getLeaseBalance(address=$address)")
   override def getTransactionHeight(id: TransactionId): Option[Height]                 = kill(s"getTransactionHeight(id=$id)")
 
   private def kill(call: String) = throw new RuntimeException(call)

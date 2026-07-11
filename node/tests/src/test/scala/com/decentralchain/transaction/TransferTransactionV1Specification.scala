@@ -29,7 +29,7 @@ class TransferTransactionV1Specification extends PropSpec {
   }
 
   property("Transfer binary parse roundtrip") {
-    val tx = TxHelpers.transfer(version = TxVersion.V1)
+    val tx     = TxHelpers.transfer(version = TxVersion.V1)
     val parsed = TransferTxSerializer.parseBytes(tx.bytes()).get
     parsed.json() shouldBe tx.json()
   }
@@ -62,7 +62,7 @@ class TransferTransactionV1Specification extends PropSpec {
     """)
 
     val recipient = Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet()
-    val tx = TransferTransaction(
+    val tx        = TransferTransaction(
       1.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
       recipient,

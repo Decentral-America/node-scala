@@ -58,7 +58,7 @@ case class AddressApiRoute(
 
   def scriptInfo: Route = (path("scriptInfo" / AddrSegment) & get) { address =>
     completeLimited {
-      val scriptInfoOpt = blockchain.accountScript(address)
+      val scriptInfoOpt           = blockchain.accountScript(address)
       val callableComplexitiesOpt =
         for {
           scriptInfo <- scriptInfoOpt

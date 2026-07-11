@@ -31,7 +31,7 @@ import scala.concurrent.duration.*
 class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherValues with BlocksTransactionsHelpers {
   import BlockV5Test.*
 
-  private val testTime = TestTime(1)
+  private val testTime                                     = TestTime(1)
   def shiftTime(miner: MinerImpl, minerAcc: KeyPair): Unit = {
     val offset = miner.getNextBlockGenerationOffset(minerAcc).explicitGet()
     testTime.advance(offset + 1.milli)
@@ -40,7 +40,7 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
   "Proto block" should "be serialized" in {
     val stateHash = ByteStr.fill(DigestLength)(1)
     val features  = Seq(534, 3, 33, 5, 1, 0, 12343242).map(_.toShort)
-    val block =
+    val block     =
       Block
         .buildAndSign(
           Block.ProtoBlockVersion,
@@ -460,7 +460,7 @@ object BlockV5Test {
   private val NGActivationHeight          = 3
 
   private val defaultSettings = DCCSettings.fromRootConfig(ConfigFactory.load())
-  private val testSettings = defaultSettings.copy(
+  private val testSettings    = defaultSettings.copy(
     blockchainSettings = defaultSettings.blockchainSettings.copy(
       functionalitySettings = FunctionalitySettings(
         featureCheckBlocksPeriod = 10,

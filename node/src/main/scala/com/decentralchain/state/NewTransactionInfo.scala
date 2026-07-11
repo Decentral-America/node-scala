@@ -25,7 +25,7 @@ object NewTransactionInfo {
       blockchain: Blockchain
   ): NewTransactionInfo = {
     val calledScripts = snapshot.scriptResults.values.flatMap(inv => InvokeScriptResult.Invocation.calledAddresses(inv.invokes))
-    val maybeDApp = tx match {
+    val maybeDApp     = tx match {
       case i: InvokeTransaction =>
         i.dApp match {
           case alias: Alias     => snapshot.aliases.get(alias).orElse(blockchain.resolveAlias(alias).toOption)
@@ -56,7 +56,7 @@ object NewTransactionInfo {
       case t: BurnTransaction        => Set(t.sender.toAddress)
       case t: CreateAliasTransaction => Set(t.sender.toAddress)
       case t: DataTransaction        => Set(t.sender.toAddress)
-      case t: EthereumTransaction =>
+      case t: EthereumTransaction    =>
         Set(t.sender.toAddress) ++
           (t.payload match {
             case EthereumTransaction.Transfer(_, _, recipient) => Set(recipient)
@@ -65,7 +65,7 @@ object NewTransactionInfo {
       case t: ExchangeTransaction     => Set(t.sender.toAddress, t.order1.sender.toAddress, t.order2.sender.toAddress)
       case t: InvokeScriptTransaction => Set(t.sender.toAddress)
       case t: IssueTransaction        => Set(t.sender.toAddress)
-      case t: LeaseCancelTransaction =>
+      case t: LeaseCancelTransaction  =>
         Set(t.sender.toAddress) ++ blockchain
           .leaseDetails(t.leaseId)
           .map(_.recipientAddress)
@@ -87,7 +87,7 @@ object NewTransactionInfo {
       case t: SetScriptTransaction       => Set(t.sender.toAddress)
       case t: SponsorFeeTransaction      => Set(t.sender.toAddress)
       case t: UpdateAssetInfoTransaction => Set(t.sender.toAddress)
-      case t: TransferTransaction =>
+      case t: TransferTransaction        =>
         Set(t.sender.toAddress) ++ (t.recipient match {
           case alias: Alias     => blockchain.resolveAlias(alias).toOption.toSet
           case address: Address => Set(address)

@@ -24,7 +24,7 @@ trait FakeObserver[T] extends StreamObserver[T] {
 
 object FakeObserver {
   private given scheduler: Scheduler = Schedulers.singleThread("fake-observer", executionModel = SynchronousExecution)
-  def apply[T]: FakeObserver[T] = new CallStreamObserver[T] with FakeObserver[T] {
+  def apply[T]: FakeObserver[T]      = new CallStreamObserver[T] with FakeObserver[T] {
     @volatile @unused var values    = Seq.empty[T]
     @volatile @unused var error     = Option.empty[Throwable]
     @volatile @unused var completed = false

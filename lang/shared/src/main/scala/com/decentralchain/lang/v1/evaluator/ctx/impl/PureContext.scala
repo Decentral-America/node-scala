@@ -280,8 +280,8 @@ object PureContext {
     ) {
       new ContextfulUserFunction[NoContext] {
         override def apply[F[_]: Monad](env: NoContext[F], startArgs: List[EXPR]): EXPR = {
-          val ctx  = getDecompilerContext(DirectiveDictionary[StdLibVersion].all.last, Expression)
-          val base = "value() called on unit value"
+          val ctx                                              = getDecompilerContext(DirectiveDictionary[StdLibVersion].all.last, Expression)
+          val base                                             = "value() called on unit value"
           def call(h: FunctionHeader, postfix: Boolean = true) = {
             val name = h match {
               case Native(id) => ctx.opCodes.get(id).orElse(ctx.binaryOps.get(id)).getOrElse(id.toString)
@@ -290,7 +290,7 @@ object PureContext {
             s"on function '$name${if (postfix) "Value" else ""}' call"
           }
           def address(args: List[EXPR]) = s"base58'${args.head.asInstanceOf[CaseObj].fields.head._2}'"
-          val errorMessage = startArgs.head match {
+          val errorMessage              = startArgs.head match {
             case FUNCTION_CALL(h, args) if stateDataHeaders(h) => s"value by key '${args(1)}' not found for the address ${address(args)} ${call(h)}"
             case FUNCTION_CALL(h, args) if stateDataSelfHeaders(h)    => s"value by key '${args(0)}' not found for the contract address ${call(h)}"
             case FUNCTION_CALL(h, args) if arrayDataByKeyHeaders(h)   => s"value by key '${args(1)}' not found in the list ${call(h)}"
@@ -1408,8 +1408,9 @@ object PureContext {
       body: (BigInt, BigInt) => Boolean
   ): BaseFunction[NoContext] =
     NativeFunction(opsToFunctions(op), Map(V5 -> 8L, V8 -> 1L), func, BOOLEAN, ("a", BIGINT), ("b", BIGINT)) {
-      case CONST_BIGINT(a) :: CONST_BIGINT(b) :: Nil => Try(body(a, b)).toEither.bimap(e => Option(e.getMessage).getOrElse(e.toString), CONST_BOOLEAN.apply)
-      case xs                                        => notImplemented[Id, EVALUATED](s"${opsToFunctions(op)}(a: BIGINT, b: BIGINT)", xs)
+      case CONST_BIGINT(a) :: CONST_BIGINT(b) :: Nil =>
+        Try(body(a, b)).toEither.bimap(e => Option(e.getMessage).getOrElse(e.toString), CONST_BOOLEAN.apply)
+      case xs => notImplemented[Id, EVALUATED](s"${opsToFunctions(op)}(a: BIGINT, b: BIGINT)", xs)
     }
 
   lazy val getElement: BaseFunction[NoContext] =

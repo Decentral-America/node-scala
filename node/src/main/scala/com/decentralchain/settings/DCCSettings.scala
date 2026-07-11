@@ -48,8 +48,9 @@ object DCCSettings {
     val utxSettings               = dccConfigSource.at("utx").loadOrThrow[UtxSettings]
     val featuresSettings          = dccConfigSource.at("features").loadOrThrow[FeaturesSettings]
     val rewardsSettings           = dccConfigSource.at("rewards").loadOrThrow[RewardsVotingSettings]
-    val metrics                   = ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // NOTE: Metrics config is outside dcc {} root — known structure
-    val enableLightMode           = dccConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
+    val metrics                   =
+      ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // NOTE: Metrics config is outside dcc {} root — known structure
+    val enableLightMode = dccConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
 
     DCCSettings(
       directory,

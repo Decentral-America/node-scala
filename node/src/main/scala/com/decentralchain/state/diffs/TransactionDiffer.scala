@@ -82,7 +82,7 @@ object TransactionDiffer {
       tx: Transaction
   ): TracedResult[ValidationError, StateSnapshot] = {
     val runVerifiers = verify || (transactionMayFail(tx) && acceptFailed(blockchain))
-    val result = for {
+    val result       = for {
       _                   <- validateCommon(blockchain, tx, prevBlockTimestamp, currentBlockTimestamp, verify).traced
       _                   <- validateFunds(blockchain, tx).traced
       verifierSnapshot    <- if (runVerifiers) verifierDiff(blockchain, tx, enableExecutionLog) else TracedResult.wrapValue(StateSnapshot.empty)
@@ -254,7 +254,7 @@ object TransactionDiffer {
   private def validateOrder(blockchain: Blockchain, order: Order, matcherFee: Long): Either[ValidationError, Unit] =
     for {
       _ <- order.matcherFeeAssetId match {
-        case Dcc => Right(())
+        case Dcc                    => Right(())
         case asset @ IssuedAsset(_) =>
           blockchain
             .assetDescription(asset)
@@ -268,7 +268,7 @@ object TransactionDiffer {
   private def validatePayments(blockchain: Blockchain, tx: InvokeScriptTransaction): Either[ValidationError, Unit] =
     for {
       dAppAddress <- blockchain.resolveAlias(tx.dApp)
-      portfolios <- tx.payments
+      portfolios  <- tx.payments
         .traverse { case InvokeScriptTransaction.Payment(amt, assetId) =>
           assetId match {
             case asset @ IssuedAsset(_) =>
@@ -344,13 +344,13 @@ object TransactionDiffer {
   // helpers
   private def feePortfolios(blockchain: Blockchain, tx: Transaction): Either[ValidationError, Map[Address, Portfolio]] =
     tx match {
-      case _: GenesisTransaction => Map.empty[Address, Portfolio].asRight
+      case _: GenesisTransaction   => Map.empty[Address, Portfolio].asRight
       case ptx: PaymentTransaction =>
         Map[Address, Portfolio](ptx.sender.toAddress -> Portfolio(balance = -ptx.fee.value)).asRight
       case e: EthereumTransaction => Map[Address, Portfolio](e.senderAddress() -> Portfolio(-e.fee)).asRight
       case ptx: ProvenTransaction =>
         ptx.assetFee match {
-          case (Dcc, fee) => Map[Address, Portfolio](ptx.sender.toAddress -> Portfolio(-fee)).asRight
+          case (Dcc, fee)                    => Map[Address, Portfolio](ptx.sender.toAddress -> Portfolio(-fee)).asRight
           case (asset @ IssuedAsset(_), fee) =>
             for {
               assetInfo <- blockchain

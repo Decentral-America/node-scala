@@ -29,7 +29,7 @@ object DirectiveParser {
         case (parsedKey, parsedValue) => {
           val valueRaw = parsedValue.replace(" ", "")
           for {
-            key <- DirectiveKey.textMap.get(parsedKey).toRight(s"Illegal directive key $parsedKey")
+            key   <- DirectiveKey.textMap.get(parsedKey).toRight(s"Illegal directive key $parsedKey")
             value <- key match {
               case k: PredefinedDirectiveKey => k.valueDic.textMap.get(valueRaw).toRight(s"Illegal directive value $valueRaw for key $parsedKey")
               case k: ArbitraryDirectiveKey  => Right(k.valueMapper(valueRaw))

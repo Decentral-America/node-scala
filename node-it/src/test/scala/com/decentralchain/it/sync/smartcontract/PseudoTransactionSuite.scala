@@ -63,7 +63,7 @@ class PseudoTransactionSuite extends BaseTransactionSuite {
   test("check burn pseudotransaction fields") {
     val smartAssetQuantityBefore = sender.assetsDetails(smartAssetId).quantity
     val burnedQuantity           = 100000
-    val signedInvoke = invokeScriptTransaction(
+    val signedInvoke             = invokeScriptTransaction(
       "burnAsset",
       List(Terms.CONST_BYTESTR(ByteStr.decodeBase58(smartAssetId).get).explicitGet(), Terms.CONST_LONG(burnedQuantity))
     )
@@ -82,7 +82,7 @@ class PseudoTransactionSuite extends BaseTransactionSuite {
   test("check reissue pseudotransaction fields") {
     val smartAssetQuantityBefore = sender.assetsDetails(smartAssetId).quantity
     val addedQuantity            = 100000
-    val signedInvoke = invokeScriptTransaction(
+    val signedInvoke             = invokeScriptTransaction(
       "reissueAsset",
       List(Terms.CONST_BYTESTR(ByteStr.decodeBase58(smartAssetId).get).explicitGet(), Terms.CONST_BOOLEAN(true), Terms.CONST_LONG(addedQuantity))
     )

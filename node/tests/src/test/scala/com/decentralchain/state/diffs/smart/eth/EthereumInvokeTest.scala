@@ -117,11 +117,11 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
     val invokerPk      = dummyEthInvoke.signerPublicKey()
 
     val emptyScript = Some(ExprScript(V4, Terms.TRUE).explicitGet())
-    val issues =
+    val issues      =
       (1 to paymentCount).map(_ =>
         IssueTransaction.selfSigned(2.toByte, dApp, "Asset", "", ENOUGH_AMT, 8, true, emptyScript, 1.dcc, ts).explicitGet()
       )
-    val assets = issues.map(i => IssuedAsset(i.id()))
+    val assets          = issues.map(i => IssuedAsset(i.id()))
     val setAssetScripts = assets.map { asset =>
       val resultScript = assetScript(dummyEthInvoke, dApp.toAddress, assets, asset, assetScriptVersion)
       SetAssetScriptTransaction.selfSigned(1.toByte, dApp, asset, Some(resultScript), 1.dcc, ts).explicitGet()
@@ -144,7 +144,7 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
 
   private def assert(dAppVersion: StdLibVersion, assetScriptVersion: StdLibVersion, paymentCount: Int, syncCall: Boolean = false) = {
     val (preparingTxs, ethInvoke, dApp, dApp2, assets) = preconditions(dAppVersion, assetScriptVersion, paymentCount, syncCall)
-    val settings =
+    val settings                                       =
       if (dAppVersion >= V9 || assetScriptVersion >= V9) DeterministicFinality
       else if (dAppVersion >= V8 || assetScriptVersion >= V8) TransactionStateSnapshot
       else BlockRewardDistribution

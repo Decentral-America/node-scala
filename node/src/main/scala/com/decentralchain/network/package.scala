@@ -22,7 +22,7 @@ import java.util.concurrent.Callable
 import scala.concurrent.duration.*
 
 package object network {
-  private val broadcastTimeStats = Kamon.timer("network-broadcast-time")
+  private val broadcastTimeStats  = Kamon.timer("network-broadcast-time")
   private lazy val logger: Logger =
     Logger(LoggerFactory.getLogger(this.getClass.getName))
 
@@ -58,7 +58,7 @@ package object network {
   implicit class ChannelHandlerContextExt(val ctx: ChannelHandlerContext) extends AnyVal {
     def remoteAddress: Option[InetSocketAddress] = ctx.channel() match {
       case x: NioSocketChannel => Option(x.remoteAddress())
-      case x =>
+      case x                   =>
         logger.debug(s"Doesn't know how to get a remoteAddress from ${id(ctx)}, $x")
         None
     }
@@ -84,7 +84,7 @@ package object network {
 
     private def logBroadcast(message: AnyRef, except: Set[Channel]): Unit = message match {
       case RawBytes(TransactionSpec.messageCode | PBTransactionSpec.messageCode, _) =>
-      case _ =>
+      case _                                                                        =>
         logger.trace {
           val exceptMsg = if (except.isEmpty) "" else s" (except ${except.map(id(_)).mkString(", ")})"
           val msgString = message match {

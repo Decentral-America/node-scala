@@ -35,23 +35,25 @@ object HotStuffSafety {
   def safeToVote(proposal: HotStuffProposal, state: SafetyState, extendsBranch: (BlockId, BlockId) => Boolean): Boolean =
     proposal.view > state.lastVotedView && {
       state.lockedQC match {
-        case None => true // nothing locked yet — safe to vote
+        case None         => true // nothing locked yet — safe to vote
         case Some(locked) =>
-          val safety   = extendsBranch(proposal.blockId, locked.blockId)  // extends the locked branch
-          val liveness = proposal.justify.exists(_.view > locked.view)    // justified by a newer QC
+          val safety   = extendsBranch(proposal.blockId, locked.blockId) // extends the locked branch
+          val liveness = proposal.justify.exists(_.view > locked.view)   // justified by a newer QC
           safety || liveness
       }
     }
 
   /** Record that this replica voted in `view` (call only after `safeToVote` returned true and the
-    * vote was cast). Keeps `lastVotedView` monotonic. */
+    * vote was cast). Keeps `lastVotedView` monotonic.
+    */
   def recordVote(view: Int, state: SafetyState): SafetyState =
     if (view > state.lastVotedView) state.copy(lastVotedView = view) else state
 
   /** Update the safety state upon observing a valid `qc`:
     *  - `prepareQC` tracks the highest-view QC seen;
     *  - `lockedQC` advances only on a PRE_COMMIT QC of strictly higher view.
-    * Never regresses either QC (monotonic in view). */
+    * Never regresses either QC (monotonic in view).
+    */
   def update(qc: QuorumCertificate, state: SafetyState): SafetyState = {
     val newPrepareQC =
       if (state.prepareQC.forall(qc.view > _.view)) Some(qc) else state.prepareQC
@@ -67,7 +69,8 @@ object HotStuffSafety {
 
   /** Detect equivocation: any voter that signed two or more DIFFERENT blocks at the same (view, phase).
     * Such a voter has violated protocol and is subject to exclusion (handled by the caller / feature-25
-    * conflict machinery). */
+    * conflict machinery).
+    */
   def equivocators(votes: Iterable[HotStuffVote]): Set[Int] =
     votes
       .groupBy(v => (v.voterIndex, v.view, v.phase))

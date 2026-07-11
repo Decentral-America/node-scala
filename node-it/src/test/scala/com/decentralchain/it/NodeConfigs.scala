@@ -62,8 +62,8 @@ object NodeConfigs {
   }
 
   object Templates {
-    def raw(x: String): String = x
-    def quorum(n: Int): String = s"dcc.miner.quorum = $n"
+    def raw(x: String): String                          = x
+    def quorum(n: Int): String                          = s"dcc.miner.quorum = $n"
     def preactivatedFeatures(f: (Int, Height)*): String = {
       s"""
          |dcc.blockchain.custom.functionality.pre-activated-features {

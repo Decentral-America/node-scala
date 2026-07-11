@@ -80,7 +80,7 @@ object Keys {
   def assetBalanceAt(addressId: AddressId, asset: IssuedAsset, height: Height): Key[BalanceNode] =
     Key(AssetBalanceHistory, hBytes(asset.id.arr ++ addressId.toByteArray, height), readBalanceNode, writeBalanceNode)
 
-  def assetDetailsHistory(asset: IssuedAsset): Key[Seq[Height]] = historyKey(AssetDetailsHistory, asset.id.arr)
+  def assetDetailsHistory(asset: IssuedAsset): Key[Seq[Height]]                           = historyKey(AssetDetailsHistory, asset.id.arr)
   def assetDetails(asset: IssuedAsset)(height: Height): Key[(AssetInfo, AssetVolumeInfo)] =
     Key(AssetDetails, hBytes(asset.id.arr, height), readAssetDetails, writeAssetDetails)
 
@@ -96,7 +96,7 @@ object Keys {
   def leaseBalance(addressId: AddressId): Key[CurrentLeaseBalance] =
     Key(LeaseBalance, addressId.toByteArray, readLeaseBalance, writeLeaseBalance)
 
-  def leaseDetailsHistory(leaseId: ByteStr): Key[Seq[Height]] = historyKey(LeaseDetailsHistory, leaseId.arr)
+  def leaseDetailsHistory(leaseId: ByteStr): Key[Seq[Height]]                   = historyKey(LeaseDetailsHistory, leaseId.arr)
   def leaseDetails(leaseId: ByteStr)(height: Height): Key[Option[LeaseDetails]] =
     Key.opt(LeaseDetailsTag, height.toByteArray ++ leaseId.arr, readLeaseDetails, writeLeaseDetails)
 
@@ -123,7 +123,7 @@ object Keys {
   def addressId(address: Address): Key[Option[AddressId]] = Key.opt(AddressIdTag, address.bytes, AddressId.fromByteArray, _.toByteArray)
   def idToAddress(addressId: AddressId): Key[Address]     = Key(IdToAddress, addressId.toByteArray, Address.fromBytes(_).explicitGet(), _.bytes)
 
-  def addressScriptHistory(addressId: AddressId): Key[Seq[Height]] = historyKey(AddressScriptHistory, addressId.toByteArray)
+  def addressScriptHistory(addressId: AddressId): Key[Seq[Height]]                        = historyKey(AddressScriptHistory, addressId.toByteArray)
   def addressScript(addressId: AddressId)(height: Height): Key[Option[AccountScriptInfo]] =
     Key.opt(AddressScript, hAddr(height, addressId), readAccountScriptInfo, writeAccountScriptInfo)
 
@@ -136,13 +136,13 @@ object Keys {
   def dataAt(addressId: AddressId, key: String)(height: Height): Key[DataNode] =
     Key(DataHistory, hBytes(addressId.toByteArray ++ key.utf8Bytes, height), readDataNode(key), writeDataNode)
 
-  def sponsorshipHistory(asset: IssuedAsset): Key[Seq[Height]] = historyKey(SponsorshipHistory, asset.id.arr)
+  def sponsorshipHistory(asset: IssuedAsset): Key[Seq[Height]]               = historyKey(SponsorshipHistory, asset.id.arr)
   def sponsorship(asset: IssuedAsset)(height: Height): Key[SponsorshipValue] =
     Key(Sponsorship, hBytes(asset.id.arr, height), readSponsorship, writeSponsorship)
 
   def carryFee(height: Height): Key[Long] = Key(CarryFee, h(height), Option(_).fold(0L)(Longs.fromByteArray), Longs.toByteArray)
 
-  def assetScriptHistory(asset: IssuedAsset): Key[Seq[Height]] = historyKey(AssetScriptHistory, asset.id.arr)
+  def assetScriptHistory(asset: IssuedAsset): Key[Seq[Height]]                      = historyKey(AssetScriptHistory, asset.id.arr)
   def assetScript(asset: IssuedAsset)(height: Height): Key[Option[AssetScriptInfo]] =
     Key.opt(AssetScript, hBytes(asset.id.arr, height), readAssetScript, writeAssetScript)
   def assetScriptPresent(asset: IssuedAsset)(height: Height): Key[Option[Unit]] =

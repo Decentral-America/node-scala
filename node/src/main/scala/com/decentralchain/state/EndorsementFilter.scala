@@ -34,7 +34,7 @@ case class EndorsementFilter(
   def simulate(validIndexes: Iterable[Int], newConflictIndexes: Set[Int]): SimulationResult = {
     type Item = (idx: GeneratorIndex, blsPk: BlsPublicKey, balance: Long)
     val lifted = normalizedGeneratorSet.lift
-    val items = for {
+    val items  = for {
       i                   <- validIndexes.view
       (_, blsPk, balance) <- lifted(i)
       if balance > 0

@@ -53,7 +53,7 @@ class HandshakeDecoderSpec extends FreeSpec {
     val timestampBytes = Longs.toByteArray(System.currentTimeMillis() / 1000)
 
     val validDeclaredAddressLen = Set(0, 8, 20)
-    val invalidBytesGen = Gen.listOfN(3, Arbitrary.arbByte.arbitrary).filter {
+    val invalidBytesGen         = Gen.listOfN(3, Arbitrary.arbByte.arbitrary).filter {
       case List(appNameLen, nodeNameLen, declaredAddressLen) =>
         !(appNameLen == appNameBytes.size || nodeNameLen == nodeNameBytes.size ||
           validDeclaredAddressLen.contains(declaredAddressLen))

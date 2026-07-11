@@ -80,7 +80,7 @@ object BlockAppender extends ScorexLogging {
       } yield validApplication).value
 
     val handle = append.flatMap {
-      case Right(Ignored) => Task.unit // block already appended
+      case Right(Ignored)    => Task.unit // block already appended
       case Right(_: Applied) =>
         Task {
           log.debug(s"${id(ch)} Appended $newBlock")

@@ -64,7 +64,7 @@ class GrpcCacheKeyConverters(chainId: Byte) {
 
   def assetValueBefore(asset: IssuedAsset, update: StateUpdate.AssetStateUpdate): Option[AssetDescription] = update.before.map(assetValue(asset, _))
   def assetValueAfter(asset: IssuedAsset, update: StateUpdate.AssetStateUpdate): Option[AssetDescription]  = update.after.map(assetValue(asset, _))
-  def assetValue(asset: IssuedAsset, update: StateUpdate.AssetDetails): AssetDescription = AssetDescription(
+  def assetValue(asset: IssuedAsset, update: StateUpdate.AssetDetails): AssetDescription                   = AssetDescription(
     originTransactionId = TransactionId(asset.id),
     issuer = update.issuer.toPublicKey,
     name = update.name.toByteString,

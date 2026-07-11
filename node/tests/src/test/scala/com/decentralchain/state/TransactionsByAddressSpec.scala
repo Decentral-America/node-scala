@@ -40,7 +40,7 @@ class TransactionsByAddressSpec extends FreeSpec with BlockGen with WithDomain {
     val recipient2 = TxHelpers.signer(3)
 
     val genesisTimestamp = ntpNow
-    val genesisBlock = Block
+    val genesisBlock     = Block
       .genesis(
         GenesisSettings(
           genesisTimestamp,

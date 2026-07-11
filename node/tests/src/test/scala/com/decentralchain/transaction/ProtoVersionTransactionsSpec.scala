@@ -133,7 +133,7 @@ class ProtoVersionTransactionsSpec extends FreeSpec {
     "LeaseTransaction/LeaseCancelTransaction" in {
       val recipient = accountOrAliasGen.sample.get
 
-      val leaseTx = LeaseTransaction.selfSigned(TxVersion.V3, Account, recipient, 100, MinFee, Now).explicitGet()
+      val leaseTx       = LeaseTransaction.selfSigned(TxVersion.V3, Account, recipient, 100, MinFee, Now).explicitGet()
       val leaseCancelTx =
         LeaseCancelTransaction
           .selfSigned(TxVersion.V3, Account, leaseTx.id(), MinFee, Now)

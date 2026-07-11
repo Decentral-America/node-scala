@@ -19,7 +19,7 @@ class MicroBlockAppendingAfterFinalizationSpec extends BaseFinalizationSpec {
   private val generator2Addr = generator2.toAddress
   private val generator2Idx  = GeneratorIndex(1)
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings.configure(
     _.copy(
       generationPeriodLength = 2,
@@ -124,7 +124,7 @@ class MicroBlockAppendingAfterFinalizationSpec extends BaseFinalizationSpec {
     val generator3    = TxHelpers.signer(2)
     val generator3Idx = GeneratorIndex(2)
 
-    val generators = Seq(generator1, generator2, generator3)
+    val generators   = Seq(generator1, generator2, generator3)
     val initBalances = Seq(
       AddrWithBalance(generator1.toAddress, 5000.dcc),
       AddrWithBalance(generator2.toAddress, 2000.dcc),

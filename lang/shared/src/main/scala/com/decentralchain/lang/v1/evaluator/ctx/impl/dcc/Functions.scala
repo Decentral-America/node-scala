@@ -29,7 +29,7 @@ import monix.eval.Coeval
 object Functions {
   private def getDataFromStateF(name: String, internalName: Short, dataType: DataType, selfCall: Boolean): BaseFunction[Environment] = {
     val resultType = UNION(dataType.innerType, UNIT)
-    val args =
+    val args       =
       if (selfCall)
         Seq(("key", STRING))
       else
@@ -47,7 +47,7 @@ object Functions {
         environmentFunctions
           .getData(addressOrAlias, key, dataType)
           .map(_.flatMap {
-            case None => Right(unit)
+            case None    => Right(unit)
             case Some(a) =>
               (a: @unchecked) match {
                 case b: ByteStr => CONST_BYTESTR(b)

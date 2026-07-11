@@ -38,12 +38,13 @@ object HotStuffAction {
 object HotStuffEngine {
 
   /** Ingest a QC. Verifies it first (finding #1); on a valid COMMIT QC for a higher block than already
-    * committed, emits a `Committed` action (finding #2). Always advances the view on a valid QC. */
+    * committed, emits a `Committed` action (finding #2). Always advances the view on a valid QC.
+    */
   def onQC(state: EngineState, qc: QuorumCertificate): (EngineState, Seq[HotStuffAction]) =
     HotStuffQuorum.verifyQC(qc, state.committee) match {
       case Left(err)    => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
       case Right(false) => (state, Seq(HotStuffAction.Rejected("QC signature verification failed")))
-      case Right(true) =>
+      case Right(true)  =>
         val advanced = state.copy(
           safety = HotStuffSafety.update(qc, state.safety),
           pacemaker = HotStuffPacemaker.onQC(qc.view, state.pacemaker)
@@ -59,7 +60,8 @@ object HotStuffEngine {
 
   /** Decide whether to vote for a leader's proposal. Verifies the justify QC (finding #1), folds it into
     * safety (catch-up), then applies the HotStuff voting rule. Returns the updated state and whether a
-    * vote should be cast (the shell signs + broadcasts the HotStuffVote when true). */
+    * vote should be cast (the shell signs + broadcasts the HotStuffVote when true).
+    */
   def onProposal(
       state: EngineState,
       proposal: HotStuffProposal,
@@ -68,7 +70,7 @@ object HotStuffEngine {
     val justifyValid = proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).contains(true))
     if (!justifyValid) (state, false)
     else {
-      val caughtUp = proposal.justify.fold(state)(qc => state.copy(safety = HotStuffSafety.update(qc, state.safety)))
+      val caughtUp   = proposal.justify.fold(state)(qc => state.copy(safety = HotStuffSafety.update(qc, state.safety)))
       val shouldVote = HotStuffSafety.safeToVote(proposal, caughtUp.safety, extendsBranch)
       val next       = if (shouldVote) caughtUp.copy(safety = HotStuffSafety.recordVote(proposal.view, caughtUp.safety)) else caughtUp
       (next, shouldVote)
@@ -76,7 +78,8 @@ object HotStuffEngine {
   }
 
   /** Round timeout: advance the view so the next leader can propose. The chain never halts — feature-25
-    * finality keeps advancing underneath. */
+    * finality keeps advancing underneath.
+    */
   def onTimeout(state: EngineState): (EngineState, Seq[HotStuffAction]) = {
     val pacemaker = HotStuffPacemaker.onTimeout(state.pacemaker)
     (state.copy(pacemaker = pacemaker), Seq(HotStuffAction.EnteredView(pacemaker.view)))

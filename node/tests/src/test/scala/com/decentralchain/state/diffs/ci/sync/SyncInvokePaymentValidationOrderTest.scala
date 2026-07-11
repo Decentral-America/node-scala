@@ -13,7 +13,7 @@ import com.decentralchain.transaction.TxHelpers.*
 class SyncInvokePaymentValidationOrderTest extends PropSpec with WithDomain {
   private val issueTx = issue()
   private val asset   = IssuedAsset(issueTx.id())
-  private val dApp = TestCompiler(V7).compileContract(
+  private val dApp    = TestCompiler(V7).compileContract(
     s"""
        | @Callable(i)
        | func f1(bigComplexity: Boolean, error: Boolean) = {

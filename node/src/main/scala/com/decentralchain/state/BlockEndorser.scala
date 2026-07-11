@@ -50,13 +50,13 @@ object BlockEndorser {
 
         committed        = blockchain.committedGenerators(votingPeriod)
         votingBlockMiner = votingBlockHeader.header.generator.toAddress
-        balances = generatorSet.collect {
+        balances         = generatorSet.collect {
           case x if blockchain.isGeneratingBalanceValid(votingHeight, votingBlockHeader.header, x.balance) => x.address -> x.balance
         }.toMap
 
         filter = {
-          val isMiner    = wallet.privateKeyAccount(votingBlockMiner).isRight
-          val minerIndex = if (isMiner) committed.indexWhere { case (addr, _) => addr == votingBlockMiner } else -1
+          val isMiner             = wallet.privateKeyAccount(votingBlockMiner).isRight
+          val minerIndex          = if (isMiner) committed.indexWhere { case (addr, _) => addr == votingBlockMiner } else -1
           val normalizedEndorsers = committed.map { case (address, blsPk) =>
             (address, blsPk, balances.getOrElse(address, 0L))
           }.toVector
@@ -74,17 +74,18 @@ object BlockEndorser {
         }
         if endorsementStorage.startVoting(filter)
 
-        (account, idx) <- for {
-          ((committedAddr, _), idx) <- committed.zipWithIndex
-          if !filter.miner.contains(idx) // A miner doesn’t need to endorse its own blocks - a mining is already an endorsement
-          pk <- wallet.privateKeyAccount(committedAddr).toSeq
-          if balances.contains(committedAddr)
-        } yield (pk, GeneratorIndex(idx))
+        (account, idx) <-
+          for {
+            ((committedAddr, _), idx) <- committed.zipWithIndex
+            if !filter.miner.contains(idx) // A miner doesn’t need to endorse its own blocks - a mining is already an endorsement
+            pk <- wallet.privateKeyAccount(committedAddr).toSeq
+            if balances.contains(committedAddr)
+          } yield (pk, GeneratorIndex(idx))
 
         endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId)
         networkMsg  = EndorseBlock.from(endorsement)
         broadcast <- endorsementStorage.tryAdd(networkMsg) match {
-          case Right(r) => Some(r)
+          case Right(r)  => Some(r)
           case Left(err) =>
             logger.warn(s"Can't add endorsement from #$idx ${account.toAddress}: $err")
             None

@@ -48,7 +48,7 @@ object InvokeDiffsCommon {
   def txFeeDiff(blockchain: Blockchain, tx: InvokeScriptTransactionLike): Either[GenericError, (Long, Map[Address, Portfolio])] = {
     val attachedFee = tx.fee
     tx.feeAssetId match {
-      case Dcc => Right((attachedFee, Map(tx.sender.toAddress -> Portfolio(-attachedFee))))
+      case Dcc                    => Right((attachedFee, Map(tx.sender.toAddress -> Portfolio(-attachedFee))))
       case asset @ IssuedAsset(_) =>
         for {
           assetInfo <- blockchain
@@ -101,7 +101,7 @@ object InvokeDiffsCommon {
 
     val resultE = for {
       (attachedFeeInDcc, portfolioDiff) <- txFeeDiff(blockchain, tx)
-      _ <- {
+      _                                 <- {
         lazy val errorMessage = {
           val stepsInfo =
             if (stepsNumber > 1)
@@ -347,7 +347,7 @@ object InvokeDiffsCommon {
     payments
       .collectFirstSome {
         case Payment(_, IssuedAsset(id)) => InvokeDiffsCommon.checkAsset(blockchain, id).swap.toOption
-        case Payment(_, Dcc)           => None
+        case Payment(_, Dcc)             => None
       }
       .map(GenericError(_))
       .toLeft(())
@@ -467,7 +467,7 @@ object InvokeDiffsCommon {
       remainingLimit: Int
   ): TracedResult[ValidationError, StateSnapshot] = {
     actions.foldLeft(TracedResult(initSnapshot.asRight[ValidationError])) {
-      case (r @ TracedResult(Left(_), _, _), _) => r
+      case (r @ TracedResult(Left(_), _, _), _)                         => r
       case (TracedResult(Right(currentSnapshot), prevTrace, _), action) =>
         val complexityLimit =
           if (remainingLimit < Int.MaxValue) remainingLimit - currentSnapshot.scriptsComplexity.toInt
@@ -480,7 +480,7 @@ object InvokeDiffsCommon {
           val AssetTransfer(addressRepr, recipient, amount, asset) = transfer
           for {
             address <- resolveAddress(addressRepr, blockchain)
-            diff <- Asset.fromCompatId(asset) match {
+            diff    <- Asset.fromCompatId(asset) match {
               case Dcc =>
                 val portfolio = Portfolio.combine(Map(address -> Portfolio(amount)), Map(dAppAddress -> Portfolio(-amount))).leftMap(GenericError(_))
                 TracedResult(
@@ -662,7 +662,7 @@ object InvokeDiffsCommon {
           blockchain.assetScript(IssuedAsset(assetId)).fold(TracedResult(actionDiff)) { case AssetScriptInfo(script, complexity) =>
             val assetValidationDiff =
               for {
-                result <- actionDiff
+                result          <- actionDiff
                 validatedResult <- validatePseudoTxWithSmartAssetScript(blockchain, tx)(
                   pseudoTx,
                   assetId,
@@ -741,7 +741,7 @@ object InvokeDiffsCommon {
         case Left(error)  => Left(FailedTransactionError.assetExecutionInAction(error.message, complexity, log, assetId))
         case Right(FALSE) => Left(FailedTransactionError.notAllowedByAssetInAction(complexity, log, assetId))
         case Right(TRUE)  => Right(nextSnapshot.setScriptsComplexity(nextSnapshot.scriptsComplexity + complexity))
-        case Right(x) =>
+        case Right(x)     =>
           Left(FailedTransactionError.assetExecutionInAction(s"Script returned not a boolean result, but $x", complexity, log, assetId))
       }
     } match {
@@ -766,7 +766,7 @@ object InvokeDiffsCommon {
       dataSize: Int,
       availableActions: ActionLimits
   ): TracedResult[ValidationError, Unit] = {
-    def error(message: String) = TracedResult(Left(FailedTransactionError.dAppExecution(message, usedComplexity, log)))
+    def error(message: String)                       = TracedResult(Left(FailedTransactionError.dAppExecution(message, usedComplexity, log)))
     def checkLimitsByVersion(version: StdLibVersion) = {
       if (version >= V6 && balanceActionsCount > availableActions.balanceActions) {
         error("ScriptTransfer, Lease, LeaseCancel actions count limit is exceeded")
@@ -808,7 +808,7 @@ object InvokeDiffsCommon {
             case t: AssetTransfer if t.amount < 0          => Some(s"Negative transfer amount = ${t.amount}")
             case l: Lease if l.amount < 0                  => Some(s"Negative lease amount = ${l.amount}")
             case SponsorFee(_, Some(amount)) if amount < 0 => Some(s"Negative sponsor amount = $amount")
-            case i: Issue =>
+            case i: Issue                                  =>
               val length = i.name.getBytes("UTF-8").length
               if (length < IssueTransaction.MinAssetNameLength || length > IssueTransaction.MaxAssetNameLength)
                 Some("Invalid asset name")

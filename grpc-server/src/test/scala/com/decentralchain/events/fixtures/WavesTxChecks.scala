@@ -393,7 +393,7 @@ object DccTxChecks extends Matchers with OptionValues {
     override def apply(actualBalances: Seq[BalanceUpdate]): MatchResult = {
       val mismatchedBalancesB = Seq.newBuilder[(Address, Asset, (Long, Long), (Long, Long))]
       val unexpectedBalancesB = Seq.newBuilder[BalanceUpdate]
-      val unmetExpectations = actualBalances.foldLeft(expected) { case (prevExpected, b) =>
+      val unmetExpectations   = actualBalances.foldLeft(expected) { case (prevExpected, b) =>
         val addr  = Address.fromBytes(b.address.toByteArray).explicitGet()
         val asset = toVanillaAssetId(b.amountAfter.value.assetId)
         prevExpected.get(addr -> asset) match {

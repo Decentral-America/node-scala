@@ -18,7 +18,7 @@ class MultipleConflictEndorserSuite extends BaseFinalizationSpec {
   private val conflictGenerator2Addr = conflictGenerator2.toAddress
   private val conflictGenerator2Idx  = GeneratorIndex(2)
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings.configure(
     _.copy(
       generationPeriodLength = 2,

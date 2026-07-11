@@ -8,8 +8,10 @@ import io.decentralchain.protobuf.block.HotStuffPhase
 
 /** Side-effect sink injected into the HotStuff coordinator. The real (step 4c-bind) implementation
   * broadcasts via `allChannels`, signs with the node's committed BLS key(s), and applies commits to
-  * the blockchain finalized height; the simulation test injects an in-memory fake. */
+  * the blockchain finalized height; the simulation test injects an in-memory fake.
+  */
 trait HotStuffEffects {
+
   /** Send a message to peers. */
   def broadcast(message: Message): Unit
 
@@ -24,7 +26,8 @@ trait HotStuffEffects {
 }
 
 /** Orchestrates the pure reducers (`HotStuffEngine`, `HotStuffVotePool`, `HotStuffQuorum`) into the
-  * 3-phase HotStuff loop for one node. */
+  * 3-phase HotStuff loop for one node.
+  */
 sealed trait HotStuffCoordinator {
   def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit
   def onVote(vote: HotStuffVote): Unit
@@ -36,13 +39,14 @@ sealed trait HotStuffCoordinator {
 object HotStuffCoordinator {
 
   /** No-op coordinator used when `dcc.hotstuff.enabled = false` (the default). Guarantees zero
-    * behaviour change while T2 is gated off. */
+    * behaviour change while T2 is gated off.
+    */
   object Disabled extends HotStuffCoordinator {
-    def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = ()
-    def onVote(vote: HotStuffVote): Unit                                = ()
-    def onQC(qc: QuorumCertificate): Unit                               = ()
+    def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit    = ()
+    def onVote(vote: HotStuffVote): Unit                                  = ()
+    def onQC(qc: QuorumCertificate): Unit                                 = ()
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = ()
-    def onTimeout(): Unit                                               = ()
+    def onTimeout(): Unit                                                 = ()
   }
 
   /** The active coordinator. Single-threaded — the shell MUST confine all calls to one actor/scheduler

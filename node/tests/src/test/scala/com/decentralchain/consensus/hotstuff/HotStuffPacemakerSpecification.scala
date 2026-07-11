@@ -18,7 +18,7 @@ class HotStuffPacemakerSpecification extends FlatSpec {
   "leaderFor" should "round-robin deterministically over the committee" in {
     HotStuffPacemaker.leaderFor(0, committee).map(_.toInt) should be(Some(0))
     HotStuffPacemaker.leaderFor(1, committee).map(_.toInt) should be(Some(1))
-    HotStuffPacemaker.leaderFor(4, committee).map(_.toInt) should be(Some(0)) // wraps
+    HotStuffPacemaker.leaderFor(4, committee).map(_.toInt) should be(Some(0))  // wraps
     HotStuffPacemaker.leaderFor(-1, committee).map(_.toInt) should be(Some(3)) // floorMod, never crashes
   }
 

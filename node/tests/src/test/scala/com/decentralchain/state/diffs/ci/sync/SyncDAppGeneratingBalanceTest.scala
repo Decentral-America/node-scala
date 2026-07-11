@@ -12,7 +12,7 @@ import com.decentralchain.transaction.TxHelpers.*
 class SyncDAppGeneratingBalanceTest extends PropSpec with WithDomain {
   property("sync balance changes should be taken into account for the generatingBalance field") {
     val amount = 777
-    val dApp = TestCompiler(V7).compileContract(
+    val dApp   = TestCompiler(V7).compileContract(
       s"""
          | @Callable(i)
          | func default() = {

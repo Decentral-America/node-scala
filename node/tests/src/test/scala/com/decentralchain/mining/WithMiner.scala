@@ -37,7 +37,7 @@ trait WithMiner extends WithDomain { suite: Suite =>
     val utxPool           = new UtxPoolImpl(time, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
     val minerScheduler    = Scheduler.singleThread("miner")
     val appenderScheduler = Scheduler.singleThread("appender")
-    val miner = new MinerImpl(
+    val miner             = new MinerImpl(
       channels,
       blockchain,
       settings,

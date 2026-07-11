@@ -99,8 +99,8 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
     nodes.waitForTransaction(putTxId)
 
     // can put new, update and remove existed in the same transaction
-    val updatedDatEntries = putDataEntries.take(25).map(updateDataEntry)
-    val newDataEntries    = (26 to 30).flatMap(i => dataEntries(i))
+    val updatedDatEntries          = putDataEntries.take(25).map(updateDataEntry)
+    val newDataEntries             = (26 to 30).flatMap(i => dataEntries(i))
     val updateAndRemoveDataEntries =
       updatedDatEntries ++                                                // 25 keys to update
         newDataEntries ++                                                 // 20 new keys
@@ -116,7 +116,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
 
     // can reuse removed keys
     val reusedData = putDataEntries.takeRight(25).map(updateDataEntry)
-    val reuseTxId =
+    val reuseTxId  =
       sender.broadcastData(sender.keyPair, reusedData, calcDataFee(reusedData, TxVersion.V1), version = TxVersion.V1).id
 
     nodes.waitForTransaction(reuseTxId)

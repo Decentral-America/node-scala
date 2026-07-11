@@ -69,7 +69,7 @@ class FunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
       .explicitGet()
 
     val recipient = Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet()
-    val ttx = TransferTransaction(
+    val ttx       = TransferTransaction(
       2.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
       recipient,
@@ -83,7 +83,7 @@ class FunctionComplexityTest(estimator: ScriptEstimator) extends PropSpec {
       recipient.chainId
     )
 
-    val script = scriptWithAllV1Functions(dtx, ttx)
+    val script        = scriptWithAllV1Functions(dtx, ttx)
     val adaptedScript =
       if (version == V3) script.replace("transactionById", "transferTransactionById")
       else script

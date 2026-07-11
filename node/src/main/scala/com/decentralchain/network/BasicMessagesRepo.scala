@@ -477,7 +477,7 @@ object BasicMessagesRepo {
 
     protected def stringify(msg: Any): String = msg match {
       case tx: Transaction => s"Transaction(${tx.id()})"
-      case b: Block =>
+      case b: Block        =>
         s"${b.id()}, header: ${BlockHeaderSerializer.toJson(b.header, b.bytes().length, b.transactionData.length, b.signature).toString}"
       case RawBytes(code, data) => s"RawBytes(${specsByCodes(code).messageName}, ${data.length} bytes)"
       case other                => other.toString

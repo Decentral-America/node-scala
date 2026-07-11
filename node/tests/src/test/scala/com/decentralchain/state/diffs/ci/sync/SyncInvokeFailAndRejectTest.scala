@@ -41,7 +41,7 @@ class SyncInvokeFailAndRejectTest extends PropSpec with WithDomain {
       val noScriptAsset      = IssuedAsset(noScriptAssetIssue.id())
       val leaseTx            = lease(dApp2Signer, defaultAddress)
       val dataTx             = data(dApp2Signer, Seq(StringDataEntry("old", "value")))
-      val dApp1 = TestCompiler(V5).compileContract(
+      val dApp1              = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() = {

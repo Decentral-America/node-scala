@@ -334,7 +334,7 @@ class ContractCompilerCompactorTest extends PropSpec {
 
     val compilationNotCompactedResult    = compiler.ContractCompiler(ctxForV(V5).compilerContext, expr, V5).explicitGet()
     val compilationCompactedResultNoMeta = compiler.ContractCompiler(ctxForV(V5).compilerContext, compactedExpr, V5).explicitGet()
-    val oldCompactedResult = compilationCompactedResultNoMeta.copy(
+    val oldCompactedResult               = compilationCompactedResultNoMeta.copy(
       meta = compilationCompactedResultNoMeta.meta
         .withCompactNameAndOriginalNamePairList(oldCompOriginalNames)
         .withFuncs(compilationNotCompactedResult.meta.funcs)

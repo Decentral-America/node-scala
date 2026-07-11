@@ -129,7 +129,9 @@ abstract class HandshakeHandler(
             val acceptedAsNew = previousPeer == null || (!previousPeer.isActive && peerConnections.replace(key, previousPeer, ctx.channel()))
             if (acceptedAsNew) {
               if (previousPeer != null) {
-                log.info(s"${id(ctx)} Replacing dead connection to peer with nonce ${remoteHandshake.nodeNonce} (stale channel ${id(previousPeer)} was inactive)")
+                log.info(
+                  s"${id(ctx)} Replacing dead connection to peer with nonce ${remoteHandshake.nodeNonce} (stale channel ${id(previousPeer)} was inactive)"
+                )
                 establishedConnections.remove(previousPeer)
                 allChannels.remove(previousPeer)
               }

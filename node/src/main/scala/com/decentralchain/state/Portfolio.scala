@@ -71,7 +71,7 @@ object Portfolio {
   def build(af: (Asset, Long)): Portfolio = build(af._1, af._2)
 
   def build(a: Asset, amount: Long): Portfolio = a match {
-    case Dcc              => Portfolio(amount)
+    case Dcc                => Portfolio(amount)
     case t @ IssuedAsset(_) => Portfolio(assets = VectorMap(t -> amount))
   }
 

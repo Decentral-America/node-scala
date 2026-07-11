@@ -23,7 +23,7 @@ case class BurnRequest(
   def toTxFrom(sender: PublicKey): Either[ValidationError, BurnTransaction] =
     for {
       validProofs <- toProofs(signature, proofs)
-      tx <- BurnTransaction.create(
+      tx          <- BurnTransaction.create(
         version.getOrElse(defaultVersion),
         sender,
         asset,

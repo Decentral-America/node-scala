@@ -92,7 +92,7 @@ class MinerAccountScriptRestrictionsTest extends PropSpec with WithDomain {
 
   private def withMiner(d: Domain)(f: (MinerImpl, Appender, Scheduler) => Unit): Unit = {
     val defaultSettings = DCCSettings.default()
-    val dccSettings   = defaultSettings.copy(minerSettings = defaultSettings.minerSettings.copy(quorum = 0))
+    val dccSettings     = defaultSettings.copy(minerSettings = defaultSettings.minerSettings.copy(quorum = 0))
 
     val utx = new UtxPoolImpl(
       time,

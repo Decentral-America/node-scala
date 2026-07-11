@@ -195,8 +195,8 @@ class MicroBlockMinerImpl(
 object MicroBlockMinerImpl {
   sealed trait MicroBlockMiningResult
 
-  case object Stop  extends MicroBlockMiningResult
-  case object Retry extends MicroBlockMiningResult
+  case object Stop                                                      extends MicroBlockMiningResult
+  case object Retry                                                     extends MicroBlockMiningResult
   final case class Success(b: Block, totalConstraint: MiningConstraint) extends MicroBlockMiningResult {
     val nanoTime: Long = System.nanoTime()
   }

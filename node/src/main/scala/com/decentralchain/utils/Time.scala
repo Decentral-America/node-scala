@@ -66,7 +66,7 @@ class NTP(ntpServer: String) extends Time with ScorexLogging with AutoCloseable 
     }
 
     newOffsetTask.flatMap {
-      case None if !scheduler.isShutdown => updateTask.delayExecution(RetryDelay)
+      case None if !scheduler.isShutdown                                   => updateTask.delayExecution(RetryDelay)
       case Some((server, ntpTimestamp, nanoTime)) if !scheduler.isShutdown =>
         log.trace(s"Adjusting time with ${ntpTimestamp - System.currentTimeMillis()} milliseconds, source: ${server.getHostName}.")
         this.ntpTimestamp = ntpTimestamp

@@ -208,7 +208,7 @@ class ProtoVersionTransactionsSpec
     }
 
     "InvokeScriptTransaction" in {
-      val dapp = TxHelpers.secondAddress
+      val dapp                   = TxHelpers.secondAddress
       val invokeScriptTxUnsigned = InvokeScriptTransaction
         .create(
           TxVersion.V2,
@@ -283,7 +283,7 @@ class ProtoVersionTransactionsSpec
     }
 
     "TransferTransaction" in {
-      val recipient = TxHelpers.secondAddress
+      val recipient          = TxHelpers.secondAddress
       val transferTxUnsigned =
         TransferTransaction
           .create(TxVersion.V3, account.publicKey, recipient, asset, 100L, Dcc, MinFee, ByteStr(attachment), now, Proofs.empty)

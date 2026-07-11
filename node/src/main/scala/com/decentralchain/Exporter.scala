@@ -53,7 +53,7 @@ object Exporter extends ScorexLogging {
           val blocksOutputFilename = s"$blocksOutputFileNamePrefix-$height"
           log.info(s"Blocks output file: $blocksOutputFilename")
 
-          val exportSnapshots = snapshotsOutputFileNamePrefix.isDefined
+          val exportSnapshots         = snapshotsOutputFileNamePrefix.isDefined
           val snapshotsOutputFilename = if (exportSnapshots) {
             val filename = s"${snapshotsOutputFileNamePrefix.get}-$height"
             log.info(s"Snapshots output file: $filename")
@@ -330,7 +330,7 @@ object Exporter extends ScorexLogging {
   private def createOutputFile(outputFilename: String): FileOutputStream =
     IO.createOutputStream(outputFilename) match {
       case Success(output) => output
-      case Failure(ex) =>
+      case Failure(ex)     =>
         log.error(s"Failed to create file '$outputFilename': $ex")
         throw ex
     }

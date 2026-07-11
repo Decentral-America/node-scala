@@ -11,7 +11,7 @@ object EthConverters {
       case skp: SeedKeyPair => Bip32ECKeyPair.generateKeyPair(skp.seed)
       case pkkp: PKKeyPair  => Bip32ECKeyPair.create(pkkp.privateKey.arr, Array.emptyByteArray)
     }
-    def toEthAddress: String       = toEthKeyPair.toEthAddress
+    def toEthAddress: String     = toEthKeyPair.toEthAddress
     def toEthDccAddress: Address = toEthKeyPair.toDccAddress
   }
 
@@ -21,7 +21,7 @@ object EthConverters {
 
   implicit class EthereumECKeyPairExt(private val kp: ECKeyPair) extends AnyVal {
     def toDccAddress: Address = Address(EthEncoding.toBytes(toEthAddress))
-    def toEthAddress: String    = Keys.getAddress(kp)
+    def toEthAddress: String  = Keys.getAddress(kp)
   }
 
   implicit class EthereumByteStrExt(private val bs: ByteStr) extends AnyVal {

@@ -209,7 +209,7 @@ class InvokeScriptWithSponsorshipSuite extends BaseTransactionSuite with CancelA
     val feeAmount     = 9
 
     val dAppAssetBalance = sender.assetBalance(dAppAddress, dAppAsset).balance
-    val dAppDccBalance = sender.accountBalances(dAppAddress)._1
+    val dAppDccBalance   = sender.accountBalances(dAppAddress)._1
 
     sender
       .invokeScript(

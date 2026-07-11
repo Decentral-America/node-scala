@@ -133,7 +133,7 @@ class DataTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     // Max size of transaction V2
     val maxKeySizeV2 = 400
     val key2         = "u" * (maxKeySizeV2 - 1)
-    val data2 =
+    val data2        =
       List.tabulate(5)(n => DataEntry(key2 + n.toChar, DataEntry.Value.BinaryValue(ByteString.copyFrom(Array.fill(Short.MaxValue)(n.toByte)))))
     val fee2 = calcDataFee(data2, TxVersion.V2)
     sender.putData(firstAcc, data2, fee2, version = TxVersion.V2, waitForTx = true)

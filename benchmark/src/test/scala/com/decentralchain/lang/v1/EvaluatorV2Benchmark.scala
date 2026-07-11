@@ -47,7 +47,7 @@ class EvaluatorV2Benchmark {
 
 @State(Scope.Benchmark)
 class Funcs {
-  val count = 2000
+  val count  = 2000
   val script =
     s"""
        | func a0() = {
@@ -62,7 +62,7 @@ class Funcs {
 
 @State(Scope.Benchmark)
 class Lets {
-  val count = 5000
+  val count  = 5000
   val script =
     s"""
        | let a0 = 1

@@ -60,7 +60,7 @@ object Schedulers {
       executionModel: ExecutionModel = ExecutionModel.Default,
       rejectedExecutionHandler: RejectedExecutionHandler = new DiscardOldestPolicy
   ): SchedulerService = {
-    val factory = threadFactory(name, daemonic = true, reporter)
+    val factory  = threadFactory(name, daemonic = true, reporter)
     val executor = new AdaptedThreadPoolExecutor(1, factory, rejectedExecutionHandler) {
       override def reportFailure(t: Throwable): Unit = reporter.reportFailure(t)
     }
@@ -75,7 +75,7 @@ object Schedulers {
       executionModel: ExecutionModel = ExecutionModel.Default,
       rejectedExecutionHandler: RejectedExecutionHandler = new DiscardOldestPolicy
   ): SchedulerService = {
-    val factory = threadFactory(name, daemonic = true, reporter)
+    val factory  = threadFactory(name, daemonic = true, reporter)
     val executor = new AdaptedThreadPoolExecutor(poolSize, factory, rejectedExecutionHandler) {
       override def reportFailure(t: Throwable): Unit = reporter.reportFailure(t)
     }
@@ -89,7 +89,7 @@ object Schedulers {
     override def isPeriodic: Boolean            = delegate.isPeriodic
     override def getDelay(unit: TimeUnit): Long = delegate.getDelay(unit)
     override def compareTo(o: Delayed): Int     = delegate.compareTo(o)
-    override def run(): Unit = {
+    override def run(): Unit                    = {
       val workerThread = Thread.currentThread()
       maybeScheduledTimeout = Some(
         timer.newTimeout(
@@ -124,9 +124,9 @@ object Schedulers {
       executionModel: ExecutionModel = ExecutionModel.Default,
       rejectedExecutionHandler: RejectedExecutionHandler = new DiscardOldestPolicy
   ): SchedulerService = {
-    val factory = threadFactory(name, daemonic = true, reporter)
+    val factory  = threadFactory(name, daemonic = true, reporter)
     val executor = new AdaptedThreadPoolExecutor(poolSize, factory, rejectedExecutionHandler) {
-      override def reportFailure(t: Throwable): Unit = reporter.reportFailure(t)
+      override def reportFailure(t: Throwable): Unit                                                                 = reporter.reportFailure(t)
       override def decorateTask[V](runnable: Runnable, task: RunnableScheduledFuture[V]): RunnableScheduledFuture[V] =
         new TimedWrapper(timer, timeout, task)
       override def decorateTask[V](callable: Callable[V], task: RunnableScheduledFuture[V]): RunnableScheduledFuture[V] =

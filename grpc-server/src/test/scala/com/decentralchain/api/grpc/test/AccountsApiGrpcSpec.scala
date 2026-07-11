@@ -37,7 +37,7 @@ class AccountsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatch
     val grpcApi = getGrpcApi(d)
 
     val assetTransferAmount   = 123
-    val dccTransferAmount   = 456 + TestValues.fee
+    val dccTransferAmount     = 456 + TestValues.fee
     val reverseTransferAmount = 1
 
     val issue     = TxHelpers.issue(sender)
@@ -50,7 +50,7 @@ class AccountsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatch
 
     d.liquidAndSolidAssert { () =>
       val expectedDccBalance = dccTransferAmount - TestValues.fee - reverseTransferAmount
-      val expectedResult = List(
+      val expectedResult     = List(
         BalanceResponse.of(
           BalanceResponse.Balance.Dcc(BalanceResponse.DccBalances(expectedDccBalance, 0, expectedDccBalance, expectedDccBalance))
         ),
@@ -209,7 +209,7 @@ class AccountsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatch
       (1 to 999).foreach(_ => d.appendBlock())
 
       val invalidStateHash = ByteStr.fill(DigestLength)(1)
-      val originalBlock = d.createBlock(
+      val originalBlock    = d.createBlock(
         Block.ProtoBlockVersion,
         Seq.empty,
         strictTime = true,

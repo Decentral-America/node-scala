@@ -36,7 +36,7 @@ class EthereumTransactionRollbackSpec extends FlatSpec with WithDomain with EthH
     d.helpers.creditDccToDefaultSigner()
     d.helpers.creditDccFromDefaultSigner(TxHelpers.secondAddress)
 
-    val asset = d.helpers.issueAsset()
+    val asset  = d.helpers.issueAsset()
     val script = TxHelpers.scriptV5(s"""
                                        | @Callable(i)
                                        | func foo() = {

@@ -25,7 +25,7 @@ case class ExchangeRequest(
   def toTxFrom(sender: PublicKey): Either[ValidationError, ExchangeTransaction] =
     for {
       validProofs <- toProofs(signature, proofs)
-      tx <- ExchangeTransaction.create(
+      tx          <- ExchangeTransaction.create(
         version.getOrElse(1.toByte),
         order1,
         order2,

@@ -12,7 +12,7 @@ import scala.concurrent.duration.*
 
 object TestHelpers {
   def genesisSettings(balances: Map[Address, Long], blockTimestamp: Long = System.currentTimeMillis()): GenesisSettings = {
-    val totalAmount = balances.values.sum
+    val totalAmount  = balances.values.sum
     val transactions = balances.map { case (account, amount) =>
       GenesisTransactionSettings(account.toString, amount)
     }.toSeq

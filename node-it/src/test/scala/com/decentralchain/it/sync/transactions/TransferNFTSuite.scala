@@ -38,7 +38,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
   }
 
   test("NFT should be correctly transferred via invoke script transaction") {
-    val nftAsset = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true).id
+    val nftAsset   = sender.issue(caller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true).id
     val scriptText =
       s"""
          |{-# STDLIB_VERSION 4 #-}
@@ -138,9 +138,9 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
   }
 
   test("NFT should correctly be transferred via exchange transaction") {
-    val buyer   = KeyPair("buyer".getBytes("UTF-8"))
-    val seller  = KeyPair("seller".getBytes("UTF-8"))
-    val matcher = KeyPair("matcher".getBytes("UTF-8"))
+    val buyer     = KeyPair("buyer".getBytes("UTF-8"))
+    val seller    = KeyPair("seller".getBytes("UTF-8"))
+    val matcher   = KeyPair("matcher".getBytes("UTF-8"))
     val transfers = List(
       Transfer(buyer.toAddress.toString, 10.dcc),
       Transfer(seller.toAddress.toString, 10.dcc),
@@ -152,7 +152,7 @@ class TransferNFTSuite extends BaseTransactionSuite with NTPTime {
       sender.broadcastIssue(seller, assetName, assetDescription, 1, 0, reissuable = false, 1.dcc / 1000, waitForTx = true, script = None).id
     val pair = AssetPair.createAssetPair(nftAsset, "DCC")
     val ts   = ntpTime.correctedTime()
-    val buy = Order
+    val buy  = Order
       .buy(
         Order.V2,
         sender = buyer,

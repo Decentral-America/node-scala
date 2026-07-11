@@ -68,9 +68,9 @@ object FinalizationState extends ScorexLogging {
       voting: Option[FinalizationVoting],
       parentHeight: Height
   ): Boolean = generatorSet.nonEmpty && {
-    val votedIndexes       = voting.fold(Seq.empty)(_.valid)
-    val votedIndexesSet    = votedIndexes.toSet
-    val allConflictIndexes = knownConflict ++ voting.fold(Set.empty)(_.conflict.view.map(_.endorserIndex))
+    val votedIndexes                              = voting.fold(Seq.empty)(_.valid)
+    val votedIndexesSet                           = votedIndexes.toSet
+    val allConflictIndexes                        = knownConflict ++ voting.fold(Set.empty)(_.conflict.view.map(_.endorserIndex))
     val (totalBalance, endorsedBalance, minerIdx) = generatorSet.foldLeft((BigInt(0), BigInt(0), -1)) {
       case (orig @ (totalBalance, endorsedBalance, minerIdx), x) =>
         val gi = x.index

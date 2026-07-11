@@ -10,13 +10,13 @@ import com.decentralchain.test.FlatSpec
 import io.decentralchain.protobuf.block.HotStuffPhase
 
 class HotStuffVotePoolSpecification extends FlatSpec {
-  private val kps = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
+  private val kps                     = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
   private val committee: GeneratorSet = kps.zipWithIndex.map { case (kp, i) =>
     GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, 25L)
   }
-  private val PREPARE = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
+  private val PREPARE        = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
   private val block: BlockId = ByteStr(Array.fill[Byte](32)(9))
-  private val height = 100
+  private val height         = 100
 
   private def vote(i: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(5, PREPARE, block, height)
@@ -31,30 +31,30 @@ class HotStuffVotePoolSpecification extends FlatSpec {
   }
 
   it should "emit a verifiable QC once 2/3 stake is reached, and clear the bucket" in {
-    val (p1, _)   = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
-    val (p2, _)   = HotStuffVotePool.onVote(p1, vote(1), committee)
-    val (p3, qc)  = HotStuffVotePool.onVote(p2, vote(2), committee) // 3/4 = 75% >= 2/3
+    val (p1, _)  = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
+    val (p2, _)  = HotStuffVotePool.onVote(p1, vote(1), committee)
+    val (p3, qc) = HotStuffVotePool.onVote(p2, vote(2), committee) // 3/4 = 75% >= 2/3
     qc.isDefined should be(true)
     HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(true))
     p3.pending should be(empty) // bucket cleared on emit
   }
 
   it should "drop an invalid (forged) vote without pooling it" in {
-    val forged = vote(0).copy(signature = ByteStr(Array.fill[Byte](96)(0)))
+    val forged  = vote(0).copy(signature = ByteStr(Array.fill[Byte](96)(0)))
     val (p, qc) = HotStuffVotePool.onVote(VotePool(), forged, committee)
     qc should be(None)
     p.pending should be(empty)
   }
 
   it should "not double-count a repeated voter" in {
-    val (p1, _)  = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
-    val (p2, _)  = HotStuffVotePool.onVote(p1, vote(0), committee) // same voter again
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
+    val (p2, _) = HotStuffVotePool.onVote(p1, vote(0), committee) // same voter again
     p2.pending.values.flatten.map(_.voterIndex).toList should be(List(0))
   }
 
   it should "pool distinct targets separately" in {
     val other: BlockId = ByteStr(Array.fill[Byte](32)(7))
-    val voteOther = {
+    val voteOther      = {
       val msg = HotStuffQuorum.voteMessage(5, PREPARE, other, height)
       HotStuffVote(5, PREPARE, other, Height(height), 1, kps(1).sign(msg).byteStr)
     }

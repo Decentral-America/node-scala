@@ -11,8 +11,8 @@ import io.decentralchain.protobuf.block.*
 import io.decentralchain.protobuf.transaction.PBRecipients
 
 class BlocksApiSuite extends GrpcBaseTransactionSuite {
-  private val BlockV4Height = 3
-  private val BlockV5Height = 5
+  private val BlockV4Height                       = 3
+  private val BlockV5Height                       = 5
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.raw(s"""dcc {

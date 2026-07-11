@@ -60,13 +60,13 @@ object BlockHeaderSerializer {
       }
 
     def createFinalizationJson(finalizationVoting: Option[FinalizationVoting]): JsObject = finalizationVoting match {
-      case None => JsObject.empty
+      case None     => JsObject.empty
       case Some(fv) =>
         val builder = Json.newBuilder
         if (fv.valid.nonEmpty) builder += "endorserIndexes" -> GeneratorIndex.toInts(fv.valid)
         fv.aggregatedEndorsement.foreach(s => builder += "aggregatedEndorsementSignature" -> s.base58)
         if (fv.finalizedHeight > Height(0)) builder += "finalizedHeight" -> fv.finalizedHeight
-        if (fv.conflict.nonEmpty) builder += "conflictEndorsements" -> fv.conflict.map { c =>
+        if (fv.conflict.nonEmpty) builder += "conflictEndorsements"      -> fv.conflict.map { c =>
           Json.obj(
             "endorserIndex"    -> c.endorserIndex.toInt,
             "finalizedBlockId" -> c.finalizedId.toString,
@@ -158,7 +158,7 @@ object BlockSerializer {
   def mkSuffixBytes(header: BlockHeader, signature: ByteStr): Array[Byte] = {
     val featureVotesBytes = header.version match {
       case v if v < NgBlockVersion => Array.empty[Byte]
-      case _ =>
+      case _                       =>
         val featuresBuf = ByteBuffer.allocate(Ints.BYTES + header.featureVotes.size * Shorts.BYTES)
         featuresBuf.putInt(header.featureVotes.size).asShortBuffer().put(header.featureVotes.toArray)
         featuresBuf.array

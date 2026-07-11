@@ -44,7 +44,7 @@ class DataTransactionSpecification extends PropSpec {
       BooleanDataEntry("bool", value = true),
       BinaryDataEntry("blob", ByteStr("alice".getBytes("UTF-8")))
     )
-    val tx = TxHelpers.data(TxHelpers.defaultSigner, entries, version = TxVersion.V1)
+    val tx     = TxHelpers.data(TxHelpers.defaultSigner, entries, version = TxVersion.V1)
     val parsed = DataTxSerializer.parseBytes(tx.bytes()).get
     parsed.json() shouldBe tx.json()
     assert(crypto.verify(tx.signature, tx.bodyBytes(), tx.sender), "signature should be valid")
@@ -180,7 +180,7 @@ class DataTransactionSpecification extends PropSpec {
     val entry1 = IntegerDataEntry("int", 24)
     val entry2 = BooleanDataEntry("bool", value = true)
     val entry3 = BinaryDataEntry("blob", ByteStr(Base64.decode("YWxpY2U=")))
-    val tx = DataTransaction
+    val tx     = DataTransaction
       .create(
         1.toByte,
         PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),

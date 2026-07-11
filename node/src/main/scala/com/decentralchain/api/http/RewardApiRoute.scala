@@ -25,7 +25,7 @@ case class RewardApiRoute(blockchain: Blockchain) extends ApiRoute {
 
   def getRewards(height: Height): Either[ValidationError, RewardStatus] =
     for {
-      _ <- Either.cond(height.toInt <= blockchain.height, (), GenericError(s"Invalid height: $height"))
+      _           <- Either.cond(height.toInt <= blockchain.height, (), GenericError(s"Invalid height: $height"))
       activatedAt <- blockchain
         .featureActivationHeight(BlockchainFeatures.BlockReward)
         .filter(_ <= height)
@@ -38,7 +38,7 @@ case class RewardApiRoute(blockchain: Blockchain) extends ApiRoute {
       votingIntervalStart = nextCheck - rewardsSettings.votingInterval + 1
       votingThreshold     = rewardsSettings.votingInterval / 2 + 1
       votes               = blockchain.blockRewardVotes(height.toInt).filter(_ >= 0)
-      term =
+      term                =
         if (blockchain.isFeatureActivated(BlockchainFeatures.CappedReward, height.toInt))
           rewardsSettings.termAfterCappedRewardFeature
         else rewardsSettings.term

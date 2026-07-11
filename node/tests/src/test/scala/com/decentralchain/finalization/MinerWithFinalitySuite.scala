@@ -26,7 +26,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
   private val thisNodeAcc  = Wallet.generateNewAccount(Domain.DefaultWalletSeed, nonce = 0)
   private val otherNodeAcc = TxHelpers.defaultSigner
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings
     .copy(minerSettings = baseSettings.minerSettings.copy(quorum = 0, microBlockInterval = 100.millis))
     .configure(_.copy(generationPeriodLength = 2))
@@ -396,7 +396,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
     val otherAcc1 = TxHelpers.signer(100)
     val otherAcc2 = TxHelpers.signer(101)
 
-    val generators = Seq(generator1, generator2, generator3)
+    val generators   = Seq(generator1, generator2, generator3)
     val initBalances = Seq(
       AddrWithBalance(generator1.toAddress, 2000.dcc), // this node miner
       AddrWithBalance(generator2.toAddress, 3000.dcc),
@@ -416,7 +416,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
       val endorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
       val blockEndorser = BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, channels)
       val utxEvents     = ConcurrentSubject.publish[Unit](using minerScheduler)
-      val minerImpl = new MinerImpl(
+      val minerImpl     = new MinerImpl(
         channels,
         d.blockchain,
         d.settings,
@@ -486,7 +486,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
     val generator3    = TxHelpers.signer(2)
     val generator3Idx = GeneratorIndex(2)
 
-    val generators = Seq(generator1, generator2, generator3)
+    val generators   = Seq(generator1, generator2, generator3)
     val initBalances = Seq(
       AddrWithBalance(generator1.toAddress, 5000.dcc),
       AddrWithBalance(generator2.toAddress, 2000.dcc),
@@ -504,7 +504,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       val endorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
       val blockEndorser = BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, channels)
-      val minerImpl = new MinerImpl(
+      val minerImpl     = new MinerImpl(
         channels,
         d.blockchain,
         d.settings,

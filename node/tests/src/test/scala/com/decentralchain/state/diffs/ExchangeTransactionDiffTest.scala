@@ -244,7 +244,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       for {
         maybeAsset1 <- Seq(Some(issue1.id()), None)
         maybeAsset2 <- Seq(Some(issue2.id()), None) if maybeAsset1 != maybeAsset2
-        exchange <- Seq(
+        exchange    <- Seq(
           TxHelpers.exchangeFromOrders(
             TxHelpers.order(
               OrderType.BUY,
@@ -365,7 +365,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
         maybeAsset2           <- Seq(Some(issue2.id()), None).map(Asset.fromCompatId) if maybeAsset1.compatId != maybeAsset2.compatId
         buyMatcherFeeAssetId  <- Seq(maybeAsset1, maybeAsset2)
         sellMatcherFeeAssetId <- Seq(maybeAsset1, maybeAsset2)
-        exchange <- Seq(
+        exchange              <- Seq(
           TxHelpers.exchangeFromOrders(
             TxHelpers.order(OrderType.BUY, maybeAsset2, maybeAsset1, amount = 100000000, sender = buyer, matcher = matcher, version = Order.V1),
             TxHelpers.order(OrderType.SELL, maybeAsset2, maybeAsset1, amount = 100000000, sender = seller, matcher = matcher, version = Order.V1),
@@ -422,7 +422,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
           .groupMap(_._1)(_._2)
           .foreach { case (_, balances) => balances.sum shouldBe 0 }
 
-        val sender = exchange.sender.toAddress
+        val sender                   = exchange.sender.toAddress
         val expectedMatcherPortfolio =
           Seq(
             ExchangeTransactionDiff.getOrderFeePortfolio(exchange.buyOrder, exchange.buyMatcherFee),
@@ -540,7 +540,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
           .groupMap(_._1)(_._2)
           .foreach { case (_, balanceDiff) => balanceDiff.sum shouldBe 0 }
 
-        val sender = exchange.sender.toAddress
+        val sender                   = exchange.sender.toAddress
         val expectedMatcherPortfolio =
           Seq(
             ExchangeTransactionDiff.getOrderFeePortfolio(exchange.buyOrder, exchange.buyMatcherFee),
@@ -613,7 +613,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       val sellerIssuedAsset     = issue2.asset
       val buyMatcherFeeAssetId  = issue3.asset
       val sellMatcherFeeAssetId = issue4.asset
-      val exchange = TxHelpers.exchangeFromOrders(
+      val exchange              = TxHelpers.exchangeFromOrders(
         TxHelpers.order(
           OrderType.BUY,
           sellerIssuedAsset,
@@ -666,8 +666,8 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       val carryFee = (issueTx1.fee.value + issueTx2.fee.value + massTransfer.fee.value - exchanges.map(_.fee.value).sum) * 3 / 5
       d.liquidSnapshot.balances.toSeq
         .map {
-          case ((`defaultAddress`, Dcc), amount) => Dcc -> (amount - d.rocksDBWriter.balance(defaultAddress, Dcc) - carryFee)
-          case ((address, asset), amount)          => asset -> (amount - d.rocksDBWriter.balance(address, asset))
+          case ((`defaultAddress`, Dcc), amount) => Dcc   -> (amount - d.rocksDBWriter.balance(defaultAddress, Dcc) - carryFee)
+          case ((address, asset), amount)        => asset -> (amount - d.rocksDBWriter.balance(address, asset))
         }
         .groupMap(_._1)(_._2)
         .foreach { case (_, balanceDiff) => balanceDiff.sum shouldBe 0 }
@@ -834,7 +834,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
     }
 
     val (buyer, seller, matcher, genesis, issue) = preconditions
-    val buy =
+    val buy                                      =
       TxHelpers.order(OrderType.BUY, issue.asset, Dcc, amount = 1000000L, fee = MatcherFee, sender = buyer, matcher = matcher, version = Order.V1)
     val sell = TxHelpers.order(OrderType.SELL, issue.asset, Dcc, fee = MatcherFee, sender = seller, matcher = matcher, version = Order.V1)
     val tx   = createExTx(buy, sell, buy.price.value, matcher)
@@ -859,7 +859,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
     }
 
     val (buyer, seller, matcher, genesis, issue) = preconditions
-    val buy = TxHelpers.order(
+    val buy                                      = TxHelpers.order(
       OrderType.BUY,
       issue.asset,
       Dcc,
@@ -996,7 +996,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       txScript        <- script("ExchangeTransaction", true)
     } yield {
       val (genesis, transfers, issueAndScripts, exchangeTx, _) = smartTradePreconditions(buyerScriptSrc, sellerScriptSrc, txScript)
-      val preconBlocks = Seq(
+      val preconBlocks                                         = Seq(
         TestBlock.create(Seq(genesis)),
         TestBlock.create(transfers),
         TestBlock.create(issueAndScripts)
@@ -1404,7 +1404,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
     val (preconditions, usdn, tidex, liquid) = {
 
       val genesisTxs = Seq(buyer, seller, matcher).map(acc => TxHelpers.genesis(acc.toAddress))
-      val usdnTx =
+      val usdnTx     =
         TxHelpers.issue(buyer, amount = ENOUGH_AMT, decimals = 6, reissuable = false, name = "USD-N", description = "USD-N", version = TxVersion.V3)
       val tidexTx =
         TxHelpers.issue(seller, amount = ENOUGH_AMT, decimals = 2, reissuable = false, name = "Tidex", description = "Tidex", version = TxVersion.V3)
@@ -1558,7 +1558,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       for {
         amountAsset <- assets
         priceAsset  <- assets if priceAsset != amountAsset
-        tx <- Seq(
+        tx          <- Seq(
           TxHelpers.exchangeFromOrders(
             TxHelpers.order(OrderType.BUY, amountAsset, priceAsset, sender = buyer, matcher = matcher, version = Order.V1),
             TxHelpers.order(OrderType.SELL, amountAsset, priceAsset, sender = seller, matcher = matcher, version = Order.V1),
@@ -1585,7 +1585,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
           )
         )
       } yield {
-        val fee = 100000000L
+        val fee   = 100000000L
         val fixed = tx
           .copy(
             version = TxVersion.V3,
@@ -1663,7 +1663,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
         val sellAmount = quantity
         val buyAmount  = quantity
         val amount     = Math.min(sellAmount, buyAmount) / 1000
-        val exchange = tx
+        val exchange   = tx
           .copy(
             amount = TxExchangeAmount.unsafeFrom(amount),
             order1 = tx.buyOrder.copy(amount = TxExchangeAmount.unsafeFrom(sellAmount)).signWith(buyer.privateKey),
@@ -1918,7 +1918,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       DomainPresets.RideV6.setFeaturesHeight(BlockchainFeatures.ConsensusImprovements -> 4),
       Seq(AddrWithBalance(signer.toDccAddress))
     ) { d =>
-      val issue = TxHelpers.issue(TxHelpers.defaultSigner)
+      val issue    = TxHelpers.issue(TxHelpers.defaultSigner)
       val buyOrder = Order(
         4.toByte,
         OrderAuthentication.Eip712Signature(ByteStr(new Array[Byte](64))),
@@ -1984,7 +1984,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       DomainPresets.RideV6.setFeaturesHeight(BlockchainFeatures.ConsensusImprovements -> 4),
       Seq(AddrWithBalance(signer.toDccAddress))
     ) { d =>
-      val issue = TxHelpers.issue(TxHelpers.defaultSigner)
+      val issue    = TxHelpers.issue(TxHelpers.defaultSigner)
       val buyOrder = Order(
         4.toByte,
         OrderAuthentication.Eip712Signature(ByteStr(new Array[Byte](64))),
@@ -1997,8 +1997,8 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
         System.currentTimeMillis() + 10.hours.toMillis,
         TxMatcherFee.unsafeFrom(0.003.dcc)
       )
-      val signature = EthOrders.signOrder(buyOrder, signer)
-      val v         = signature.last
+      val signature      = EthOrders.signOrder(buyOrder, signer)
+      val v              = signature.last
       val signedBuyOrder = buyOrder.copy(
         orderAuthentication = OrderAuthentication.Eip712Signature(ByteStr(signature.init :+ (v - 27).toByte))
       )
@@ -2025,7 +2025,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
       ConsensusImprovements.setFeaturesHeight(BlockchainFeatures.LightNode -> 4),
       AddrWithBalance.enoughBalances(matcher, issuer)
     ) { d =>
-      val issue = TxHelpers.issue(issuer)
+      val issue    = TxHelpers.issue(issuer)
       val exchange = () =>
         TxHelpers.exchangeFromOrders(
           TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(ByteStr.fill(1)(1))),
@@ -2086,7 +2086,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
     val setMatcherScript = TxHelpers.setScript(matcher, txScriptCompiled)
     val setSellerScript  = TxHelpers.setScript(seller, sellerScript)
     val setBuyerScript   = TxHelpers.setScript(buyer, buyerScript)
-    val o1 = TxHelpers.order(
+    val o1               = TxHelpers.order(
       OrderType.BUY,
       issue1.asset,
       issue2.asset,
@@ -2135,7 +2135,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
     for {
       maybeAsset1 <- Seq(Some(issue1.id()), None).map(Asset.fromCompatId)
       maybeAsset2 <- Seq(Some(issue2.id()), None).map(Asset.fromCompatId) if maybeAsset1.compatId != maybeAsset2.compatId
-      exchange <- Seq(
+      exchange    <- Seq(
         TxHelpers.exchangeFromOrders(
           TxHelpers.order(OrderType.BUY, maybeAsset1, maybeAsset2, sender = buyer, matcher = matcher, version = Order.V1),
           TxHelpers.order(OrderType.SELL, maybeAsset1, maybeAsset2, sender = seller, matcher = matcher, version = Order.V1),

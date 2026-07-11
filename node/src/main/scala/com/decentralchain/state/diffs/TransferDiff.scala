@@ -30,7 +30,7 @@ object TransferDiff {
   ): Either[ValidationError, StateSnapshot] = {
 
     val isSmartAsset = feeAssetId match {
-      case Dcc => false
+      case Dcc                    => false
       case asset @ IssuedAsset(_) =>
         blockchain
           .assetDescription(asset)
@@ -42,7 +42,7 @@ object TransferDiff {
       recipient <- blockchain.resolveAlias(recipient)
       _         <- Either.cond(!isSmartAsset, (), GenericError("Smart assets can't participate in TransferTransactions as a fee"))
 
-      _ <- validateOverflow(blockchain, blockchain.height, amount, fee)
+      _          <- validateOverflow(blockchain, blockchain.height, amount, fee)
       transferPf <- assetId match {
         case Dcc =>
           Portfolio
@@ -60,7 +60,7 @@ object TransferDiff {
             .leftMap(GenericError(_))
       }
       feePf <- feeAssetId match {
-        case Dcc => Right(Map(senderAddress -> Portfolio(-fee)))
+        case Dcc                    => Right(Map(senderAddress -> Portfolio(-fee)))
         case asset @ IssuedAsset(_) =>
           val senderPf = Map(senderAddress -> Portfolio.build(asset -> -fee))
           if (Height(blockchain.height) >= Sponsorship.sponsoredFeesSwitchHeight(blockchain)) {

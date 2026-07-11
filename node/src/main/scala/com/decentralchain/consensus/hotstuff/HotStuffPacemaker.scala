@@ -35,7 +35,8 @@ object HotStuffPacemaker {
     leaderFor(view, committee).exists(_.toInt == candidateIndex)
 
   /** Advance the view upon observing a QC for `qcView` (never regresses). Standard HotStuff pacemaker:
-    * a QC for view v moves the pacemaker to v+1 so the next leader can propose. */
+    * a QC for view v moves the pacemaker to v+1 so the next leader can propose.
+    */
   def onQC(qcView: Int, state: PacemakerState): PacemakerState =
     if (qcView >= state.view) PacemakerState(qcView + 1) else state
 

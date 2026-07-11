@@ -10,7 +10,7 @@ import com.decentralchain.test.FlatSpec
 import io.decentralchain.protobuf.block.HotStuffPhase
 
 class HotStuffEngineSpecification extends FlatSpec {
-  private val kps = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
+  private val kps                     = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
   private val committee: GeneratorSet = kps.zipWithIndex.map { case (kp, i) =>
     GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, 25L)
   }

@@ -13,7 +13,7 @@ import scala.util.Try
 
 object MicroBlockSerializer {
   def toBytes(microBlock: MicroBlock): Array[Byte] = {
-    val transactionDataBytes = writeTransactionData(microBlock.version, microBlock.transactionData)
+    val transactionDataBytes    = writeTransactionData(microBlock.version, microBlock.transactionData)
     val finalizationVotingBytes = microBlock.finalizationVoting
       .map(voting => PBUtils.encodeDeterministic(PBFinalizationVotings.protobuf(voting)))
       .getOrElse(Array.emptyByteArray)

@@ -30,7 +30,7 @@ package object ci {
       fee: Option[Long] = None,
       call: Option[FUNCTION_CALL] = None
   ): InvokeExpressionTransaction = {
-    val callables = setScript.script.get.asInstanceOf[ContractScriptImpl].expr.callableFuncs
+    val callables  = setScript.script.get.asInstanceOf[ContractScriptImpl].expr.callableFuncs
     val expression =
       call.fold(
         callables.head.u.body

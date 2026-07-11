@@ -93,7 +93,7 @@ case class TransactionsApiRoute(
         .transactionSnapshot(id)
         .toRight(TransactionDoesNotExist)
         .map { case (snapshot, txStatus) => StateSnapshotJson.fromSnapshot(snapshot, txStatus) }
-    val single = (get & path(TransactionId))(id => complete(readSnapshot(id)))
+    val single   = (get & path(TransactionId))(id => complete(readSnapshot(id)))
     val multiple = (pathEndOrSingleSlash & anyParam("id", limit = settings.transactionSnapshotsLimit))(rawIds =>
       complete(
         for {

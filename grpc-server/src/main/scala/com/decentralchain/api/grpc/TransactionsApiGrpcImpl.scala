@@ -22,7 +22,7 @@ class TransactionsApiGrpcImpl(blockchain: Blockchain, commonApi: CommonTransacti
 
   override def getTransactions(request: TransactionsRequest, responseObserver: StreamObserver[TransactionResponse]): Unit =
     responseObserver.interceptErrors {
-      val transactionIds = request.transactionIds.map(_.toByteStr)
+      val transactionIds                      = request.transactionIds.map(_.toByteStr)
       val stream: Observable[TransactionMeta] = request.recipient match {
         // By recipient
         case Some(subject) =>
@@ -147,8 +147,8 @@ class TransactionsApiGrpcImpl(blockchain: Blockchain, commonApi: CommonTransacti
 
 private object TransactionsApiGrpcImpl {
   def toTransactionResponse(meta: TransactionMeta): TransactionResponse = {
-    val transactionId = meta.transaction.id().toByteString
-    val status        = applicationStatusFromTxStatus(meta.status)
+    val transactionId      = meta.transaction.id().toByteString
+    val status             = applicationStatusFromTxStatus(meta.status)
     val invokeScriptResult = meta match {
       case TransactionMeta.Invoke(_, _, _, _, r) => r.map(VISR.toPB(_, addressForTransfer = true))
       case _                                     => None

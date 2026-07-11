@@ -26,13 +26,13 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
   val sponsorPreconditions: Gen[Setup] = for {
 
     master                      <- accountGen
-    transferAssetDccFee       <- smallFeeGen
+    transferAssetDccFee         <- smallFeeGen
     _                           <- accountGen
     alice                       <- accountGen
     bob                         <- accountGen
     (feeAsset, sponsorTx, _, _) <- sponsorFeeCancelSponsorFeeGen(alice)
-    dccFee                    = Sponsorship.toDcc(sponsorTx.minSponsoredAssetFee.get.value, sponsorTx.minSponsoredAssetFee.get.value)
-    genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
+    dccFee                             = Sponsorship.toDcc(sponsorTx.minSponsoredAssetFee.get.value, sponsorTx.minSponsoredAssetFee.get.value)
+    genesis: GenesisTransaction        = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
     masterToAlice: TransferTransaction = TransferTransaction
       .selfSigned(
         1.toByte,

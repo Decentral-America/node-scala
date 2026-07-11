@@ -77,25 +77,25 @@ object Common {
       def chainId: Byte = nByte
       def inputEntity   = in()
 
-      def transactionById(id: Array[Byte]): Option[Tx]                                    = ???
-      def transferTransactionById(id: Array[Byte]): Option[Tx.Transfer]                   = ???
-      def transactionHeightById(id: Array[Byte]): Option[Long]                            = ???
-      def assetInfoById(id: Array[Byte]): Option[ScriptAssetInfo]                         = ???
-      def lastBlockOpt(): Option[BlockInfo]                                               = ???
-      def blockInfoByHeight(height: Int): Option[BlockInfo]                               = ???
-      def data(recipient: Recipient, key: String, dataType: DataType): Option[Any]        = None
-      def hasData(recipient: Recipient): Boolean                                          = false
-      def resolveAlias(name: String): Either[String, Recipient.Address]                   = ???
-      def accountBalanceOf(a: Recipient, b: Option[Array[Byte]]): Either[String, Long]    = ???
+      def transactionById(id: Array[Byte]): Option[Tx]                                  = ???
+      def transferTransactionById(id: Array[Byte]): Option[Tx.Transfer]                 = ???
+      def transactionHeightById(id: Array[Byte]): Option[Long]                          = ???
+      def assetInfoById(id: Array[Byte]): Option[ScriptAssetInfo]                       = ???
+      def lastBlockOpt(): Option[BlockInfo]                                             = ???
+      def blockInfoByHeight(height: Int): Option[BlockInfo]                             = ???
+      def data(recipient: Recipient, key: String, dataType: DataType): Option[Any]      = None
+      def hasData(recipient: Recipient): Boolean                                        = false
+      def resolveAlias(name: String): Either[String, Recipient.Address]                 = ???
+      def accountBalanceOf(a: Recipient, b: Option[Array[Byte]]): Either[String, Long]  = ???
       def accountDccBalanceOf(a: Recipient): Either[String, Environment.BalanceDetails] = ???
-      def tthis: Environment.Tthis                                                        = Address(ByteStr.empty)
-      def multiPaymentAllowed: Boolean                                                    = true
-      def txId: ByteStr                                                                   = ???
-      def transferTransactionFromProto(b: Array[Byte]): Option[Tx.Transfer]               = ???
-      def addressFromString(address: String): Either[String, Recipient.Address]           = ???
-      def addressFromPublicKey(publicKey: ByteStr): Either[String, Address]               = ???
-      def accountScript(addressOrAlias: Recipient): Option[Script]                        = ???
-      def calculateDelay(gt: ByteStr, b: Long): Long                                      = ???
+      def tthis: Environment.Tthis                                                      = Address(ByteStr.empty)
+      def multiPaymentAllowed: Boolean                                                  = true
+      def txId: ByteStr                                                                 = ???
+      def transferTransactionFromProto(b: Array[Byte]): Option[Tx.Transfer]             = ???
+      def addressFromString(address: String): Either[String, Recipient.Address]         = ???
+      def addressFromPublicKey(publicKey: ByteStr): Either[String, Address]             = ???
+      def accountScript(addressOrAlias: Recipient): Option[Script]                      = ???
+      def calculateDelay(gt: ByteStr, b: Long): Long                                    = ???
       def callScript(
           dApp: Address,
           func: String,
@@ -115,12 +115,12 @@ object Common {
   def addressFromString(chainId: Byte, str: String): Either[String, Option[Array[Byte]]] = {
     val base58String = if (str.startsWith(EnvironmentFunctions.AddressPrefix)) str.drop(EnvironmentFunctions.AddressPrefix.length) else str
     Global.base58Decode(base58String, Global.MaxAddressLength) match {
-      case Left(e) => Left(e)
+      case Left(e)             => Left(e)
       case Right(addressBytes) =>
-        val version = addressBytes.head
-        val network = addressBytes.tail.head
+        val version              = addressBytes.head
+        val network              = addressBytes.tail.head
         lazy val checksumCorrect = {
-          val checkSum = addressBytes.takeRight(EnvironmentFunctions.ChecksumLength)
+          val checkSum          = addressBytes.takeRight(EnvironmentFunctions.ChecksumLength)
           val checkSumGenerated =
             Global.secureHash(addressBytes.dropRight(EnvironmentFunctions.ChecksumLength)).take(EnvironmentFunctions.ChecksumLength)
           checkSum sameElements checkSumGenerated

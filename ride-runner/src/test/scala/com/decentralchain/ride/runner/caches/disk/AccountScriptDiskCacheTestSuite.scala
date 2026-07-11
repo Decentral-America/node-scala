@@ -9,8 +9,8 @@ import com.decentralchain.ride.runner.db.{Heights, ReadOnly, ReadWrite}
 import com.decentralchain.state.AccountScriptInfo
 
 class AccountScriptDiskCacheTestSuite extends DiskCacheWithHistoryTestSuite[Address, WeighedAccountScriptInfo] {
-  private val defaultAddressId      = AddressId(0L) // There is only one addressId
-  protected override val defaultKey = aliceAddr
+  private val defaultAddressId        = AddressId(0L) // There is only one addressId
+  protected override val defaultKey   = aliceAddr
   protected override val defaultValue = WeighedAccountScriptInfo(
     scriptInfoWeight = 0, // Doesn't matter here
     accountScriptInfo = AccountScriptInfo(

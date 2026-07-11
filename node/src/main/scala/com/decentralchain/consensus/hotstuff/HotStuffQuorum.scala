@@ -32,7 +32,8 @@ object HotStuffQuorum {
     voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt)
 
   /** True iff `vote.voterIndex` is a real committee member whose BLS signature over the canonical
-    * vote message verifies. */
+    * vote message verifies.
+    */
   def verifyVote(vote: HotStuffVote, committee: GeneratorSet): Boolean =
     committee.find(_.index.toInt == vote.voterIndex).exists { gi =>
       BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr)
@@ -52,14 +53,14 @@ object HotStuffQuorum {
 
   /** Build a QC from votes that MUST all target the same (view, phase, blockId, blockHeight).
     * Rejects mixed targets, unknown/invalid signatures, and vote sets below the 2/3 stake quorum;
-    * otherwise aggregates the BLS signatures into a single QC. Votes are de-duplicated per voter. */
+    * otherwise aggregates the BLS signatures into a single QC. Votes are de-duplicated per voter.
+    */
   def formQC(votes: Seq[HotStuffVote], committee: GeneratorSet): Either[String, QuorumCertificate] =
     votes match {
-      case Seq() => Left("no votes")
+      case Seq()     => Left("no votes")
       case head +: _ =>
-        val sameTarget = votes.forall(v =>
-          v.view == head.view && v.phase == head.phase && v.blockId == head.blockId && v.blockHeight == head.blockHeight
-        )
+        val sameTarget =
+          votes.forall(v => v.view == head.view && v.phase == head.phase && v.blockId == head.blockId && v.blockHeight == head.blockHeight)
         if (!sameTarget) Left("votes target different (view, phase, block)")
         else {
           val distinct = votes.groupBy(_.voterIndex).values.map(_.head).toSeq
@@ -78,7 +79,8 @@ object HotStuffQuorum {
 
   /** Verify a QC: every signer must be a committee member, the signer set must reach the 2/3 stake
     * quorum, and the aggregated BLS signature must verify against the signers' public keys over the
-    * canonical vote message. */
+    * canonical vote message.
+    */
   def verifyQC(qc: QuorumCertificate, committee: GeneratorSet): Either[String, Boolean] = {
     val byIndex   = committee.iterator.map(g => g.index.toInt -> g).toMap
     val signerOpt = qc.signerIndexes.map(byIndex.get)

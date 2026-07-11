@@ -31,7 +31,7 @@ class CommonFunctionsTest extends PropSpec {
     )
     transfer.assetId match {
       case IssuedAsset(v) => result.explicitGet().asInstanceOf[CONST_BYTESTR].bs.arr sameElements v.arr
-      case Dcc          => result should produce("extract() called on unit")
+      case Dcc            => result should produce("extract() called on unit")
     }
   }
 
@@ -242,7 +242,7 @@ class CommonFunctionsTest extends PropSpec {
     )
     transferResult shouldBe evaluated(true)
 
-    val dataTx = TxHelpers.data(sender, Seq(entry))
+    val dataTx     = TxHelpers.data(sender, Seq(entry))
     val dataResult = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -266,7 +266,7 @@ class CommonFunctionsTest extends PropSpec {
 
   property("data constructors bad syntax") {
     val realAddr = "3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8"
-    val cases = Seq(
+    val cases    = Seq(
       (s"""Address(\"$realAddr\")""", "Compilation failed: Non-matching types"),
       ("Address(base58'GzumLunBoK', 4)", "Function 'Address' requires 1 arguments, but 2 are provided"),
       ("Address()", "Function 'Address' requires 1 arguments, but 0 are provided"),

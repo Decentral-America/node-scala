@@ -69,7 +69,7 @@ trait EmptyBlockchain extends Blockchain {
 
   /** Retrieves Dcc balance snapshot in the [from, to] range (inclusive) */
   override def balanceAtHeight(address: Address, height: Int, assetId: Asset = Dcc): Option[(Int, Long)] = Option.empty
-  override def balanceSnapshots(address: Address, from: Int, to: Option[ByteStr]): Seq[BalanceSnapshot]    = Seq.empty
+  override def balanceSnapshots(address: Address, from: Int, to: Option[ByteStr]): Seq[BalanceSnapshot]  = Seq.empty
 
   override def accountScript(address: Address): Option[AccountScriptInfo] = None
 

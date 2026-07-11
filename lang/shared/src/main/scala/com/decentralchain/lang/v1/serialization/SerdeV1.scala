@@ -69,7 +69,7 @@ object SerdeV1 extends Serde[ByteBuffer, ByteArrayOutputStream] {
       case E_BYTES  => Coeval.now(CONST_BYTESTR(ByteStr(bb.getBytes)).explicitGet())
       case E_STRING => Coeval.now(CONST_STRING(bb.getString).explicitGet())
       case E_IF     => (desAuxR(bb, allowObjects, acc), desAuxR(bb, allowObjects, acc), desAuxR(bb, allowObjects, acc)).mapN(IF.apply)
-      case E_BLOCK =>
+      case E_BLOCK  =>
         for {
           name     <- Coeval.now(bb.getString)
           letValue <- desAuxR(bb, allowObjects, acc)
@@ -84,10 +84,10 @@ object SerdeV1 extends Serde[ByteBuffer, ByteArrayOutputStream] {
           dec     <- deserializeDeclaration(bb, desAuxR(bb, allowObjects, acc), decType)
           body    <- desAuxR(bb, allowObjects, acc)
         } yield BLOCK(dec, body)
-      case E_REF    => Coeval.now(REF(bb.getString))
-      case E_TRUE   => Coeval.now(TRUE)
-      case E_FALSE  => Coeval.now(FALSE)
-      case E_GETTER => desAuxR(bb, allowObjects, acc).map(GETTER(_, field = bb.getString))
+      case E_REF     => Coeval.now(REF(bb.getString))
+      case E_TRUE    => Coeval.now(TRUE)
+      case E_FALSE   => Coeval.now(FALSE)
+      case E_GETTER  => desAuxR(bb, allowObjects, acc).map(GETTER(_, field = bb.getString))
       case E_FUNCALL =>
         Coeval
           .now((bb.getFunctionHeader, bb.getInt))
@@ -114,7 +114,7 @@ object SerdeV1 extends Serde[ByteBuffer, ByteArrayOutputStream] {
       case E_CASE_OBJ if allowObjects =>
         for {
           (typeName, fieldsNumber) <- Coeval((bb.getString, bb.getInt))
-          fields <- (1 to fieldsNumber)
+          fields                   <- (1 to fieldsNumber)
             .to(LazyList)
             .traverse(_ =>
               for {
@@ -131,7 +131,7 @@ object SerdeV1 extends Serde[ByteBuffer, ByteArrayOutputStream] {
   }
 
   def deserialize(bytes: Array[Byte], all: Boolean = true, allowObjects: Boolean = false): Either[String, (EXPR, Int)] = {
-    val bb = ByteBuffer.wrap(bytes)
+    val bb  = ByteBuffer.wrap(bytes)
     val res = Try(desAux(bb, allowObjects).value()).toEither.left
       .map(_.getMessage)
     (if (all)

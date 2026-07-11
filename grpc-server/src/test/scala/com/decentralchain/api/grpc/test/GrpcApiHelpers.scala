@@ -8,7 +8,7 @@ import monix.execution.Scheduler
 import monix.reactive.subjects.ConcurrentSubject
 
 trait GrpcApiHelpers {
-  private given scheduler: Scheduler = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
+  private given scheduler: Scheduler                        = Schedulers.singleThread("grpc", executionModel = SynchronousExecution)
   def createObserver[T]: (StreamObserver[T], Task[List[T]]) = {
     val subj = ConcurrentSubject.replay[T]
 

@@ -39,7 +39,7 @@ object DataTxSerializer {
   }
 
   def serializeEntry(e: DataEntry[?]): Array[Byte] = {
-    val keyBytes = e.key.utf8Bytes
+    val keyBytes   = e.key.utf8Bytes
     val valueBytes = e match {
       case IntegerDataEntry(_, value) => Bytes.concat(Array(Type.Integer.id.toByte), Longs.toByteArray(value))
       case BooleanDataEntry(_, value) => Array(Type.Boolean.id, if (value) 1 else 0).map(_.toByte)

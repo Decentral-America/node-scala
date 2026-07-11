@@ -117,7 +117,7 @@ trait BlocksTransactionsHelpers { self: TransactionGen =>
         version: Byte,
         timestamp: Long
     ): (Block, Seq[MicroBlock]) = {
-      val block = unsafeBlock(totalRefTo, base, signer, version, timestamp)
+      val block       = unsafeBlock(totalRefTo, base, signer, version, timestamp)
       val microBlocks = micros
         .foldLeft((block, Seq.empty[MicroBlock])) { case ((lastTotal, allMicros), txs) =>
           val (newTotal, micro) = unsafeMicro(totalRefTo, lastTotal, txs, signer, version, timestamp)

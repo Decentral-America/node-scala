@@ -105,7 +105,7 @@ case class SignedInvokeScriptRequest(
     for {
       _sender      <- PublicKey.fromBase58String(senderPublicKey)
       _dappAddress <- AddressOrAlias.fromString(dApp)
-      t <- InvokeScriptTransaction.create(
+      t            <- InvokeScriptTransaction.create(
         version.getOrElse(2.toByte),
         _sender,
         _dappAddress,

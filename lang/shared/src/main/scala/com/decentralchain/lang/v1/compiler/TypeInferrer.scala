@@ -11,20 +11,20 @@ object TypeInferrer {
     val matching = seq.map(x => matchTypes(x._1, x._2, knownTypes, x._1.name, x._2.toString))
     matching.find(_.isLeft) match {
       case Some(left) => left.asInstanceOf[Left[String, Nothing]]
-      case None =>
+      case None       =>
         val matchResults: Map[TYPEPARAM, Seq[MatchResult]] = matching.flatMap(_.explicitGet()).groupBy(_.name)
-        val resolved = matchResults.view.mapValues {
-          case h :: Nil => Right(h.tpe)
+        val resolved                                       = matchResults.view.mapValues {
+          case h :: Nil     => Right(h.tpe)
           case matchResults =>
             val commonType = matchResults.map(_.tpe).toVector.reduce(findCommonType(_, _))
             commonType match {
-              case NOTHING => Right(NOTHING)
+              case NOTHING            => Right(NOTHING)
               case commonTuple: TUPLE =>
                 val matchingTuples   = matchResults.collect { case MatchResult(t: TUPLE, _) => t }.toList
                 val commonTypeExists = checkTuplesCommonType(matchingTuples, commonTuple)
                 typeMatchResult(matchResults, matchResults.head.name, commonTuple, commonTypeExists)
-              case p: SINGLE => Right(p)
-              case ANY       => Right(ANY)
+              case p: SINGLE                => Right(p)
+              case ANY                      => Right(ANY)
               case u @ UNION(plainTypes, _) =>
                 val commonTypeExists = plainTypes.exists { p =>
                   matchResults.map(_.tpe).forall(e => e >= p)
@@ -34,7 +34,7 @@ object TypeInferrer {
         }
         resolved.find(_._2.isLeft) match {
           case Some((_, left)) => left.asInstanceOf[Left[String, Nothing]]
-          case None =>
+          case None            =>
             Right(resolved.mapValues { t =>
               t.explicitGet() match {
                 case UNION(x :: Nil, _) => x
@@ -83,12 +83,12 @@ object TypeInferrer {
     lazy val err = s"Non-matching types: expected: $matchingTypeStr, actual: $argTypeStr"
 
     (placeholder, argType) match {
-      case (tp @ TYPEPARAM(_), _)                       => Right(Some(MatchResult(argType, tp)))
-      case (PARAMETERIZEDLIST(innerTypeParam), LIST(t)) => matchTypes(t, innerTypeParam, knownTypes, argTypeStr, matchingTypeStr)
+      case (tp @ TYPEPARAM(_), _)                           => Right(Some(MatchResult(argType, tp)))
+      case (PARAMETERIZEDLIST(innerTypeParam), LIST(t))     => matchTypes(t, innerTypeParam, knownTypes, argTypeStr, matchingTypeStr)
       case (PARAMETERIZEDLIST(innerTypeParam), UNION(l, _)) =>
         l.foldLeft(Right(UNION(List(), None)): Either[String, FINAL]) { (u, tl) =>
           u match {
-            case Left(e) => Left(e)
+            case Left(e)            => Left(e)
             case Right(UNION(l, _)) =>
               tl match {
                 case LIST(t: REAL) => Right(UNION(t :: l, None))
@@ -102,7 +102,7 @@ object TypeInferrer {
       case (PARAMETERIZEDLIST(_), _)                      => Left(err)
       case (PARAMETERIZEDTUPLE(typeParams), TUPLE(types)) => matchTupleTypes(err, typeParams, types, knownTypes)
       case (PARAMETERIZEDTUPLE(_), _)                     => Left(err)
-      case (PARAMETERIZEDUNION(l), _) =>
+      case (PARAMETERIZEDUNION(l), _)                     =>
         val concretes = UNION.create(
           l.filter(_.isInstanceOf[REAL])
             .map(_.asInstanceOf[REAL])
@@ -143,7 +143,7 @@ object TypeInferrer {
 
       case (LIST(tp), LIST(t))            => matchTypes(t, tp, knownTypes, argTypeStr, matchingTypeStr)
       case (TUPLE(types1), TUPLE(types2)) => matchTupleTypes(err, types1, types2, knownTypes)
-      case (placeholder: FINAL, _) =>
+      case (placeholder: FINAL, _)        =>
         Either.cond(placeholder >= argType, None, err)
     }
   }
@@ -163,8 +163,8 @@ object TypeInferrer {
 
   // match, e.g. many ifs
   def findCommonType(list: List[FINAL]): FINAL = list match {
-    case Nil        => NOTHING
-    case one :: Nil => one
+    case Nil          => NOTHING
+    case one :: Nil   => one
     case head :: tail =>
       val t = findCommonType(tail)
       findCommonType(head, t)
@@ -185,7 +185,7 @@ object TypeInferrer {
     case (u: UNION, t: FINAL) => if (u.typeList.contains(t)) u else UNION.create(u.typeList :+ t)
     case (t: FINAL, u: UNION) => if (u.typeList.contains(t)) u else UNION.create(u.typeList :+ t)
 
-    case (LIST(it1), LIST(it2)) => LIST(findCommonTypeR(it1, it2, mergeTuples))
+    case (LIST(it1), LIST(it2))                                                          => LIST(findCommonTypeR(it1, it2, mergeTuples))
     case (TUPLE(types1), TUPLE(types2)) if mergeTuples && types1.length == types2.length =>
       TUPLE((types1 zip types2).map { case (t1, t2) => findCommonTypeR(t1, t2, mergeTuples) })
     case (p1: FINAL, p2: FINAL) => UNION.create(List(p1, p2))

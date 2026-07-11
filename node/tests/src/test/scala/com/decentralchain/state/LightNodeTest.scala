@@ -114,8 +114,8 @@ class LightNodeTest extends PropSpec with WithDomain {
         DomainPresets.TransactionStateSnapshot.copy(enableLightMode = isLightMode),
         AddrWithBalance.enoughBalances(sender, TxHelpers.defaultSigner)
       ) { d =>
-        val chainSize = 3
-        val genesisId = d.lastBlockId
+        val chainSize    = 3
+        val genesisId    = d.lastBlockId
         val betterBlocks = (1 to chainSize).map { idx =>
           val txs =
             Seq(TxHelpers.transfer(sender, recipient, amount = (idx + 10).dcc), TxHelpers.transfer(sender, recipient, amount = (idx + 11).dcc))
