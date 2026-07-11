@@ -124,7 +124,7 @@ class SyncDAppComplexityCountTest extends PropSpec with WithDomain {
       val callPayment = if (withThroughPayment) Some(asset) else None
       val transfer    = if (withThroughTransfer) Some(asset) else None
       val condition   = if (raiseError) if (txs.nonEmpty) "true" else "false" else groth
-      val script =
+      val script      =
         if (sequentialCalls)
           if (isLast)
             dApp(txs.map(_.sender.toAddress), callPayment, transfer, condition)
@@ -192,7 +192,7 @@ class SyncDAppComplexityCountTest extends PropSpec with WithDomain {
           else
             snapshot.errorMessage(invokeTx.id()) shouldBe None
 
-          val dAppAddress = invokeTx.dApp.asInstanceOf[Address]
+          val dAppAddress    = invokeTx.dApp.asInstanceOf[Address]
           val basePortfolios =
             Map(TestBlock.defaultSigner.toAddress -> Portfolio(CurrentBlockFeePart(invokeTx.fee.value))) |+|
               Map(invokeTx.sender.toAddress -> Portfolio(-invokeTx.fee.value))
@@ -206,7 +206,7 @@ class SyncDAppComplexityCountTest extends PropSpec with WithDomain {
             Map(lastCallingDApp -> Portfolio.build(asset, 1)) |+|
               Map(dAppAddress -> Portfolio.build(asset, -1))
 
-          val emptyPortfolios = Map.empty[Address, Portfolio]
+          val emptyPortfolios      = Map.empty[Address, Portfolio]
           val additionalPortfolios =
             (if (withPayment) paymentsPortfolios else emptyPortfolios) |+|
               (if (withThroughPayment) throughPaymentsPortfolios else emptyPortfolios) |+|

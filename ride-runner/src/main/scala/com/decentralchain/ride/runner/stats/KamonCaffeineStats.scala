@@ -6,12 +6,12 @@ import kamon.Kamon
 
 // Tags that is easier to show in Grafana than with original KamonStatsCounter.
 class KamonCaffeineStats(name: String) extends StatsCounter {
-  val hitsCounter     = Kamon.counter("cache.hits").withTag("name", name)
-  val missesCounter   = Kamon.counter("cache.misses").withTag("name", name)
-  val evictionCount   = Kamon.counter("cache.evictions").withTag("name", name)
-  val loadSuccessTime = Kamon.timer("cache.load-time.success").withTag("name", name)
-  val loadFailureTime = Kamon.timer("cache.load-time.failure").withTag("name", name)
-  val evictionWeight  = Kamon.counter("cache.eviction.weight").withTag("name", name)
+  val hitsCounter               = Kamon.counter("cache.hits").withTag("name", name)
+  val missesCounter             = Kamon.counter("cache.misses").withTag("name", name)
+  val evictionCount             = Kamon.counter("cache.evictions").withTag("name", name)
+  val loadSuccessTime           = Kamon.timer("cache.load-time.success").withTag("name", name)
+  val loadFailureTime           = Kamon.timer("cache.load-time.failure").withTag("name", name)
+  val evictionWeight            = Kamon.counter("cache.eviction.weight").withTag("name", name)
   val evictionWeightInstruments = RemovalCause
     .values()
     .map(cause => cause -> evictionWeight.withTag("eviction.cause", cause.name()))

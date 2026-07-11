@@ -127,7 +127,7 @@ class ScriptTransferTest extends PropSpec with WithDomain {
         )
         val issueTx = issue(script = Some(assetScript))
         val asset   = IssuedAsset(issueTx.id())
-        val dApp = TestCompiler(V5).compileContract(
+        val dApp    = TestCompiler(V5).compileContract(
           s"""
              | @Callable(i)
              | func default() =
@@ -152,7 +152,7 @@ class ScriptTransferTest extends PropSpec with WithDomain {
       val transferAmount = 120
       val issueTx        = issue(secondSigner, issueAmount)
       val asset          = IssuedAsset(issueTx.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp           = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() =

@@ -128,7 +128,7 @@ class OverflowTest extends PropSpec with WithDomain {
       withDomain(RideV5, AddrWithBalance.enoughBalances(sender, recipientKp)) { d =>
         val issueTx = issue(recipientKp, amount = amount1)
         val asset   = IssuedAsset(issueTx.id())
-        val dApp = TestCompiler(V5).compileContract(
+        val dApp    = TestCompiler(V5).compileContract(
           s"""
              | @Callable(i)
              | func default() =

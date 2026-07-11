@@ -27,10 +27,10 @@ import scala.concurrent.duration.*
 class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
   val estimator = ScriptEstimatorV1
 
-  var assetWOScript    = ""
-  var assetWScript     = ""
-  var assetWScript2    = ""
-  private def accountB = secondKeyPair
+  var assetWOScript              = ""
+  var assetWScript               = ""
+  var assetWScript2              = ""
+  private def accountB           = secondKeyPair
   private val unchangeableScript = TestCompiler.DefaultVersion.compileAsset(
     s"""match tx {
        |  case _: SetAssetScriptTransaction => false
@@ -355,7 +355,7 @@ class SetAssetScriptTransactionSuite extends BaseTransactionSuite {
     val accountA = firstKeyPair
 
     for (v <- setAssetScrTxSupportedVersions) {
-      val assetWithScript = if (v < 2) assetWScript else assetWScript2
+      val assetWithScript      = if (v < 2) assetWScript else assetWScript2
       val setScriptTransaction = SetScriptTransaction
         .selfSigned(
           version = v,

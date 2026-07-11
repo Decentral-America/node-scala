@@ -39,7 +39,7 @@ class Worker(
 
   private val task =
     for {
-      state <- Ref.of[Task, State](EmptyState(settings.warmUp))
+      state     <- Ref.of[Task, State](EmptyState(settings.warmUp))
       initState <- settings.initialWarmUp match {
         case Some(warmUp) => Ref.of[Task, State](EmptyState(warmUp))
         case None         => Ref.of[Task, State](SkipState(settings.utxLimit))
@@ -92,14 +92,14 @@ class Worker(
         _            <- logInfo(s"Sending initial transactions to $validChannel")
         cntToSend    <- calcAndSaveCntToSend(state)
         _            <- Task.deferFuture(networkSender.send(validChannel, txs.take(cntToSend)*))
-        r <-
+        r            <-
           if (cntToSend >= txs.size) sleepOrWaitEmptyUtx(settings.tailInitialDelay) *> writeTailInitial(validChannel, state)
           else sleep(settings.delay) *> Task.defer(writeInitial(channel, state, txs.drop(cntToSend)))
       } yield r
 
   private def sleepOrWaitEmptyUtx(strategy: Either[FiniteDuration, FiniteDuration]): Task[Unit] =
     strategy match {
-      case Left(duration) => sleep(duration)
+      case Left(duration)  => sleep(duration)
       case Right(duration) =>
         for {
           _ <- sleep(duration)
@@ -116,7 +116,7 @@ class Worker(
         _            <- logInfo(s"Sending tail initial transactions to $validChannel")
         cntToSend    <- calcAndSaveCntToSend(state)
         _            <- Task.deferFuture(networkSender.send(validChannel, txs.take(cntToSend)*))
-        r <-
+        r            <-
           if (cntToSend >= txs.size) sleepOrWaitEmptyUtx(settings.initialDelay) *> Task.now(validChannel)
           else sleep(settings.delay) *> Task.defer(writeTailInitial(validChannel, state, txs.drop(cntToSend)))
       } yield r
@@ -197,7 +197,7 @@ object Worker {
     def cnt: Int
     def next(utxToSendCnt: Int): State =
       this match {
-        case SkipState(_) => SkipState(utxToSendCnt)
+        case SkipState(_)       => SkipState(utxToSendCnt)
         case EmptyState(warmUp) =>
           WorkState(warmUp.start, false, warmUp.duration.map(d => LocalDateTime.now.plus(d.toMillis, ChronoUnit.MILLIS)), warmUp)
         case s @ WorkState(cnt, raised, endAfter, warmUp) =>
@@ -205,7 +205,7 @@ object Worker {
           else {
             endAfter match {
               case Some(ldt) if ldt.isBefore(LocalDateTime.now) => s.copy(cnt = utxToSendCnt, raised = true)
-              case _ =>
+              case _                                            =>
                 val mayBeNextCnt = math.min(cnt + warmUp.step, warmUp.end)
                 val nextCnt      = math.min(mayBeNextCnt, utxToSendCnt)
                 WorkState(nextCnt, false, endAfter, warmUp)

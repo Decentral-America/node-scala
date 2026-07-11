@@ -42,7 +42,7 @@ class SyncInvokeTotalPaymentsTest extends PropSpec with WithDomain {
     def setDAppsCallingFromParent(syncCalls: Int, syncPayments: Int): Seq[SetScriptTransaction] = {
       val payments         = Seq.fill(syncPayments)(s"AttachedPayment(unit, 1)").mkString(",")
       def nextCall(i: Int) = s"""strict r$i = Address(base58'${signer(i + 1).toAddress}').invoke("default", [], [$payments])"""
-      val parentDApp =
+      val parentDApp       =
         s"""
            | @Callable(i)
            | func default() = {

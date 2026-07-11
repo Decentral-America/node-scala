@@ -21,7 +21,7 @@ import org.scalacheck.Gen
 import play.api.libs.json.Json
 
 class SponsorFeeTransactionSpecification extends PropSpec with WithState {
-  val One = 100000000L
+  val One                                             = 100000000L
   val NgAndSponsorshipSettings: FunctionalitySettings = TestFunctionalitySettings.Enabled.copy(
     featureCheckBlocksPeriod = 1,
     blocksForFeatureActivation = 1,
@@ -207,11 +207,11 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val setup = for {
       (acc, name, desc, quantity, decimals, reissuable, fee, ts) <- issueParamGen
       genesis = GenesisTransaction.create(acc.toAddress, ENOUGH_AMT, ts).explicitGet()
-      issue = IssueTransaction
+      issue   = IssueTransaction
         .selfSigned(TxVersion.V1, acc, new String(name), new String(desc), quantity, decimals, reissuable, script = None, fee, ts)
         .explicitGet()
       minFee <- Gen.choose(1L, issue.quantity.value)
-      sponsor = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
+      sponsor  = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer = TransferTransaction
         .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee, ByteStr.empty, ts)
         .explicitGet()
@@ -232,11 +232,11 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val setup = for {
       (acc, name, desc, quantity, decimals, reissuable, fee, ts) <- issueParamGen
       genesis = GenesisTransaction.create(acc.toAddress, ENOUGH_AMT, ts).explicitGet()
-      issue = IssueTransaction
+      issue   = IssueTransaction
         .selfSigned(TxVersion.V1, acc, new String(name), new String(desc), quantity, decimals, reissuable, script = None, fee, ts)
         .explicitGet()
       minFee <- Gen.choose(1000000L, issue.quantity.value)
-      sponsor = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
+      sponsor   = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer1 = TransferTransaction
         .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, feeAsset = IssuedAsset(issue.id()), minFee + 7, ByteStr.empty, ts)
         .explicitGet()
@@ -260,16 +260,16 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val setup = for {
       (acc, name, desc, quantity, decimals, reissuable, fee, ts) <- issueParamGen
       genesis = GenesisTransaction.create(acc.toAddress, ENOUGH_AMT, ts).explicitGet()
-      issue = IssueTransaction
+      issue   = IssueTransaction
         .selfSigned(TxVersion.V1, acc, new String(name), new String(desc), quantity, decimals, reissuable, script = None, fee, ts)
         .explicitGet()
       minFee <- Gen.choose(1L, issue.quantity.value / 11)
 
-      sponsor1 = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
+      sponsor1  = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee), One, ts).explicitGet()
       transfer1 = TransferTransaction
         .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, IssuedAsset(issue.id()), fee = minFee, ByteStr.empty, ts)
         .explicitGet()
-      sponsor2 = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee * 10), One, ts).explicitGet()
+      sponsor2  = SponsorFeeTransaction.selfSigned(1.toByte, acc, IssuedAsset(issue.id()), Some(minFee * 10), One, ts).explicitGet()
       transfer2 = TransferTransaction
         .selfSigned(1.toByte, acc, acc.toAddress, Dcc, 1L, IssuedAsset(issue.id()), fee = minFee * 10, ByteStr.empty, ts)
         .explicitGet()
@@ -290,7 +290,7 @@ class SponsorFeeTransactionSpecification extends PropSpec with WithState {
     val setup = for {
       (acc, name, desc, quantity, decimals, reissuable, fee, ts) <- issueParamGen
       genesis = GenesisTransaction.create(acc.toAddress, ENOUGH_AMT, ts).explicitGet()
-      issue = IssueTransaction
+      issue   = IssueTransaction
         .selfSigned(TxVersion.V1, acc, new String(name), new String(desc), quantity, decimals, reissuable, script = None, fee, ts)
         .explicitGet()
       minSponsoredAssetFee <- Gen.choose(1L, issue.quantity.value / 11)

@@ -24,7 +24,7 @@ case class SignedUpdateAssetInfoRequest(
 
   def toTx: Either[ValidationError, UpdateAssetInfoTransaction] =
     for {
-      _sender <- PublicKey.fromBase58String(senderPublicKey)
+      _sender     <- PublicKey.fromBase58String(senderPublicKey)
       _feeAssetId <- feeAssetId
         .traverse(parseBase58(_, "invalid.assetId", AssetIdStringLength).map(IssuedAsset(_)))
         .map(_ getOrElse Dcc)

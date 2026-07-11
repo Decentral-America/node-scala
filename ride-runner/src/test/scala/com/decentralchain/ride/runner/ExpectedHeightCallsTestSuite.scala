@@ -94,7 +94,7 @@ class ExpectedHeightCallsTestSuite extends BaseTestSuite with HasTestAccounts {
     }
     val blockchain = new ImmutableBlockchain(DefaultBlockchainSettings, input)
     val counter    = new CountedHeightCallsTracker
-    val r = UtilsEvaluator.evaluate(
+    val r          = UtilsEvaluator.evaluate(
       blockchain = blockchain,
       dAppAddress = aliceAddr,
       request = Json.obj("expr" -> "foo()"),

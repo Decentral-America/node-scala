@@ -62,7 +62,7 @@ object SetScriptTransactionDiff {
       version: StdLibVersion,
       dApp: DApp
   ): Either[GenericError, Map[Int, Map[String, Long]]] = {
-    val callables = dApp.copy(verifierFuncOpt = None)
+    val callables          = dApp.copy(verifierFuncOpt = None)
     val actualComplexities =
       for {
         currentComplexity <- ContractScript.estimateComplexity(

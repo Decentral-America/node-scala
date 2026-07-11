@@ -103,7 +103,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
 
     val config      = readConfFile(options.genesisConfigFile)
     val genSettings = GenesisBlockGenerator.parseSettings(config)
-    val genesis =
+    val genesis     =
       ConfigSource
         .fromConfig(ConfigFactory.parseString(GenesisBlockGenerator.createConfig(genSettings)))
         .at("genesis")
@@ -112,7 +112,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
     log.info(s"Initial base target is ${genesis.initialBaseTarget}")
 
     val blockchainSettings = BlockchainSettings(genSettings.chainId.toChar, genSettings.functionalitySettings, genesis, RewardsSettings.MAINNET)
-    val dccSettings = {
+    val dccSettings        = {
       val settings = DCCSettings.fromRootConfig(loadConfig(options.configFile.map(readConfFile)))
       settings.copy(blockchainSettings = blockchainSettings, minerSettings = settings.minerSettings.copy(quorum = 0))
     }
@@ -120,7 +120,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
     val fakeTime = new FakeTime(genSettings.timestamp.getOrElse(System.currentTimeMillis()))
 
     val blockchain = {
-      val rdb = RDB.open(dccSettings.dbSettings)
+      val rdb                            = RDB.open(dccSettings.dbSettings)
       val (blockchainUpdater, rdbWriter) =
         StorageFactory(dccSettings, rdb, fakeTime, BlockchainUpdateTriggers.noop)
       com.decentralchain.checkGenesis(dccSettings, blockchainUpdater, Miner.StrictDisabledMiner)
@@ -139,22 +139,22 @@ object BlockchainGeneratorApp extends ScorexLogging {
     }
 
     val wallet: Wallet = new Wallet {
-      private val map                                                  = miners.map(kp => kp.toAddress -> kp).toMap
-      override def seed: Array[Byte]                                   = Array.emptyByteArray
-      override def nonce: Int                                          = miners.length
-      override def privateKeyAccounts: Seq[SeedKeyPair]                = miners
-      override def generateNewAccounts(howMany: Int): Seq[SeedKeyPair] = ???
-      override def generateNewAccount(): Option[SeedKeyPair]           = ???
-      override def generateNewAccount(nonce: Int): Option[SeedKeyPair] = ???
-      override def deleteAccount(account: SeedKeyPair): Boolean        = ???
+      private val map                                                                        = miners.map(kp => kp.toAddress -> kp).toMap
+      override def seed: Array[Byte]                                                         = Array.emptyByteArray
+      override def nonce: Int                                                                = miners.length
+      override def privateKeyAccounts: Seq[SeedKeyPair]                                      = miners
+      override def generateNewAccounts(howMany: Int): Seq[SeedKeyPair]                       = ???
+      override def generateNewAccount(): Option[SeedKeyPair]                                 = ???
+      override def generateNewAccount(nonce: Int): Option[SeedKeyPair]                       = ???
+      override def deleteAccount(account: SeedKeyPair): Boolean                              = ???
       override def privateKeyAccount(account: Address): Either[ValidationError, SeedKeyPair] =
         map.get(account).toRight(GenericError(s"No key for $account"))
     }
 
-    val utx = new UtxPoolImpl(fakeTime, blockchain, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
+    val utx         = new UtxPoolImpl(fakeTime, blockchain, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
     val posSelector = PoSSelector(blockchain, None)
     val utxEvents   = ConcurrentSubject.publish[UtxEvent](using scheduler)
-    val miner = new MinerImpl(
+    val miner       = new MinerImpl(
       new DefaultChannelGroup("", null),
       blockchain,
       dccSettings,
@@ -171,7 +171,7 @@ object BlockchainGeneratorApp extends ScorexLogging {
     val blockAppender = BlockAppender(blockchain, fakeTime, utx, posSelector, BlockEndorser.Disabled, scheduler, verify = false)(_, None)
 
     object Output {
-      private var first = true
+      private var first  = true
       private val output = options.outputFile.map { f =>
         log.info(s"Blocks json will be written to $f")
         val fs = new FileOutputStream(f)

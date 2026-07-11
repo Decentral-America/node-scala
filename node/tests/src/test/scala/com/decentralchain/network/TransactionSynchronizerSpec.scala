@@ -26,7 +26,7 @@ class TransactionSynchronizerSpec extends PropSpec with WithDomain {
 
       val broadcastCount = AtomicInt(0)
 
-      val scheduler = Schedulers.fixedPool(4, "synchronizer")
+      val scheduler    = Schedulers.fixedPool(4, "synchronizer")
       val synchronizer = TransactionSynchronizer(
         UtxSynchronizerSettings(1000000, 8, 5000, true),
         blockIds,

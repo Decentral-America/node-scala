@@ -272,8 +272,8 @@ object BlockchainSettings {
 
   given ConfigReader[BlockchainSettings] = ConfigReader.fromCursor(cur =>
     for {
-      objCur               <- cur.asObjectCursor
-      blockchainTypeString <- objCur.atKey("type").flatMap(_.asString).map(_.toUpperCase)
+      objCur                                                                            <- cur.asObjectCursor
+      blockchainTypeString                                                              <- objCur.atKey("type").flatMap(_.asString).map(_.toUpperCase)
       (addressSchemeCharacter, functionalitySettings, genesisSettings, rewardsSettings) <- blockchainTypeString match {
         case BlockchainType.STAGENET => Right(('S', FunctionalitySettings.STAGENET, GenesisSettings.STAGENET, RewardsSettings.STAGENET))
         case BlockchainType.TESTNET  => Right(('!', FunctionalitySettings.TESTNET, GenesisSettings.TESTNET, RewardsSettings.TESTNET))

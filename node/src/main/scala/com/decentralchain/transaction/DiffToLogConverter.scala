@@ -20,9 +20,9 @@ object DiffToLogConverter {
   def convert(snapshot: StateSnapshot, txId: ByteStr, funcName: String, complexityLimit: Int): Log[Id] = {
     def strToMap(str: String, fieldName: String)          = CONST_STRING(str).map(s => Map(fieldName -> s)).getOrElse(Map.empty)
     def byteStrToMap(byteStr: ByteStr, fieldName: String) = CONST_BYTESTR(byteStr).map(bs => Map(fieldName -> bs)).getOrElse(Map.empty)
-    def assetToMap(asset: Asset, fieldName: String) = (asset match {
+    def assetToMap(asset: Asset, fieldName: String)       = (asset match {
       case IssuedAsset(id) => CONST_BYTESTR(id)
-      case Dcc           => CaseObj(UNIT, Map.empty).asRight[CommonError]
+      case Dcc             => CaseObj(UNIT, Map.empty).asRight[CommonError]
     }).map(assetObj => Map(fieldName -> assetObj)).getOrElse(Map.empty)
     def arrToMap(items: Seq[EVALUATED], fieldName: String) =
       ARR(items.toIndexedSeq, false).map(arr => Map(fieldName -> arr)).getOrElse(Map.empty)
@@ -39,7 +39,7 @@ object DiffToLogConverter {
               )
             case IntegerDataEntry(key, value) => CaseObj(Types.intDataEntry, strToMap(key, "key") ++ Map("value" -> CONST_LONG(value)))
             case StringDataEntry(key, value)  => CaseObj(Types.stringDataEntry, strToMap(key, "key") ++ strToMap(value, "value"))
-            case BinaryDataEntry(key, value) =>
+            case BinaryDataEntry(key, value)  =>
               CaseObj(Types.binaryDataEntry, CONST_BYTESTR(value).map(b => strToMap(key, "key") ++ Map("value" -> b)).getOrElse(Map.empty))
             case EmptyDataEntry(key) => CaseObj(Types.deleteDataEntry, strToMap(key, "key"))
           },

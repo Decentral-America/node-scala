@@ -36,7 +36,7 @@ class EthRpcRoute(blockchain: Blockchain, transactionsApi: CommonTransactionsApi
       val results = erc20Ids
         .map(id =>
           id -> (for {
-            dccId   <- blockchain.resolveERC20Address(ERC20Address(id))
+            dccId     <- blockchain.resolveERC20Address(ERC20Address(id))
             assetDesc <- blockchain.assetDescription(dccId)
           } yield (dccId, assetDesc))
         )
@@ -70,7 +70,7 @@ class EthRpcRoute(blockchain: Blockchain, transactionsApi: CommonTransactionsApi
               case "earliest" => Some(1).asRight
               case "latest"   => Some(blockchain.height).asRight
               case "pending"  => None.asRight
-              case _ =>
+              case _          =>
                 Try(Some(Integer.parseInt(str.drop(2), 16))).toEither
                   .leftMap(_ => GenericError("Request parameter is not number nor supported tag"))
             }
@@ -108,7 +108,7 @@ class EthRpcRoute(blockchain: Blockchain, transactionsApi: CommonTransactionsApi
           extractParam1[String](jso) { str =>
             extractTransaction(str) match {
               case Left(value) => resp(id, ApiError.fromValidationError(value).json)
-              case Right(et) =>
+              case Right(et)   =>
                 resp(
                   id,
                   transactionsApi.broadcastTransaction(et).map[JsValueWrapper] { result =>

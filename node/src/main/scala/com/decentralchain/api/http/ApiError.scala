@@ -53,7 +53,7 @@ object ApiError {
       case TxValidationError.WrongChain(ex, pr)              => InvalidChainId(ex, pr)
       case err: TxValidationError.TooManyProofs              => InvalidProofs(err.toString())
       case err: TxValidationError.ToBigProof                 => InvalidProofs(err.toString())
-      case TransactionValidationError(cause, tx) =>
+      case TransactionValidationError(cause, tx)             =>
         cause match {
           case e: TxValidationError.TransactionNotAllowedByScript =>
             if (e.isAssetScript) TransactionNotAllowedByAssetScript(tx)
@@ -81,9 +81,9 @@ object ApiError {
       errors: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])] = Seq.empty,
       msg: Option[String] = None
   ) extends ApiError {
-    override val id               = WrongJson.Id
-    override val code: StatusCode = StatusCodes.BadRequest
-    override val message: String  = msg.getOrElse(WrongJson.WrongJsonMessage)
+    override val id                  = WrongJson.Id
+    override val code: StatusCode    = StatusCodes.BadRequest
+    override val message: String     = msg.getOrElse(WrongJson.WrongJsonMessage)
     override lazy val json: JsObject = Json.obj(
       "error"            -> id,
       "message"          -> message,
@@ -373,9 +373,9 @@ object ApiError {
   }
 
   case class AccountBalanceErrors(errs: Map[Address, String]) extends ApiError {
-    override val id: Int          = 402
-    override val code: StatusCode = StatusCodes.BadRequest
-    override val message: String  = "Accounts balance errors"
+    override val id: Int             = 402
+    override val code: StatusCode    = StatusCodes.BadRequest
+    override val message: String     = "Accounts balance errors"
     override lazy val json: JsObject =
       Json.obj(
         "error"   -> id,
@@ -385,9 +385,9 @@ object ApiError {
   }
 
   case class OrderInvalid(o: Order, error: String) extends ApiError {
-    override val id: Int          = 403
-    override val message: String  = s"Order validation error: $error"
-    override val code: StatusCode = StatusCodes.BadRequest
+    override val id: Int             = 403
+    override val message: String     = s"Order validation error: $error"
+    override val code: StatusCode    = StatusCodes.BadRequest
     override lazy val json: JsObject = Json.obj(
       "error"   -> id,
       "message" -> message,

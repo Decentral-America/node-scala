@@ -138,7 +138,7 @@ package object database {
       ByteString.copyFrom(ld.sourceId.arr),
       ld.height.toInt,
       ld.status match {
-        case LeaseDetails.Status.Active => pb.LeaseDetails.CancelReason.Empty
+        case LeaseDetails.Status.Active                        => pb.LeaseDetails.CancelReason.Empty
         case LeaseDetails.Status.Cancelled(height, cancelTxId) =>
           pb.LeaseDetails.CancelReason
             .Cancelled(pb.LeaseDetails.Cancelled(height.toInt, cancelTxId.fold(ByteString.EMPTY)(id => ByteString.copyFrom(id.arr))))
@@ -285,7 +285,7 @@ package object database {
   def readStateHash(bs: Array[Byte]): StateHash = {
     val ndi           = newDataInput(bs)
     val sectionsCount = ndi.readByte()
-    val sections = (0 until sectionsCount).map { _ =>
+    val sections      = (0 until sectionsCount).map { _ =>
       val sectionId = ndi.readByte()
       val value     = ndi.readByteStr(DigestLength)
       SectionId(sectionId) -> value
@@ -497,7 +497,7 @@ package object database {
       val keyBufs = getKeyBuffersFromKeys(keys)
       val valBufs = getValueBuffers(keys.size, valBufSize)
 
-      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val cfhs   = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
       val result = keys.view
         .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
         .map { case (parser, value) =>
@@ -519,7 +519,7 @@ package object database {
       val keyBufs  = getKeyBuffers(keyBytes)
       val valBufs  = getValueBuffers(keyBytes.size, 4)
 
-      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val cfhs   = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
       val result = db
         .multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava)
         .asScala
@@ -540,7 +540,7 @@ package object database {
       val keyBufs = getKeyBuffersFromKeys(keys)
       val valBufs = getValueBuffers(valBufSizes)
 
-      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val cfhs   = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
       val result = keys.view
         .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
         .flatMap { case (parser, value) =>
@@ -608,7 +608,7 @@ package object database {
         keyBufs: collection.IndexedSeq[ByteBuffer],
         valBufs: collection.IndexedSeq[ByteBuffer]
     ): Seq[Option[A]] = {
-      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val cfhs   = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
       val result = keys.view
         .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
         .map { case (parser, value) =>
@@ -631,7 +631,7 @@ package object database {
         keyBufs: collection.IndexedSeq[ByteBuffer],
         valBufs: collection.IndexedSeq[ByteBuffer]
     ): View[A] = {
-      val cfhs = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
+      val cfhs   = keys.map(_.columnFamilyHandle.getOrElse(db.getDefaultColumnFamily)).asJava
       val result = keys.view
         .zip(db.multiGetByteBuffers(readOptions, cfhs, keyBufs.asJava, valBufs.asJava).asScala)
         .flatMap { case (parser, value) =>
@@ -692,14 +692,14 @@ package object database {
 
   def toVanillaTransaction(tx: pb.TransactionData.Transaction): Transaction = tx match {
     case tx: TD.LegacyBytes         => TransactionParsers.parseBytes(tx.value.toByteArray).get
-    case tx: TD.DccTransaction    => PBTransactions.vanilla(tx.value, unsafe = false).explicitGet()
+    case tx: TD.DccTransaction      => PBTransactions.vanilla(tx.value, unsafe = false).explicitGet()
     case tx: TD.EthereumTransaction => EthereumTransaction(tx.value.toByteArray).explicitGet()
     case _                          => throw new IllegalArgumentException("Illegal transaction data")
   }
 
   def writeTransaction(v: (TxMeta, Transaction)): Array[Byte] = {
     val (m, tx) = v
-    val ptx = tx match {
+    val ptx     = tx match {
       case lps: (PBSince & Versioned) if PBSince.affects(lps) => TD.DccTransaction(PBTransactions.protobuf(tx))
       case et: EthereumTransaction                            => TD.EthereumTransaction(ByteString.copyFrom(et.bytes()))
       case _                                                  => TD.LegacyBytes(ByteString.copyFrom(tx.bytes()))

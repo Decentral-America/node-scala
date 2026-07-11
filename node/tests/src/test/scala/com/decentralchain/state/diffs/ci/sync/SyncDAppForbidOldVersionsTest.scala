@@ -71,7 +71,7 @@ class SyncDAppForbidOldVersionsTest
       invokeExpression   <- Seq(false, true)
     } {
       val (balances, preparingTxs, invoke, proxyDApp, callingDApp) = scenario(callingDAppVersion, invokeExpression)
-      val (settings, source, target) =
+      val (settings, source, target)                               =
         if (invokeExpression)
           (ContinuationTransaction, invoke.sender.toAddress, callingDApp)
         else

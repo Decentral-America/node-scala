@@ -27,7 +27,7 @@ object GRPCErrors {
 
   def toStatusException(exc: Throwable): StatusException = exc match {
     case se: StatusException => se
-    case _ =>
+    case _                   =>
       val status = exc match {
         case _: NoSuchElementException => Status.NOT_FOUND
         case _: IllegalStateException  => Status.FAILED_PRECONDITION

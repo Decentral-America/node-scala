@@ -38,11 +38,11 @@ class InvokePaymentsLimitTest extends PropSpec with Inside with WithState with D
       paymentsCount: Int,
       nested: Boolean
   ): (Seq[AddrWithBalance], Seq[Transaction], InvokeScriptTransaction) = {
-    val invoker  = TxHelpers.signer(0)
-    val dApp1    = TxHelpers.signer(1)
-    val dApp2    = TxHelpers.signer(2)
-    val balances = AddrWithBalance.enoughBalances(invoker, dApp1, dApp2)
-    val issues   = (1 to paymentsCount).map(_ => TxHelpers.issue(if (nested) dApp1 else invoker, 100))
+    val invoker                    = TxHelpers.signer(0)
+    val dApp1                      = TxHelpers.signer(1)
+    val dApp2                      = TxHelpers.signer(2)
+    val balances                   = AddrWithBalance.enoughBalances(invoker, dApp1, dApp2)
+    val issues                     = (1 to paymentsCount).map(_ => TxHelpers.issue(if (nested) dApp1 else invoker, 100))
     val (nestedInvoke, txPayments) = {
       val payments = issues.map(i => Payment(1, IssuedAsset(i.id.value())))
       if (nested)

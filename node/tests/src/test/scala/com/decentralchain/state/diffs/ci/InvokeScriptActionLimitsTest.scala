@@ -49,7 +49,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
         ContractLimits.MaxCallableActionsAmountBeforeV6(version)
 
     property(s"Allow not more $limit ScriptTransfer/Lease/LeaseCancel actions for V${version.id}") {
-      val dccTransferActionsCount = (limit - 8) / 2
+      val dccTransferActionsCount                                  = (limit - 8) / 2
       val (preparingTxs1, invoke1, masterAddress, serviceAddress1) =
         scenario(
           balanceActionsWithIssueMasterContract(_, _, dccTransferActionsCount, version),
@@ -89,7 +89,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
         ContractLimits.MaxCallableActionsAmountBeforeV6(version)
 
     property(s"Allow not more $limit Issue/Reissue/Burn/SponsorFee actions for V${version.id}") {
-      val actionsCount = limit / 2
+      val actionsCount                                             = limit / 2
       val (preparingTxs1, invoke1, masterAddress, serviceAddress1) =
         scenario(
           (_: Address, alias: Alias) => assetActionsMasterContract(alias, actionsCount, version),
@@ -358,7 +358,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
 
   private def balanceActionsNestedContract(version: StdLibVersion, transferActionsCount: Int): Script = {
     val recipient = TxHelpers.address(100)
-    val script =
+    val script    =
       s"""
          |{-# STDLIB_VERSION ${version.id} #-}
          |{-# CONTENT_TYPE DAPP #-}
@@ -400,7 +400,7 @@ class InvokeScriptActionLimitsTest extends PropSpec with WithDomain with DBCache
 
   private def allActionsNestedContract(version: StdLibVersion): Script = {
     val recipient = TxHelpers.address(100)
-    val script =
+    val script    =
       s"""
          |{-# STDLIB_VERSION ${version.id} #-}
          |{-# CONTENT_TYPE DAPP #-}

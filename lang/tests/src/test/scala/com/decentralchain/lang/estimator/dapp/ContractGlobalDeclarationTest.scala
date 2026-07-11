@@ -949,8 +949,8 @@ class ContractGlobalDeclarationTest extends PropSpec {
     val dApp      = TestCompiler(V6).compileContract(neutrinoScript).expr
     val estimator = ScriptEstimatorV3.latest
 
-    val oldFunctionsCosts = ContractScript.oldGlobalFunctionsCosts(V6, dApp, estimator).explicitGet()
-    val oldLetsCosts      = ContractScript.oldGlobalLetsCosts(V6, dApp, estimator).explicitGet()
+    val oldFunctionsCosts                                     = ContractScript.oldGlobalFunctionsCosts(V6, dApp, estimator).explicitGet()
+    val oldLetsCosts                                          = ContractScript.oldGlobalLetsCosts(V6, dApp, estimator).explicitGet()
     val (oldMaxAnnotatedComplexity, oldAnnotatedComplexities) =
       ContractScript.estimateComplexityExact(V6, dApp, estimator, fixEstimateOfVerifier = true).explicitGet()
 

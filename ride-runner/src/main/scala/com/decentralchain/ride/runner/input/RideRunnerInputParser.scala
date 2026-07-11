@@ -30,11 +30,11 @@ object RideRunnerInputParser {
   /** Use after "prepare"
     */
   def from(config: Config): RideRunnerInput = {
-    val address     = ConfigSource.fromConfig(config).at("address").loadOrThrow[Address]
-    val request     = ConfigSource.fromConfig(config).at("request").loadOrThrow[JsObject]
-    val chainId     = getChainId(config)
-    val intAsString = ConfigSource.fromConfig(config).at("intAsString").load[Boolean].getOrElse(false)
-    val trace       = ConfigSource.fromConfig(config).at("trace").load[Boolean].getOrElse(false)
+    val address                       = ConfigSource.fromConfig(config).at("address").loadOrThrow[Address]
+    val request                       = ConfigSource.fromConfig(config).at("request").loadOrThrow[JsObject]
+    val chainId                       = getChainId(config)
+    val intAsString                   = ConfigSource.fromConfig(config).at("intAsString").load[Boolean].getOrElse(false)
+    val trace                         = ConfigSource.fromConfig(config).at("trace").load[Boolean].getOrElse(false)
     val evaluateScriptComplexityLimit =
       ConfigSource.fromConfig(config).at("evaluateScriptComplexityLimit").load[Int].getOrElse(Int.MaxValue)
     val maxTxErrorLogSize = ConfigSource.fromConfig(config).at("maxTxErrorLogSize").load[Int].getOrElse(1024)
@@ -98,7 +98,7 @@ object RideRunnerInputParser {
 
   implicit val accountConfigReader: ConfigReader[RideRunnerAccount] = ConfigReader.fromCursor { cur =>
     for {
-      objCur <- cur.asObjectCursor
+      objCur        <- cur.asObjectCursor
       assetBalances <- ConfigReader[Option[Map[IssuedAsset, TxNonNegativeAmount]]]
         .from(objCur.atKeyOrUndefined("assetBalances"))
         .map(_.getOrElse(Map.empty))
@@ -132,8 +132,8 @@ object RideRunnerInputParser {
       objCur <- cur.asObjectCursor
       // Note: `System.currentTimeMillis()` is a side effect, as well as the default value for the `timestamp` field in case class is.
       // It would be a good idea not to use side effects in the default values of case class fields.
-      timestamp  <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("timestamp")).map(_.getOrElse(System.currentTimeMillis()))
-      baseTarget <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("baseTarget")).map(_.getOrElse(130L))
+      timestamp           <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("timestamp")).map(_.getOrElse(System.currentTimeMillis()))
+      baseTarget          <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("baseTarget")).map(_.getOrElse(130L))
       generationSignature <- ConfigReader[Option[ByteStr]]
         .from(objCur.atKeyOrUndefined("generationSignature"))
         .map(_.getOrElse(ByteStr(new Array[Byte](64))))
@@ -156,9 +156,9 @@ object RideRunnerInputParser {
       height          <- ConfigReader[Option[Int]].from(objCur.atKeyOrUndefined("height"))
       // Note: `System.currentTimeMillis()` is a side effect, as well as the default value for the `timestamp` field in case class is.
       // It would be a good idea not to use side effects in the default values of case class fields.
-      timestamp <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("timestamp")).map(_.getOrElse(System.currentTimeMillis()))
-      proofs    <- ConfigReader[Option[List[StringOrBytesAsByteArray]]].from(objCur.atKeyOrUndefined("proofs")).map(_.getOrElse(Nil))
-      version   <- ConfigReader[Option[Byte]].from(objCur.atKeyOrUndefined("version")).map(_.getOrElse(3: Byte))
+      timestamp  <- ConfigReader[Option[Long]].from(objCur.atKeyOrUndefined("timestamp")).map(_.getOrElse(System.currentTimeMillis()))
+      proofs     <- ConfigReader[Option[List[StringOrBytesAsByteArray]]].from(objCur.atKeyOrUndefined("proofs")).map(_.getOrElse(Nil))
+      version    <- ConfigReader[Option[Byte]].from(objCur.atKeyOrUndefined("version")).map(_.getOrElse(3: Byte))
       attachment <- ConfigReader[Option[StringOrBytesAsByteArray]]
         .from(objCur.atKeyOrUndefined("attachment"))
         .map(_.getOrElse(StringOrBytesAsByteArray(Array.empty[Byte])))
@@ -169,7 +169,7 @@ object RideRunnerInputParser {
     val chainId = AddressScheme.current.chainId
 
     val separatorNumber = x.count(_ == ':')
-    val alias =
+    val alias           =
       if (separatorNumber == 2) Alias.fromString(x)
       else if (separatorNumber == 1) Alias.createWithChainId(x.substring(x.indexOf(":") + 1), chainId)
       else Alias.createWithChainId(x, chainId)
@@ -181,7 +181,7 @@ object RideRunnerInputParser {
     val chainId = AddressScheme.current.chainId
 
     val separatorNumber = x.count(_ == ':')
-    val addressOrAlias =
+    val addressOrAlias  =
       if (separatorNumber == 2) Alias.fromString(x)
       else if (separatorNumber == 1) Alias.createWithChainId(x.substring(x.indexOf(":") + 1), chainId)
       else Address.fromString(x)
@@ -195,11 +195,11 @@ object RideRunnerInputParser {
     for {
       objCur   <- cur.asObjectCursor
       dataType <- objCur.atKey("type").flatMap(ConfigReader[String].from)
-      data <- dataType match {
+      data     <- dataType match {
         case "integer" => objCur.atKey("value").flatMap(ConfigReader[Long].from).map(IntegerRideRunnerDataEntry.apply)
         case "boolean" => objCur.atKey("value").flatMap(ConfigReader[Boolean].from).map(BooleanRideRunnerDataEntry.apply)
         case "string"  => objCur.atKey("value").flatMap(ConfigReader[String].from).map(StringRideRunnerDataEntry.apply)
-        case "binary" =>
+        case "binary"  =>
           objCur.atKey("value").flatMap(ConfigReader[String].from).map(x => BinaryRideRunnerDataEntry(ByteStr(byteArrayDefaultUtf8FromString(x))))
         case x => fail(s"Expected one of types: integer, boolean, string, binary. Got $x")
       }
@@ -210,11 +210,11 @@ object RideRunnerInputParser {
     for {
       objCur <- cur.asObjectCursor
       method <- objCur.atKey("type").flatMap(ConfigReader[String].from)
-      data <- method match {
+      data   <- method match {
         case "pick"    => objCur.atKey("path").flatMap(ConfigReader[String].from).map(RideRunnerPostProcessingMethod.Pick.apply)
         case "pickAll" => objCur.atKey("paths").flatMap(ConfigReader[List[String]].from).map(RideRunnerPostProcessingMethod.PickAll.apply)
         case "prune"   => objCur.atKey("paths").flatMap(ConfigReader[List[String]].from).map(RideRunnerPostProcessingMethod.Prune.apply)
-        case "regex" =>
+        case "regex"   =>
           for {
             path    <- objCur.atKey("path").flatMap(ConfigReader[String].from)
             find    <- objCur.atKey("find").flatMap(ConfigReader[String].from)
@@ -227,9 +227,9 @@ object RideRunnerInputParser {
 
   implicit val rideRunnerScriptInfoConfigReader: ConfigReader[RideRunnerScriptInfo] = ConfigReader.fromCursor { cur =>
     for {
-      objCur  <- cur.asObjectCursor
-      pk      <- ConfigReader[Option[PublicKey]].from(objCur.atKeyOrUndefined("publicKey")).map(_.getOrElse(EmptyPublicKey))
-      imports <- ConfigReader[Option[Map[String, String]]].from(objCur.atKeyOrUndefined("imports")).map(_.getOrElse(Map.empty))
+      objCur         <- cur.asObjectCursor
+      pk             <- ConfigReader[Option[PublicKey]].from(objCur.atKeyOrUndefined("publicKey")).map(_.getOrElse(EmptyPublicKey))
+      imports        <- ConfigReader[Option[Map[String, String]]].from(objCur.atKeyOrUndefined("imports")).map(_.getOrElse(Map.empty))
       compiledScript <- ConfigReader[SrcOrCompiledScript].from(objCur.atKeyOrUndefined("script")).map {
         case Right(x)  => x
         case Left(src) => ScriptUtil.from(src, imports)
@@ -243,7 +243,7 @@ object RideRunnerInputParser {
     else x.getBytes(StandardCharsets.UTF_8)
   }.getOrElse(x.getBytes(StandardCharsets.UTF_8))
 
-  private def byteStrDefaultBase58FromString(x: String): ByteStr = ByteStr(byteArrayDefaultBase58FromString(x))
+  private def byteStrDefaultBase58FromString(x: String): ByteStr       = ByteStr(byteArrayDefaultBase58FromString(x))
   private def byteArrayDefaultBase58FromString(x: String): Array[Byte] = {
     if (x.startsWith("base64:"))
       Base64.tryDecode(x.substring(7)).fold(e => fail(s"Error parsing base64: ${e.getMessage}", e), identity)

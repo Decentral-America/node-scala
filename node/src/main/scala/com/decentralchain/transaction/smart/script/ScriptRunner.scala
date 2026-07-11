@@ -95,8 +95,8 @@ object ScriptRunner {
       }
       val ctxE =
         for {
-          ds <- DirectiveSet(script.stdLibVersion, if (isAssetScript) Asset else Account, Expression)
-          mi <- buildThisValue(in, blockchain, ds, scriptContainerAddress)
+          ds  <- DirectiveSet(script.stdLibVersion, if (isAssetScript) Asset else Account, Expression)
+          mi  <- buildThisValue(in, blockchain, ds, scriptContainerAddress)
           ctx <- BlockchainContext
             .build(
               script.stdLibVersion,

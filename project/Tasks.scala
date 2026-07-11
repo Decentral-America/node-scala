@@ -14,7 +14,7 @@ object Tasks {
   mapper.registerModule(DefaultScalaModule)
 
   lazy val listComplexFunctions = Def.inputTask {
-    val version = (' ' ~> NatBasic).parsed
+    val version     = (' ' ~> NatBasic).parsed
     val baseLangDir = baseDirectory.value.getParentFile.getAbsolutePath
 
     val complexFuncs = for {
@@ -23,7 +23,6 @@ object Tasks {
       func <- mapper.readValue[Map[String, List[FuncSourceData]]](json).head._2
       if func.complexity > 1
     } yield s"${func.name};${func.complexity};${func.params.mkString(",")}"
-
 
     val targetFile = ((Compile / target).value / s"complex-functions-v$version.csv")
     IO.write(targetFile, complexFuncs.mkString("\n").getBytes("utf-8"))
@@ -138,14 +137,18 @@ object Tasks {
 
       // Split into separate private lazy vals to avoid JVM 64KB method limit.
       // Scoverage instrumentation inflates bytecode ~5x per lazy val init method.
-      val allFuncs = funcs.toSeq
+      val allFuncs  = funcs.toSeq
       val chunkSize = 10
       if (allFuncs.size <= chunkSize) {
         buildCategorizedFuncsStr(allFuncs, version)
       } else {
-        allFuncs.grouped(chunkSize).zipWithIndex.map { case (chunk, _) =>
-          buildCategorizedFuncsStr(chunk, version)
-        }.mkString(" ++ ")
+        allFuncs
+          .grouped(chunkSize)
+          .zipWithIndex
+          .map { case (chunk, _) =>
+            buildCategorizedFuncsStr(chunk, version)
+          }
+          .mkString(" ++ ")
       }
     }
 
@@ -161,18 +164,20 @@ object Tasks {
         category = path.getName(path.getNameCount - 1).toString.split('.').head
       } yield (funcs, category)
 
-      val allFuncs = funcs.toSeq
+      val allFuncs  = funcs.toSeq
       val chunkSize = 10
-      val chunks = allFuncs.grouped(chunkSize).toSeq
+      val chunks    = allFuncs.grouped(chunkSize).toSeq
 
       if (chunks.size <= 1) {
         val expr = buildCategorizedFuncsStr(allFuncs, version)
         (s"  lazy val funcsV$version = $expr", s"funcsV$version")
       } else {
-        val defs = chunks.zipWithIndex.map { case (chunk, idx) =>
-          s"  private lazy val funcsV${version}_$idx = ${buildCategorizedFuncsStr(chunk, version)}"
-        }.mkString("\n")
-        val refs = chunks.indices.map(idx => s"funcsV${version}_$idx").mkString(" ++ ")
+        val defs = chunks.zipWithIndex
+          .map { case (chunk, idx) =>
+            s"  private lazy val funcsV${version}_$idx = ${buildCategorizedFuncsStr(chunk, version)}"
+          }
+          .mkString("\n")
+        val refs    = chunks.indices.map(idx => s"funcsV${version}_$idx").mkString(" ++ ")
         val mainDef = s"$defs\n  lazy val funcsV$version = $refs"
         (mainDef, s"funcsV$version")
       }
@@ -189,7 +194,7 @@ object Tasks {
       buildTypesStr(types, ver)
     }
 
-    val docFolderR = "^v(\\d+)$".r
+    val docFolderR         = "^v(\\d+)$".r
     val currentRideVersion =
       new File(s"$baseLangDir/doc")
         .listFiles()

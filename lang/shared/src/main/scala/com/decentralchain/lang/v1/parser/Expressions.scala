@@ -119,7 +119,7 @@ object Expressions {
   }
 
   case class ANNOTATION(position: Pos, name: PART[String], args: Seq[PART[String]]) extends Positioned
-  case class ANNOTATEDFUNC(position: Pos, anns: Seq[ANNOTATION], f: FUNC) extends Positioned {
+  case class ANNOTATEDFUNC(position: Pos, anns: Seq[ANNOTATION], f: FUNC)           extends Positioned {
     def name: PART[String] = f.name
   }
 
@@ -149,7 +149,7 @@ object Expressions {
   case class BLOCK(position: Pos, let: Declaration, body: EXPR, resultType: Option[FINAL] = None, ctxOpt: CtxOpt = None)                extends EXPR
   case class IF(position: Pos, cond: EXPR, ifTrue: EXPR, ifFalse: EXPR, resultType: Option[FINAL] = None, ctxOpt: CtxOpt = None)        extends EXPR
   case class REF(position: Pos, key: PART[String], resultType: Option[FINAL] = None, ctxOpt: CtxOpt = None)                             extends EXPR
-  case class TRUE(position: Pos, ctxOpt: CtxOpt = None) extends EXPR {
+  case class TRUE(position: Pos, ctxOpt: CtxOpt = None)                                                                                 extends EXPR {
     val resultType: Option[FINAL] = Some(BOOLEAN)
   }
   case class FALSE(position: Pos, ctxOpt: CtxOpt = None) extends EXPR {

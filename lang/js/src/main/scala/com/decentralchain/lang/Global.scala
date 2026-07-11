@@ -13,7 +13,7 @@ import scala.scalajs.js.typedarray.{ArrayBuffer, Int8Array, TA2AB}
 import scala.util.Try
 
 object Global extends BaseGlobal {
-  def base58Encode(input: Array[Byte]): Either[String, String] = Right(Base58.encode(input))
+  def base58Encode(input: Array[Byte]): Either[String, String]                      = Right(Base58.encode(input))
   override def base58Decode(input: String, limit: Int): Either[String, Array[Byte]] =
     for {
       _ <- Either.cond(input.length <= limit, {}, s"Input is too long (${input.length}), limit is $limit")

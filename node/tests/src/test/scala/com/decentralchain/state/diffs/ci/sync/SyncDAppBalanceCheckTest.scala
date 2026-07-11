@@ -60,7 +60,7 @@ class SyncDAppBalanceCheckTest extends PropSpec with WithDomain with Transaction
 
   property("temporary negative balance of sync call produces error") {
     val (preparingTxs, invoke) = scenario.sample.get
-    val settings =
+    val settings               =
       DomainPresets.RideV5
         .configure(_.copy(enforceTransferValidationAfter = 2))
         .setFeaturesHeight(BlockchainFeatures.RideV6 -> 4)

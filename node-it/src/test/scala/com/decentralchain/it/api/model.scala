@@ -150,7 +150,7 @@ class Transaction(
     val endorserPublicKey: Option[String]
 ) {
   import Transaction.*
-  override def toString: String = Json.toJson(this).toString
+  override def toString: String        = Json.toJson(this).toString
   override def equals(x: Any): Boolean = {
     x match {
       case t: Transaction => id == t.id
@@ -235,7 +235,7 @@ object Transaction {
         name        <- (jsv \ "name").validateOpt[String]
         amount      <- (jsv \ "amount").validateOpt[Long]
         description <- (jsv \ "description").validateOpt[String]
-        attachment <- version match {
+        attachment  <- version match {
           case Some(_) if _type == 4 || _type == 11 => (jsv \ "attachment").validateOpt[String]
           case _                                    => JsSuccess(None)
         }
@@ -578,17 +578,17 @@ object TransferTransactionInfo {
   implicit val transactionFormat: Format[TransferTransactionInfo] = Format(
     Reads(jsv =>
       for {
-        _type     <- (jsv \ "type").validate[Int]
-        id        <- (jsv \ "id").validate[String]
-        _         <- (jsv \ "chainId").validateOpt[Byte]
-        fee       <- (jsv \ "fee").validate[Long]
-        timestamp <- (jsv \ "timestamp").validate[Long]
-        sender    <- (jsv \ "sender").validateOpt[String]
-        height    <- (jsv \ "height").validate[Int]
-        amount    <- (jsv \ "amount").validateOpt[Long]
-        recipient <- (jsv \ "recipient").validateOpt[String]
-        version   <- (jsv \ "version").validateOpt[Byte]
-        chainId   <- (jsv \ "chainId").validateOpt[Byte]
+        _type      <- (jsv \ "type").validate[Int]
+        id         <- (jsv \ "id").validate[String]
+        _          <- (jsv \ "chainId").validateOpt[Byte]
+        fee        <- (jsv \ "fee").validate[Long]
+        timestamp  <- (jsv \ "timestamp").validate[Long]
+        sender     <- (jsv \ "sender").validateOpt[String]
+        height     <- (jsv \ "height").validate[Int]
+        amount     <- (jsv \ "amount").validateOpt[Long]
+        recipient  <- (jsv \ "recipient").validateOpt[String]
+        version    <- (jsv \ "version").validateOpt[Byte]
+        chainId    <- (jsv \ "chainId").validateOpt[Byte]
         attachment <- version match {
           case Some(_) if _type == 4 || _type == 11 => (jsv \ "attachment").validateOpt[String]
           case _                                    => JsSuccess(None)
@@ -632,16 +632,16 @@ object MassTransferTransactionInfo {
   implicit val transactionFormat: Format[MassTransferTransactionInfo] = Format(
     Reads(jsv =>
       for {
-        _type     <- (jsv \ "type").validate[Int]
-        id        <- (jsv \ "id").validate[String]
-        fee       <- (jsv \ "fee").validate[Long]
-        timestamp <- (jsv \ "timestamp").validate[Long]
-        sender    <- (jsv \ "sender").validateOpt[String]
-        height    <- (jsv \ "height").validate[Int]
-        amount    <- (jsv \ "amount").validateOpt[Long]
-        recipient <- (jsv \ "recipient").validateOpt[String]
-        version   <- (jsv \ "version").validateOpt[Byte]
-        chainId   <- (jsv \ "chainId").validateOpt[Byte]
+        _type      <- (jsv \ "type").validate[Int]
+        id         <- (jsv \ "id").validate[String]
+        fee        <- (jsv \ "fee").validate[Long]
+        timestamp  <- (jsv \ "timestamp").validate[Long]
+        sender     <- (jsv \ "sender").validateOpt[String]
+        height     <- (jsv \ "height").validate[Int]
+        amount     <- (jsv \ "amount").validateOpt[Long]
+        recipient  <- (jsv \ "recipient").validateOpt[String]
+        version    <- (jsv \ "version").validateOpt[Byte]
+        chainId    <- (jsv \ "chainId").validateOpt[Byte]
         attachment <- version match {
           case Some(_) if _type == 4 || _type == 11 => (jsv \ "attachment").validateOpt[String]
           case _                                    => JsSuccess(None)
@@ -722,11 +722,11 @@ case class DeleteDataResponse(key: String)                          extends Data
 object DataResponse {
   def put(`type`: String, value: Any, key: String): PutDataResponse = PutDataResponse(`type`, value, key)
   def delete(key: String): DeleteDataResponse                       = DeleteDataResponse(key)
-  implicit val dataResponseFormat: Reads[DataResponse] = Reads {
+  implicit val dataResponseFormat: Reads[DataResponse]              = Reads {
     case JsObject(fields) if fields.get("key").exists(_.isInstanceOf[JsString]) && fields.get("type").exists(_.isInstanceOf[JsString]) =>
       val key    = fields("key").asInstanceOf[JsString].value
       val `type` = fields("type").asInstanceOf[JsString].value
-      val value = `type` match {
+      val value  = `type` match {
         case "binary"  => fields("value").asInstanceOf[JsString].value
         case "string"  => fields("value").asInstanceOf[JsString].value
         case "integer" => fields("value").asInstanceOf[JsNumber].value.toLongExact

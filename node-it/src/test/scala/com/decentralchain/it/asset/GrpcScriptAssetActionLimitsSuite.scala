@@ -53,7 +53,7 @@ class GrpcScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite with
     s"SponsorFee actions count limit for V${version.id}" in {
       val dApp        = createSponsorFeeDApp(actionsLimit, version)
       val dAppAddress = byteStringAddress(dApp)
-      val invokeTx1 = miner.broadcastInvokeScript(
+      val invokeTx1   = miner.broadcastInvokeScript(
         miner.keyPair,
         PBRecipients.create(dApp.toAddress),
         Some(FUNCTION_CALL(FunctionHeader.User(s"issue${actionsLimit}assets"), List.empty)),
@@ -96,7 +96,7 @@ class GrpcScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite with
 
     s"Issue $actionsLimit assets should not produce an error for V${version.id}" in {
       val acc = createDApp(script(actionsLimit, version))
-      val tx = miner.broadcastInvokeScript(
+      val tx  = miner.broadcastInvokeScript(
         acc,
         PBRecipients.create(acc.toAddress),
         Some(FUNCTION_CALL(FunctionHeader.User(s"issue${actionsLimit}Assets"), List.empty)),

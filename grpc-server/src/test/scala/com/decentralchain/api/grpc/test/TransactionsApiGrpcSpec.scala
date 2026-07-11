@@ -162,7 +162,7 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
 
       val attachment = ByteStr.fill(32)(1)
       val issue      = TxHelpers.issue(issuer)
-      val exchange =
+      val exchange   =
         TxHelpers.exchangeFromOrders(
           TxHelpers.order(
             OrderType.BUY,
@@ -232,10 +232,10 @@ class TransactionsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffM
 
       (1 to 999).foreach(_ => d.appendBlock())
 
-      val invalidStateHash = ByteStr.fill(DigestLength)(1)
-      val resenderTxs = Seq(TxHelpers.transfer(resender, recipient.toAddress, 1.dcc), TxHelpers.transfer(resender, recipient.toAddress, 2.dcc))
+      val invalidStateHash  = ByteStr.fill(DigestLength)(1)
+      val resenderTxs       = Seq(TxHelpers.transfer(resender, recipient.toAddress, 1.dcc), TxHelpers.transfer(resender, recipient.toAddress, 2.dcc))
       val challengedBlockTx = TxHelpers.transfer(challengedMiner, resender.toAddress, 1001.dcc)
-      val originalBlock = d.createBlock(
+      val originalBlock     = d.createBlock(
         Block.ProtoBlockVersion,
         challengedBlockTx +: resenderTxs,
         strictTime = true,

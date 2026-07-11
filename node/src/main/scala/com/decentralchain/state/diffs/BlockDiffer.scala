@@ -174,7 +174,7 @@ object BlockDiffer {
     }
 
     val blockchainWithNewBlock = SnapshotBlockchain(blockchain, StateSnapshot.empty, block, hitSource, 0, blockchain.lastBlockReward, None)
-    val initSnapshotE =
+    val initSnapshotE          =
       for {
         feeFromPreviousBlock                             <- feeFromPreviousBlockE
         initialFeeFromThisBlock                          <- initialFeeFromThisBlockE
@@ -184,7 +184,7 @@ object BlockDiffer {
         totalMinerPortfolio = Map(block.sender.toAddress -> totalMinerReward)
         nonMinerRewardPortfolios <- Portfolio.combine(daoPortfolio, xtnBuybackPortfolio)
         totalRewardPortfolios    <- Portfolio.combine(totalMinerPortfolio, nonMinerRewardPortfolios)
-        penalties <- maybePrevBlock match {
+        penalties                <- maybePrevBlock match {
           case Some(prevBlock) => calculatePenalties(blockchain, prevBlock)
           case None            => Map.empty[Address, Portfolio].asRight[String]
         }
@@ -291,7 +291,7 @@ object BlockDiffer {
   }
 
   private def calculatePenalties(blockchain: Blockchain, prevBlockId: BlockId): Either[String, Map[Address, Portfolio]] = {
-    val empty = Map.empty[Address, Portfolio].asRight[String]
+    val empty           = Map.empty[Address, Portfolio].asRight[String]
     val parentBlockInfo = for {
       prevHeight <- blockchain.heightOf(prevBlockId)
       period     <- blockchain.generationPeriodOf(Height(prevHeight))
@@ -304,7 +304,7 @@ object BlockDiffer {
   }
 
   private def calculatePenalties(blockchain: Blockchain, prevBlock: Block): Either[String, Map[Address, Portfolio]] = {
-    val empty = Map.empty[Address, Portfolio].asRight[String]
+    val empty           = Map.empty[Address, Portfolio].asRight[String]
     val parentBlockInfo = for {
       voting     <- prevBlock.header.finalizationVoting
       prevHeight <- blockchain.heightOf(prevBlock.id())
@@ -324,10 +324,10 @@ object BlockDiffer {
     val empty          = Map.empty[Address, Portfolio].asRight[String]
     lazy val committed = blockchain.committedGenerators(prevBlockPeriod)
     prevBlockVoting.conflict.foldLeft(empty) {
-      case (r @ Left(_), _) => r
+      case (r @ Left(_), _)        => r
       case (Right(r), endorsement) =>
         committed.lift(endorsement.endorserIndex.toInt) match {
-          case None => Left(s"Invalid endorsement index in $endorsement, valid: [0; ${committed.size}]")
+          case None            => Left(s"Invalid endorsement index in $endorsement, valid: [0; ${committed.size}]")
           case Some((addr, _)) =>
             val orig    = r.getOrElse(addr, Portfolio.empty)
             val updated = orig.combine(Portfolio.dcc(-CommitToGenerationTransaction.DepositInDcclets))
@@ -420,7 +420,7 @@ object BlockDiffer {
               tx
             ) =>
           val currBlockchain = SnapshotBlockchain(blockchain, currSnapshot)
-          val res = txDiffer(currBlockchain, tx).flatMap { txSnapshot =>
+          val res            = txDiffer(currBlockchain, tx).flatMap { txSnapshot =>
             val updatedConstraint = currConstraint.put(currBlockchain, tx, txSnapshot)
             if (updatedConstraint.isOverfilled)
               TracedResult(Left(GenericError(s"Limit of txs was reached: $initConstraint -> $updatedConstraint")))
@@ -501,7 +501,7 @@ object BlockDiffer {
 
     // carry is 60% of dcc fees the next miner will get. obviously carry fee only makes sense when both
     // NG and sponsorship is active. also if sponsorship is active, feeAsset can only be Dcc
-    val carry    = if (hasNg && hasSponsorship) feeAmount - currentBlockFee else 0
+    val carry  = if (hasNg && hasSponsorship) feeAmount - currentBlockFee else 0
     val dccFee = if (feeAsset == Dcc) feeAmount else 0L
 
     TxFeeInfo(feeAsset, feeAmount, carry, dccFee)
@@ -521,7 +521,7 @@ object BlockDiffer {
       case tx: ExchangeTransaction =>
         addresses.addAll(Seq(tx.sender.toAddress, tx.buyOrder.senderAddress, tx.sellOrder.senderAddress))
         orders.addOne(tx.buyOrder.id()).addOne(tx.sellOrder.id())
-      case tx: GenesisTransaction => addresses.addOne(tx.recipient)
+      case tx: GenesisTransaction      => addresses.addOne(tx.recipient)
       case tx: InvokeScriptTransaction =>
         addresses.addAll(Seq(tx.senderAddress) ++ (tx.dApp match {
           case addr: Address => Some(addr)
@@ -534,7 +534,7 @@ object BlockDiffer {
         }))
       case tx: MassTransferTransaction =>
         addresses.addAll(Seq(tx.sender.toAddress) ++ tx.transfers.collect { case ParsedTransfer(addr: Address, _) => addr })
-      case tx: PaymentTransaction => addresses.addAll(Seq(tx.sender.toAddress, tx.recipient))
+      case tx: PaymentTransaction  => addresses.addAll(Seq(tx.sender.toAddress, tx.recipient))
       case tx: TransferTransaction =>
         addresses.addAll(Seq(tx.sender.toAddress) ++ (tx.recipient match {
           case addr: Address => Some(addr)

@@ -21,7 +21,7 @@ class InvokeTransferBalanceErrorTest extends PropSpec with WithDomain {
   property("invoke is always rejected with a lack of funds without execution of ScriptTransfer script after RideV6, corrected after LightNode") {
     val issueTx = issue(signer(10), script = Some(assetFailScript))
     val asset   = IssuedAsset(issueTx.id())
-    val dApp = TestCompiler(V5).compileContract(
+    val dApp    = TestCompiler(V5).compileContract(
       s"""
          | @Callable(i)
          | func default() = {

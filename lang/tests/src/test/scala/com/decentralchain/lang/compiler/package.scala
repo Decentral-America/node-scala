@@ -19,7 +19,7 @@ package object compiler {
 
   val pointType   = CASETYPEREF("Point", List("x" -> LONG, "y" -> LONG))
   val listOfLongs = LIST
-  val idT = NativeFunction[NoContext]("idT", 1, 10000: Short, TYPEPARAM('T'), ("p1", TYPEPARAM('T'))) {
+  val idT         = NativeFunction[NoContext]("idT", 1, 10000: Short, TYPEPARAM('T'), ("p1", TYPEPARAM('T'))) {
     case a :: Nil => Right(a)
     case _        => ???
   }

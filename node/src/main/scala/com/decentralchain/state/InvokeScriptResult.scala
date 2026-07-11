@@ -85,7 +85,7 @@ object InvokeScriptResult {
   }
 
   def paymentsFromPortfolio(addr: Address, portfolio: Portfolio): Seq[Payment] = {
-    val dcc  = InvokeScriptResult.Payment(addr, Dcc, portfolio.balance)
+    val dcc    = InvokeScriptResult.Payment(addr, Dcc, portfolio.balance)
     val assets = portfolio.assets.map { case (assetId, amount) => InvokeScriptResult.Payment(addr, assetId, amount) }
     (assets.toVector ++ Some(dcc)).filter(_.amount != 0)
   }
@@ -107,7 +107,7 @@ object InvokeScriptResult {
   implicit val sponsorFeeFormat: OWrites[SponsorFee]     = Json.writes[SponsorFee]
   implicit val leaseCancelFormat: OWrites[LeaseCancel]   = Json.writes[LeaseCancel]
   implicit val errorMessageFormat: OWrites[ErrorMessage] = Json.writes[ErrorMessage]
-  implicit val invocationFormat: Writes[Invocation] = (i: Invocation) =>
+  implicit val invocationFormat: Writes[Invocation]      = (i: Invocation) =>
     Json.obj(
       "dApp"         -> i.dApp.toString,
       "call"         -> i.call,
@@ -193,7 +193,7 @@ object InvokeScriptResult {
         val transfers    = actions.collect { case t: lang.AssetTransfer => langTransferToPayment(t) }
         val leases       = actions.collect { case l: lang.Lease => langLeaseToLease(l) }
         val leaseCancels = actions.collect { case l: lang.LeaseCancel => l }
-        val retVal = returnedValue match {
+        val retVal       = returnedValue match {
           case CaseObj(caseType, _) if caseType == Types.UNIT => None
           case v                                              => Some(v)
         }
@@ -288,7 +288,7 @@ object InvokeScriptResult {
         case Value.StringValue(value)  => Terms.CONST_STRING(value).explicitGet()
         case Value.BooleanValue(value) => Terms.CONST_BOOLEAN(value)
         case Value.List(value)         => Terms.ARR(value.items.map(a => toVanillaTerm(a.value)).toVector, limited = true).explicitGet()
-        case Value.CaseObj(bytes) =>
+        case Value.CaseObj(bytes)      =>
           SerdeV1
             .deserialize(bytes.toByteArray, allowObjects = true)
             .toOption

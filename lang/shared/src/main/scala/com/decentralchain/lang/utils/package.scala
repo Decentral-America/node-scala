@@ -43,7 +43,7 @@ package object utils {
     override def data(addressOrAlias: Recipient, key: String, dataType: DataType): Option[Any]                   = None
     override def hasData(addressOrAlias: Recipient): Boolean                                                     = ???
     override def accountBalanceOf(addressOrAlias: Recipient, assetId: Option[Array[Byte]]): Either[String, Long] = ???
-    override def accountDccBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails]    = ???
+    override def accountDccBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails]      = ???
     override def resolveAlias(name: String): Either[String, Recipient.Address]                                   = ???
     override def tthis: Environment.Tthis                                                                        = Recipient.Address(ByteStr.empty)
     override def multiPaymentAllowed: Boolean                                                                    = true
@@ -71,7 +71,7 @@ package object utils {
       fixBigScriptField  <- Seq(false, true)
       fixEcRecover       <- Seq(false, true)
     } yield {
-      val ds = DirectiveSet(version, scriptType, contentType).explicitGet()
+      val ds  = DirectiveSet(version, scriptType, contentType).explicitGet()
       val ctx = Coeval.evalOnce(
         PureContext.build(version, useNewPowPrecision).withEnvironment[Environment] |+|
           CryptoContext.build(Global, version, fixEcRecover).withEnvironment[Environment] |+|

@@ -48,7 +48,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
       sender    <- wallet.findPrivateKey(request.sender)
       signer    <- if (request.sender == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       transfers <- MassTransferTransaction.parseTransfersList(request.transfers)
-      tx <- MassTransferTransaction.signed(
+      tx        <- MassTransferTransaction.signed(
         request.version.getOrElse(1.toByte),
         sender.publicKey,
         Asset.fromCompatId(request.assetId.map(s => ByteStr.decodeBase58(s).get)),
@@ -210,7 +210,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       sender <- wallet.findPrivateKey(request.sender)
       signer <- if (request.sender == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
-      tx <- DataTransaction.signed(
+      tx     <- DataTransaction.signed(
         request.version,
         sender.publicKey,
         request.data,
@@ -249,8 +249,8 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
 
   def sponsor(request: SponsorFeeRequest, signerAddress: String): Either[ValidationError, SponsorFeeTransaction] =
     for {
-      sender <- wallet.findPrivateKey(request.sender)
-      signer <- if (request.sender == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
+      sender  <- wallet.findPrivateKey(request.sender)
+      signer  <- if (request.sender == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       assetId <- ByteStr
         .decodeBase58(request.assetId)
         .toEither
@@ -334,7 +334,7 @@ object TransactionFactory {
   def massTransferAsset(request: MassTransferRequest, sender: PublicKey): Either[ValidationError, MassTransferTransaction] =
     for {
       transfers <- MassTransferTransaction.parseTransfersList(request.transfers)
-      tx <- MassTransferTransaction.create(
+      tx        <- MassTransferTransaction.create(
         request.version.getOrElse(1.toByte),
         sender,
         Asset.fromCompatId(request.assetId.map(s => ByteStr.decodeBase58(s).get)),

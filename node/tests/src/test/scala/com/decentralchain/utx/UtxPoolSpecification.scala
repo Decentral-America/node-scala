@@ -75,7 +75,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
   private def withBlockchain[A](genAccounts: Map[Address, Long])(test: BlockchainUpdaterImpl => A): A = {
     val genesisSettings = TestHelpers.genesisSettings(genAccounts)
     val origSettings    = DCCSettings.default()
-    val settings = origSettings.copy(
+    val settings        = origSettings.copy(
       blockchainSettings = BlockchainSettings(
         'T',
         FunctionalitySettings.TESTNET.copy(preActivatedFeatures =
@@ -169,7 +169,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val recipient = TxHelpers.signer(2)
 
       val time = TestTime()
-      val utx =
+      val utx  =
         new UtxPoolImpl(
           time,
           bcu,
@@ -198,7 +198,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val recipient = TxHelpers.signer(2)
       val time      = TestTime()
       val txs       = (1 to 10).map(_ => transferWithRecipient(sender, recipient.publicKey, time))
-      val settings =
+      val settings  =
         UtxSettings(
           10,
           PoolDefaultMaxBytes,
@@ -223,7 +223,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val txs = (1 to 10).map(_ => massTransferWithRecipients(sender, recipients, senderBalance / 10, time)) ++
         (if (!allowRecipients) Seq(massTransferWithRecipients(sender, Seq.empty, senderBalance / 10, time)) else Seq.empty)
       val whitelist: Set[String] = if (allowRecipients) recipients.map(_.toAddress.toString).toSet else Set.empty
-      val settings =
+      val settings               =
         UtxSettings(
           txs.length,
           PoolDefaultMaxBytes,
@@ -246,7 +246,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val recipient = TxHelpers.signer(2)
       val time      = TestTime()
       val txs       = (1 to 10).map(_ => transferWithRecipient(sender, recipient.publicKey, time))
-      val settings =
+      val settings  =
         UtxSettings(
           txs.length,
           PoolDefaultMaxBytes,
@@ -268,7 +268,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val recipient = TxHelpers.signer(2)
       val time      = TestTime()
       val txs       = (1 to 10).map(_ => transferWithRecipient(sender, recipient.publicKey, time))
-      val settings =
+      val settings  =
         UtxSettings(
           txs.length,
           PoolDefaultMaxBytes,
@@ -293,7 +293,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       val txs1  = (1 to count).map(idx => transfer(sender, TestTime(ts + idx)))
       val txs2  = (1 to count).map(idx => transfer(sender, TestTime(ts + idx + maxAge.toMillis + 1000)))
       val time  = TestTime()
-      val utx = new UtxPoolImpl(
+      val utx   = new UtxPoolImpl(
         time,
         bcu,
         UtxSettings(
@@ -377,7 +377,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
   }
 
   private def preconditionBlocks(lastBlockId: ByteStr, master: KeyPair, time: Time): Seq[Block] = {
-    val ts = time.getTimestamp()
+    val ts     = time.getTimestamp()
     val script = TestCompiler(V3).compileExpression(
       """
         |let x = 1
@@ -432,7 +432,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
 
         val gen = for {
           headTransaction <- transfer(sender, senderBalance / 2, time)
-          vipTransaction <- transfer(sender, senderBalance / 2, time)
+          vipTransaction  <- transfer(sender, senderBalance / 2, time)
             .suchThat(TransactionsOrdering.InUTXPool(Set.empty).compare(_, headTransaction) < 0)
         } yield (headTransaction, vipTransaction)
 
@@ -767,7 +767,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
 
       "when pack time limit is exceeded" - {
         "always packs the first transaction" in withStateWithTransfer { case (time, bcu, transfer) =>
-          var timeSourceIsRunning = false
+          var timeSourceIsRunning    = false
           def nanoTimeSource(): Long =
             if (timeSourceIsRunning) 100000L
             else {
@@ -860,7 +860,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         d.appendBlock(setScripts*)
 
         val invoke = TxHelpers.invoke(genesisTxs.head.recipient, Some("default"))
-        val utx = new UtxPoolImpl(
+        val utx    = new UtxPoolImpl(
           ntpTime,
           d.blockchainUpdater,
           DefaultDCCSettings.utxSettings,
@@ -913,7 +913,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         AddrWithBalance.enoughBalances(defaultSigner, secondSigner)
       ) { d =>
         val recipient = signer(3).toAddress
-        val dApp = TestCompiler(V5).compileContract(
+        val dApp      = TestCompiler(V5).compileContract(
           s"""
              | @Callable(i)
              | func default() = {
@@ -923,7 +923,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
            """.stripMargin
         )
         val events = new ListBuffer[UtxEvent]
-        val utx = new UtxPoolImpl(
+        val utx    = new UtxPoolImpl(
           ntpTime,
           d.blockchainUpdater,
           DefaultDCCSettings.utxSettings.copy(alwaysUnlimitedExecution = true),
@@ -1033,7 +1033,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         forAll(gen) { case (acc, _, tx1, rest) =>
 
           var utx: UtxPool = null // this is needed to resolve circular references between UTX and blockchain stub
-          val blockchain = new EmptyBlockchain {
+          val blockchain   = new EmptyBlockchain {
             override lazy val settings: BlockchainSettings                    = DCCSettings.default().blockchainSettings
             override def balance(address: Address, mayBeAssetId: Asset): Long = ENOUGH_AMT
 
@@ -1101,7 +1101,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
           secondAcc <- accountGen
           ts = System.currentTimeMillis()
           fee <- smallFeeGen
-          genesis = GenesisTransaction.create(richAcc.toAddress, ENOUGH_AMT, ts).explicitGet()
+          genesis       = GenesisTransaction.create(richAcc.toAddress, ENOUGH_AMT, ts).explicitGet()
           validTransfer = TransferTransaction
             .selfSigned(TxVersion.V1, richAcc, secondAcc.toAddress, Dcc, 1L, Dcc, fee, ByteStr.empty, ts)
             .explicitGet()
@@ -1113,8 +1113,8 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         forAll(preconditions) { case (genesis, validTransfer, invalidTransfer) =>
           withDomain() { d =>
             d.appendBlock(TestBlock.create(Seq(genesis)).block)
-            val time   = TestTime()
-            val events = new ListBuffer[UtxEvent]
+            val time    = TestTime()
+            val events  = new ListBuffer[UtxEvent]
             val utxPool =
               new UtxPoolImpl(
                 time,
@@ -1142,22 +1142,26 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
             val validTransferDiff = differ(validTransfer)
             addUnverified(validTransfer)
             addUnverified(invalidTransfer)
-            assertEvents { case UtxEvent.TxAdded(`validTransfer`, `validTransferDiff`) +: Nil => // Pass
+            assertEvents {
+              case UtxEvent.TxAdded(`validTransfer`, `validTransferDiff`) +: Nil => // Pass
             }
 
             utxPool.packUnconfirmed(MultiDimensionalMiningConstraint.Unlimited, None, PackStrategy.Unlimited)
-            assertEvents { case UtxEvent.TxRemoved(`invalidTransfer`, Some(_)) +: Nil => // Pass
+            assertEvents {
+              case UtxEvent.TxRemoved(`invalidTransfer`, Some(_)) +: Nil => // Pass
             }
 
             utxPool.removeAll(Seq(validTransfer))
-            assertEvents { case UtxEvent.TxRemoved(`validTransfer`, None) +: Nil => // Pass
+            assertEvents {
+              case UtxEvent.TxRemoved(`validTransfer`, None) +: Nil => // Pass
             }
 
             addUnverified(validTransfer)
             events.clear()
             time.advance(maxAge + 1000.millis)
             utxPool.packUnconfirmed(MultiDimensionalMiningConstraint.Unlimited, None, PackStrategy.Unlimited)
-            assertEvents { case UtxEvent.TxRemoved(`validTransfer`, Some(GenericError("Expired"))) +: Nil => // Pass
+            assertEvents {
+              case UtxEvent.TxRemoved(`validTransfer`, Some(GenericError("Expired"))) +: Nil => // Pass
             }
           }
         }

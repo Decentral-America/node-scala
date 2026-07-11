@@ -31,7 +31,7 @@ import scala.concurrent.duration.DurationInt
 class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper, PropertyChecks, Inside, WithDomain {
   private val timer                         = new HashedWheelTimer()
   private val timeBounded: SchedulerService = Schedulers.timeBoundedFixedPool(timer, 5.seconds, 1, "rest-time-limited")
-  private val utilsApi: UtilsApiRoute = UtilsApiRoute(
+  private val utilsApi: UtilsApiRoute       = UtilsApiRoute(
     new Time {
       def correctedTime(): Long = System.currentTimeMillis()
       def getTimestamp(): Long  = System.currentTimeMillis()
@@ -51,7 +51,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
   routePath("/script/evaluate/{address}") - {
     val xFromContract = 1000
-    val testScript = TxHelpers.scriptV5(
+    val testScript    = TxHelpers.scriptV5(
       s"""
          |let x = $xFromContract
          |
@@ -319,7 +319,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
         val customApi       = api.copy(settings = restAPISettings.copy(evaluateScriptComplexityLimit = complexityLimit))
         evalScript(""" testSyncCallComplexityExcess() """) ~> customApi.route ~> check {
           val response = responseAs[JsValue]
-          val message =
+          val message  =
             "InvokeRejectError(error = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded), log = \n\ttestSyncCallComplexityExcess.@args = []\n\tinvoke.@args = [\n\t\tAddress(\n\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t),\n\t\t\"testSyncCallComplexityExcess\",\n\t\t[],\n\t\t[]\n\t]\n\tinvoke.@complexity = 75\n\t@complexityLimit = 122\n\tr = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded, log = \n\t\t@invokedDApp = Address(\n\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t)\n\t\t@invokedFuncName = \"testSyncCallComplexityExcess\"\n\t\ti = Invocation(\n\t\t\toriginCaller = Address(\n\t\t\t\tbytes = base58'3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG'\n\t\t\t)\n\t\t\tpayments = []\n\t\t\tcallerPublicKey = base58'9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ'\n\t\t\tfeeAssetId = Unit\n\t\t\toriginCallerPublicKey = base58'11111111111111111111111111111111'\n\t\t\ttransactionId = base58''\n\t\t\tcaller = Address(\n\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t)\n\t\t\tfee = 2000000\n\t\t)\n\t\ttestSyncCallComplexityExcess.@args = []\n\t\tinvoke.@args = [\n\t\t\tAddress(\n\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t),\n\t\t\t\"testSyncCallComplexityExcess\",\n\t\t\t[],\n\t\t\t[]\n\t\t]\n\t\tinvoke.@complexity = 75\n\t\t@complexityLimit = 44\n\t\tr = FailedTransactionError(code = 1, error = Invoke complexity limit = 200 is exceeded, log = \n\t\t\t@invokedDApp = Address(\n\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t)\n\t\t\t@invokedFuncName = \"testSyncCallComplexityExcess\"\n\t\t\ti = Invocation(\n\t\t\t\toriginCaller = Address(\n\t\t\t\t\tbytes = base58'3DTHeekVN5DYQynBbS3DsBSXcYTVGbyFfdG'\n\t\t\t\t)\n\t\t\t\tpayments = []\n\t\t\t\tcallerPublicKey = base58'9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ'\n\t\t\t\tfeeAssetId = Unit\n\t\t\t\toriginCallerPublicKey = base58'11111111111111111111111111111111'\n\t\t\t\ttransactionId = base58''\n\t\t\t\tcaller = Address(\n\t\t\t\t\tbytes = base58'3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY'\n\t\t\t\t)\n\t\t\t\tfee = 2000000\n\t\t\t)\n\t\t\ttestSyncCallComplexityExcess.@args = []\n\t\t)\n\t)\n)"
           (response \ "message").as[String] shouldBe message
           (response \ "error").as[Int] shouldBe ScriptExecutionError.Id
@@ -556,14 +556,14 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
           val exprTests = Table[Seq[(Asset, Long)]](
             "paymentAssetWithAmounts",
             Seq(Asset.Dcc -> 3),
-            Seq(asset       -> 3),
+            Seq(asset     -> 3),
             Seq(Asset.Dcc -> 3, asset -> 3)
           )
 
           forAll(exprTests) { paymentAssetWithAmounts =>
             val setScriptTx = mkSetScriptTx(paymentAssetWithAmounts*)
 
-            val hasDccAsset  = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Dcc }
+            val hasDccAsset    = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Dcc }
             val hasIssuedAsset = paymentAssetWithAmounts.exists { case (a, _) => a == asset }
             withDomain(
               RideV6,
@@ -613,7 +613,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
           val exprTests = Table[Seq[(Asset, Long)]](
             "paymentAssetWithAmounts",
             Seq(Asset.Dcc -> 1),
-            Seq(asset       -> 1),
+            Seq(asset     -> 1),
             Seq(Asset.Dcc -> 1, asset -> 2)
           )
 
@@ -712,7 +712,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
           forAll(invocationTests) { case (feeAsset, paymentAssetWithAmounts) =>
             val setScriptTx = mkSetScriptTx(paymentAssetWithAmounts*)
 
-            val hasDccAsset  = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Dcc }
+            val hasDccAsset    = paymentAssetWithAmounts.exists { case (a, _) => a == Asset.Dcc }
             val hasIssuedAsset = (paymentAssetWithAmounts.map(_._1) :+ feeAsset).contains(asset)
             withDomain(
               RideV6,
@@ -825,8 +825,8 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
 
               def collectBalance(asset: Asset): Long = paymentAssetWithAmounts.collect { case (`asset`, x) => x }.sum
 
-              val callerDccBalance = invocationFeeInDcc + collectBalance(Asset.Dcc)
-              val callerAssetBalance = invocationFeeInAsset + collectBalance(asset)
+              val callerDccBalance    = invocationFeeInDcc + collectBalance(Asset.Dcc)
+              val callerAssetBalance  = invocationFeeInAsset + collectBalance(asset)
               val blockchainOverrides = Json.obj(
                 "accounts" -> Json.obj(
                   callerAddress.toString -> Json
@@ -889,7 +889,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
             .as[JsObject]
 
         val minerInitialDccBalance = 10001
-        val leasingTx                = lease(miner, dAppAddress, 333)
+        val leasingTx              = lease(miner, dAppAddress, 333)
 
         withDomain(
           RideV6,
@@ -958,7 +958,7 @@ class UtilsRouteEvaluateSpec extends RouteSpec("/utils"), RestAPISettingsHelper,
     "validation of root call" in {
       withDomain(RideV6, Seq(AddrWithBalance(secondAddress, 0.01 dcc))) { d =>
         val route = seal(utilsApi.copy(blockchain = d.blockchain).route)
-        val dApp = TestCompiler(V6).compileContract(
+        val dApp  = TestCompiler(V6).compileContract(
           s"""
              | @Callable(i)
              | func action() = [ ScriptTransfer(Address(base58'$defaultAddress'), 1, unit) ]

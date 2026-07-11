@@ -20,7 +20,7 @@ class InvokeFeeMultiplierTest extends PropSpec with WithState with DBCacheSettin
 
   private val estimatorV3ActivationHeight = 4
   private val fixActivationHeight         = 6
-  private val fsWithV5 =
+  private val fsWithV5                    =
     RideV5
       .setFeaturesHeight(BlockV5 -> estimatorV3ActivationHeight, SynchronousCalls -> fixActivationHeight)
       .configure(_.copy(estimatorPreCheckHeight = Int.MaxValue))
@@ -46,9 +46,9 @@ class InvokeFeeMultiplierTest extends PropSpec with WithState with DBCacheSettin
       IntegerDataEntry(s"open_lends_of_${invoker.toAddress}", Int.MaxValue),
       StringDataEntry(s"lenders_of_${invoker.toAddress}", invoker.toAddress.toString)
     )
-    val data1 = TxHelpers.data(master, initData)
-    val data2 = () => TxHelpers.data(master, initData)
-    val issue = TxHelpers.issue(invoker, ENOUGH_AMT, script = None)
+    val data1    = TxHelpers.data(master, initData)
+    val data2    = () => TxHelpers.data(master, initData)
+    val issue    = TxHelpers.issue(invoker, ENOUGH_AMT, script = None)
     val initArgs =
       List(
         CONST_STRING("").explicitGet(),

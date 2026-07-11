@@ -18,7 +18,7 @@ class GetTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       .explicitGet()
       .id()
       .toString
-    val transactionBySenderAndId = sender.getTransaction(sender = firstAddress, id = txId).getDccTransaction
+    val transactionBySenderAndId    = sender.getTransaction(sender = firstAddress, id = txId).getDccTransaction
     val transactionByRecipientAndId =
       sender.getTransaction(recipient = Some(Recipient().withPublicKeyHash(secondAddress)), id = txId).getDccTransaction
     val transactionBySenderRecipientAndId =

@@ -14,7 +14,7 @@ object FileCompiler {
       val scriptFile = new File(path).getAbsoluteFile
       require(scriptFile.isFile, s"$path is not a file")
       val baseDirectory = scriptFile.getParentFile
-      val imports = baseDirectory
+      val imports       = baseDirectory
         .listFiles({ (pathname: File) =>
           pathname.isFile && pathname.getAbsoluteFile != scriptFile
         })

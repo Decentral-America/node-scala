@@ -193,7 +193,7 @@ class SyncDAppTransferTest extends PropSpec with WithDomain with Inside {
 
     val setInvokerScript = TxHelpers.setScript(invokerDApp, invokerDAppScript(senderDApp.toAddress, paymentAmount = Some(transferAmount)))
     val setSenderScript  = TxHelpers.setScript(senderDApp, simpleTransferDAppScript(amount = transferAmount, recipient = Some(recipient.toAddress)))
-    val genesis = Seq(invoker, invokerDApp).map(acc => TxHelpers.genesis(acc.toAddress)) :+ TxHelpers.genesis(
+    val genesis          = Seq(invoker, invokerDApp).map(acc => TxHelpers.genesis(acc.toAddress)) :+ TxHelpers.genesis(
       senderDApp.toAddress,
       setSenderScript.fee.value
     )

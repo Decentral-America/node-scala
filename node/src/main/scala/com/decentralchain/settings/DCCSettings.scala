@@ -16,6 +16,7 @@ case class DCCSettings(
     walletSettings: WalletSettings,
     blockchainSettings: BlockchainSettings,
     minerSettings: MinerSettings,
+    hotStuffSettings: HotStuffSettings,
     restAPISettings: RestAPISettings,
     synchronizationSettings: SynchronizationSettings,
     utxSettings: UtxSettings,
@@ -41,13 +42,15 @@ object DCCSettings {
     val walletSettings            = dccConfigSource.at("wallet").loadOrThrow[WalletSettings]
     val blockchainSettings        = dccConfigSource.at("blockchain").loadOrThrow[BlockchainSettings]
     val minerSettings             = dccConfigSource.at("miner").loadOrThrow[MinerSettings]
+    val hotStuffSettings          = dccConfigSource.at("hotstuff").loadOrThrow[HotStuffSettings]
     val restAPISettings           = dccConfigSource.at("rest-api").loadOrThrow[RestAPISettings]
     val synchronizationSettings   = dccConfigSource.at("synchronization").loadOrThrow[SynchronizationSettings]
     val utxSettings               = dccConfigSource.at("utx").loadOrThrow[UtxSettings]
     val featuresSettings          = dccConfigSource.at("features").loadOrThrow[FeaturesSettings]
     val rewardsSettings           = dccConfigSource.at("rewards").loadOrThrow[RewardsVotingSettings]
-    val metrics                   = ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // NOTE: Metrics config is outside dcc {} root — known structure
-    val enableLightMode           = dccConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
+    val metrics                   =
+      ConfigSource.fromConfig(rootConfig).at("metrics").loadOrThrow[Metrics.Settings] // NOTE: Metrics config is outside dcc {} root — known structure
+    val enableLightMode = dccConfigSource.at("enable-light-mode").loadOrThrow[Boolean]
 
     DCCSettings(
       directory,
@@ -60,6 +63,7 @@ object DCCSettings {
       walletSettings,
       blockchainSettings,
       minerSettings,
+      hotStuffSettings,
       restAPISettings,
       synchronizationSettings,
       utxSettings,

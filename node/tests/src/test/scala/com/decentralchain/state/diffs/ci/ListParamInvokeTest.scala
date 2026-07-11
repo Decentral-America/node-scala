@@ -126,7 +126,7 @@ class ListParamInvokeTest extends PropSpec with WithState with Inside {
   }
 
   private def features(withV4: Boolean) = {
-    val v4ForkO = if (withV4) Seq(BlockchainFeatures.BlockV5) else Seq()
+    val v4ForkO    = if (withV4) Seq(BlockchainFeatures.BlockV5) else Seq()
     val parameters = Seq(
       BlockchainFeatures.SmartAccounts,
       BlockchainFeatures.SmartAssets,

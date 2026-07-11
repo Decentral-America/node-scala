@@ -71,7 +71,7 @@ object DataEntry {
                 case _                        => JsError("value is missing or not a string")
               }
             case JsDefined(JsString(t)) => JsError(s"unknown type $t")
-            case _ =>
+            case _                      =>
               jsv \ "value" match {
                 case _: JsUndefined | JsDefined(JsNull) => JsSuccess(EmptyDataEntry(key))
                 case _                                  => JsError("type is missing")

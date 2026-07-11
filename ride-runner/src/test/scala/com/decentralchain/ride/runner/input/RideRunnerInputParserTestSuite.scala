@@ -248,7 +248,7 @@ let x = getIntegerValue(alice, "x")
         request = Json.obj(
           "call" -> Json.obj(
             "function" -> "foo",
-            "args" -> Json.arr(
+            "args"     -> Json.arr(
               Json.obj(
                 "type"  -> "integer",
                 "value" -> 1
@@ -256,7 +256,7 @@ let x = getIntegerValue(alice, "x")
             )
           ),
           "senderPublicKey" -> "2KwU4vzdgPmKyf7q354H9kSyX9NZjNiq4qbnH2wi2VDF",
-          "payment" -> Json.arr(
+          "payment"         -> Json.arr(
             Json.obj("amount" -> 1)
           )
         ),

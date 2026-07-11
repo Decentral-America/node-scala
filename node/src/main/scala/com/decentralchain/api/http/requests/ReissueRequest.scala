@@ -23,7 +23,7 @@ case class ReissueRequest(
   def toTxFrom(sender: PublicKey): Either[ValidationError, ReissueTransaction] =
     for {
       validProofs <- toProofs(signature, proofs)
-      tx <- ReissueTransaction.create(
+      tx          <- ReissueTransaction.create(
         version.getOrElse(defaultVersion),
         sender,
         assetId,

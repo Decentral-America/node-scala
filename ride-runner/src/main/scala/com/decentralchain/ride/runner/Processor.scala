@@ -107,7 +107,7 @@ case class ProcessResult[TagT](
 ) {
   def isEmpty: Boolean = affected.isEmpty
 
-  def withoutAffectedTags: ProcessResult[TagT] = copy(affected = AffectedTags.empty[TagT])
+  def withoutAffectedTags: ProcessResult[TagT]             = copy(affected = AffectedTags.empty[TagT])
   def combine(x: ProcessResult[TagT]): ProcessResult[TagT] = copy(
     newHeight = newHeight.max(x.newHeight),
     affected = affected ++ x.affected

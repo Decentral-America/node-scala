@@ -72,7 +72,7 @@ case class SignedCommitToGenerationRequest(
       _senderPk  <- PublicKey.fromBase58String(senderPublicKey)
       sig        <- BlsSignature(commitmentSignature)
       endorserPk <- BlsPublicKey(endorserPublicKey)
-      t <- CommitToGenerationTransaction.create(
+      t          <- CommitToGenerationTransaction.create(
         version.getOrElse(1.toByte),
         _senderPk,
         endorserPk,

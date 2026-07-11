@@ -14,7 +14,7 @@ final case class TracedResult[+E, +A](
 ) {
   def flatMap[B, E1 >: E](f: A => TracedResult[E1, B]): TracedResult[E1, B] = {
     resultE match {
-      case Left(_) => this.asInstanceOf[TracedResult[E1, B]]
+      case Left(_)      => this.asInstanceOf[TracedResult[E1, B]]
       case Right(value) =>
         val newResult = f(value)
         newResult.copy(trace = this.trace ::: newResult.trace, attributes = this.attributes ++ newResult.attributes)

@@ -36,7 +36,7 @@ case class SignedTransferV1Request(
 ) {
   def toTx: Either[ValidationError, TransferTransaction] =
     for {
-      _sender <- PublicKey.fromBase58String(senderPublicKey)
+      _sender  <- PublicKey.fromBase58String(senderPublicKey)
       _assetId <- parseBase58ToAsset(
         assetId,
         "invalid.assetId"
@@ -48,7 +48,7 @@ case class SignedTransferV1Request(
       _signature  <- parseBase58(signature, "invalid.signature", SignatureStringLength)
       _attachment <- parseBase58(attachment.filter(_.length > 0), "invalid.attachment", TransferTransaction.MaxAttachmentStringSize)
       _account    <- AddressOrAlias.fromString(recipient)
-      tx <- TransferTransaction.create(
+      tx          <- TransferTransaction.create(
         1.toByte,
         _sender,
         _account,

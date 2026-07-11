@@ -273,8 +273,8 @@ class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheS
 
   def withEnv(gen: Time => Gen[(Seq[KeyPair], Seq[Block])], VRFActivated: Boolean = false)(f: Env => Unit): Unit = {
     // we are not using the db instance from WithDB trait as it should be recreated between property checks
-    val path = Files.createTempDirectory("lvl").toAbsolutePath
-    val rdb  = RDB.open(dbSettings.copy(directory = path.toAbsolutePath.toString))
+    val path          = Files.createTempDirectory("lvl").toAbsolutePath
+    val rdb           = RDB.open(dbSettings.copy(directory = path.toAbsolutePath.toString))
     val defaultWriter = TestRocksDB.withFunctionalitySettings(
       rdb,
       TestFunctionalitySettings.Stub.copy(preActivatedFeatures =
@@ -283,7 +283,7 @@ class FPPoSSelectorTest extends FreeSpec with WithNewDBForEachTest with DBCacheS
     )
     val settings0 = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
     val settings  = settings0.copy(featuresSettings = settings0.featuresSettings.copy(autoShutdownOnUnsupportedFeature = false))
-    val bcu =
+    val bcu       =
       new BlockchainUpdaterImpl(defaultWriter, settings, ntpTime, ignoreBlockchainUpdateTriggers, (_, _) => Map.empty)
     val pos = PoSSelector(bcu, settings.synchronizationSettings.maxBaseTarget)
     try {
@@ -402,7 +402,7 @@ object FPPoSSelectorTest {
     val lastBlockHeader = blockchain.lastBlockHeader.get
     val ggParentTS      = blockchain.blockHeader(height - 2).map(_.header.timestamp)
     val minerBalance    = blockchain.effectiveBalance(miner.toAddress, 0)
-    val delay = updateDelay(
+    val delay           = updateDelay(
       pos
         .getValidBlockDelay(
           height,

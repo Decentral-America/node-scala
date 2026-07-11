@@ -37,7 +37,7 @@ object RxScoreObserver extends ScorexLogging {
 
     if (bestScore > localScore && bestScoreChannels.nonEmpty) bestChannel match {
       case Some(c) if bestScoreChannels.contains(c) => Some(BestChannel(c, bestScore))
-      case _ =>
+      case _                                        =>
         val head = bestScoreChannels.head
         log.trace(s"${id(head)} Publishing new best channel with score=$bestScore > localScore $localScore")
         Some(BestChannel(head, bestScore))
@@ -58,7 +58,7 @@ object RxScoreObserver extends ScorexLogging {
 
     var localScore: BigInt                  = initalLocalScore
     var currentBestChannel: Option[Channel] = None
-    val scores = CacheBuilder
+    val scores                              = CacheBuilder
       .newBuilder()
       .expireAfterWrite(scoreTtl.toMillis, TimeUnit.MILLISECONDS)
       .build[Channel, BigInt]()

@@ -22,7 +22,7 @@ case class LeaseCancelRequest(
     for {
       validProofs  <- toProofs(signature, proofs)
       validLeaseId <- parseBase58(leaseId, "invalid.leaseTx", DigestStringLength)
-      tx <- LeaseCancelTransaction.create(
+      tx           <- LeaseCancelTransaction.create(
         version.getOrElse(1.toByte),
         sender,
         validLeaseId,

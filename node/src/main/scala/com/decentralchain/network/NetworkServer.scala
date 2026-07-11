@@ -44,7 +44,7 @@ object NetworkServer extends ScorexLogging {
 
     val bossGroup   = new MultiThreadIoEventLoopGroup(0, new DefaultThreadFactory("nio-boss-group", true), NioIoHandler.newFactory());
     val workerGroup = new MultiThreadIoEventLoopGroup(0, new DefaultThreadFactory("nio-worker-group", true), NioIoHandler.newFactory());
-    val handshake = Handshake(
+    val handshake   = Handshake(
       applicationName,
       Version.VersionTuple,
       networkSettings.derivedNodeName,
@@ -54,7 +54,7 @@ object NetworkServer extends ScorexLogging {
 
     val excludedAddresses: Set[InetSocketAddress] =
       networkSettings.derivedBindAddress.fold(Set.empty[InetSocketAddress]) { bindAddress =>
-        val isLocal = Option(bindAddress.getAddress).exists(_.isAnyLocalAddress)
+        val isLocal        = Option(bindAddress.getAddress).exists(_.isAnyLocalAddress)
         val localAddresses = if (isLocal) {
           NetworkInterface.getNetworkInterfaces.asScala
             .flatMap(_.getInetAddresses.asScala.map(a => new InetSocketAddress(a, bindAddress.getPort)))
@@ -121,7 +121,23 @@ object NetworkServer extends ScorexLogging {
           Seq(
             new BrokenConnectionDetector(networkSettings.breakIdleConnectionsTimeout),
             new HandshakeDecoder(peerDatabase),
-            new HandshakeTimeoutHandler(if (peerConnectionsMap.isEmpty) AverageHandshakePeriod else networkSettings.handshakeTimeout),
+            // Was `if (peerConnectionsMap.isEmpty) AverageHandshakePeriod else
+            // networkSettings.handshakeTimeout` -- AverageHandshakePeriod is
+            // 1 second, meant for how *often* to retry connecting while
+            // disconnected (see scheduleConnectTask below), not for how long
+            // an in-flight handshake gets before being killed. Reusing it
+            // here gave every reconnect attempt only 1s to complete a full
+            // TCP + DCC handshake round trip -- exactly when reconnecting
+            // after losing all peers, the worst possible moment to make the
+            // timeout 30x tighter than normal. Any attempt slower than 1s
+            // (routine for a cross-region path, e.g. LKE Frankfurt <-> a
+            // Newark VPS) got suspended for 300s and retried into the same
+            // 1s ceiling again -- a self-reinforcing connect/suspend loop.
+            // Confirmed live via INCIDENT-GEN0-PEERS.md #11: newly-added
+            // info-level logging caught a connection established then
+            // suspended+closed 1.5s later with no successful handshake ever
+            // logged in between. Always use the real handshake-timeout.
+            new HandshakeTimeoutHandler(networkSettings.handshakeTimeout),
             clientHandshakeHandler
           ) ++ pipelineTail
         )
@@ -133,10 +149,15 @@ object NetworkServer extends ScorexLogging {
       outgoingChannels.remove(remoteAddress, closeFuture.channel())
       if (!shutdownInitiated) peerDatabase.suspend(remoteAddress)
 
+      // Bumped from trace/debug to info (INCIDENT-GEN0-PEERS.md #11, 2026-07-07):
+      // this is the only place that logs why an outbound peer connection
+      // actually closed, and it was invisible at every log level tested,
+      // including targeted TRACE overrides -- made diagnosing repeated
+      // gen-0/gen-1/val-0 disconnects from main impossible without a rebuild.
       if (closeFuture.isSuccess)
-        log.trace(formatOutgoingChannelEvent(closeFuture.channel(), "Channel closed (expected)"))
+        log.info(formatOutgoingChannelEvent(closeFuture.channel(), "Channel closed (expected)"))
       else
-        log.debug(
+        log.info(
           formatOutgoingChannelEvent(
             closeFuture.channel(),
             s"Channel closed: ${Option(closeFuture.cause()).map(_.getMessage).getOrElse("no message")}"
@@ -148,7 +169,7 @@ object NetworkServer extends ScorexLogging {
 
     def handleConnectionAttempt(remoteAddress: InetSocketAddress)(thisConnFuture: ChannelFuture): Unit = {
       if (thisConnFuture.isSuccess) {
-        log.trace(formatOutgoingChannelEvent(thisConnFuture.channel(), "Connection established"))
+        log.info(formatOutgoingChannelEvent(thisConnFuture.channel(), "Connection established"))
         thisConnFuture.channel().closeFuture().addListener((f: ChannelFuture) => handleOutgoingChannelClosed(remoteAddress)(f))
       } else if (thisConnFuture.cause() != null) {
         peerDatabase.suspend(remoteAddress)
@@ -156,13 +177,13 @@ object NetworkServer extends ScorexLogging {
         thisConnFuture.cause() match {
           case e: ClosedChannelException =>
             // this can happen when the node is shut down before connection attempt succeeds
-            log.trace(
+            log.info(
               formatOutgoingChannelEvent(
                 thisConnFuture.channel(),
                 s"Channel closed by connection issue: ${Option(e.getMessage).getOrElse("no message")}"
               )
             )
-          case other => log.debug(formatOutgoingChannelEvent(thisConnFuture.channel(), other.getMessage))
+          case other => log.info(formatOutgoingChannelEvent(thisConnFuture.channel(), other.getMessage))
         }
       }
       logConnections()

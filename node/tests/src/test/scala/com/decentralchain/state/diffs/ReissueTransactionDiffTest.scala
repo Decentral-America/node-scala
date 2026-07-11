@@ -108,7 +108,7 @@ class ReissueTransactionDiffTest extends PropSpec with WithState with EitherValu
 
   private def genesis: (KeyPair, Block) = {
     val issuer = TxHelpers.signer(1)
-    val block = TestBlock
+    val block  = TestBlock
       .create(
         ntpNow,
         Seq(GenesisTransaction.create(issuer.toAddress, Constants.TotalDcc * Constants.UnitsInDcc, ntpNow).explicitGet())

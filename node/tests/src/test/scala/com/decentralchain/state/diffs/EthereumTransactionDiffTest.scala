@@ -95,7 +95,7 @@ class EthereumTransactionDiffTest extends FlatSpec with WithDomain with DiffMatc
     val fee = TestValues.fee
 
     withDomain(RideV6.copy(rewardsSettings = RewardsVotingSettings(None)), Seq(AddrWithBalance(senderKp.toDccAddress))) { d =>
-      val dccTransfer   = EthTxGenerator.generateEthTransfer(senderKp, recipient, 1.dcc, Dcc, fee)
+      val dccTransfer     = EthTxGenerator.generateEthTransfer(senderKp, recipient, 1.dcc, Dcc, fee)
       val transferPayload = dccTransfer.payload.asInstanceOf[Transfer]
 
       d.appendAndAssertSucceed(dccTransfer)

@@ -34,7 +34,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
 
   test("set acc0 as 2of2 multisig") {
     for (v <- setScrTxSupportedVersions) {
-      val contract = if (v < 2) acc0 else acc4
+      val contract   = if (v < 2) acc0 else acc4
       val scriptText =
         s"""
         match tx {
@@ -91,7 +91,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
       val contract                              = if (v < 2) acc0 else acc4
       val (contractBalance, contractEffBalance) = sender.accountBalances(contract.toAddress.toString)
       val (acc3Balance, acc3EffBalance)         = sender.accountBalances(acc3.toAddress.toString)
-      val unsigned =
+      val unsigned                              =
         TransferTransaction(
           version = 2.toByte,
           sender = contract.publicKey,
@@ -125,7 +125,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
     for (v <- setScrTxSupportedVersions) {
       val contract                              = if (v < 2) acc0 else acc4
       val (contractBalance, contractEffBalance) = sender.accountBalances(contract.toAddress.toString)
-      val unsigned = SetScriptTransaction
+      val unsigned                              = SetScriptTransaction
         .create(
           version = v,
           sender = contract.publicKey,
@@ -162,7 +162,7 @@ class SetScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFai
       val contract                              = if (v < 2) acc0 else acc4
       val (contractBalance, contractEffBalance) = sender.accountBalances(contract.toAddress.toString)
       val (acc3Balance, acc3EffBalance)         = sender.accountBalances(acc3.toAddress.toString)
-      val transferTxId = sender
+      val transferTxId                          = sender
         .transfer(
           contract,
           recipient = acc3.toAddress.toString,

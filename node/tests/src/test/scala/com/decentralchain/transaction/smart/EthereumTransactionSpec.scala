@@ -220,7 +220,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(assetIssuer.toAddress, 1.dcc),
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
@@ -289,7 +289,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(assetIssuer.toAddress, 1.dcc),
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
@@ -329,7 +329,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(assetIssuer.toAddress, 1.dcc),
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
@@ -391,7 +391,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.signer(1).toEthKeyPair
     val dAppAccount    = TxHelpers.signer(2)
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(assetIssuer.toAddress, 1.dcc),
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
@@ -452,7 +452,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
   it should "fail with max+1 payments" in {
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
@@ -487,7 +487,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
@@ -547,7 +547,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
     val assetIssuer    = TxHelpers.defaultSigner
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )
@@ -612,7 +612,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
   it should "test minimum fee" in {
     val invokerAccount = TxHelpers.defaultSigner.toEthKeyPair
     val dAppAccount    = TxHelpers.secondSigner
-    val balances = Seq(
+    val balances       = Seq(
       AddrWithBalance(invokerAccount.toDccAddress, 1.dcc),
       AddrWithBalance(dAppAccount.toAddress, 1.dcc)
     )

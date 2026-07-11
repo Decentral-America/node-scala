@@ -179,7 +179,7 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
         |""".stripMargin
     )
 
-    val kp = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
+    val kp  = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
     val cat = CreateAliasTransaction(
       3.toByte,
       notMiner.publicKey,
@@ -247,6 +247,8 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
     s"testalias.${alphanumericStream.take(9).mkString}".toLowerCase
   }
 
-  private def alphanumericStream: LazyList[Char] = { val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62))) }
+  private def alphanumericStream: LazyList[Char] = {
+    val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62)))
+  }
 
 }

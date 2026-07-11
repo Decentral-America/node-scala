@@ -99,7 +99,7 @@ class NarrowTransactionGenerator(
               (sender, asset) <- randomSenderAndAsset(validIssueTxs)
               useAlias = random.nextBoolean()
               recipient <- if (useAlias && aliases.nonEmpty) randomFrom(aliases).map(_.alias) else randomFrom(accounts).map(_.toAddress)
-              tx <- logOption(
+              tx        <- logOption(
                 TransferTransaction
                   .selfSigned(
                     correctVersion(TxVersion.V2),
@@ -121,7 +121,7 @@ class NarrowTransactionGenerator(
             for {
               assetTx <- randomFrom(reissuableIssueTxs) orElse randomFrom(Universe.IssuedAssets.filter(_.reissuable))
               sender  <- accountByAddress(assetTx.sender.toAddress.toString)
-              tx <- logOption(
+              tx      <- logOption(
                 ReissueTransaction
                   .selfSigned(
                     correctVersion(TxVersion.V2),
@@ -141,7 +141,7 @@ class NarrowTransactionGenerator(
             for {
               assetTx <- randomFrom(validIssueTxs).orElse(randomFrom(Universe.IssuedAssets))
               sender  <- accountByAddress(assetTx.sender.toAddress.toString)
-              tx <- logOption(
+              tx      <- logOption(
                 BurnTransaction.selfSigned(
                   correctVersion(TxVersion.V2),
                   sender,
@@ -161,7 +161,7 @@ class NarrowTransactionGenerator(
               seller  <- randomFrom(accounts)
               buyer   <- randomFrom(accounts)
               pair    <- preconditions.tradeAsset.map(a => AssetPair(Dcc, IssuedAsset(a.id())))
-              delta = random.nextLong(10000)
+              delta     = random.nextLong(10000)
               sellOrder = Order
                 .sell(
                   Order.V2,
@@ -239,12 +239,13 @@ class NarrowTransactionGenerator(
             for {
               (sender, asset) <- randomSenderAndAsset(validIssueTxs)
               transferCount = random.nextInt(MassTransferTransaction.MaxTransferCount)
-              transfers = for (_ <- 0 until transferCount) yield {
-                val useAlias  = random.nextBoolean()
-                val recipient = if (useAlias && aliases.nonEmpty) randomFrom(aliases).map(_.alias).get else randomFrom(accounts).get.toAddress
-                val amount    = 1000 / (transferCount + 1)
-                ParsedTransfer(recipient, TxNonNegativeAmount.unsafeFrom(amount))
-              }
+              transfers     =
+                for (_ <- 0 until transferCount) yield {
+                  val useAlias  = random.nextBoolean()
+                  val recipient = if (useAlias && aliases.nonEmpty) randomFrom(aliases).map(_.alias).get else randomFrom(accounts).get.toAddress
+                  val amount    = 1000 / (transferCount + 1)
+                  ParsedTransfer(recipient, TxNonNegativeAmount.unsafeFrom(amount))
+                }
               tx <- logOption(
                 MassTransferTransaction
                   .selfSigned(
@@ -271,7 +272,7 @@ class NarrowTransactionGenerator(
             case t if t == Type.Integer.id => IntegerDataEntry(randomString(10), random.nextLong)
             case t if t == Type.Boolean.id => BooleanDataEntry(randomString(10), random.nextBoolean)
             case t if t == Type.String.id  => StringDataEntry(randomString(10), random.nextLong.toString)
-            case t if t == Type.Binary.id =>
+            case t if t == Type.Binary.id  =>
               val size = random.nextInt(MaxValueSize + 1)
               val b    = new Array[Byte](size)
               random.nextBytes(b)
@@ -286,7 +287,7 @@ class NarrowTransactionGenerator(
             for {
               assetTx <- randomFrom(validIssueTxs).orElse(randomFrom(Universe.IssuedAssets))
               sender  <- accountByAddress(assetTx.sender.toAddress.toString)
-              tx <- logOption(
+              tx      <- logOption(
                 SponsorFeeTransaction.selfSigned(
                   correctVersion(TxVersion.V1),
                   sender,
@@ -303,11 +304,11 @@ class NarrowTransactionGenerator(
           val script   = randomFrom(settings.scripts).get
           val function = randomFrom(script.functions).get
           val sender   = randomFrom(accounts).get
-          val data = for {
+          val data     = for {
             ScriptSettings.Function.Arg(argType, value) <- function.args
           } yield argType.toLowerCase match {
             case "integer" => Terms.CONST_LONG(value.toLong)
-            case "string" =>
+            case "string"  =>
               if (value.equals("random")) {
                 Terms.CONST_STRING(randomString(20)).explicitGet()
               } else
@@ -344,7 +345,7 @@ class NarrowTransactionGenerator(
           val script   = randomFrom(settings.scripts).get
           val function = randomFrom(script.functions).get
           val sender   = randomFrom(accounts).get
-          val ethArgs = for {
+          val ethArgs  = for {
             ScriptSettings.Function.Arg(argType, value) <- function.args
           } yield argType.toLowerCase match {
             case "integer" | "int" | "long" | "int64" | "uint64" => Arg.Integer(value.toLong)
@@ -576,7 +577,7 @@ object NarrowTransactionGenerator extends ConfigReaders {
               import assetsSettings.*
 
               val issuer = randomFrom(accounts).get
-              val tx = IssueTransaction
+              val tx     = IssueTransaction
                 .selfSigned(
                   TxVersion.V3,
                   issuer,

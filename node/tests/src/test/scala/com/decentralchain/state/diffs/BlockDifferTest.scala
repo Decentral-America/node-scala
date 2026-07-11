@@ -131,13 +131,13 @@ class BlockDifferTest extends FreeSpec with WithDomain {
 
           val txs = (1 to 10).map(idx => TxHelpers.transfer(TxHelpers.signer(idx), TxHelpers.address(idx + 1), (100 - idx).dcc))
 
-          val blockTs    = txs.map(_.timestamp).max
-          val signer     = TxHelpers.signer(2)
-          val blockchain = SnapshotBlockchain(d.blockchain, Some(d.settings.blockchainSettings.rewardsSettings.initial))
+          val blockTs      = txs.map(_.timestamp).max
+          val signer       = TxHelpers.signer(2)
+          val blockchain   = SnapshotBlockchain(d.blockchain, Some(d.settings.blockchainSettings.rewardsSettings.initial))
           val initSnapshot = BlockDiffer
             .createInitialBlockSnapshot(d.blockchain, d.lastBlock.id(), signer.toAddress)
             .explicitGet()
-          val initStateHash = TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(genesis.header.stateHash.get)
+          val initStateHash  = TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(genesis.header.stateHash.get)
           val blockStateHash = TxStateSnapshotHashBuilder
             .computeStateHash(
               txs,
@@ -224,7 +224,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
       withDomain(DomainPresets.TransactionStateSnapshot, AddrWithBalance.enoughBalances(sender)) { d =>
         (1 to 5).map { idx =>
           val (refBlock, refSnapshot, carry, _, refStateHash, _) = d.liquidState.get.snapshotOf(d.lastBlock.id()).get
-          val refBlockchain = SnapshotBlockchain(
+          val refBlockchain                                      = SnapshotBlockchain(
             d.rocksDBWriter,
             refSnapshot,
             refBlock,

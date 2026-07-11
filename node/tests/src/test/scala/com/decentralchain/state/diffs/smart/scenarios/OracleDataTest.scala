@@ -30,11 +30,11 @@ class OracleDataTest extends PropSpec with WithState {
     val alias       = Alias.create("alias").explicitGet()
     val createAlias = TxHelpers.createAlias(alias.name, oracle)
 
-    val long   = IntegerDataEntry("long", 1)
-    val bool   = BooleanDataEntry("bool", true)
-    val bin    = BinaryDataEntry("bin", ByteStr.fromLong(1))
-    val str    = StringDataEntry("str", "test_str")
-    val dataTx = TxHelpers.data(oracle, Seq(long, bool, bin, str))
+    val long                    = IntegerDataEntry("long", 1)
+    val bool                    = BooleanDataEntry("bool", true)
+    val bin                     = BinaryDataEntry("bin", ByteStr.fromLong(1))
+    val str                     = StringDataEntry("str", "test_str")
+    val dataTx                  = TxHelpers.data(oracle, Seq(long, bool, bin, str))
     val allFieldsRequiredScript = s"""
                                      | match tx {
                                      | case t : DataTransaction =>
@@ -54,7 +54,7 @@ class OracleDataTest extends PropSpec with WithState {
                                      |   long && bool && bin && str
                                      |}""".stripMargin
     val untypedAllFieldsRequiredScript = Parser.parseExpr(allFieldsRequiredScript).get.value
-    val typedAllFieldsRequiredScript =
+    val typedAllFieldsRequiredScript   =
       ExpressionCompiler(compilerContext(V1, Expression, isAssetScript = false), V1, untypedAllFieldsRequiredScript).explicitGet()._1
     val setScript            = TxHelpers.setScript(master, ExprScript(typedAllFieldsRequiredScript).explicitGet())
     val transferFromScripted = TxHelpers.transfer(master, alice.toAddress)

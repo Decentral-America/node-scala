@@ -105,7 +105,7 @@ class DCCEnvironment(
   override def data(recipient: Recipient, key: String, dataType: DataType): Option[Any] = {
     for {
       address <- toAddress(recipient)
-      data <- currentBlockchain()
+      data    <- currentBlockchain()
         .accountData(address, key)
         .map((_, dataType))
         .flatMap {
@@ -268,7 +268,7 @@ class DCCEnvironment(
 
   override def calculateDelay(generator: ByteStr, balance: Long): Long = {
     val baseTarget = blockchain.lastBlockHeader.map(_.header.baseTarget).getOrElse(0L)
-    val hitSource =
+    val hitSource  =
       blockchain
         .vrf(blockchain.height)
         .orElse(blockchain.lastBlockHeader.map(_.header.generationSignature))

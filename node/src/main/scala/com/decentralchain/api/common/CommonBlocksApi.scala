@@ -60,8 +60,8 @@ object CommonBlocksApi {
       blockchain
         .heightOf(blockId)
         .map { maxHeight =>
-          val minHeight  = maxHeight - blockNum.max(1)
-          val allHeaders = (minHeight to maxHeight).flatMap(h => metaAt(Height(h)))
+          val minHeight   = maxHeight - blockNum.max(1)
+          val allHeaders  = (minHeight to maxHeight).flatMap(h => metaAt(Height(h)))
           val totalPeriod = allHeaders
             .sliding(2)
             .map { pair =>

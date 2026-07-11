@@ -36,7 +36,7 @@ object TxStateSnapshotHashBuilder {
 
     snapshot.balances.foreach { case ((address, asset), balance) =>
       asset match {
-        case Dcc              => changedKeys += address.bytes ++ Longs.toByteArray(balance)
+        case Dcc                => changedKeys += address.bytes ++ Longs.toByteArray(balance)
         case asset: IssuedAsset => changedKeys += address.bytes ++ asset.id.arr ++ Longs.toByteArray(balance)
       }
     }
@@ -117,7 +117,7 @@ object TxStateSnapshotHashBuilder {
       txs
         .foldLeft(InitStateHash.arr -> Map.empty[Address, Long]) { case ((prevStateHash, balances), tx) =>
           val newBalance = balances.getOrElse(tx.recipient, 0L) + tx.amount.value
-          val tsh =
+          val tsh        =
             crypto.fastHash(tx.recipient.bytes ++ Longs.toByteArray(newBalance))
           val newStateHash = crypto.fastHash(prevStateHash ++ tsh)
           newStateHash -> balances.updated(tx.recipient, newBalance)
@@ -150,7 +150,7 @@ object TxStateSnapshotHashBuilder {
 
               val txSnapshotWithBalances = txSnapshot.addBalances(minerPortfolio, accBlockchain).explicitGet()
               val txInfo                 = txSnapshot.transactions.head._2
-              val stateHash =
+              val stateHash              =
                 TxStateSnapshotHashBuilder
                   .createHashFromSnapshot(txSnapshotWithBalances, Some(TxStatusInfo(txInfo.transaction.id(), txInfo.status)))
                   .createHash(prevStateHash)

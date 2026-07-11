@@ -59,8 +59,8 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
   }
 
   property("Microblock tx sequence") {
-    val txCount         = 10
-    val microBlockCount = 10
+    val txCount                                                                                          = 10
+    val microBlockCount                                                                                  = 10
     val preconditionsAndPayments: Gen[(KeyPair, GenesisTransaction, Seq[Seq[TransferTransaction]], Int)] =
       for {
         master <- accountGen
@@ -69,7 +69,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
         fee    <- smallFeeGen
         amt    <- smallFeeGen
         genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
-        microBlockTxs = (1 to txCount * microBlockCount)
+        microBlockTxs               = (1 to txCount * microBlockCount)
           .map(step => createDccTransfer(master, master.toAddress, amt, fee, ts + step).explicitGet())
           .grouped(microBlockCount)
           .toSeq
@@ -131,7 +131,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
       payments: Seq[TransferTransaction]    <- randomPayments(accs, ts, totalTxs)
       intSeqs: Seq[BlockAndMicroblockSizes] <- randomSequences(totalTxs, totalScenarios)
     } yield {
-      val version = 3: Byte
+      val version         = 3: Byte
       val blocksAndMicros = intSeqs.map { intSeq =>
         val blockAndMicroblockSequence = r(payments, intSeq, genesis.id(), miner, version, ts)
         val ref                        = bestRef(blockAndMicroblockSequence.last)
@@ -174,8 +174,8 @@ object BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest {
       } yield h +: t
 
   def take(txs: Seq[Transaction], sizes: BlockAndMicroblockSize): ((Seq[Transaction], Seq[Seq[Transaction]]), Seq[Transaction]) = {
-    val (blockAmt, microsAmts) = sizes
-    val (blockTxs, rest)       = txs.splitAt(blockAmt)
+    val (blockAmt, microsAmts)       = sizes
+    val (blockTxs, rest)             = txs.splitAt(blockAmt)
     val (reversedMicroblockTxs, res) = microsAmts.foldLeft((Seq.empty[Seq[Transaction]], rest)) { case ((acc, pool), amt) =>
       val (step, next) = pool.splitAt(amt)
       (step +: acc, next)

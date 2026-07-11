@@ -57,7 +57,7 @@ class HttpScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite {
     s"SponsorFee actions count limit for V${version.id}" in {
       val dApp        = createSponsorFeeDApp(actionsLimit, version)
       val dAppAddress = dApp.toAddress.toString
-      val invokeTx1 = miner.invokeScript(
+      val invokeTx1   = miner.invokeScript(
         miner.keyPair,
         dAppAddress,
         Some(s"issue${actionsLimit}assets"),
@@ -87,7 +87,7 @@ class HttpScriptAssetActionLimitsSuite extends ScriptAssetActionLimitsSuite {
     }
 
     s"Issue $actionsLimit assets should not produce an error for V${version.id}" in {
-      val acc = createDApp(script(actionsLimit, version))
+      val acc     = createDApp(script(actionsLimit, version))
       val (tx, _) = miner.invokeScript(
         acc,
         acc.toAddress.toString,

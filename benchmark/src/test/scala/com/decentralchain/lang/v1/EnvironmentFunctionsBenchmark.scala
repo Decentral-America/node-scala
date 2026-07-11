@@ -113,12 +113,12 @@ object EnvironmentFunctionsBenchmark {
     override def lastBlockOpt(): Option[BlockInfo]                                                               = ???
     override def blockInfoByHeight(height: Int): Option[BlockInfo]                                               = ???
     override def accountBalanceOf(addressOrAlias: Recipient, assetId: Option[Array[Byte]]): Either[String, Long] = ???
-    override def accountDccBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails]    = ???
+    override def accountDccBalanceOf(addressOrAlias: Recipient): Either[String, Environment.BalanceDetails]      = ???
     override def tthis: Environment.Tthis                                                                        = ???
     override def multiPaymentAllowed: Boolean                                                                    = ???
     override def transferTransactionFromProto(b: Array[Byte]): Option[Tx.Transfer]                               = ???
     override def txId: ByteStr                                                                                   = ByteStr(new Array[Byte](64))
-    override def addressFromString(addressStr: String): Either[String, Recipient.Address] =
+    override def addressFromString(addressStr: String): Either[String, Recipient.Address]                        =
       account.Address
         .fromString(addressStr)
         .bimap(

@@ -40,6 +40,17 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
   private val endorseBlocksSubj                      = ConcurrentSubject.publish[(Channel, EndorseBlock)]
   val endorseBlocks: ChannelObservable[EndorseBlock] = endorseBlocksSubj
 
+  // T2 HotStuff (see docs/hotstuff-integration-design.md). Populated only when peers run a
+  // HotStuff-enabled node; empty otherwise. Consumed by the coordinator wiring in Application (gated).
+  private val hotStuffVotesSubj                      = ConcurrentSubject.publish[(Channel, HotStuffVote)]
+  val hotStuffVotes: ChannelObservable[HotStuffVote] = hotStuffVotesSubj
+
+  private val hotStuffQCsSubj                           = ConcurrentSubject.publish[(Channel, QuorumCertificate)]
+  val hotStuffQCs: ChannelObservable[QuorumCertificate] = hotStuffQCsSubj
+
+  private val hotStuffProposalsSubj                          = ConcurrentSubject.publish[(Channel, HotStuffProposal)]
+  val hotStuffProposals: ChannelObservable[HotStuffProposal] = hotStuffProposalsSubj
+
   override def channelRead(ctx: ChannelHandlerContext, msg: AnyRef): Unit = msg match {
     case b: Block                       => blocksSubj.onNext((ctx.channel(), b))
     case sc: BigInt                     => blockchainScoresSubj.onNext((ctx.channel(), sc))
@@ -50,6 +61,9 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
     case sn: BlockSnapshotResponse      => blockSnapshotsSubj.onNext((ctx.channel(), sn))
     case sn: MicroBlockSnapshotResponse => microblockSnapshotsSubj.onNext((ctx.channel(), sn))
     case e: EndorseBlock                => endorseBlocksSubj.onNext((ctx.channel(), e))
+    case v: HotStuffVote                => hotStuffVotesSubj.onNext((ctx.channel(), v))
+    case qc: QuorumCertificate          => hotStuffQCsSubj.onNext((ctx.channel(), qc))
+    case p: HotStuffProposal            => hotStuffProposalsSubj.onNext((ctx.channel(), p))
     case _                              => super.channelRead(ctx, msg)
   }
 
@@ -63,6 +77,9 @@ class MessageObserver extends ChannelInboundHandlerAdapter {
     blockSnapshotsSubj.onComplete()
     microblockSnapshotsSubj.onComplete()
     endorseBlocksSubj.onComplete()
+    hotStuffVotesSubj.onComplete()
+    hotStuffQCsSubj.onComplete()
+    hotStuffProposalsSubj.onComplete()
   }
 }
 

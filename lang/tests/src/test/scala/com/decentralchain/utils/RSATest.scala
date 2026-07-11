@@ -316,7 +316,7 @@ class RSATest extends PropSpec with BeforeAndAfterAll {
   }
 
   property("test from ride-js") {
-    val message = "hello world".getBytes()
+    val message   = "hello world".getBytes()
     val signature = Base64.decode(
       "Gnco0w3Kd19R6GiWU+ANsJoleurQ8sYQZWUfY+pst9u9m22FHmqnUgo7A22yyQHLBdeLAyPCqbMvFFMKlebnAiZWjbQsOClo8Ddv4avVJJdetSzjJO0QpoG/34/N+1Zmm0TKxDZG8+++hwR1JGsIRI5msT5/ZxW01Dzqaz+ErfNOt6NMAU37bCgdZoF6QxXg2SCLCfOwK31jMcFdBpMOFiKZDogBYl5GX2y2uf1jzUHSwzTr3GZAtMNMXDjZNOQOZ6SRo0SKuZ5nBS9jndAXliT0AMtg838YjCh8I+yNCT+4vnPMPMnot3ikMFORcKdHBhOpApV6K2FqydA7/NItQA=="
     )

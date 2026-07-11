@@ -57,7 +57,7 @@ object BalanceDistribution {
 
     override def computeNext(): (Address, Long) = findNextBalance() match {
       case Some(balance) => balance
-      case None =>
+      case None          =>
         pendingPortfolios.headOption
           .collect { case (key @ (address, `asset`), balance) =>
             pendingPortfolios -= key

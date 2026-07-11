@@ -201,7 +201,7 @@ class RideReplBlockchainFunctionsSuite extends BaseTransactionSuite {
       .foreach { version =>
         val transferTxId = transferTxIds(version)
         val responseTx   = sender.transactionInfo[TransferTransactionInfo](transferTxId)
-        val bodyBytes = TransferTransaction
+        val bodyBytes    = TransferTransaction
           .selfSigned(
             version = version,
             sender = alice,

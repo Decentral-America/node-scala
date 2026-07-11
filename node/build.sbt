@@ -111,7 +111,7 @@ def fixScriptName(path: String, name: String, packageName: String): String =
 
 linuxPackageMappings := linuxPackageMappings.value.map { lpm =>
   lpm.copy(mappings = lpm.mappings.map {
-    case (file, path) if path.endsWith(s"/bin/${name.value}") => file -> fixScriptName(path, name.value, (Linux / packageName).value)
+    case (file, path) if path.endsWith(s"/bin/${name.value}")   => file -> fixScriptName(path, name.value, (Linux / packageName).value)
     case (file, path) if path.endsWith("/conf/application.ini") =>
       val dest = (Debian / target).value / path
       IO.write(
@@ -143,9 +143,9 @@ inConfig(Debian)(
     packageSource            := sourceDirectory.value / "package",
     linuxStartScriptTemplate := (packageSource.value / "systemd.service").toURI.toURL,
     debianPackageDependencies += "java17-runtime-headless",
-    maintainerScripts := maintainerScriptsFromDirectory(packageSource.value / "debian", Seq("postinst", "postrm", "prerm")),
+    maintainerScripts    := maintainerScriptsFromDirectory(packageSource.value / "debian", Seq("postinst", "postrm", "prerm")),
     linuxPackageMappings := {
-      val classifier = if (packageArchitecture.value == "amd64") "linux-x86_64" else "linux-aarch_64"
+      val classifier               = if (packageArchitecture.value == "amd64") "linux-x86_64" else "linux-aarch_64"
       val platformSpecificMappings = packageMapping(
         (Optional / update).value
           .select(artifactFilter(classifier = classifier))

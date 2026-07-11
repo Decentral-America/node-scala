@@ -6,8 +6,8 @@ import com.decentralchain.lang.v1.compiler.Terms.{ARR, CONST_BYTESTR, CONST_STRI
 case class TermPrinter(fixArrIndentation: Boolean = false) {
   def prettyString(e: EVALUATED, depth: Int): String = {
     e match {
-      case obj: CaseObj => indentObjString(obj, depth)
-      case arr: ARR     => indentArrString(arr, depth)
+      case obj: CaseObj      => indentObjString(obj, depth)
+      case arr: ARR          => indentArrString(arr, depth)
       case CONST_BYTESTR(bs) =>
         if (bs.size > 1024) {
           "base64'" ++ Base64.encode(bs.arr) ++ "'"

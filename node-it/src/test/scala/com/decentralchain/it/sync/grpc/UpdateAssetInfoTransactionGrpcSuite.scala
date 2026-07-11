@@ -150,8 +150,8 @@ class UpdateAssetInfoTransactionGrpcSuite extends GrpcBaseTransactionSuite with 
   }
 
   test("check increased fee for smart sender/asset") {
-    val scriptText = s"""true""".stripMargin
-    val script     = TestCompiler.DefaultVersion.compileAsset(scriptText)
+    val scriptText   = s"""true""".stripMargin
+    val script       = TestCompiler.DefaultVersion.compileAsset(scriptText)
     val smartAssetId =
       PBTransactions
         .vanilla(

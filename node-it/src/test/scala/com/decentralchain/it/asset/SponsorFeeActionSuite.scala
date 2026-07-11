@@ -102,7 +102,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
       miner.assetBalance(bobAddress, sponsoredAssetId).balance shouldBe assetTransferAmount
 
       val dAppDccOutgo = smartMinFee + Sponsorship.toDcc(assetFee, minSponsoredAssetFee)
-      val blockReward    = miner.lastBlock().reward.get
+      val blockReward  = miner.lastBlock().reward.get
 
       val lastCheckHeight = miner.height + 1
       miner.waitForHeight(lastCheckHeight)
@@ -183,7 +183,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
 
     "Multiple SponsorFee is available for same asset" in {
       val lastMinSponsoredAssetFee = 10000000000L
-      val dApp = createDApp(
+      val dApp                     = createDApp(
         s"""
            | {-# STDLIB_VERSION 4 #-}
            | {-# CONTENT_TYPE DAPP #-}
@@ -390,7 +390,7 @@ class SponsorFeeActionSuite extends BaseFreeSpec {
 
   "Rollback" - {
     val minSponsoredAssetFee = 1000
-    val script =
+    val script               =
       s"""
          | {-# STDLIB_VERSION 4 #-}
          | {-# CONTENT_TYPE DAPP #-}

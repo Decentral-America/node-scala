@@ -345,8 +345,8 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
   def assertBalanceInvariant(snapshot: StateSnapshot, db: RocksDBWriter, rewardAndFee: Long = 0): Unit = {
     snapshot.balances.toSeq
       .map {
-        case ((`defaultAddress`, Dcc), balance) => Dcc -> (balance - db.balance(defaultAddress, Dcc) - rewardAndFee)
-        case ((address, asset), balance)          => asset -> (balance - db.balance(address, asset))
+        case ((`defaultAddress`, Dcc), balance) => Dcc   -> (balance - db.balance(defaultAddress, Dcc) - rewardAndFee)
+        case ((address, asset), balance)        => asset -> (balance - db.balance(address, asset))
       }
       .groupMap(_._1)(_._2)
       .foreach { case (_, balances) => balances.sum shouldBe 0 }
@@ -429,7 +429,7 @@ trait WithDomain extends WithState { suite: Suite =>
   )(test: Domain => A): A =
     withRocksDBWriter(settings) { blockchain =>
       var domain: Domain = null
-      val bcu = wrapBU(
+      val bcu            = wrapBU(
         new BlockchainUpdaterImpl(
           blockchain,
           settings,
@@ -477,7 +477,7 @@ trait WithDomain extends WithState { suite: Suite =>
       .foreach(v => withDomain(DomainPresets.settingsForRide(v), balances)(assertion(v, _)))
 
   def createGenesisWithStateHash(txs: Seq[GenesisTransaction], fillStateHash: Boolean, baseTarget: Option[Long] = None): Block = {
-    val timestamp = txs.map(_.timestamp).max
+    val timestamp       = txs.map(_.timestamp).max
     val genesisSettings = GenesisSettings(
       timestamp,
       timestamp,

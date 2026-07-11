@@ -201,7 +201,7 @@ class ApiCompilerTest extends PropSpec {
   private def checkParseAndCompileVerifier(verifier: String, lib: String, expectedErrors: Seq[CompilationError]): Assertion =
     API.parseAndCompile(verifier, libraries = Map(libName -> lib)).explicitGet().asInstanceOf[Expression].errors shouldBe expectedErrors
 
-  private def libName = "lib.ride"
+  private def libName                    = "lib.ride"
   private def dAppWithParseError: String =
     s"""{-# STDLIB_VERSION 6 #-}
        |{-# CONTENT_TYPE DAPP #-}

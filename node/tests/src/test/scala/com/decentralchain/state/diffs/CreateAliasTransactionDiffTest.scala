@@ -33,9 +33,9 @@ class CreateAliasTransactionDiffTest extends PropSpec with WithDomain {
 
     val fee = 400000
 
-    val genesis = TxHelpers.genesis(master.toAddress)
-    val alias   = Alias.create("alias").explicitGet()
-    val alias2  = Alias.create("alias2").explicitGet()
+    val genesis  = TxHelpers.genesis(master.toAddress)
+    val alias    = Alias.create("alias").explicitGet()
+    val alias2   = Alias.create("alias2").explicitGet()
     val aliasTxs = Seq(
       TxHelpers.createAlias(alias.name, master, fee = fee),
       TxHelpers.createAlias(alias.name, master, fee = fee, version = TxVersion.V1)
@@ -112,8 +112,8 @@ class CreateAliasTransactionDiffTest extends PropSpec with WithDomain {
       maybeAsset    <- Seq(None, Some(issue1))
       maybeAsset2   <- Seq(None, Some(issue2))
       maybeFeeAsset <- Seq(maybeAsset, maybeAsset2)
-      alias   = Alias.create("alias").explicitGet()
-      aliasTx = TxHelpers.createAlias(alias.name, aliasedRecipient)
+      alias    = Alias.create("alias").explicitGet()
+      aliasTx  = TxHelpers.createAlias(alias.name, aliasedRecipient)
       transfer = TxHelpers.transfer(
         master,
         alias,

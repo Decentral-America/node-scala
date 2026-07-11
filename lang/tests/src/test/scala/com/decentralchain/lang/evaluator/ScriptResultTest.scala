@@ -75,7 +75,7 @@ class ScriptResultTest extends PropSpec {
   val scriptResultObj =
     CaseObj(CASETYPEREF("ScriptResult", el), Map(FieldNames.ScriptWriteSet -> writeSetObj, FieldNames.ScriptTransferSet -> transferSetObj))
 
-  val writeResult = List(DataItem.Lng("xxx", 42))
+  val writeResult    = List(DataItem.Lng("xxx", 42))
   val transferResult =
     List(AssetTransfer(Address(address1), Address(address1), 41L, Some(asset)), AssetTransfer(Address(address2), Address(address2), 42L, None))
 

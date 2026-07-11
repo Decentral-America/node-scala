@@ -84,19 +84,19 @@ final case class EthereumTransaction(
   override lazy val sender: PublicKey = signerPublicKey()
 
   def toTransferLike(a: TxPositiveAmount, r: AddressOrAlias, asset: Asset): TransferTransactionLike = new TransferTransactionLike {
-    override val amount: TxPositiveAmount       = a
-    override val recipient: AddressOrAlias      = r
-    override val sender: PublicKey              = signerPublicKey()
-    override val assetId: Asset                 = asset
-    override val attachment: ByteStr            = ByteStr.empty
-    override def timestamp: TxTimestamp         = self.timestamp
-    override def chainId: TxType                = self.chainId
-    override def id: Coeval[ByteStr]            = self.id
-    override val tpe: TransactionType           = TransactionType.Transfer
-    override def assetFee: (Asset, TxTimestamp) = self.assetFee
+    override val amount: TxPositiveAmount        = a
+    override val recipient: AddressOrAlias       = r
+    override val sender: PublicKey               = signerPublicKey()
+    override val assetId: Asset                  = asset
+    override val attachment: ByteStr             = ByteStr.empty
+    override def timestamp: TxTimestamp          = self.timestamp
+    override def chainId: TxType                 = self.chainId
+    override def id: Coeval[ByteStr]             = self.id
+    override val tpe: TransactionType            = TransactionType.Transfer
+    override def assetFee: (Asset, TxTimestamp)  = self.assetFee
     override def checkedAssets: Seq[IssuedAsset] = asset match {
       case i: IssuedAsset => Seq(i)
-      case Asset.Dcc    => Nil
+      case Asset.Dcc      => Nil
     }
   }
 }
@@ -129,7 +129,7 @@ object EthereumTransaction {
       for {
         scriptInfo      <- blockchain.accountScript(dApp).toRight(GenericError(s"No script at address $dApp"))
         callAndPayments <- EthABIConverter(scriptInfo.script).decodeFunctionCall(hexCallData, blockchain)
-        _ <- Either.cond(
+        _               <- Either.cond(
           !blockchain.isFeatureActivated(BlockRewardDistribution) || PBTransactions
             .toPBInvokeScriptData(dApp, Some(callAndPayments._1), callAndPayments._2)
             .toByteArray

@@ -266,7 +266,7 @@ object GenesisBlockGenerator {
         if (n == 0)
           baseTargets
         else {
-          val currentHitSource = if (height > 100) hitSources(100) else hitSources.head
+          val currentHitSource      = if (height > 100) hitSources(100) else hitSources.head
           val (delay, newHitSource) = parallelMapMin[(FullAddressInfo, Share), (Long, ByteStr), Long](
             minerShares,
             { case (miner, balance) =>

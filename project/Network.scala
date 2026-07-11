@@ -10,7 +10,7 @@ sealed abstract class Network(val suffix: String) {
 object Network {
   private val oneNetwork: Parser[String]  = (Mainnet.suffix: Parser[String]) | Testnet.suffix | Stagenet.suffix | Devnet.suffix
   val networkParser: Parser[Seq[Network]] = (Space ~> oneNetwork.map(apply)).+
-  def apply(v: String): Network = v match {
+  def apply(v: String): Network           = v match {
     case Testnet.suffix  => Testnet
     case Devnet.suffix   => Devnet
     case Stagenet.suffix => Stagenet

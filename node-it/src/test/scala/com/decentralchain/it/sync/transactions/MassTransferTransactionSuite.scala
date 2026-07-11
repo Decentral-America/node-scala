@@ -145,7 +145,7 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
       ): (SignedMassTransferRequest, Option[ByteStr]) = {
         val txEi = for {
           parsedTransfers <- MassTransferTransaction.parseTransfersList(transfers)
-          tx <- MassTransferTransaction.selfSigned(
+          tx              <- MassTransferTransaction.selfSigned(
             1.toByte,
             sender.keyPair,
             Dcc,
@@ -175,11 +175,11 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
       def negativeTransferAmountRequest: (SignedMassTransferRequest, Option[ByteStr]) = {
         val recipient = secondKeyPair
 
-        val transfers  = List(Transfer(recipient.toAddress.toString, -1))
-        val attachment = ByteStr(Array.emptyByteArray)
-        val fee        = calcMassTransferFee(1)
-        val timestamp  = System.currentTimeMillis()
-        val version    = TxVersion.V1
+        val transfers     = List(Transfer(recipient.toAddress.toString, -1))
+        val attachment    = ByteStr(Array.emptyByteArray)
+        val fee           = calcMassTransferFee(1)
+        val timestamp     = System.currentTimeMillis()
+        val version       = TxVersion.V1
         val mttdTransfers = transfers.map { t =>
           MassTransferTransactionData.Transfer(
             Some(Recipient.of(Recipient.Recipient.PublicKeyHash(PBRecipients.create(Address.fromPublicKey(recipient.publicKey)).getPublicKeyHash))),
@@ -244,8 +244,8 @@ class MassTransferTransactionSuite extends BaseTransactionSuite {
 
   test("transaction requires a proof") {
     for (v <- massTransferTxSupportedVersions) {
-      val fee       = calcMassTransferFee(2)
-      val transfers = Seq(Transfer(secondAddress, 1000), Transfer(thirdAddress, 1000))
+      val fee                          = calcMassTransferFee(2)
+      val transfers                    = Seq(Transfer(secondAddress, 1000), Transfer(thirdAddress, 1000))
       val signedMassTransfer: JsObject = {
         val rs = sender.postJsonWithApiKey(
           "/transactions/sign",

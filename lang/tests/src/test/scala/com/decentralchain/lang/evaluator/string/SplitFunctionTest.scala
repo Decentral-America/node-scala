@@ -10,7 +10,7 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.PureContext.MaxListLengthV4
 import com.decentralchain.test.produce
 
 class SplitFunctionTest extends EvaluatorSpec {
-  private implicit val version: StdLibVersion = V6
+  private implicit val version: StdLibVersion               = V6
   private def assertSuccess(script: String => String): Unit =
     for ((f, v) <- Seq((PureContext.splitStrFixed, V3), (PureContext.splitStrV6, V6), (PureContext.splitStr4C, V6), (PureContext.splitStr51C, V6))) {
       eval(script(f.name))(using v) shouldBe Right(CONST_BOOLEAN(true))

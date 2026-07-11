@@ -58,7 +58,7 @@ class NotaryControlledTransferScenarioTest extends PropSpec with WithState {
                          | }
         """.stripMargin
     val untypedScript = Parser.parseExpr(assetScript).get.value
-    val typedScript = ExprScript(ExpressionCompiler(compilerContext(V1, Expression, isAssetScript = false), V1, untypedScript).explicitGet()._1)
+    val typedScript   = ExprScript(ExpressionCompiler(compilerContext(V1, Expression, isAssetScript = false), V1, untypedScript).explicitGet()._1)
       .explicitGet()
 
     val issue                   = TxHelpers.issue(company, 100, script = Some(typedScript))

@@ -59,7 +59,7 @@ case class PoSSelector(blockchain: Blockchain, maxBaseTarget: Option[Long]) exte
   def validateBlockDelay(parentHeight: Int, header: BlockHeader, parent: BlockHeader, effectiveBalance: Long): Either[ValidationError, Unit] = {
     for {
       parentHitSource <- getHitSource(parentHeight)
-      gs <-
+      gs              <-
         if (vrfActivated(parentHeight + 1)) {
           crypto
             .verifyVRF(
@@ -157,7 +157,7 @@ case class PoSSelector(blockchain: Blockchain, maxBaseTarget: Option[Long]) exte
   private def getHit(height: Int, account: KeyPair): Either[ValidationError, BigInt] =
     for {
       hitSource <- getHitSource(height)
-      gs <-
+      gs        <-
         if (vrfActivated(height + 1)) {
           val vrfProof = crypto.signVRF(account.privateKey, hitSource.arr)
           crypto.verifyVRF(vrfProof, hitSource.arr, account.publicKey, blockchain.isFeatureActivated(BlockchainFeatures.RideV6, height)).map(_.arr)

@@ -92,7 +92,7 @@ class FairPoSCalculatorTest extends PropSpec {
     val gs               = generationSignature(ByteStr(genSig), miner.publicKey)
     val h                = hit(gs)
     val delay            = pos.calculateDelay(h, prev.baseTarget, balance)
-    val bt = pos.calculateBaseTarget(
+    val bt               = pos.calculateBaseTarget(
       blockDelaySeconds,
       prev.height + 1,
       prev.baseTarget,

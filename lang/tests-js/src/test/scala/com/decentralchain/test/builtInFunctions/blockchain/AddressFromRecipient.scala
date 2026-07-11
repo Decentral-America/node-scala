@@ -49,7 +49,7 @@ object AddressFromRecipient extends JsTestBase {
     test("RIDE-26. Function 'addressFromRecipient' requires 1 arguments") {
       for (version <- testData.actualVersions) {
         val precondition = new GeneratorContractsForBuiltInFunctions("", version)
-        val script = precondition.codeForAddressFromRecipient(
+        val script       = precondition.codeForAddressFromRecipient(
           randomAddressDataArrayElement,
           invalidFunc,
           randomAddressDataArrayElement

@@ -51,7 +51,7 @@ class WideStateGenerationSuite extends BaseFreeSpec with WaitForHeight2 with Tra
 
   "Generate a lot of transactions and synchronise" in {
     val test = for {
-      b <- dumpBalances()
+      b           <- dumpBalances()
       uploadedTxs <- processRequests(
         generateTransfersToRandomAddresses(requestsCount / 2, nodeAddresses) ++
           generateTransfersBetweenAccounts(requestsCount / 2, b)
@@ -65,7 +65,7 @@ class WideStateGenerationSuite extends BaseFreeSpec with WaitForHeight2 with Tra
       _ <- Await.ready(traverse(nodes)(assertHasTxs(_, uploadedTxs.map(_.id).toSet)), 5.minutes)
     } yield ()
 
-    val limit = GlobalTimer.instance.schedule(Future.failed(new TimeoutException("Time is out for test")), 18.minutes)
+    val limit         = GlobalTimer.instance.schedule(Future.failed(new TimeoutException("Time is out for test")), 18.minutes)
     val testWithDumps = Future.firstCompletedOf(Seq(test, limit)).recoverWith { case e =>
       for {
         _     <- dumpBalances()
@@ -104,13 +104,13 @@ class WideStateGenerationSuite extends BaseFreeSpec with WaitForHeight2 with Tra
     val maxRequestSize = 100
 
     for {
-      utxSize <- node.utxSize
-      height  <- node.height
+      utxSize     <- node.utxSize
+      height      <- node.height
       blockGroups <- traverse((2 to height.toInt).grouped(maxRequestSize).map { xs =>
         (Height(xs.head), Height(xs.last), false)
       })(Function.tupled(node.blockSeq))
     } yield {
-      val blocks = blockGroups.flatten.toList
+      val blocks     = blockGroups.flatten.toList
       val blocksInfo = blocks.zipWithIndex
         .map { case (x, i) => s"$i: id=${x.id.trim}, txsSize=${x.transactions.size}, txs=${x.transactions.map(_.id.trim).mkString(", ")}" }
 

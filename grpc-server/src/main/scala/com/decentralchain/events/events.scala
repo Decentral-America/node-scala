@@ -617,12 +617,12 @@ object BlockAppended {
       reward: Option[Long],
       hitSource: ByteStr
   ): BlockAppended = {
-    val height = blockchainBeforeWithReward.height
+    val height                                                      = blockchainBeforeWithReward.height
     val (blockStateUpdate, txsStateUpdates, txsMetadata, refAssets) =
       StateUpdate.container(blockchainBeforeWithReward, snapshot)
 
     // updatedDccAmount can change as a result of either genesis transactions or miner rewards
-    val dccAmount = blockchainBeforeWithReward.dccAmount(height).toLong
+    val dccAmount        = blockchainBeforeWithReward.dccAmount(height).toLong
     val updatedDccAmount =
       dccAmount + reward.filter(_ => height > 0).getOrElse(0L) * blockchainBeforeWithReward.blockRewardBoost(Height(height + 1))
     val activatedFeatures = blockchainBeforeWithReward.activatedFeatures.collect {

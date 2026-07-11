@@ -148,7 +148,7 @@ class MinerImpl(
       reference: ByteStr,
       prevStateHash: Option[ByteStr]
   ): (Seq[Transaction], MiningConstraint, Option[ByteStr]) = {
-    val estimators = MiningConstraints(blockchainUpdater, blockchainUpdater.height, Some(minerSettings))
+    val estimators        = MiningConstraints(blockchainUpdater, blockchainUpdater.height, Some(minerSettings))
     val keyBlockStateHash = prevStateHash.flatMap { prevHash =>
       BlockDiffer
         .createInitialBlockSnapshot(blockchainUpdater, reference, miner)
@@ -161,7 +161,7 @@ class MinerImpl(
 
     if (blockchainUpdater.isFeatureActivated(BlockchainFeatures.NG)) (Seq.empty, estimators.total, keyBlockStateHash)
     else {
-      val mdConstraint = MultiDimensionalMiningConstraint(estimators.total, estimators.keyBlock)
+      val mdConstraint                                       = MultiDimensionalMiningConstraint(estimators.total, estimators.keyBlock)
       val (maybeUnconfirmed, updatedMdConstraint, stateHash) = Instrumented.logMeasure(log, "packing unconfirmed transactions for block")(
         utx.packUnconfirmed(mdConstraint, keyBlockStateHash, PackStrategy.Limit(settings.minerSettings.microBlockInterval))
       )
@@ -198,12 +198,12 @@ class MinerImpl(
       } yield balance
 
       def retryReasons(balance: Long) = for {
-        _ <- checkQuorumAvailable()
+        _               <- checkQuorumAvailable()
         validBlockDelay <- pos
           .getValidBlockDelay(height, account, lastBlockHeader.baseTarget, balance)
           .leftMap(_.toString)
         currentTime = timeService.correctedTime()
-        blockTime = math.max(
+        blockTime   = math.max(
           lastBlockHeader.timestamp + validBlockDelay,
           currentTime - 1.minute.toMillis
         )
@@ -316,7 +316,10 @@ class MinerImpl(
           case None => Task.unit
         }
 
-        def appendTask(block: Block, totalConstraint: MiningConstraint) = // NOTE: Could accept blockAppender to reduce parameter count — current pattern works correctly
+        def appendTask(
+            block: Block,
+            totalConstraint: MiningConstraint
+        ) = // NOTE: Could accept blockAppender to reduce parameter count — current pattern works correctly
           BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).flatMap {
             case Left(BlockFromFuture(_, _)) => // Time was corrected, retry
               generateBlockTask(account, None)

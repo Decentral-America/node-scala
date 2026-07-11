@@ -55,7 +55,7 @@ object MakeStringBenchmark {
   abstract class MakeString(listSize: Int, stringSize: Int = 1, separatorSize: Int = 1) {
     val string    = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * stringSize
     val separator = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * separatorSize
-    val expr =
+    val expr      =
       FUNCTION_CALL(
         Native(FunctionIds.MAKESTRING),
         List(

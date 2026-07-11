@@ -8,7 +8,7 @@ case class ByteStr(arr: Array[Byte]) {
   private lazy val base58: String = Base58.encode(arr)
   lazy val base64Raw: String      = Base64.encode(arr)
   lazy val base64: String         = "base64:" + base64Raw
-  lazy val trim: String = (if (arr.length < 1024) {
+  lazy val trim: String           = (if (arr.length < 1024) {
                              base58.take(7)
                            } else {
                              base64Raw

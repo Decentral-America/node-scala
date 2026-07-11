@@ -110,7 +110,7 @@ class StateHashBuilder {
 
   def result(): Result = {
     val digestInstance = StateHashBuilder.newDigestInstance()
-    val sectHashes =
+    val sectHashes     =
       for {
         (section, id) <- this.maps.zipWithIndex if section.nonEmpty
       } yield SectionId(id) -> StateHashBuilder.createSectionHash(section.flatMap { case (k, v) => Seq(k, ByteStr(v)) }, digestInstance)

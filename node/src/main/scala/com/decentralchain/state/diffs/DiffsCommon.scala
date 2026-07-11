@@ -43,7 +43,7 @@ object DiffsCommon {
           blockchain.height > blockchain.settings.functionalitySettings.estimatorPreCheckHeight &&
             !blockchain.isFeatureActivated(BlockchainFeatures.BlockV5)
 
-        val fixEstimateOfVerifier = blockchain.isFeatureActivated(BlockchainFeatures.RideV6)
+        val fixEstimateOfVerifier                  = blockchain.isFeatureActivated(BlockchainFeatures.RideV6)
         def complexity(estimator: ScriptEstimator) =
           Script.verifierComplexity(
             script,
@@ -155,7 +155,7 @@ object DiffsCommon {
     val senderAddress = sender.toAddress
     for {
       recipientAddress <- blockchain.resolveAlias(recipient)
-      _ <- Either.cond(
+      _                <- Either.cond(
         recipientAddress != senderAddress,
         (),
         GenericError("Cannot lease to self")
@@ -196,7 +196,7 @@ object DiffsCommon {
     val allowedTs = blockchain.settings.functionalitySettings.allowMultipleLeaseCancelTransactionUntilTimestamp
     for {
       lease <- blockchain.leaseDetails(leaseId).toRight(GenericError(s"Lease with id=$leaseId not found"))
-      _ <- Either.cond(
+      _     <- Either.cond(
         lease.isActive || time <= allowedTs,
         (),
         GenericError(s"Cannot cancel already cancelled lease")
@@ -212,7 +212,7 @@ object DiffsCommon {
       senderPortfolio    = Map[Address, Portfolio](sender.toAddress -> Portfolio(-fee, LeaseBalance(0, -lease.amount.value)))
       recipientPortfolio = Map(lease.recipientAddress -> Portfolio(0, LeaseBalance(-lease.amount.value, 0)))
       portfolios <- Portfolio.combine(senderPortfolio, recipientPortfolio).leftMap(GenericError(_))
-      snapshot <- StateSnapshot.build(
+      snapshot   <- StateSnapshot.build(
         blockchain,
         portfolios = portfolios,
         cancelledLeases = Map(leaseId -> LeaseDetails.Status.Cancelled(Height(blockchain.height), Some(TransactionId(cancelTxId))))

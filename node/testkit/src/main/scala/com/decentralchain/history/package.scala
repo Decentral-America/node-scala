@@ -14,7 +14,7 @@ package object history {
   val MaxTransactionsPerBlockDiff = 10
   val MaxBlocksInMemory           = 5
   val DefaultBaseTarget           = 1000L
-  val DefaultBlockchainSettings = BlockchainSettings(
+  val DefaultBlockchainSettings   = BlockchainSettings(
     addressSchemeCharacter = 'N',
     functionalitySettings = TestFunctionalitySettings.Enabled,
     genesisSettings = GenesisSettings.TESTNET,
@@ -86,7 +86,7 @@ package object history {
       ts: Long
   ): (Block, MicroBlockWithTotalId) = {
     val newTotalBlock = customBuildBlockOfTxs(totalRefTo, prevTotal.transactionData ++ txs, signer, version, ts)
-    val nonSigned = MicroBlock
+    val nonSigned     = MicroBlock
       .buildAndSign(
         version,
         generator = signer,
@@ -102,7 +102,7 @@ package object history {
 
   def buildMicroBlockOfTxs(totalRefTo: ByteStr, prevTotal: Block, txs: Seq[Transaction], signer: KeyPair): (Block, MicroBlockWithTotalId) = {
     val newTotalBlock = buildBlockOfTxs(totalRefTo, prevTotal.transactionData ++ txs)
-    val nonSigned = MicroBlock
+    val nonSigned     = MicroBlock
       .buildAndSign(
         3.toByte,
         generator = signer,
@@ -140,7 +140,7 @@ package object history {
       version: Byte,
       timestamp: Long
   ): (Block, Seq[MicroBlockWithTotalId]) = {
-    val block = customBuildBlockOfTxs(totalRefTo, base, signer, version, timestamp)
+    val block       = customBuildBlockOfTxs(totalRefTo, base, signer, version, timestamp)
     val microBlocks = micros
       .foldLeft((block, Seq.empty[MicroBlockWithTotalId])) { case ((lastTotal, allMicros), txs) =>
         val (newTotal, micro) = customBuildMicroBlockOfTxs(totalRefTo, lastTotal, txs, signer, version, timestamp)

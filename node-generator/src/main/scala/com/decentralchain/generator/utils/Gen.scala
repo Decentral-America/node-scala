@@ -71,7 +71,7 @@ object Gen {
 
   def multiSigScript(owners: Seq[KeyPair], requiredProofsCount: Int, estimator: ScriptEstimator): Script = {
     val accountsWithIndexes = owners.zipWithIndex
-    val keyLets =
+    val keyLets             =
       accountsWithIndexes map { case (acc, i) =>
         s"let accountPK$i = base58'${acc.publicKey}'"
       } mkString "\n"

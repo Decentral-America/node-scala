@@ -233,7 +233,7 @@ object Block {
       }.sequence
       baseTarget = genesisSettings.initialBaseTarget
       timestamp  = genesisSettings.blockTimestamp
-      block = create(
+      block      = create(
         GenesisBlockVersion,
         timestamp,
         GenesisReference,

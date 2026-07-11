@@ -37,8 +37,8 @@ object BlockchainState extends ScorexLogging {
       copy(
         processedHeight = Height(event.getUpdate.height),
         processedMicroBlockNumber = event.getUpdate.update match {
-          case Update.Empty       => processedMicroBlockNumber
-          case _: Update.Rollback => 0
+          case Update.Empty          => processedMicroBlockNumber
+          case _: Update.Rollback    => 0
           case Update.Append(append) =>
             append.body match {
               case Body.Empty         => processedMicroBlockNumber
@@ -114,7 +114,7 @@ object BlockchainState extends ScorexLogging {
     event match {
       case WrappedEvent.Next(event) => Task(apply(processor, orig, event))
       case WrappedEvent.Closed      => forceRestart()
-      case WrappedEvent.Failed(e) =>
+      case WrappedEvent.Failed(e)   =>
         e match {
           case _: UpstreamTimeoutException => forceRestart()
           case e: StatusRuntimeException
@@ -158,7 +158,7 @@ object BlockchainState extends ScorexLogging {
               else
                 processor.hasLocalBlockAt(h, currBlockId) match {
                   case Some(true) => orig
-                  case _ =>
+                  case _          =>
                     log.info(s"Blocks on $h are different")
                     processor.removeAllFrom(h)
                     orig.withDifferentBlocks

@@ -10,7 +10,7 @@ object Types {
   sealed trait TYPE
   sealed trait SINGLE extends TYPE
   sealed trait REAL   extends FINAL with SINGLE
-  sealed trait FINAL extends TYPE {
+  sealed trait FINAL  extends TYPE {
     def fields: List[(String, FINAL)] = List()
     def typeList: List[REAL]
     def unfold: FINAL = this
@@ -24,12 +24,12 @@ object Types {
   case class PARAMETERIZEDLIST(t: TYPE)          extends PARAMETERIZED with SINGLE { override def toString: String = s"List[$t]"                }
   case class PARAMETERIZEDTUPLE(t: List[TYPE])   extends PARAMETERIZED with SINGLE { override def toString: String = t.mkString("(", ", ", ")") }
   case class PARAMETERIZEDUNION(l: List[SINGLE]) extends PARAMETERIZED             { override def toString: String = l.mkString("|")            }
-  case object NOTHING extends REAL { override val name = "Nothing"; override val typeList: List[REAL] = List()        }
-  case object LONG    extends REAL { override val name = "Int"; override val typeList: List[REAL] = List(this)        }
-  case object BIGINT  extends REAL { override val name = "BigInt"; override val typeList: List[REAL] = List(this)     }
-  case object BYTESTR extends REAL { override val name = "ByteVector"; override val typeList: List[REAL] = List(this) }
-  case object BOOLEAN extends REAL { override val name = "Boolean"; override val typeList: List[REAL] = List(this)    }
-  case object STRING  extends REAL { override val name = "String"; override val typeList: List[REAL] = List(this)     }
+  case object NOTHING               extends REAL { override val name = "Nothing"; override val typeList: List[REAL] = List()        }
+  case object LONG                  extends REAL { override val name = "Int"; override val typeList: List[REAL] = List(this)        }
+  case object BIGINT                extends REAL { override val name = "BigInt"; override val typeList: List[REAL] = List(this)     }
+  case object BYTESTR               extends REAL { override val name = "ByteVector"; override val typeList: List[REAL] = List(this) }
+  case object BOOLEAN               extends REAL { override val name = "Boolean"; override val typeList: List[REAL] = List(this)    }
+  case object STRING                extends REAL { override val name = "String"; override val typeList: List[REAL] = List(this)     }
   case class LIST(innerType: FINAL) extends REAL {
     override lazy val name: String    = "List[" ++ innerType.toString ++ "]"
     override def typeList: List[REAL] = List(this)
@@ -79,7 +79,7 @@ object Types {
   }
 
   case class CASETYPEREF(override val name: String, override val fields: List[(String, FINAL)], hideConstructor: Boolean = false) extends REAL {
-    override def typeList: List[REAL] = List(this)
+    override def typeList: List[REAL]      = List(this)
     override def equals(obj: Any): Boolean =
       obj match {
         case CASETYPEREF(`name`, _, _) => true
@@ -135,8 +135,8 @@ object Types {
           else
             unfolded `equivalent` l2.unfold
         }
-      case (l1: LIST, l2: LIST) => l1.innerType `equivalent` l2.innerType
-      case (l1: REAL, l2: REAL) => l1 == l2
+      case (l1: LIST, l2: LIST)   => l1.innerType `equivalent` l2.innerType
+      case (l1: REAL, l2: REAL)   => l1 == l2
       case (l1: UNION, l2: UNION) =>
         l1.typeList.length == l2.typeList.length &&
         (l1.unfold.typeList.sortBy(_.name) zip l2.unfold.typeList.sortBy(_.name))
@@ -145,13 +145,13 @@ object Types {
     }
 
     def >=(l2: FINAL): Boolean = (l1, l2) match {
-      case (ANY, _)             => true
-      case (l1, UNION(l2, _))   => l2.forall(l1 >= _)
-      case (UNION(l1, _), l2)   => l1.exists(_ >= l2)
-      case (_, ANY)             => false
-      case (_, NOTHING)         => true
-      case (NOTHING, _)         => false
-      case (LIST(t1), LIST(t2)) => t1 >= t2
+      case (ANY, _)                       => true
+      case (l1, UNION(l2, _))             => l2.forall(l1 >= _)
+      case (UNION(l1, _), l2)             => l1.exists(_ >= l2)
+      case (_, ANY)                       => false
+      case (_, NOTHING)                   => true
+      case (NOTHING, _)                   => false
+      case (LIST(t1), LIST(t2))           => t1 >= t2
       case (TUPLE(types1), TUPLE(types2)) =>
         types1.length == types2.length && (types1 zip types2).forall { case (t1, t2) => t1 >= t2 }
       case (l1: REAL, l2: REAL) => l1 `equivalent` l2

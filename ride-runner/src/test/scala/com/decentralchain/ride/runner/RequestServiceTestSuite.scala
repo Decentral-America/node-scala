@@ -200,23 +200,23 @@ class RequestServiceTestSuite extends BaseTestSuite with HasGrpc with HasBasicGr
       implicit val testScheduler = TestScheduler()
 
       val blockchainApi = new TestBlockchainApi() {
-        override def getCurrentBlockchainHeight(): Height = Height(2)
+        override def getCurrentBlockchainHeight(): Height                             = Height(2)
         override def getBlockHeader(height: Height): Option[SignedBlockHeaderWithVrf] =
           toVanilla(BlockWithHeight(mkPbBlock(height).some, height.toInt))
         override def getActivatedFeatures(height: Height): Map[Short, Height] =
           blockchainSettings.functionalitySettings.preActivatedFeatures.view.mapValues(Height(_)).toMap
-        override def getAccountScript(address: Address): Option[(PublicKey, Script)] = accountScripts.get(address)
+        override def getAccountScript(address: Address): Option[(PublicKey, Script)]          = accountScripts.get(address)
         override def getAccountDataEntry(address: Address, key: String): Option[DataEntry[?]] =
           if (address == aliceAddr && key == "x") IntegerDataEntry("x", 0).some
           else super.getAccountDataEntry(address, key)
 
-        override def getBalance(address: Address, asset: Asset): Long = Long.MaxValue / 3
+        override def getBalance(address: Address, asset: Asset): Long               = Long.MaxValue / 3
         override def getLeaseBalance(address: Address): BalanceResponse.DccBalances =
           BalanceResponse.DccBalances(getBalance(address, Asset.Dcc))
       }
 
-      val testDb  = use(mkTestDb())
-      val allTags = new CacheKeyTags[RideScriptRunRequest]
+      val testDb     = use(mkTestDb())
+      val allTags    = new CacheKeyTags[RideScriptRunRequest]
       val blockchain = testDb.access.directReadWrite { implicit ctx =>
         LazyBlockchain.init(
           blockchainSettings,
@@ -234,7 +234,7 @@ class RequestServiceTestSuite extends BaseTestSuite with HasGrpc with HasBasicGr
       val blockchainUpdatesStream = use(blockchainApi.mkBlockchainUpdatesStream(testScheduler))
 
       val workingHeight = Height(1)
-      val eventsStream = blockchainUpdatesStream.downstream
+      val eventsStream  = blockchainUpdatesStream.downstream
         .doOnError(e =>
           Task {
             log.error("Error!", e)

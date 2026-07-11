@@ -225,7 +225,7 @@ class ScriptCompilerV1Test extends PropSpec with EitherValues with Inside {
         complexity: Int
     ): Unit = {
 
-      val directives = buildDirectives(version, contentType, scriptType)
+      val directives              = buildDirectives(version, contentType, scriptType)
       val (assigns, conjunctions) = (version, contentType, scriptType) match {
         case (V3, DApp, Account)       => (103, 9)
         case (V3, Expression, Account) => (103, 14)

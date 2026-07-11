@@ -132,7 +132,7 @@ case class BlocksApiRoute(settings: RestAPISettings, commonApi: CommonBlocksApi,
       require(lowerTimestamp <= target)
 
       val averageBlockTime = (upperTimestamp - lowerTimestamp) / (upperBound - lowerBound).max(1)
-      val offset = {
+      val offset           = {
         val blocksBetween = ((target - lowerTimestamp) / averageBlockTime).toInt
         blocksBetween
       }
@@ -166,7 +166,7 @@ object BlocksApiRoute {
   }
 
   private def transactionField(blockVersion: Byte, transactions: Seq[(TxMeta, Transaction)]): JsObject = Json.obj(
-    "fee" -> transactions.map(_._2.assetFee).collect { case (Dcc, feeAmt) => feeAmt }.sum,
+    "fee"          -> transactions.map(_._2.assetFee).collect { case (Dcc, feeAmt) => feeAmt }.sum,
     "transactions" -> JsArray(transactions.map { case (tm, transaction) =>
       transaction.json() ++ TransactionJsonSerializer.applicationStatus(blockVersion >= Block.ProtoBlockVersion, tm.status)
     })

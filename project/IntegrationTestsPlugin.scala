@@ -38,7 +38,7 @@ object IntegrationTestsPlugin extends AutoPlugin {
           Tests.Argument(TestFrameworks.ScalaTest, args: _*)
         },
         parallelExecution := true,
-        testGrouping := {
+        testGrouping      := {
           // ffs, sbt!
           // https://github.com/sbt/sbt/issues/3266
           val javaHomeValue     = javaHome.value

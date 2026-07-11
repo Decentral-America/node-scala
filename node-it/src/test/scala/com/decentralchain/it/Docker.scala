@@ -65,7 +65,7 @@ class Docker(
       .setRequestTimeout(JDuration.ofSeconds(10))
   )
 
-  private val dockerConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()
+  private val dockerConfig     = DefaultDockerClientConfig.createDefaultConfigBuilder().build()
   private val dockerHttpClient = new ApacheDockerHttpClient.Builder()
     .dockerHost(dockerConfig.getDockerHost)
     .build()
@@ -114,10 +114,7 @@ class Docker(
       try {
         network match {
           case Some(n) =>
-            val ipam = n
-              .getIpam
-              .getConfig
-              .asScala
+            val ipam = n.getIpam.getConfig.asScala
               .map(n => s"subnet=${n.getSubnet}, ip range=${n.getIpRange}")
               .mkString(", ")
             log.info(s"Network ${n.getName} (id: ${n.getId}) is created for $tag, ipam: $ipam")
@@ -132,7 +129,8 @@ class Docker(
             val ipam = new Network.Ipam()
               .withDriver("default")
               .withConfig(ipamConfig)
-            val r = client.createNetworkCmd()
+            val r = client
+              .createNetworkCmd()
               .withName(networkName)
               .withIpam(ipam)
               .withCheckDuplicate(true)
@@ -184,7 +182,7 @@ class Docker(
         _              <- node.connect(address)
         _              <- Future(blocking(Thread.sleep(1.seconds.toMillis)))
         connectedPeers <- node.connectedPeers
-        _ <- {
+        _              <- {
           val connectedAddresses = connectedPeers.map(_.address.replaceAll("""^.*/([\d\.]+).+$""", "$1")).sorted
           log.debug(s"Looking for ${address.getHostName} in $connectedAddresses")
           if (connectedAddresses.contains(address.getHostName)) Future.successful(())
@@ -207,7 +205,7 @@ class Docker(
 
   private def startNodeInternal(nodeConfig: Config, autoConnect: Boolean = true): DockerNode =
     try {
-      val nodeName = nodeConfig.getString("dcc.network.node-name")
+      val nodeName       = nodeConfig.getString("dcc.network.node-name")
       val peersOverrides = if (autoConnect) {
         val otherAddrs = peersFor(nodeName)
 
@@ -233,7 +231,7 @@ class Docker(
       val nodeNumber = nodeName.replace("node", "").toInt
       val ip         = ipForNode(nodeNumber)
 
-      val javaOptions = Option(System.getenv("CONTAINER_JAVA_OPTS")).getOrElse("")
+      val javaOptions             = Option(System.getenv("CONTAINER_JAVA_OPTS")).getOrElse("")
       val configOverrides: String = {
         val ntpServer    = Option(System.getenv("NTP_SERVER")).fold("")(x => s"-Ddcc.ntp-server=$x ")
         val maxCacheSize = Option(System.getenv("MAX_CACHE_SIZE")).fold("")(x => s"-Ddcc.max-cache-size=$x ")
@@ -259,7 +257,8 @@ class Docker(
         portBindings.bind(ExposedPort.tcp(internalDebuggerPort), Ports.Binding.bindPort(debuggerPort))
       }
 
-      val hostConfig = HostConfig.newHostConfig()
+      val hostConfig = HostConfig
+        .newHostConfig()
         .withPortBindings(portBindings)
         .withPublishAllPorts(true)
         .withNetworkMode(dccNetwork.getName)
@@ -271,6 +270,12 @@ class Docker(
 
       val exposedPorts = new java.util.ArrayList[ExposedPort]()
       exposedPorts.add(ExposedPort.tcp(internalDebuggerPort))
+      // Publish the ports the node actually listens on per its resolved config, rather than relying on
+      // the image's EXPOSE matching. The base application.conf uses dcc.network.port = 6863 while the
+      // Dockerfile EXPOSEs 6868; without this, withPublishAllPorts never binds the real P2P port and
+      // NodeInfo.hostNetworkAddress NPEs. Reading them from actualConfig keeps host + container in sync.
+      exposedPorts.add(ExposedPort.tcp(networkPort.toInt))
+      exposedPorts.add(ExposedPort.tcp(actualConfig.getInt("dcc.rest-api.port")))
       if (Try(nodeConfig.getStringList("dcc.extensions").contains("com.decentralchain.events.BlockchainUpdates")).getOrElse(false)) {
         exposedPorts.add(ExposedPort.tcp(6881))
       }
@@ -284,7 +289,8 @@ class Docker(
         )
 
         log.debug(s"Creating container $containerName at $ip with options: $javaOptions")
-        val r = client.createContainerCmd(imageName)
+        val r = client
+          .createContainerCmd(imageName)
           .withName(containerName)
           .withExposedPorts(exposedPorts)
           .withHostConfig(hostConfig)
@@ -295,16 +301,20 @@ class Docker(
       }
 
       // Reassign to specific IP (docker-java doesn't support NetworkingConfig on create)
-      client.disconnectFromNetworkCmd()
+      client
+        .disconnectFromNetworkCmd()
         .withContainerId(containerId)
         .withNetworkId(dccNetwork.getId)
         .exec()
-      client.connectToNetworkCmd()
+      client
+        .connectToNetworkCmd()
         .withContainerId(containerId)
         .withNetworkId(dccNetwork.getId)
-        .withContainerNetwork(new ContainerNetwork()
-          .withIpv4Address(ip)
-          .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip)))
+        .withContainerNetwork(
+          new ContainerNetwork()
+            .withIpv4Address(ip)
+            .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip))
+        )
         .exec()
 
       client.startContainerCmd(containerId).exec()
@@ -325,8 +335,25 @@ class Docker(
     // assume test nodes always have an open port
     val networkPort = settings.networkSettings.derivedBindAddress.get.getPort
 
-    val containerInfo  = inspectContainer(containerId)
-    val dccIpAddress = containerInfo.getNetworkSettings.getNetworks.get(dccNetwork.getName).getIpAddress
+    // Host port bindings are populated by Docker shortly AFTER the container starts, and with
+    // withPublishAllPorts each published port's host binding can appear a beat apart. The first
+    // inspect (right after startContainer) may return no bindings — or only some — which used to
+    // NPE in NodeInfo.externalPort. Wait until BOTH ports NodeInfo reads (REST + network) are bound.
+    def isBound(info: com.github.dockerjava.api.command.InspectContainerResponse, port: Int): Boolean =
+      Option(info.getNetworkSettings.getPorts.getBindings.get(ExposedPort.tcp(port))).exists(_.nonEmpty)
+
+    @tailrec def awaitPortBindings(attempt: Int): com.github.dockerjava.api.command.InspectContainerResponse = {
+      val info = inspectContainer(containerId)
+      if ((isBound(info, restApiPort) && isBound(info, networkPort)) || attempt >= 40) info
+      else {
+        log.debug(s"Container $containerId ports $restApiPort/$networkPort not fully bound yet, retry")
+        Thread.sleep(500)
+        awaitPortBindings(attempt + 1)
+      }
+    }
+
+    val containerInfo = awaitPortBindings(0)
+    val dccIpAddress  = containerInfo.getNetworkSettings.getNetworks.get(dccNetwork.getName).getIpAddress
 
     NodeInfo(restApiPort, networkPort, dccIpAddress, containerInfo.getNetworkSettings.getPorts)
   }
@@ -394,7 +421,7 @@ class Docker(
 
       // Docker do not allow updating ENV https://github.com/moby/moby/issues/8838 :(
       log.debug("Set new config directly in the entrypoint.sh script")
-      val shPath = "/usr/share/dcc/bin/entrypoint.sh"
+      val shPath                   = "/usr/share/dcc/bin/entrypoint.sh"
       val scriptCmd: Array[String] =
         Array("sh", "-c", s"sed -i 's|$${JAVA_OPTS}|$${JAVA_OPTS} $renderedConfig|' $shPath && cat $shPath")
 
@@ -494,7 +521,7 @@ class Docker(
         // generic <I extends ArchiveInputStream<?>> I resolved from the call-site
         // expected type — Scala has no expected type here without a hint.
         val archiveStream = new ArchiveStreamFactory().createArchiveInputStream[TarArchiveInputStream](ArchiveStreamFactory.TAR, profilerDirStream)
-        val snapshotFile = Iterator
+        val snapshotFile  = Iterator
           .continually(Option(archiveStream.getNextEntry))
           .takeWhile(_.nonEmpty)
           .collectFirst {
@@ -526,7 +553,8 @@ class Docker(
 
   private def disconnectFromNetwork(containerId: String): Unit = {
     log.info(s"Trying to disconnect container $containerId from network ...")
-    client.disconnectFromNetworkCmd()
+    client
+      .disconnectFromNetworkCmd()
       .withContainerId(containerId)
       .withNetworkId(dccNetwork.getId)
       .exec()
@@ -563,13 +591,16 @@ class Docker(
   private def connectToNetwork(node: DockerNode): Unit = {
     log.info(s"Trying to connect node $node to network ...")
     val nodeNumber = node.name.replace("node", "").toInt
-    val ip = ipForNode(nodeNumber)
-    client.connectToNetworkCmd()
+    val ip         = ipForNode(nodeNumber)
+    client
+      .connectToNetworkCmd()
       .withContainerId(node.containerId)
       .withNetworkId(dccNetwork.getId)
-      .withContainerNetwork(new ContainerNetwork()
-        .withIpv4Address(ip)
-        .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip)))
+      .withContainerNetwork(
+        new ContainerNetwork()
+          .withIpv4Address(ip)
+          .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip))
+      )
       .exec()
 
     node.nodeInfo = getNodeInfo(node.containerId, node.settings)
@@ -602,7 +633,7 @@ object Docker {
   private val jsonMapper  = new ObjectMapper
   private val propsMapper = new JavaPropsMapper
 
-  val configTemplate: Config   = parseResources("template.conf")
+  val configTemplate: Config = parseResources("template.conf")
   val initialDccAmount: Long = configTemplate.getLong("dcc.blockchain.custom.genesis.initial-balance")
 
   def genesisOverride(featuresConfig: Option[Config] = None): Config = {
@@ -626,8 +657,8 @@ object Docker {
                                             |  signature = null # To calculate it in Block.genesis
                                             |}""".stripMargin)
 
-    val genesisConfig = timestampOverrides.withFallback(configTemplate)
-    val gs            = ConfigSource.fromConfig(genesisConfig).at("dcc.blockchain.custom.genesis").loadOrThrow[GenesisSettings]
+    val genesisConfig          = timestampOverrides.withFallback(configTemplate)
+    val gs                     = ConfigSource.fromConfig(genesisConfig).at("dcc.blockchain.custom.genesis").loadOrThrow[GenesisSettings]
     val featuresConfigAdjusted = featuresConfig
       .map(_.withFallback(configTemplate))
       .getOrElse(configTemplate)

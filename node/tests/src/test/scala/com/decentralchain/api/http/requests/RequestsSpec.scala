@@ -37,7 +37,7 @@ class RequestsSpec extends FreeSpec with OptionValues {
           val request = json.as[TransferRequest]
           val tx      = request.toTxFrom(sender.publicKey).explicitGet()
 
-            request.proofs.value should be(tx.proofs)
+          request.proofs.value should be(tx.proofs)
         }
       }
 

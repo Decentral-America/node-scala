@@ -101,7 +101,7 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
             withDomain(NG) { d =>
               d.appendBlock(genesis)
               d.appendBlock(transfer1)
-              val block = TestBlock.create(defaultSigner, Seq(transfer2)).block
+              val block                                               = TestBlock.create(defaultSigner, Seq(transfer2)).block
               val BlockDiffer.Result(_, _, _, _, detailedSnapshot, _) =
                 BlockDiffer
                   .fromBlock(d.blockchain, Some(d.lastBlock), block, None, MiningConstraint.Unlimited, block.header.generationSignature)

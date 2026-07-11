@@ -54,9 +54,9 @@ class EstimationSwitchTest extends PropSpec with WithDomain with TransactionGenB
       d.appendBlock(setScript(), invoke())
       d.liquidSnapshot.accountScripts.head._2.get.complexitiesByEstimator(3)("default") shouldBe 1
       d.liquidSnapshot.scriptsComplexity shouldBe 1
-    // condition decreased by 1,
-    // accessing to ref ([] = nil) decreased by 1,
-    // != decreased by 4 (because of using predefined user function complexities)
+      // condition decreased by 1,
+      // accessing to ref ([] = nil) decreased by 1,
+      // != decreased by 4 (because of using predefined user function complexities)
     }
   }
 

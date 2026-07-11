@@ -95,7 +95,7 @@ class EvaluatorV2(
       } yield result
 
     def doEvaluateNativeFunction(fc: FUNCTION_CALL, function: NativeFunction[Environment], limit: Int, cost: Int): EvaluationResult[Int] = {
-      val args = fc.args.asInstanceOf[List[EVALUATED]]
+      val args       = fc.args.asInstanceOf[List[EVALUATED]]
       val evaluation = function.ev match {
         case f: Extended[Environment] =>
           f.evaluate[Id](ctx.ec.environment, args, limit - cost).map { case (result, unusedComplexity) =>
@@ -140,7 +140,7 @@ class EvaluatorV2(
         .get(fc.function)
         .map(_.asInstanceOf[UserFunction[Environment]])
         .map { f =>
-          val func = FUNC(f.name, f.args.toList, f.ev[Id](ctx.ec.environment, startArgs))
+          val func               = FUNC(f.name, f.args.toList, f.ev[Id](ctx.ec.environment, startArgs))
           val precalculatedLimit =
             if (newMode) {
               val cost = f.costByLibVersion(stdLibVersion).toInt

@@ -165,7 +165,7 @@ class BlockchainUpdaterImpl(
         .flatMap { activatedAt =>
           val mayBeReward     = lastBlockReward
           val mayBeTimeToVote = nextHeight - activatedAt
-          val modifiedTerm = if (rocksdb.isFeatureActivated(BlockchainFeatures.CappedReward, this.height)) {
+          val modifiedTerm    = if (rocksdb.isFeatureActivated(BlockchainFeatures.CappedReward, this.height)) {
             settings.termAfterCappedRewardFeature
           } else {
             settings.term
@@ -337,7 +337,7 @@ class BlockchainUpdaterImpl(
 
                       val prevHitSource                     = ng.hitSource
                       val liquidSnapshotWithCancelledLeases = ng.cancelExpiredLeases(referencedLiquidSnapshot)
-                      val referencedBlockchain = SnapshotBlockchain(
+                      val referencedBlockchain              = SnapshotBlockchain(
                         rocksdb,
                         liquidSnapshotWithCancelledLeases,
                         referencedForgedBlock,
@@ -468,7 +468,7 @@ class BlockchainUpdaterImpl(
 
   private def collectLeasesToCancel(newHeight: Height): Map[ByteStr, LeaseDetails] =
     if (rocksdb.isFeatureActivated(BlockchainFeatures.LeaseExpiration, newHeight.toInt)) {
-      val toHeight = newHeight - rocksdb.settings.functionalitySettings.leaseExpiration
+      val toHeight   = newHeight - rocksdb.settings.functionalitySettings.leaseExpiration
       val fromHeight = rocksdb.featureActivationHeight(BlockchainFeatures.LeaseExpiration) match {
         case Some(`newHeight`) =>
           log.trace(s"Collecting leases created up till height $toHeight")
@@ -508,7 +508,7 @@ class BlockchainUpdaterImpl(
       case maybeNg =>
         for {
           height <- rocksdb.heightOf(blockId).toRight(GenericError(s"No such block $blockId"))
-          _ <- Either.cond(
+          _      <- Either.cond(
             Height(height) >= rocksdb.safeRollbackHeight,
             (),
             GenericError(s"Rollback is possible only to the block at the height ${rocksdb.safeRollbackHeight}")
@@ -518,7 +518,7 @@ class BlockchainUpdaterImpl(
         } yield {
           ngState = None
           val liquidBlockData = maybeNg.map { ng =>
-            val block = ng.bestLiquidBlock
+            val block    = ng.bestLiquidBlock
             val snapshot = if (dccSettings.enableLightMode && block.transactionData.nonEmpty) {
               Some(
                 BlockSnapshot(
@@ -569,7 +569,7 @@ class BlockchainUpdaterImpl(
             Left(MicroBlockAppendError("It doesn't reference last known microBlock(which exists)", microBlock))
           case _ =>
             for {
-              _ <- microBlock.signaturesValid()
+              _                                         <- microBlock.signaturesValid()
               (totalBlock, referencedComputedStateHash) <- ng
                 .snapshotOf(microBlock.reference)
                 .toRight(GenericError(s"No referenced block exists: $microBlock"))
@@ -586,7 +586,7 @@ class BlockchainUpdaterImpl(
               _ <- Either.raiseUnless(totalBlock.signatureValid()) {
                 MicroBlockAppendError("Invalid total block signature", microBlock)
               }
-              b <- appender.validateFinalizationVoting(totalBlock, rocksdb, ng.finalizationState.generatorSet)
+              b                 <- appender.validateFinalizationVoting(totalBlock, rocksdb, ng.finalizationState.generatorSet)
               blockDifferResult <- BlockDiffer.fromMicroBlock(
                 this,
                 rocksdb.lastBlockTimestamp,
@@ -657,7 +657,7 @@ class BlockchainUpdaterImpl(
     activatedFeatures.get(BlockchainFeatures.BlockReward.id) match {
       case Some(activatedAt) if activatedAt <= Height(height) =>
         ngState match {
-          case None => rocksdb.blockRewardVotes(height)
+          case None     => rocksdb.blockRewardVotes(height)
           case Some(ng) =>
             val innerVotes = rocksdb.blockRewardVotes(height)
             val modifyTerm = activatedFeatures.get(BlockchainFeatures.CappedReward.id).exists(_ <= Height(height))

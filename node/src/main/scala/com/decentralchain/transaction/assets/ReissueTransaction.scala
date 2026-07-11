@@ -41,7 +41,7 @@ object ReissueTransaction extends TransactionParser {
 
   override val typeId: TxType = 5: Byte
 
-  implicit val validator: TxValidator[ReissueTransaction] = ReissueTxValidator
+  implicit val validator: TxValidator[ReissueTransaction]                               = ReissueTxValidator
   implicit def sign(tx: ReissueTransaction, privateKey: PrivateKey): ReissueTransaction =
     tx.copy(proofs = Proofs(crypto.sign(privateKey, tx.bodyBytes())))
 

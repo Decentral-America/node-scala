@@ -99,7 +99,7 @@ object InvokeScriptDiff {
           _ <- ensurePaymentsAreNotNegative(blockchain, tx, invoker, dAppAddress)
 
           directives: DirectiveSet <- traced(DirectiveSet(version, Account, DAppType).leftMap(GenericError.apply))
-          payments <- traced(AttachedPaymentExtractor.extractPayments(tx, version, blockchain, DAppTarget).leftMap(GenericError.apply))
+          payments        <- traced(AttachedPaymentExtractor.extractPayments(tx, version, blockchain, DAppTarget).leftMap(GenericError.apply))
           checkedPayments <- traced {
             payments.payments.toList
               .traverseFilter {
@@ -112,10 +112,10 @@ object InvokeScriptDiff {
               .leftMap(GenericError(_))
           }
           complexityAfterPaymentsTraced = checkedPayments.foldLeft(TracedResult(Right(remainingComplexity): TxValidationError.Validation[Int])) {
-            case (error @ TracedResult(Left(_), _, _), _) => error
+            case (error @ TracedResult(Left(_), _, _), _)                                        => error
             case (TracedResult(Right(nextRemainingComplexity), _, _), (script, amount, assetId)) =>
               val usedComplexity = totalComplexityLimit - nextRemainingComplexity
-              val pseudoTx = if (blockchain.isFeatureActivated(BlockchainFeatures.RideV6)) {
+              val pseudoTx       = if (blockchain.isFeatureActivated(BlockchainFeatures.RideV6)) {
                 InvokePseudoTx(
                   tx.txId,
                   tx.timestamp,
@@ -169,210 +169,211 @@ object InvokeScriptDiff {
           tthis = RideRecipient.Address(ByteStr(dAppAddress.bytes))
           input <- traced(buildThisValue(tx.root, blockchain, directives, tthis).leftMap(GenericError(_)))
 
-          result <- for {
-            paymentsPart <- traced(InvokeDiffsCommon.paymentsPart(blockchain, tx, tx.dApp, Map()))
-            (
-              resultSnapshot,
-              (scriptResult, log),
-              availableActions,
-              availablePayments
-            ) <- {
-              stats.invokedScriptExecution.measureForType(TransactionType.InvokeScript)({
-                val height = blockchain.height
-                val invocation = ContractEvaluator.Invocation(
-                  tx.funcCall,
-                  RideRecipient.Address(ByteStr(invoker.bytes)),
-                  ByteStr(tx.sender.arr),
-                  RideRecipient.Address(ByteStr(tx.root.sender.toAddress.bytes)),
-                  ByteStr(tx.root.sender.arr),
-                  payments,
-                  tx.txId,
-                  tx.root.fee,
-                  tx.root.feeAssetId.compatId
-                )
-                val (paymentsPartInsideDApp, paymentsPartToResolve) =
-                  if (version < V5) (StateSnapshot.empty, paymentsPart) else (paymentsPart, StateSnapshot.empty)
-                val environment = wrapDAppEnv(
-                  new DAppEnvironment(
-                    AddressScheme.current.chainId,
-                    Coeval.evalOnce(input),
-                    Coeval(height),
-                    blockchain,
-                    tthis,
-                    directives,
-                    rootVersion,
-                    tx.root,
-                    tx.dApp,
-                    pk,
-                    calledAddresses,
-                    limitedExecution,
-                    enableExecutionLog,
-                    totalComplexityLimit,
-                    remainingCalls - 1,
-                    remainingActions,
-                    remainingPayments - tx.payments.size,
-                    paymentsPartInsideDApp,
-                    invocationRoot,
-                    wrapDAppEnv
-                  )
-                )
-                for {
-                  _ <-
-                    if (
-                      blockchain.height >= blockchain.settings.functionalitySettings.paymentsCheckHeight && blockchain
-                        .isFeatureActivated(BlockchainFeatures.LightNode)
-                    )
-                      validateIntermediateBalances(blockchain, paymentsPartInsideDApp, 0, Nil)
-                    else traced(Right(()))
-                  evaluated <- CoevalR(
-                    evaluateV2(
-                      version,
-                      blockchain,
-                      contract,
-                      dAppAddress,
-                      invocation,
-                      environment,
-                      complexityAfterPayments,
-                      remainingComplexity,
-                      enableExecutionLog
-                    ).map(TracedResult(_))
-                  )
-                  resultSnapshot = environment.currentSnapshot |+| paymentsPartToResolve
-                } yield (
-                  resultSnapshot,
-                  evaluated,
-                  environment.availableActions,
-                  environment.availablePayments
-                )
-              })
-            }
-            _               = invocationRoot.setLog(log)
-            spentComplexity = remainingComplexity - scriptResult.unusedComplexity.max(0)
-
-            _ <-
-              if (blockchain.isFeatureActivated(LightNode))
-                traced(Right(()))
-              else
-                validateIntermediateBalances(blockchain, resultSnapshot, spentComplexity, log)
-
-            doProcessActions = (actions: List[CallableAction], unusedComplexity: Int) => {
-              val storingComplexity = complexityAfterPayments - unusedComplexity
-              CoevalR(
-                Coeval.now(
-                  InvokeDiffsCommon.processActions(
-                    StructuredCallableActions(actions, blockchain),
-                    version,
-                    rootVersion,
-                    dAppAddress,
-                    pk,
-                    storingComplexity,
-                    tx,
-                    SnapshotBlockchain(blockchain, resultSnapshot),
-                    blockTime,
-                    isSyncCall = true,
-                    limitedExecution,
-                    totalComplexityLimit,
-                    Seq(),
-                    enableExecutionLog,
-                    log
-                  )
-                )
-              )
-            }
-
-            process = {
+          result <-
+            for {
+              paymentsPart <- traced(InvokeDiffsCommon.paymentsPart(blockchain, tx, tx.dApp, Map()))
               (
-                  actions: List[CallableAction],
-                  unusedComplexity: Int,
-                  actionsCount: Int,
-                  balanceActionsCount: Int,
-                  assetActionsCount: Int,
-                  dataCount: Int,
-                  dataSize: Int,
-                  ret: EVALUATED
-              ) =>
-                for {
-                  _ <- CoevalR(
-                    Coeval(
-                      InvokeDiffsCommon.checkCallResultLimits(
+                resultSnapshot,
+                (scriptResult, log),
+                availableActions,
+                availablePayments
+              ) <- {
+                stats.invokedScriptExecution.measureForType(TransactionType.InvokeScript)({
+                  val height     = blockchain.height
+                  val invocation = ContractEvaluator.Invocation(
+                    tx.funcCall,
+                    RideRecipient.Address(ByteStr(invoker.bytes)),
+                    ByteStr(tx.sender.arr),
+                    RideRecipient.Address(ByteStr(tx.root.sender.toAddress.bytes)),
+                    ByteStr(tx.root.sender.arr),
+                    payments,
+                    tx.txId,
+                    tx.root.fee,
+                    tx.root.feeAssetId.compatId
+                  )
+                  val (paymentsPartInsideDApp, paymentsPartToResolve) =
+                    if (version < V5) (StateSnapshot.empty, paymentsPart) else (paymentsPart, StateSnapshot.empty)
+                  val environment = wrapDAppEnv(
+                    new DAppEnvironment(
+                      AddressScheme.current.chainId,
+                      Coeval.evalOnce(input),
+                      Coeval(height),
+                      blockchain,
+                      tthis,
+                      directives,
+                      rootVersion,
+                      tx.root,
+                      tx.dApp,
+                      pk,
+                      calledAddresses,
+                      limitedExecution,
+                      enableExecutionLog,
+                      totalComplexityLimit,
+                      remainingCalls - 1,
+                      remainingActions,
+                      remainingPayments - tx.payments.size,
+                      paymentsPartInsideDApp,
+                      invocationRoot,
+                      wrapDAppEnv
+                    )
+                  )
+                  for {
+                    _ <-
+                      if (
+                        blockchain.height >= blockchain.settings.functionalitySettings.paymentsCheckHeight && blockchain
+                          .isFeatureActivated(BlockchainFeatures.LightNode)
+                      )
+                        validateIntermediateBalances(blockchain, paymentsPartInsideDApp, 0, Nil)
+                      else traced(Right(()))
+                    evaluated <- CoevalR(
+                      evaluateV2(
                         version,
-                        rootVersion,
                         blockchain,
-                        remainingComplexity - unusedComplexity,
-                        log,
-                        actionsCount,
-                        balanceActionsCount,
-                        assetActionsCount,
-                        dataCount,
-                        dataSize,
-                        availableActions
+                        contract,
+                        dAppAddress,
+                        invocation,
+                        environment,
+                        complexityAfterPayments,
+                        remainingComplexity,
+                        enableExecutionLog
+                      ).map(TracedResult(_))
+                    )
+                    resultSnapshot = environment.currentSnapshot |+| paymentsPartToResolve
+                  } yield (
+                    resultSnapshot,
+                    evaluated,
+                    environment.availableActions,
+                    environment.availablePayments
+                  )
+                })
+              }
+              _               = invocationRoot.setLog(log)
+              spentComplexity = remainingComplexity - scriptResult.unusedComplexity.max(0)
+
+              _ <-
+                if (blockchain.isFeatureActivated(LightNode))
+                  traced(Right(()))
+                else
+                  validateIntermediateBalances(blockchain, resultSnapshot, spentComplexity, log)
+
+              doProcessActions = (actions: List[CallableAction], unusedComplexity: Int) => {
+                val storingComplexity = complexityAfterPayments - unusedComplexity
+                CoevalR(
+                  Coeval.now(
+                    InvokeDiffsCommon.processActions(
+                      StructuredCallableActions(actions, blockchain),
+                      version,
+                      rootVersion,
+                      dAppAddress,
+                      pk,
+                      storingComplexity,
+                      tx,
+                      SnapshotBlockchain(blockchain, resultSnapshot),
+                      blockTime,
+                      isSyncCall = true,
+                      limitedExecution,
+                      totalComplexityLimit,
+                      Seq(),
+                      enableExecutionLog,
+                      log
+                    )
+                  )
+                )
+              }
+
+              process = {
+                (
+                    actions: List[CallableAction],
+                    unusedComplexity: Int,
+                    actionsCount: Int,
+                    balanceActionsCount: Int,
+                    assetActionsCount: Int,
+                    dataCount: Int,
+                    dataSize: Int,
+                    ret: EVALUATED
+                ) =>
+                  for {
+                    _ <- CoevalR(
+                      Coeval(
+                        InvokeDiffsCommon.checkCallResultLimits(
+                          version,
+                          rootVersion,
+                          blockchain,
+                          remainingComplexity - unusedComplexity,
+                          log,
+                          actionsCount,
+                          balanceActionsCount,
+                          assetActionsCount,
+                          dataCount,
+                          dataSize,
+                          availableActions
+                        )
                       )
                     )
+                    snapshot <- doProcessActions(actions, unusedComplexity)
+                  } yield (
+                    snapshot,
+                    ret,
+                    availableActions.decrease(actionsCount, balanceActionsCount, assetActionsCount, dataCount, dataSize),
+                    availablePayments
                   )
-                  snapshot <- doProcessActions(actions, unusedComplexity)
-                } yield (
-                  snapshot,
-                  ret,
-                  availableActions.decrease(actionsCount, balanceActionsCount, assetActionsCount, dataCount, dataSize),
-                  availablePayments
-                )
-            }
+              }
 
-            (
-              actionsSnapshot,
+              (
+                actionsSnapshot,
+                evaluated,
+                remainingActions1,
+                remainingPayments1
+              ) <-
+                scriptResult match {
+                  case ScriptResultV3(dataItems, transfers, unusedComplexity) =>
+                    val dataEntries  = dataItems.map(InvokeDiffsCommon.dataItemToEntry)
+                    val dataCount    = dataItems.length
+                    val dataSize     = DataTxValidator.invokeWriteSetSize(blockchain, dataEntries)
+                    val actionsCount = transfers.length
+                    process(dataItems ::: transfers, unusedComplexity, actionsCount, actionsCount, 0, dataCount, dataSize, unit)
+                  case ScriptResultV4(actions, unusedComplexity, ret) =>
+                    val dataEntries         = actions.collect { case d: DataOp => InvokeDiffsCommon.dataItemToEntry(d) }
+                    val dataCount           = dataEntries.length
+                    val balanceActionsCount = actions.collect {
+                      case tr: AssetTransfer => tr
+                      case l: Lease          => l
+                      case lc: LeaseCancel   => lc
+                    }.length
+                    val assetActionsCount = actions.length - dataCount - balanceActionsCount
+                    val dataSize          = DataTxValidator.invokeWriteSetSize(blockchain, dataEntries)
+                    val actionsCount      = actions.length - dataCount
+                    process(actions, unusedComplexity, actionsCount, balanceActionsCount, assetActionsCount, dataCount, dataSize, ret)
+                  case _: IncompleteResult if limitedExecution =>
+                    doProcessActions(Nil, 0).map(
+                      (
+                        _,
+                        unit,
+                        availableActions,
+                        availablePayments
+                      )
+                    )
+                  case r: IncompleteResult =>
+                    val usedComplexity = remainingComplexity - r.unusedComplexity
+                    val error          =
+                      FailedTransactionError.dAppExecution(s"Invoke complexity limit = $totalComplexityLimit is exceeded", usedComplexity, log)
+                    traced(error.asLeft[(StateSnapshot, EVALUATED, ActionLimits, Int)])
+                }
+              resultSnapshot <- traced(
+                (resultSnapshot.setScriptsComplexity(0) |+| actionsSnapshot.addScriptsComplexity(paymentsComplexity)).asRight
+              )
+              _ <-
+                if (blockchain.isFeatureActivated(LightNode))
+                  traced(Right(()))
+                else
+                  validateIntermediateBalances(blockchain, resultSnapshot, resultSnapshot.scriptsComplexity, log)
+              _ = invocationRoot.setResult(scriptResult)
+            } yield (
+              resultSnapshot,
               evaluated,
               remainingActions1,
               remainingPayments1
-            ) <-
-              scriptResult match {
-                case ScriptResultV3(dataItems, transfers, unusedComplexity) =>
-                  val dataEntries  = dataItems.map(InvokeDiffsCommon.dataItemToEntry)
-                  val dataCount    = dataItems.length
-                  val dataSize     = DataTxValidator.invokeWriteSetSize(blockchain, dataEntries)
-                  val actionsCount = transfers.length
-                  process(dataItems ::: transfers, unusedComplexity, actionsCount, actionsCount, 0, dataCount, dataSize, unit)
-                case ScriptResultV4(actions, unusedComplexity, ret) =>
-                  val dataEntries = actions.collect { case d: DataOp => InvokeDiffsCommon.dataItemToEntry(d) }
-                  val dataCount   = dataEntries.length
-                  val balanceActionsCount = actions.collect {
-                    case tr: AssetTransfer => tr
-                    case l: Lease          => l
-                    case lc: LeaseCancel   => lc
-                  }.length
-                  val assetActionsCount = actions.length - dataCount - balanceActionsCount
-                  val dataSize          = DataTxValidator.invokeWriteSetSize(blockchain, dataEntries)
-                  val actionsCount      = actions.length - dataCount
-                  process(actions, unusedComplexity, actionsCount, balanceActionsCount, assetActionsCount, dataCount, dataSize, ret)
-                case _: IncompleteResult if limitedExecution =>
-                  doProcessActions(Nil, 0).map(
-                    (
-                      _,
-                      unit,
-                      availableActions,
-                      availablePayments
-                    )
-                  )
-                case r: IncompleteResult =>
-                  val usedComplexity = remainingComplexity - r.unusedComplexity
-                  val error =
-                    FailedTransactionError.dAppExecution(s"Invoke complexity limit = $totalComplexityLimit is exceeded", usedComplexity, log)
-                  traced(error.asLeft[(StateSnapshot, EVALUATED, ActionLimits, Int)])
-              }
-            resultSnapshot <- traced(
-              (resultSnapshot.setScriptsComplexity(0) |+| actionsSnapshot.addScriptsComplexity(paymentsComplexity)).asRight
             )
-            _ <-
-              if (blockchain.isFeatureActivated(LightNode))
-                traced(Right(()))
-              else
-                validateIntermediateBalances(blockchain, resultSnapshot, resultSnapshot.scriptsComplexity, log)
-            _ = invocationRoot.setResult(scriptResult)
-          } yield (
-            resultSnapshot,
-            evaluated,
-            remainingActions1,
-            remainingPayments1
-          )
         } yield result
 
       case Some(AccountScriptInfo(_, _, _, _)) => traced(InvokeDiffsCommon.callExpressionError)
@@ -416,7 +417,7 @@ object InvokeScriptDiff {
             reject.copy(skipInvokeComplexity = false)
           case (error, unusedComplexity, log) =>
             val usedComplexity = startComplexityLimit - unusedComplexity
-            val msg = error match {
+            val msg            = error match {
               case CommonError(_, Some(fte: FailedTransactionError)) => fte.error.getOrElse(error.message)
               case _                                                 => error.message
             }
@@ -426,9 +427,9 @@ object InvokeScriptDiff {
             .checkScriptResultFields(blockchain, r)
             .leftMap[ValidationError]({
               case reject: FailOrRejectError => reject
-              case error =>
+              case error                     =>
                 val usedComplexity = startComplexityLimit - r.unusedComplexity
-                val msg = error match {
+                val msg            = error match {
                   case fte: FailedTransactionError => fte.error.getOrElse(error.toString)
                   case _                           => error.toString
                 }

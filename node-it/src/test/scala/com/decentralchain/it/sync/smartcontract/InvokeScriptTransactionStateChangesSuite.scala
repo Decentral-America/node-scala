@@ -251,7 +251,7 @@ class InvokeScriptTransactionStateChangesSuite extends BaseTransactionSuite with
       SponsorFeeResponse(assetSponsoredByDApp, Some(1000))
     )
 
-    val expectedIssueNames = Seq("asset #1", "asset #2")
+    val expectedIssueNames       = Seq("asset #1", "asset #2")
     val expectedReissueResponses = Seq(
       ReissueInfoResponse(simpleAsset, isReissuable = true, 1),
       ReissueInfoResponse(assetSponsoredByDApp, isReissuable = true, 2),

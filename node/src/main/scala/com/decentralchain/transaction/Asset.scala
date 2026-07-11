@@ -18,8 +18,8 @@ object Asset {
   }
 
   object IssuedAsset {
-    private val interner                = Interners.newWeakInterner[IssuedAsset]()
-    def apply(id: ByteStr): IssuedAsset = interner.intern(new IssuedAsset(id))
+    private val interner                                                                   = Interners.newWeakInterner[IssuedAsset]()
+    def apply(id: ByteStr): IssuedAsset                                                    = interner.intern(new IssuedAsset(id))
     def fromString[T](str: String, onSuccess: IssuedAsset => T, onFailure: String => T): T =
       Base58.tryDecodeWithLimit(str) match {
         case Success(arr) if arr.length != AssetIdLength => onFailure(s"Invalid validation. Size of asset id $str not equal $AssetIdLength bytes")
@@ -40,9 +40,9 @@ object Asset {
     JsString(asset.id.toString)
   }
 
-  implicit val assetIdReads: Reads[Asset] = assetReads(false)
+  implicit val assetIdReads: Reads[Asset]   = assetReads(false)
   implicit val assetIdWrites: Writes[Asset] = Writes {
-    case Dcc           => JsNull
+    case Dcc             => JsNull
     case IssuedAsset(id) => JsString(id.toString)
   }
 
@@ -64,22 +64,22 @@ object Asset {
 
   implicit class AssetIdOps(private val ai: Asset) extends AnyVal {
     def byteRepr: Array[Byte] = ai match {
-      case Dcc           => Array(0: Byte)
+      case Dcc             => Array(0: Byte)
       case IssuedAsset(id) => (1: Byte) +: id.arr
     }
 
     def compatId: Option[ByteStr] = ai match {
-      case Dcc           => None
+      case Dcc             => None
       case IssuedAsset(id) => Some(id)
     }
 
     def maybeBase58Repr: Option[String] = ai match {
-      case Dcc           => None
+      case Dcc             => None
       case IssuedAsset(id) => Some(id.toString)
     }
 
     def fold[A](onDcc: => A)(onAsset: IssuedAsset => A): A = ai match {
-      case Dcc                  => onDcc
+      case Dcc                    => onDcc
       case asset @ IssuedAsset(_) => onAsset(asset)
     }
   }

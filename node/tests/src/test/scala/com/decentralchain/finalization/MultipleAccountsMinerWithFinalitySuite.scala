@@ -23,7 +23,7 @@ class MultipleAccountsMinerWithFinalitySuite extends BaseFinalizationSpec, TestS
   private val otherNodeAcc1     = TxHelpers.defaultSigner
   private val otherNodeAcc2Addr = TxHelpers.secondAddress
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings
     .copy(minerSettings = baseSettings.minerSettings.copy(quorum = 0, microBlockInterval = 100.millis))
     .configure(_.copy(generationPeriodLength = 2))

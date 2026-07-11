@@ -160,7 +160,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
       )
 
       val dAppAddress = byteStringAddress(dApp)
-      val issueTx = miner.broadcastInvokeScript(
+      val issueTx     = miner.broadcastInvokeScript(
         miner.keyPair,
         PBRecipients.create(dApp.toAddress),
         Some(FUNCTION_CALL(FunctionHeader.User("issue2assets"), List.empty)),
@@ -205,7 +205,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
 
     "Multiple SponsorFee is available for same asset" in {
       val lastMinSponsoredAssetFee = 10000000000L
-      val dApp = createDApp(
+      val dApp                     = createDApp(
         s"""
            | {-# STDLIB_VERSION 4 #-}
            | {-# CONTENT_TYPE DAPP #-}
@@ -231,7 +231,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
       )
 
       val dAppAddress = byteStringAddress(dApp)
-      val invokeTx = miner.broadcastInvokeScript(
+      val invokeTx    = miner.broadcastInvokeScript(
         miner.keyPair,
         PBRecipients.create(dApp.toAddress),
         Some(FUNCTION_CALL(FunctionHeader.User("issueAndMultipleSponsor"), List.empty)),
@@ -284,7 +284,7 @@ class GrpcSponsorFeeActionSuite extends AnyFreeSpec with GrpcBaseTransactionSuit
       )
 
       val dAppAddress = byteStringAddress(dApp)
-      val invokeTx =
+      val invokeTx    =
         miner.broadcastInvokeScript(
           miner.keyPair,
           PBRecipients.create(dApp.toAddress),

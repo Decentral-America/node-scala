@@ -83,8 +83,8 @@ object CommonAccountsApi {
     override def assetBalance(address: Address, asset: IssuedAsset): Long = blockchain.balance(address, asset)
 
     override def portfolio(address: Address): Observable[Seq[(IssuedAsset, Long)]] = {
-      val featureNotActivated = !blockchain.isFeatureActivated(BlockchainFeatures.ReduceNFTFee)
-      val compBlockchain      = compositeBlockchain()
+      val featureNotActivated                       = !blockchain.isFeatureActivated(BlockchainFeatures.ReduceNFTFee)
+      val compBlockchain                            = compositeBlockchain()
       def includeNft(assetId: IssuedAsset): Boolean =
         featureNotActivated || !compBlockchain.assetDescription(assetId).exists(_.nft)
 
@@ -106,7 +106,7 @@ object CommonAccountsApi {
       blockchain.accountData(address, key)
 
     override def dataStream(address: Address, regex: Option[String]): Observable[DataEntry[?]] = Observable.defer {
-      val pattern = regex.map(_.r.pattern)
+      val pattern         = regex.map(_.r.pattern)
       val entriesFromDiff = compositeBlockchain().snapshot.accountData
         .get(address)
         .fold(Array.empty[DataEntry[?]])(_.filter { case (k, _) => pattern.forall(_.matcher(k).matches()) }.values.toArray.sortBy(_.key))

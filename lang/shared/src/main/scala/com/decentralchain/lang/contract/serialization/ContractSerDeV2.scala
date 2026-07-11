@@ -36,7 +36,7 @@ object ContractSerDeV2 extends ContractSerDe {
         c.callableFuncs.foreach(cFunc => serializeAnnotatedFunction(out, cFunc.u, cFunc.annotation.invocationArgName))
 
         c.verifierFuncOpt match {
-          case None => out.writeRawByte(0)
+          case None     => out.writeRawByte(0)
           case Some(vf) =>
             out.writeRawByte(1)
             serializeAnnotatedFunction(out, vf.u, vf.annotation.invocationArgName)

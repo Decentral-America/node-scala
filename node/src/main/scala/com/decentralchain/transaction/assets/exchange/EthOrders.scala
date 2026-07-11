@@ -18,7 +18,7 @@ object EthOrders {
   def toEip712Json(order: Order): JsObject = {
     def encodeAsset(asset: Asset): String = asset match {
       case IssuedAsset(id) => id.toString
-      case Dcc           => "DCC"
+      case Dcc             => "DCC"
     }
 
     def encodeOrderType(orderType: OrderType): String = orderType match {
@@ -83,7 +83,7 @@ object EthOrders {
   }
 
   def decodeSignature(signature: Array[Byte]): SignatureData = {
-    val buffer = ByteBuffer.wrap(signature)
+    val buffer    = ByteBuffer.wrap(signature)
     val paramSize = buffer.remaining() match {
       case 129   => 64
       case 65    => 32

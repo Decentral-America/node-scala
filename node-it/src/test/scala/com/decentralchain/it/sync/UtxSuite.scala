@@ -162,7 +162,10 @@ class UtxSuite extends BaseFunSuite {
     }
 
     val startHeight = nodes.waitForHeightArise()
-    new scala.util.Random(ThreadLocalRandom.current()).shuffle(txs ++ whitelistedTxs).map(_.json()).foreach(AsyncHttpApi.NodeAsyncHttpApi(miner).signedBroadcast)
+    new scala.util.Random(ThreadLocalRandom.current())
+      .shuffle(txs ++ whitelistedTxs)
+      .map(_.json())
+      .foreach(AsyncHttpApi.NodeAsyncHttpApi(miner).signedBroadcast)
     miner.waitForEmptyUtx()
     val endHeight = miner.height
 

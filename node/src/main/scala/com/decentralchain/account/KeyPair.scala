@@ -22,9 +22,9 @@ object KeyPair {
     def toAddress(chainId: Byte): Address = kp.publicKey.toAddress(chainId)
   }
 
-  def apply(privateKey: PrivateKey): PKKeyPair = PKKeyPair(privateKey)
-  def apply(seed: ByteStr): SeedKeyPair        = SeedKeyPair(seed.arr)
-  def apply(seed: Array[Byte]): SeedKeyPair    = SeedKeyPair(seed)
+  def apply(privateKey: PrivateKey): PKKeyPair                    = PKKeyPair(privateKey)
+  def apply(seed: ByteStr): SeedKeyPair                           = SeedKeyPair(seed.arr)
+  def apply(seed: Array[Byte]): SeedKeyPair                       = SeedKeyPair(seed)
   def fromSeed(base58: String): Either[GenericError, SeedKeyPair] = Base58.tryDecodeWithLimit(base58) match {
     case Success(x) => Right(SeedKeyPair(ByteStr(x)))
     case Failure(e) => Left(GenericError(s"Unable to get a private key from the seed '$base58': ${e.getMessage}"))

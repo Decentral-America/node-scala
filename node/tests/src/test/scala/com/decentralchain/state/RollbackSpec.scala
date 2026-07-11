@@ -304,7 +304,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
         val actualDesc       = d.blockchainUpdater.assetDescription(IssuedAsset(issueTransaction.id()))
         val nameBytes        = issueTransaction.name
         val descriptionBytes = issueTransaction.description
-        val desc1 = AssetDescription(
+        val desc1            = AssetDescription(
           TransactionId(issueTransaction.id()),
           sender.publicKey,
           nameBytes,
@@ -520,7 +520,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
       ): ByteStr = {
         d.rollbackTo(parentBlockId)
 
-        val fee = 150000000L
+        val fee    = 150000000L
         val invoke =
           ss.fold[InvokeTransaction](
             TxHelpers.invoke(dApp.toAddress, func = Some(fc.function.funcName), args = fc.args, invoker = invoker, fee = fee)
@@ -846,7 +846,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
                 (None, dApp)
 
             val leaseAmount = smallFeeGen.sample.get
-            val leaseTx =
+            val leaseTx     =
               LeaseTransaction
                 .selfSigned(2.toByte, leaseSender, leaseRecipientAddress.toAddress, leaseAmount, setScript.fee.value, nextTs)
                 .explicitGet()
@@ -1126,7 +1126,7 @@ class RollbackSpec extends FreeSpec with WithDomain {
         def leases(address: Address) = d.accountsApi.activeLeases(address).toListL.runSyncUnsafe()
 
         val leaseTxs = Seq.fill(5)(lease(defaultSigner, secondAddress)) ++ Seq.fill(5)(lease(secondSigner, defaultAddress))
-        val info =
+        val info     =
           leaseTxs.map(tx =>
             LeaseInfo(tx.id(), TransactionId(tx.id()), tx.sender.toAddress, tx.recipient.asInstanceOf[Address], tx.amount.value, Height(2), Active)
           )

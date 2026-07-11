@@ -9,7 +9,7 @@ import org.github.jamm.MemoryMeter
 import pureconfig.ConfigReader
 
 class MemBlockchainDataCache(settings: Settings) {
-  private val mmeter = MemoryMeter.builder().build()
+  private val mmeter  = MemoryMeter.builder().build()
   private val backend = Caffeine
     .newBuilder()
     .softValues()

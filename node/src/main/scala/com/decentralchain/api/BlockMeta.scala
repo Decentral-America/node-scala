@@ -30,7 +30,7 @@ case class BlockMeta(
       Json.obj("height" -> height, "totalFee" -> totalFeeInDcc) ++
       reward.fold(Json.obj())(r =>
         Json.obj(
-          "reward" -> r,
+          "reward"       -> r,
           "rewardShares" -> Json.obj(rewardShares.map[(String, Json.JsValueWrapper)] { case (addrName, reward) =>
             addrName.toString -> reward
           }*)

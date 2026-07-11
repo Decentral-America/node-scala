@@ -55,7 +55,7 @@ class TraceResultJsonTest extends PropSpec with JsonMatchers {
       "invocation" -> CONST_STRING("str")
     )
     val recipient = Recipient.Address(ByteStr(tx.dApp.bytes))
-    val trace = List(
+    val trace     = List(
       InvokeScriptTrace(
         tx.id(),
         tx.dApp,

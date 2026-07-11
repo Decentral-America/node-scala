@@ -222,7 +222,7 @@ class ReplTest extends AnyPropSpec with Matchers {
   property("libraries") {
     val address  = "31bcW5NfGXKZhWbBvfwyFfcfCjHkcAiS8UZ"
     val settings = NodeConnectionSettings("testnet-node.decentralchain.io", '!'.toByte, address)
-    val repl = Repl(
+    val repl     = Repl(
       Some(settings),
       libraries = List(
         """
@@ -248,7 +248,7 @@ class ReplTest extends AnyPropSpec with Matchers {
   property("blockchain interaction using lets from libraries is prohibited") {
     val address  = "31bcW5NfGXKZhWbBvfwyFfcfCjHkcAiS8UZ"
     val settings = NodeConnectionSettings("testnet-node.decentralchain.io", '!'.toByte, address)
-    val repl = Repl(
+    val repl     = Repl(
       Some(settings),
       libraries = List("let a = this")
     )
@@ -272,7 +272,7 @@ class ReplTest extends AnyPropSpec with Matchers {
 
   property("transactionHeightById for failed transaction") {
     val settings = NodeConnectionSettings("testnet-node.decentralchain.io", '!'.toByte, "")
-    val client = new NodeClient {
+    val client   = new NodeClient {
       def get[F[_]: Functor, R: Decoder](path: String)(using ResponseWrapper[F]): Future[F[R]] = {
         if (path == "/transactions/info/abcd")
           Future.successful(Some(HeightResponse(1, succeed = false)).asInstanceOf[F[R]])

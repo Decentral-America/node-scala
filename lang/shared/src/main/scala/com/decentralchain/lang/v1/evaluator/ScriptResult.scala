@@ -118,7 +118,7 @@ object ScriptResult {
             case other                      => err(s"can't reconstruct token from $other", version)
           }
           recipient <- processRecipient(recipient, ctx, version)
-          address <- recipient match {
+          address   <- recipient match {
             case a: Address  => Right(a)
             case Alias(name) => ctx.environment.resolveAlias(name).leftMap(CommonError(_))
           }

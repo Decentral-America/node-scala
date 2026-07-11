@@ -89,7 +89,7 @@ class AssetsApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
 
     def check() = {
       val (observer, result) = createObserver[NFTResponse]
-      val request = NFTRequest.of(
+      val request            = NFTRequest.of(
         ByteString.copyFrom(sender.toAddress.bytes),
         limit,
         afterAssetId = ByteString.copyFrom(nftIssues(afterId).asset.id.arr)

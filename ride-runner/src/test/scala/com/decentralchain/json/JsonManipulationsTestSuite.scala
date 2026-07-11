@@ -7,7 +7,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json.{JsArray, JsNumber, JsObject, Json}
 
 class JsonManipulationsTestSuite extends BaseTestSuite with TableDrivenPropertyChecks {
-  private val ten = JsNumber(10)
+  private val ten  = JsNumber(10)
   private val json = Json.parse(
     """{
       |  "extra1": {},
@@ -38,7 +38,7 @@ class JsonManipulationsTestSuite extends BaseTestSuite with TableDrivenPropertyC
 
       "on object" in {
         val table = Table(
-          "path" -> "expectedJson",
+          "path"    -> "expectedJson",
           "foo.bar" -> Json.parse(
             """{
               |  "foo": {
@@ -75,7 +75,7 @@ class JsonManipulationsTestSuite extends BaseTestSuite with TableDrivenPropertyC
 
     "pruneAll" in {
       val table = Table(
-        "paths" -> "expectedJson",
+        "paths"                       -> "expectedJson",
         List("foo.bar.baz", "extra1") -> Json.parse(
           """{
             |  "extra1": {},
@@ -107,7 +107,7 @@ class JsonManipulationsTestSuite extends BaseTestSuite with TableDrivenPropertyC
     "prune" - {
       "on object" in {
         val table = Table(
-          "path" -> "expectedJson",
+          "path"        -> "expectedJson",
           "foo.bar.baz" -> Json.parse(
             """{
               |  "foo": {
@@ -171,7 +171,7 @@ class JsonManipulationsTestSuite extends BaseTestSuite with TableDrivenPropertyC
         val table = Table(
           "path"        -> "expectedJson",
           "foo.bar.baz" -> ten.some,
-          "foo.bar" -> Json
+          "foo.bar"     -> Json
             .parse(
               """{
                 |  "extra1": {},

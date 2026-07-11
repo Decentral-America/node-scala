@@ -53,7 +53,7 @@ object RxExtensionLoader extends ScorexLogging {
     implicit val schdlr: SchedulerService = scheduler
 
     val extensions: ConcurrentSubject[(Channel, ExtensionBlocks), (Channel, ExtensionBlocks)] = ConcurrentSubject.publish[(Channel, ExtensionBlocks)]
-    val simpleBlocksWithSnapshot: ConcurrentSubject[BlockWithSnapshot, BlockWithSnapshot] =
+    val simpleBlocksWithSnapshot: ConcurrentSubject[BlockWithSnapshot, BlockWithSnapshot]     =
       ConcurrentSubject.publish[BlockWithSnapshot]
     @volatile var stateValue: State            = State(LoaderState.Idle, ApplierState.Idle)
     val lastSyncWith: Coeval[Option[SyncWith]] = lastObserved(syncWithChannelClosed.map(_.syncWith))
@@ -116,7 +116,7 @@ object RxExtensionLoader extends ScorexLogging {
         case ChannelClosedAndSyncWith(Some(closedChannel), Some(bestChannel)) =>
           state.loaderState match {
             case wp: LoaderState.WithPeer if closedChannel != wp.channel.channel => state
-            case _ =>
+            case _                                                               =>
               log.trace(s"Switching to next best channel: state=$state, cc=$cc, bestChannel=$bestChannel")
               syncNext(state.withIdleLoader, Some(bestChannel))
           }
@@ -296,7 +296,7 @@ object RxExtensionLoader extends ScorexLogging {
         case ApplierState.Applying(maybeBuffer, applying) =>
           if (applying != extension) log.warn(s"Applied $extension doesn't match expected $applying")
           maybeBuffer match {
-            case None => state.copy(applierState = ApplierState.Idle)
+            case None                                     => state.copy(applierState = ApplierState.Idle)
             case Some(Buffer(nextChannel, nextExtension)) =>
               applicationResult match {
                 case Left(_) =>
@@ -345,7 +345,7 @@ object RxExtensionLoader extends ScorexLogging {
 
   private def timeoutMsg(isLightMode: Boolean, totalLeftBlocks: Int, totalLeftSnapshots: Int, requested: Seq[BlockId]): String = {
     val snapshotShortMsg = if (isLightMode) " or snapshots" else ""
-    val snapshotsInfo =
+    val snapshotsInfo    =
       if (isLightMode)
         s", non-received snapshots: ${if (totalLeftSnapshots == 1) s"one=${requested.last.trim}" else s"total=$totalLeftSnapshots"}"
       else ""

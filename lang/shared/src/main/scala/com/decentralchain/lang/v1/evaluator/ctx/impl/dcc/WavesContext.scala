@@ -105,7 +105,7 @@ object DccContext {
     ) ++ extractedStateSelfFuncs(v)
 
   private def variableFuncs(global: BaseGlobal, ds: DirectiveSet, typeDefs: Map[String, FINAL], proofsEnabled: Boolean) = {
-    val version = ds.stdLibVersion
+    val version     = ds.stdLibVersion
     val commonFuncs =
       Array(
         getIntegerFromArrayF(version),
@@ -142,7 +142,7 @@ object DccContext {
     version match {
       case V1 => Map(txVal)
       case V2 => Map(sell, buy, txVal)
-      case _ =>
+      case _  =>
         val `this` = if (isTokenContext) assetThis(version) else accountThis
         val txO    = if (contentType == Expression) Map(txVal) else Map()
         val common = Map(sell, buy, lastBlock(version), `this`)

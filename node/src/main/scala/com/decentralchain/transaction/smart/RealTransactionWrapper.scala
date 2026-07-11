@@ -42,7 +42,7 @@ object RealTransactionWrapper {
   }
 
   implicit def assetPair(a: AssetPair): APair = APair(a.amountAsset.compatId, a.priceAsset.compatId)
-  implicit def ord(o: Order): Ord =
+  implicit def ord(o: Order): Ord             =
     Ord(
       id = o.id(),
       sender = RideRecipient.Address(ByteStr(o.sender.toAddress.bytes)),
@@ -73,7 +73,7 @@ object RealTransactionWrapper {
     (tx: @unchecked) match {
       case g: GenesisTransaction      => Tx.Genesis(header(g), g.amount.value, toRide(g.recipient)).asRight
       case t: TransferTransactionLike => mapTransferTx(t).asRight
-      case i: IssueTransaction =>
+      case i: IssueTransaction        =>
         Tx.Issue(
           proven(i),
           i.quantity.value,
@@ -83,11 +83,11 @@ object RealTransactionWrapper {
           i.decimals.value,
           i.script.map(_.bytes())
         ).asRight
-      case r: ReissueTransaction     => Tx.ReIssue(proven(r), r.quantity.value, r.asset.id, r.reissuable).asRight
-      case b: BurnTransaction        => Tx.Burn(proven(b), b.quantity.value, b.asset.id).asRight
-      case b: LeaseTransaction       => Tx.Lease(proven(b), b.amount.value, toRide(b.recipient)).asRight
-      case b: LeaseCancelTransaction => Tx.LeaseCancel(proven(b), b.leaseId).asRight
-      case b: CreateAliasTransaction => Tx.CreateAlias(proven(b), b.alias.name).asRight
+      case r: ReissueTransaction       => Tx.ReIssue(proven(r), r.quantity.value, r.asset.id, r.reissuable).asRight
+      case b: BurnTransaction          => Tx.Burn(proven(b), b.quantity.value, b.asset.id).asRight
+      case b: LeaseTransaction         => Tx.Lease(proven(b), b.amount.value, toRide(b.recipient)).asRight
+      case b: LeaseCancelTransaction   => Tx.LeaseCancel(proven(b), b.leaseId).asRight
+      case b: CreateAliasTransaction   => Tx.CreateAlias(proven(b), b.alias.name).asRight
       case ms: MassTransferTransaction =>
         Tx.MassTransfer(
           proven(ms),
@@ -100,10 +100,10 @@ object RealTransactionWrapper {
       case ss: SetScriptTransaction      => Tx.SetScript(proven(ss), ss.script.map(_.bytes())).asRight
       case ss: SetAssetScriptTransaction => Tx.SetAssetScript(proven(ss), ss.asset.id, ss.script.map(_.bytes())).asRight
       case p: PaymentTransaction         => Tx.Payment(proven(p), p.amount.value, toRide(p.recipient)).asRight
-      case e: ExchangeTransaction =>
+      case e: ExchangeTransaction        =>
         Tx.Exchange(proven(e), e.amount.value, e.price.value, e.buyMatcherFee, e.sellMatcherFee, e.buyOrder, e.sellOrder).asRight
       case s: SponsorFeeTransaction => Tx.Sponsorship(proven(s), s.asset.id, s.minSponsoredAssetFee.map(_.value)).asRight
-      case d: DataTransaction =>
+      case d: DataTransaction       =>
         Tx.Data(
           proven(d),
           d.data.collect {

@@ -49,7 +49,7 @@ object PeerSynchronizer {
       msg match {
         case GetPeers      =>
         case KnownPeers(_) =>
-        case _ =>
+        case _             =>
           super.channelRead(ctx, msg)
       }
     }

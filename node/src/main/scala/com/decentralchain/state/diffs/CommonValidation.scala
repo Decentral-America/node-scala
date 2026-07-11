@@ -39,22 +39,22 @@ object CommonValidation {
       ): Either[ValidationError, T] = {
         val amountPortfolio = assetId match {
           case aid @ IssuedAsset(_) => Portfolio.build(aid -> -amount)
-          case Dcc                => Portfolio(-amount)
+          case Dcc                  => Portfolio(-amount)
         }
         val feePortfolio = feeAssetId match {
           case aid @ IssuedAsset(_) => Portfolio.build(aid -> -feeAmount)
-          case Dcc                => Portfolio(-feeAmount)
+          case Dcc                  => Portfolio(-feeAmount)
         }
 
         val checkedTx = for {
           _ <- assetId match {
             case IssuedAsset(id) => InvokeDiffsCommon.checkAsset(blockchain, id)
-            case Dcc           => Right(())
+            case Dcc             => Right(())
           }
           spendings <- amountPortfolio.combine(feePortfolio)
           oldDccBalance = blockchain.balance(sender, Dcc)
 
-          newDccBalance     <- safeSum(oldDccBalance, spendings.balance, "Spendings")
+          newDccBalance       <- safeSum(oldDccBalance, spendings.balance, "Spendings")
           feeUncheckedBalance <- safeSum(oldDccBalance, amountPortfolio.balance, "Transfer amount")
 
           overdraftFilter = allowFeeOverdraft && feeUncheckedBalance >= 0
@@ -87,7 +87,7 @@ object CommonValidation {
                 s"${blockchain.balance(ptx.sender.toAddress, Dcc)} is less than ${ptx.amount.value + ptx.fee.value}"
             )
           )
-        case ttx: TransferTransaction => checkTransfer(ttx.sender.toAddress, ttx.assetId, ttx.amount.value, ttx.feeAssetId, ttx.fee.value)
+        case ttx: TransferTransaction     => checkTransfer(ttx.sender.toAddress, ttx.assetId, ttx.amount.value, ttx.feeAssetId, ttx.fee.value)
         case mtx: MassTransferTransaction =>
           checkTransfer(mtx.sender.toAddress, mtx.assetId, mtx.transfers.map(_.amount.value).sum, Dcc, mtx.fee.value)
         case citx: InvokeScriptTransaction =>
@@ -118,7 +118,7 @@ object CommonValidation {
   def disallowDuplicateIds[T <: Transaction](blockchain: Blockchain, tx: T): Either[ValidationError, T] = tx match {
     case _: PaymentTransaction                                                                  => Right(tx)
     case _: CreateAliasTransaction if Height(blockchain.height) < DisableHijackedAliases.height => Right(tx)
-    case _ =>
+    case _                                                                                      =>
       val id = tx.id()
       Either.cond(!blockchain.containsTransaction(tx), tx, AlreadyInTheState(id, blockchain.transactionMeta(id).get.height))
   }
@@ -198,7 +198,7 @@ object CommonValidation {
       case _: PaymentTransaction => Right(tx)
       case _: GenesisTransaction => Right(tx)
 
-      case e: ExchangeTransaction if e.version == TxVersion.V1 => Right(tx)
+      case e: ExchangeTransaction if e.version == TxVersion.V1       => Right(tx)
       case exv2: ExchangeTransaction if exv2.version >= TxVersion.V2 =>
         activationBarrier(BlockchainFeatures.SmartAccountTrading).flatMap { tx =>
           (exv2.buyOrder, exv2.sellOrder) match {
@@ -240,7 +240,7 @@ object CommonValidation {
       case _: SponsorFeeTransaction   => activationBarrier(BlockchainFeatures.FeeSponsorship)
       case _: InvokeScriptTransaction => activationBarrier(BlockchainFeatures.Ride4DApps)
 
-      case _: UpdateAssetInfoTransaction => activationBarrier(BlockchainFeatures.BlockV5)
+      case _: UpdateAssetInfoTransaction    => activationBarrier(BlockchainFeatures.BlockV5)
       case iet: InvokeExpressionTransaction =>
         if (iet.version == 1) activationBarrier(BlockchainFeatures.ContinuationTransaction)
         else Left(TxValidationError.ActivationError(s"Transaction version ${iet.version} has not been activated yet"))

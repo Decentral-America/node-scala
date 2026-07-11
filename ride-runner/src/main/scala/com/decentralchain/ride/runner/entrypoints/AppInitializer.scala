@@ -57,7 +57,7 @@ object AppInitializer extends ScorexLogging {
     val rootPath = Paths.get(settings.rideRunner.db.directory, "..").normalize()
     Files.createDirectories(rootPath)
 
-    val versionFilePath = rootPath.resolve("version")
+    val versionFilePath          = rootPath.resolve("version")
     val (cleanup, updateVersion) =
       if (versionFilePath.toFile.exists()) {
         val rawVersion = new String(Files.readAllBytes(versionFilePath), StandardCharsets.UTF_8).trim

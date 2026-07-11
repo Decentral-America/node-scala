@@ -23,10 +23,10 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
     val aliceLeaseToBobAmount    = 500.dcc
     val masterLeaseToAliceAmount = 750.dcc
 
-    val genesis                = TxHelpers.genesis(master.toAddress)
-    val masterTransfersToAlice = TxHelpers.transfer(master, alice.toAddress, masterTransferAmount, fee = fee, version = TxVersion.V1)
-    val aliceLeasesToBob       = TxHelpers.lease(alice, bob.toAddress, aliceLeaseToBobAmount)
-    val masterLeasesToAlice    = TxHelpers.lease(master, alice.toAddress, masterLeaseToAliceAmount)
+    val genesis                                 = TxHelpers.genesis(master.toAddress)
+    val masterTransfersToAlice                  = TxHelpers.transfer(master, alice.toAddress, masterTransferAmount, fee = fee, version = TxVersion.V1)
+    val aliceLeasesToBob                        = TxHelpers.lease(alice, bob.toAddress, aliceLeaseToBobAmount)
+    val masterLeasesToAlice                     = TxHelpers.lease(master, alice.toAddress, masterLeaseToAliceAmount)
     val aliceTransfersMoreThanOwnsMinusLeaseOut =
       TxHelpers.transfer(alice, cooper.toAddress, masterTransferAmount - fee - aliceLeaseToBobAmount, fee = fee, version = TxVersion.V1)
 
@@ -84,7 +84,7 @@ class BalanceDiffValidationTest extends PropSpec with WithState {
     val settings = DomainPresets.DeterministicFinality.blockchainSettings.functionalitySettings.copy(generationPeriodLength = 3)
 
     val notBlockedAmount = 100_000.dcc
-    val initBalance =
+    val initBalance      =
       notBlockedAmount + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee + TestValues.fee // for transfer
 
     val transferAmount = notBlockedAmount + 1

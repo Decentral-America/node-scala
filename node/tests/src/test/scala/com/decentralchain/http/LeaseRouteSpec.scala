@@ -310,7 +310,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
           richAccount,
           Seq(
             sender.toDccAddress -> 0.005.dcc,
-            dApp.toAddress        -> 10_0001.dcc
+            dApp.toAddress      -> 10_0001.dcc
           ),
           fee = 0.002.dcc
         ),
@@ -451,9 +451,9 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            invoker.toAddress                   -> 1.dcc,
-            dApp1.toAddress                     -> 1.dcc,
-            dApp2.toAddress                     -> 1.dcc,
+            invoker.toAddress                 -> 1.dcc,
+            dApp1.toAddress                   -> 1.dcc,
+            dApp2.toAddress                   -> 1.dcc,
             invoker.toEthKeyPair.toDccAddress -> 1.dcc
           ),
           fee = 0.005.dcc
@@ -464,7 +464,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
 
       domain.appendBlock(invokeTx)
 
-      val lease1Id = getLeaseId(dApp1.toAddress)
+      val lease1Id      = getLeaseId(dApp1.toAddress)
       val leaseDetails1 = Seq(
         lease1Id -> LeaseDetails(
           LeaseStaticInfo(
@@ -477,7 +477,7 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
           LeaseDetails.Status.Active
         )
       )
-      val lease2Id = getLeaseId(dApp2.toAddress)
+      val lease2Id      = getLeaseId(dApp2.toAddress)
       val leaseDetails2 = Seq(
         lease2Id -> LeaseDetails(
           LeaseStaticInfo(

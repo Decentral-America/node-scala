@@ -11,7 +11,7 @@ import scala.concurrent.duration.*
 
 class TransferTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime {
 
-  var issuedAssetId: String = scala.compiletime.uninitialized
+  var issuedAssetId: String      = scala.compiletime.uninitialized
   override def beforeAll(): Unit = {
     super.beforeAll()
 

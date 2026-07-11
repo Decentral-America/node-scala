@@ -30,7 +30,7 @@ class SmartAssetEvalTest extends PropSpec with WithState {
                          |
         """.stripMargin
     val parsedEmptyScript = Parser.parseExpr(emptyScript).get.value
-    val emptyExprScript =
+    val emptyExprScript   =
       ExprScript(V3, ExpressionCompiler(compilerContext(V3, Expression, isAssetScript = true), V3, parsedEmptyScript).explicitGet()._1)
         .explicitGet()
     val issue = TxHelpers.issue(firstAcc, 100, script = Some(emptyExprScript), reissuable = false)
@@ -50,7 +50,7 @@ class SmartAssetEvalTest extends PropSpec with WithState {
                          |
         """.stripMargin
     val untypedScript = Parser.parseExpr(assetScript).get.value
-    val typedScript = ExprScript(V3, ExpressionCompiler(compilerContext(V3, Expression, isAssetScript = true), V3, untypedScript).explicitGet()._1)
+    val typedScript   = ExprScript(V3, ExpressionCompiler(compilerContext(V3, Expression, isAssetScript = true), V3, untypedScript).explicitGet()._1)
       .explicitGet()
     val setAssetScript = TxHelpers.setAssetScript(firstAcc, asset, typedScript)
 

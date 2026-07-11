@@ -197,7 +197,7 @@ class TransactionsRouteSpec
 
     domain.appendBlock(leaseCancel)
 
-    val cancelHeight = domain.blockchain.height
+    val cancelHeight          = domain.blockchain.height
     val cancelTransactionJson =
       expectedJson("canceled", leaseHeight, Some(cancelHeight), Some(leaseCancel.id())) ++ Json.obj("height" -> cancelHeight)
 
@@ -282,7 +282,7 @@ class TransactionsRouteSpec
     val leaseRecipient = TxHelpers.address(237)
 
     val originalLease = TxHelpers.lease(dapp, leaseRecipient, 20_00000000L)
-    val invoke =
+    val invoke        =
       TxHelpers.invoke(dapp.toAddress, Some("testLease"), Seq(CONST_LONG(1000), CONST_BYTESTR(originalLease.id()).explicitGet()), invoker = caller)
 
     domain.appendBlock(
@@ -547,7 +547,7 @@ class TransactionsRouteSpec
         TxHelpers.massTransfer(
           richAccount,
           Seq(
-            dapp.toAddress        -> 1.dcc,
+            dapp.toAddress      -> 1.dcc,
             caller.toDccAddress -> 1.dcc
           ),
           fee = 0.002.dcc
@@ -828,7 +828,7 @@ class TransactionsRouteSpec
       val funcName          = "func"
       val funcWithoutArgs   = Json.obj("function" -> funcName)
       val funcWithEmptyArgs = Json.obj("function" -> funcName, "args" -> JsArray.empty)
-      val funcWithArgs = InvokeScriptTxSerializer.functionCallToJson(
+      val funcWithArgs      = InvokeScriptTxSerializer.functionCallToJson(
         FUNCTION_CALL(
           FunctionHeader.User(funcName),
           List(CONST_LONG(1), CONST_BOOLEAN(true))
@@ -861,8 +861,8 @@ class TransactionsRouteSpec
     }
 
     "CommitToGenerationTransaction" in {
-      val sender = domain.wallet.generateNewAccount().get
-      val blsKP  = BlsKeyPair(sender.privateKey)
+      val sender          = domain.wallet.generateNewAccount().get
+      val blsKP           = BlsKeyPair(sender.privateKey)
       val unsignedTxnJson = Json.parse(
         s"""{
            |  "type": 19,
@@ -888,7 +888,7 @@ class TransactionsRouteSpec
       val seed = new Array[Byte](32)
       ThreadLocalRandom.current().nextBytes(seed)
       val sender: KeyPair = KeyPair(seed)
-      val ist = Signed.invokeScript(
+      val ist             = Signed.invokeScript(
         TxVersion.V1,
         sender,
         sender.toAddress,
@@ -1115,7 +1115,7 @@ class TransactionsRouteSpec
       )
 
       val transactions = Seq(tx1, tx2)
-      val proofs = Seq(
+      val proofs       = Seq(
         (tx1.id(), crypto.fastHash(PBTransactions.toByteArrayMerkle(tx1)), 2),
         (tx2.id(), crypto.fastHash(PBTransactions.toByteArrayMerkle(tx2)), 3)
       )
@@ -1221,7 +1221,7 @@ class TransactionsRouteSpec
     val issuer     = TxHelpers.signer(1101)
     val attachment = ByteStr.fill(32)(1)
     val issue      = TxHelpers.issue(issuer)
-    val exchange =
+    val exchange   =
       TxHelpers.exchangeFromOrders(
         TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(attachment)),
         TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer),

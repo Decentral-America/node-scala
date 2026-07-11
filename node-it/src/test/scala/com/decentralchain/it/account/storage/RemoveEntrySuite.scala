@@ -119,8 +119,8 @@ class RemoveEntrySuite extends BaseFreeSpec {
   }
 
   def createDapp(scriptParts: String*): KeyPair = {
-    val script  = scriptParts.mkString(" ")
-    val address = miner.createKeyPair()
+    val script         = scriptParts.mkString(" ")
+    val address        = miner.createKeyPair()
     val compiledScript = ScriptCompiler
       .compile(
         script,

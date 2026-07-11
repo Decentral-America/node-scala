@@ -43,8 +43,8 @@ class FunctionComplexityDocTest extends PropSpec {
       functions
         .filterNot(_.name.startsWith(UtilityFunctionPrefix))
         .foldLeft(docCosts) { case (remainingDocCosts, function) =>
-          val arg  = CONST_STRING("throw").explicitGet()
-          val expr = FUNCTION_CALL(function.header, List.fill(function.args.size)(arg))
+          val arg           = CONST_STRING("throw").explicitGet()
+          val expr          = FUNCTION_CALL(function.header, List.fill(function.args.size)(arg))
           val estimatedCost =
             ScriptEstimatorV3(fixOverflow = true, overhead = false, letFixes = true)(
               varNames(ds.stdLibVersion, ds.contentType),
@@ -52,8 +52,8 @@ class FunctionComplexityDocTest extends PropSpec {
               expr
             ).explicitGet()
 
-          val name = function.name
-          val args = function.signature.args.map(_._2.toString).toList
+          val name         = function.name
+          val args         = function.signature.args.map(_._2.toString).toList
           val expectedCost =
             remainingDocCosts.getOrElse(
               (name, args),

@@ -29,7 +29,7 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
 
   test("filter accounts data by regexp") {
     val dataKeys = List("1aB1cD!@#$", "\"\\", "\u0000qweqwe", "\t\r\n", "reeeee", "rerere", "rerrre", "rre", "eeeee")
-    val regexps = List(
+    val regexps  = List(
       "1aB1cD!%40%23%24",
       "%5Ba-zA-Z0-9!-%2F%3A-%40%5C%5C%5C%5C%5D%7B0%2C15%7D",
       "%5Cs%7B0%2C%7D",
@@ -104,7 +104,9 @@ class AddressApiSuite extends BaseTransactionSuite with NTPTime {
     )
   }
 
-  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+  private def randomString(n: Int): String = {
+    val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString
+  }
 
   private def assertBalances(asset: Option[String]): Unit = {
     val addressesAndBalances = (1 to 5).map(i => (TxHelpers.signer(1000 + i).toAddress.toString, (i * 100).toLong)).toList

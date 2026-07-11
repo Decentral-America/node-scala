@@ -57,7 +57,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
         )
         import Scheduler.Implicits.global
         val startTime = System.nanoTime()
-        val tx = CreateAliasTransaction
+        val tx        = CreateAliasTransaction
           .selfSigned(TxVersion.V1, acc, "test" + ThreadLocalRandom.current().nextInt(), TestValues.fee, TestValues.timestamp)
           .explicitGet()
         utxPool.putIfNew(tx).resultE.explicitGet()
@@ -109,7 +109,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
       import Scheduler.Implicits.global
       val utxEvents        = ConcurrentSubject.publish[UtxEvent]
       val eventHasBeenSent = new CountDownLatch(1)
-      val inner = new UtxPoolImpl(
+      val inner            = new UtxPoolImpl(
         ntpTime,
         d.blockchainUpdater,
         RideV6.utxSettings,
@@ -130,7 +130,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
             cancelled: () => Boolean
         ): (Option[Seq[Transaction]], MiningConstraint, Option[ByteStr]) = {
           val (txs, constraint, stateHash) = inner.packUnconfirmed(rest, None, strategy, cancelled)
-          val waitingConstraint = new MiningConstraint {
+          val waitingConstraint            = new MiningConstraint {
             def isFull: Boolean                                                         = { eventHasBeenSent.await(); constraint.isFull }
             def isOverfilled: Boolean                                                   = constraint.isOverfilled
             def put(b: Blockchain, tx: Transaction, s: StateSnapshot): MiningConstraint = constraint.put(b, tx, s)

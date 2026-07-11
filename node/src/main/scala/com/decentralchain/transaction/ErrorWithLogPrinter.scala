@@ -14,8 +14,8 @@ object ErrorWithLogPrinter {
     @tailrec
     def loop(log: Log[Id], limit: Int, sb: StringBuilder): String = {
       log match {
-        case _ if limit < 0 => sb.append("\n...").toString()
-        case Nil            => sb.toString()
+        case _ if limit < 0           => sb.append("\n...").toString()
+        case Nil                      => sb.toString()
         case (name, Right(v)) :: tail =>
           val logStrItem = s"\n${"\t" * depth}$name = ${TermPrinter(true).prettyString(v, depth)}"
           val length     = logStrItem.length

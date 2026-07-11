@@ -102,7 +102,7 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
   }
 
   test("caller deposits dcc") {
-    val balanceBefore = sender.accountBalances(contractAddress)._1
+    val balanceBefore  = sender.accountBalances(contractAddress)._1
     val invokeScriptId = sender
       .invokeScript(
         caller,
@@ -140,7 +140,7 @@ class HodlContractTransactionSuite extends BaseTransactionSuite with CancelAfter
   }
 
   test("caller can withdraw less than he owns") {
-    val balanceBefore = sender.accountBalances(contractAddress)._1
+    val balanceBefore  = sender.accountBalances(contractAddress)._1
     val invokeScriptId = sender
       .invokeScript(
         caller,

@@ -23,7 +23,7 @@ class HttpSpanLogger extends CombinedReporter with LazyLogging {
 
       val processingStart   = span.marks.find(_.key == ProcessingStartMark).map(_.instant)
       val akkaQueueDuration = processingStart.map(millisBetween(span.from, _))
-      val processDuration =
+      val processDuration   =
         for {
           from <- processingStart
           to   <- span.marks.find(_.key == ResponseEndMark).map(_.instant)
@@ -45,7 +45,7 @@ class HttpSpanLogger extends CombinedReporter with LazyLogging {
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    val timeInQueue = snapshot.timers.filter(_.name == TimeInQueueMetricKey)
+    val timeInQueue   = snapshot.timers.filter(_.name == TimeInQueueMetricKey)
     val distributions = timeInQueue
       .flatMap(_.instruments)
       .collect {

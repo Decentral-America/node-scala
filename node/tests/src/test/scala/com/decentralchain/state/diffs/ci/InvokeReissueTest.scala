@@ -15,7 +15,7 @@ class InvokeReissueTest extends PropSpec with WithDomain {
     withDomain(RideV5, AddrWithBalance.enoughBalances(secondSigner)) { d =>
       val issueTx = issue()
       val asset   = IssuedAsset(issueTx.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp    = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() = [
@@ -33,7 +33,7 @@ class InvokeReissueTest extends PropSpec with WithDomain {
     withDomain(RideV5, AddrWithBalance.enoughBalances(secondSigner)) { d =>
       val issueTx = issue(secondSigner)
       val asset   = IssuedAsset(issueTx.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp    = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() =

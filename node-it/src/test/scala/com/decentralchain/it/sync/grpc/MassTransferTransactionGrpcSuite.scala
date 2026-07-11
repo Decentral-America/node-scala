@@ -19,7 +19,7 @@ class MassTransferTransactionGrpcSuite extends GrpcBaseTransactionSuite {
       val attachment    = ByteString.copyFrom("mass transfer description".getBytes("UTF-8"))
 
       val transfers = List(Transfer(Some(Recipient.of(Recipient.Recipient.PublicKeyHash(secondAddress))), transferAmount))
-      val assetId = PBTransactions
+      val assetId   = PBTransactions
         .vanilla(
           sender.broadcastIssue(firstAcc, "name", issueAmount, 8, reissuable = false, issueFee, waitForTx = true),
           true
@@ -48,7 +48,7 @@ class MassTransferTransactionGrpcSuite extends GrpcBaseTransactionSuite {
     val firstBalance  = sender.dccBalance(firstAddress)
     val secondBalance = sender.dccBalance(secondAddress)
     val thirdBalance  = sender.dccBalance(thirdAddress)
-    val transfers = List(
+    val transfers     = List(
       Transfer(Some(Recipient.of(Recipient.Recipient.PublicKeyHash(secondAddress))), transferAmount),
       Transfer(Some(Recipient.of(Recipient.Recipient.PublicKeyHash(thirdAddress))), 2 * transferAmount)
     )
@@ -71,7 +71,7 @@ class MassTransferTransactionGrpcSuite extends GrpcBaseTransactionSuite {
   test("can not make mass transfer without having enough dcc") {
     val firstBalance  = sender.dccBalance(firstAddress)
     val secondBalance = sender.dccBalance(secondAddress)
-    val transfers = List(
+    val transfers     = List(
       Transfer(Some(Recipient.of(Recipient.Recipient.PublicKeyHash(secondAddress))), firstBalance.regular / 2),
       Transfer(Some(Recipient.of(Recipient.Recipient.PublicKeyHash(thirdAddress))), firstBalance.regular / 2)
     )

@@ -58,7 +58,7 @@ final case class EthABIConverter(script: Script) {
                           amount,
                           assetId match {
                             case DccByteRepr => Asset.Dcc
-                            case assetId       => Asset.IssuedAsset(assetId)
+                            case assetId     => Asset.IssuedAsset(assetId)
                           }
                         )
                       )
@@ -148,12 +148,12 @@ final case class EthABIConverter(script: Script) {
 }
 
 object EthABIConverter {
-  val DccByteRepr: ByteStr      = ByteStr(new Array[Byte](32))
+  val DccByteRepr: ByteStr        = ByteStr(new Array[Byte](32))
   val PaymentListType: Types.LIST = Types.LIST(Types.TUPLE(List(Types.BYTESTR, Types.LONG)))
   val PaymentArgSignature: String = "(bytes32,int64)[]"
-  val PaymentArgJson: JsObject = Json.obj(
-    "name" -> "payments",
-    "type" -> "tuple[]",
+  val PaymentArgJson: JsObject    = Json.obj(
+    "name"       -> "payments",
+    "type"       -> "tuple[]",
     "components" -> Json.arr(
       Json.obj("name" -> "assetId", "type" -> "bytes32"),
       Json.obj("name" -> "amount", "type"  -> "int64")
@@ -174,10 +174,10 @@ object EthABIConverter {
     def t(s: String) = Json.obj("type" -> s)
 
     argType match {
-      case Types.BOOLEAN => t("bool")
-      case Types.LONG    => t("int64")
-      case Types.BYTESTR => t("bytes")
-      case Types.STRING  => t("string")
+      case Types.BOOLEAN         => t("bool")
+      case Types.LONG            => t("int64")
+      case Types.BYTESTR         => t("bytes")
+      case Types.STRING          => t("string")
       case Types.LIST(innerType) =>
         val base = ethTypeObj(innerType)
         if (base.value("type").asInstanceOf[JsString].value == "tuple") {

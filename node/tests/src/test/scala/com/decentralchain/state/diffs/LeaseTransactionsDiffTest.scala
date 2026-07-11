@@ -22,7 +22,7 @@ import scala.collection.immutable.VectorMap
 class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
 
   private val allowMultipleLeaseCancelTransactionUntilTimestamp = Long.MaxValue / 2
-  private val settings =
+  private val settings                                          =
     TestFunctionalitySettings.Enabled.copy(lastTimeBasedForkParameter = allowMultipleLeaseCancelTransactionUntilTimestamp)
 
   def total(l: LeaseBalance): Long = l.in - l.out
@@ -234,7 +234,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
 
     scenario.foreach { case (genesis, lease, leaseCancel, ts) =>
       val beforeFailedTxs = TestFunctionalitySettings.Enabled
-      val afterFailedTxs = beforeFailedTxs.copy(
+      val afterFailedTxs  = beforeFailedTxs.copy(
         preActivatedFeatures = beforeFailedTxs.preActivatedFeatures + (BlockchainFeatures.BlockV5.id -> 0)
       )
 
@@ -248,7 +248,7 @@ class LeaseTransactionsDiffTest extends PropSpec with WithDomain {
     }
   }
 
-  private val totalBalance = 1000.dcc
+  private val totalBalance                                       = 1000.dcc
   private val scenario: (Seq[AddrWithBalance], LeaseTransaction) = {
     val sender    = TxHelpers.signer(1)
     val recipient = TxHelpers.signer(2)

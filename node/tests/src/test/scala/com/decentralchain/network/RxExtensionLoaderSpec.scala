@@ -41,13 +41,13 @@ class RxExtensionLoaderSpec extends FreeSpec with RxScheduler with BlockGen {
           Observable[(Channel, Block, Option[BlockSnapshotResponse])]
       ) => Any
   ) = {
-    val blocks          = PS[(Channel, Block)]()
-    val sigs            = PS[(Channel, Signatures)]()
-    val ccsw            = PS[ChannelClosedAndSyncWith]()
-    val snapshots       = PS[(Channel, BlockSnapshotResponse)]()
-    val timeout         = PS[Channel]()
-    val op              = PeerDatabase.NoOp
-    val invBlockStorage = new InMemoryInvalidBlockStorage
+    val blocks               = PS[(Channel, Block)]()
+    val sigs                 = PS[(Channel, Signatures)]()
+    val ccsw                 = PS[ChannelClosedAndSyncWith]()
+    val snapshots            = PS[(Channel, BlockSnapshotResponse)]()
+    val timeout              = PS[Channel]()
+    val op                   = PeerDatabase.NoOp
+    val invBlockStorage      = new InMemoryInvalidBlockStorage
     val (singleBlocks, _, _) =
       RxExtensionLoader(
         timeOut,
@@ -139,7 +139,7 @@ class RxExtensionLoaderSpec extends FreeSpec with RxScheduler with BlockGen {
   }
 
   "should process received extension" in {
-    @volatile var applied = false
+    @volatile var applied          = false
     val successfulApplier: Applier = (_, _) =>
       Task {
         applied = true

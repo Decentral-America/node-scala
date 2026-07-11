@@ -52,7 +52,7 @@ object IssueTransaction extends TransactionParser {
 
   override val typeId: TxType = 3: Byte
 
-  implicit val validator: TxValidator[IssueTransaction] = IssueTxValidator
+  implicit val validator: TxValidator[IssueTransaction]                             = IssueTxValidator
   implicit def sign(tx: IssueTransaction, privateKey: PrivateKey): IssueTransaction =
     tx.copy(proofs = Proofs(crypto.sign(privateKey, tx.bodyBytes())))
 
@@ -74,7 +74,7 @@ object IssueTransaction extends TransactionParser {
       fee      <- TxPositiveAmount(fee)(TxValidationError.InsufficientFee)
       quantity <- TxPositiveAmount(quantity)(TxValidationError.NonPositiveAmount(quantity, "assets"))
       decimals <- TxDecimals(decimals)(TxValidationError.InvalidDecimals(decimals))
-      tx <- IssueTransaction(
+      tx       <- IssueTransaction(
         version,
         sender,
         ByteString.copyFromUtf8(name),

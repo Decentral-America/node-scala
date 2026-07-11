@@ -19,7 +19,7 @@ trait RestAPISettingsHelper {
 
   lazy val restAPISettings = {
     val keyHash = Base58.encode(crypto.secureHash(apiKey.getBytes("UTF-8")))
-    val config = ConfigFactory
+    val config  = ConfigFactory
       .parseString(
         s"""dcc.rest-api {
            |  api-key-hash = $keyHash

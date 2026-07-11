@@ -84,7 +84,7 @@ object Bindings {
     CaseObj(
       paymentType,
       Map(
-        "amount" -> CONST_LONG(amount),
+        "amount"  -> CONST_LONG(amount),
         "assetId" -> (asset match {
           case None                 => unit
           case Some(asset: ByteStr) => CONST_BYTESTR(asset).explicitGet()
@@ -228,7 +228,7 @@ object Bindings {
           buildPaymentTransactionType(proofsEnabled),
           Map("amount" -> CONST_LONG(amount)) ++ provenTxPart(p, proofsEnabled, version) + mapRecipient(recipient)
         )
-      case ttx: Tx.Transfer => transferTransactionObject(ttx, proofsEnabled, version)
+      case ttx: Tx.Transfer                                                          => transferTransactionObject(ttx, proofsEnabled, version)
       case Tx.Issue(p, quantity, name, description, reissuable, decimals, scriptOpt) =>
         CaseObj(
           buildIssueTransactionType(proofsEnabled, version),

@@ -36,9 +36,9 @@ object PublicKey {
     Some(apply(arg))
 
   extension (pk: PublicKey) {
-    def arr: Array[Byte]   = pk.arr
-    def byteStr: ByteStr   = pk
-    def toAddress: Address = toAddress(AddressScheme.current.chainId)
+    def arr: Array[Byte]                  = pk.arr
+    def byteStr: ByteStr                  = pk
+    def toAddress: Address                = toAddress(AddressScheme.current.chainId)
     def toAddress(chainId: Byte): Address = pk.size match {
       case KeyLength         => Address.fromPublicKey(pk, chainId)
       case EthereumKeyLength => Address(Keys.getAddress(pk.arr), chainId)

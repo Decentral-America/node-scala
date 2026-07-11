@@ -76,7 +76,7 @@ object ScriptEstimatorV2 extends ScriptEstimator {
   private def evalRef(key: String): EvalM[Long] =
     for {
       ctx <- get[Id, EstimatorContext, EstimationError]
-      r <- ctx.letDefs.get(key) match {
+      r   <- ctx.letDefs.get(key) match {
         case Some((false, lzy)) => setRefEvaluated(key, lzy)
         case Some((true, _))    => const(0)
         case None               => raiseError[Id, EstimatorContext, EstimationError, Long](s"A definition of '$key' not found")
@@ -92,7 +92,7 @@ object ScriptEstimatorV2 extends ScriptEstimator {
 
   private def evalFuncCall(header: FunctionHeader, args: List[EXPR]): EvalM[Long] =
     for {
-      ctx <- get[Id, EstimatorContext, EstimationError]
+      ctx            <- get[Id, EstimatorContext, EstimationError]
       bodyComplexity <- ctx.predefFuncs
         .get(header)
         .map(bodyComplexity => evalFuncArgs(args).map(_ + bodyComplexity))

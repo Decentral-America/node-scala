@@ -156,7 +156,7 @@ object TransactionsGeneratorApp extends ScoptImplicits {
       ConfigSource.fromConfig(dccSettings.config).at("dcc.generator").loadOrThrow[GeneratorSettings]
 
     parser.parse(args, defaultConfig) match {
-      case None => parser.failure("Failed to parse command line parameters")
+      case None              => parser.failure("Failed to parse command line parameters")
       case Some(finalConfig) =>
         log.info(show"The final configuration: \n$finalConfig")
 
@@ -191,7 +191,12 @@ object TransactionsGeneratorApp extends ScoptImplicits {
         val threadPool                            = Executors.newFixedThreadPool(Math.max(1, finalConfig.sendTo.size))
         implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(threadPool)
 
-        val sender = new NetworkSender(dccSettings.networkSettings.trafficLogger, finalConfig.addressScheme, "generator", nonce = ThreadLocalRandom.current().nextLong())
+        val sender = new NetworkSender(
+          dccSettings.networkSettings.trafficLogger,
+          finalConfig.addressScheme,
+          "generator",
+          nonce = ThreadLocalRandom.current().nextLong()
+        )
 
         sys.addShutdownHook(sender.close())
 
