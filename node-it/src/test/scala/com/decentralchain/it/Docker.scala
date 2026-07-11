@@ -271,6 +271,12 @@ class Docker(
 
       val exposedPorts = new java.util.ArrayList[ExposedPort]()
       exposedPorts.add(ExposedPort.tcp(internalDebuggerPort))
+      // Publish the ports the node actually listens on per its resolved config, rather than relying on
+      // the image's EXPOSE matching. The base application.conf uses dcc.network.port = 6863 while the
+      // Dockerfile EXPOSEs 6868; without this, withPublishAllPorts never binds the real P2P port and
+      // NodeInfo.hostNetworkAddress NPEs. Reading them from actualConfig keeps host + container in sync.
+      exposedPorts.add(ExposedPort.tcp(networkPort.toInt))
+      exposedPorts.add(ExposedPort.tcp(actualConfig.getInt("dcc.rest-api.port")))
       if (Try(nodeConfig.getStringList("dcc.extensions").contains("com.decentralchain.events.BlockchainUpdates")).getOrElse(false)) {
         exposedPorts.add(ExposedPort.tcp(6881))
       }
@@ -325,8 +331,25 @@ class Docker(
     // assume test nodes always have an open port
     val networkPort = settings.networkSettings.derivedBindAddress.get.getPort
 
-    val containerInfo  = inspectContainer(containerId)
-    val dccIpAddress = containerInfo.getNetworkSettings.getNetworks.get(dccNetwork.getName).getIpAddress
+    // Host port bindings are populated by Docker shortly AFTER the container starts, and with
+    // withPublishAllPorts each published port's host binding can appear a beat apart. The first
+    // inspect (right after startContainer) may return no bindings — or only some — which used to
+    // NPE in NodeInfo.externalPort. Wait until BOTH ports NodeInfo reads (REST + network) are bound.
+    def isBound(info: com.github.dockerjava.api.command.InspectContainerResponse, port: Int): Boolean =
+      Option(info.getNetworkSettings.getPorts.getBindings.get(ExposedPort.tcp(port))).exists(_.nonEmpty)
+
+    @tailrec def awaitPortBindings(attempt: Int): com.github.dockerjava.api.command.InspectContainerResponse = {
+      val info = inspectContainer(containerId)
+      if ((isBound(info, restApiPort) && isBound(info, networkPort)) || attempt >= 40) info
+      else {
+        log.debug(s"Container $containerId ports $restApiPort/$networkPort not fully bound yet, retry")
+        Thread.sleep(500)
+        awaitPortBindings(attempt + 1)
+      }
+    }
+
+    val containerInfo = awaitPortBindings(0)
+    val dccIpAddress  = containerInfo.getNetworkSettings.getNetworks.get(dccNetwork.getName).getIpAddress
 
     NodeInfo(restApiPort, networkPort, dccIpAddress, containerInfo.getNetworkSettings.getPorts)
   }
