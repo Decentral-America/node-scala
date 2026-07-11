@@ -46,7 +46,7 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T1 | Rogue-key forgery of the fast-aggregate | on-chain PoP | verified `…Diff.scala:22`; ✅ |
 | T2 | Forged / below-quorum QC | `HotStuffQuorum.verifyQC` | all-signers-∈-committee + 2/3-stake + agg verify; unit-tested |
 | T3 | Unverified QC influencing safety/commit | `HotStuffEngine.onQC/onProposal` | `verifyQC` gate before `update` (`:44`,`:70`); finding #1 ✅ |
-| T4 | **COMMIT QC without the preceding 3-chain** | `HotStuffEngine` phase progression | **finding #2 — audit's primary target**; needs a step-5 Byzantine test |
+| T4 | Conflicting / out-of-chain COMMIT | `verifyQC` + honest-quorum voting/lock rules | verified COMMIT QC trusted by design (finding #2); forged/below-quorum rejected, same-height re-commit blocked (tested) — audit the safety proof under the honest-≥2/3 assumption |
 | T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | detected; slashing/`conflictGenerators` wiring is future work |
 | T6 | Byzantine voter stalls QC formation | `HotStuffVotePool.onVote` | invalid votes dropped on ingress; finding #3 ✅ |
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
@@ -78,8 +78,9 @@ HotStuff authoritative (not built); non-consensus node subsystems.
   all 4 nodes with HotStuff enabled; **green on CI** (ubuntu-latest).
 
 ## 7. Residual risk / known-open before mainnet
-1. **Finding #2 (3-chain commit)** — implemented but is the primary audit target; add a step-5 Byzantine
-   test presenting a COMMIT QC with no preceding chain.
+1. **Finding #2 (commit trust model)** — a *verified* COMMIT QC is trusted by design (standard HotStuff);
+   safety rests on the honest-≥2/3 assumption + the voting/lock rules, which the auditor should prove.
+   No receiver-side chain-replay gap; covered by `verifyQC` + monotonic-commit + `safeToVote` tests.
 2. **Live behaviour unproven** — view=height/forger mapping, cross-period state, and proposing have only
    unit + single-CI-run coverage; **testnet soak (infra PR #49) required.**
 3. **Equivocation → slashing** not wired to `conflictGenerators` (T5) — acceptable while observational;
@@ -92,6 +93,6 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 - [x] Multi-node finality IT green on CI
 - [x] `protobuf-schemas` 1.6.4 published (wire types)
 - [ ] Testnet deploy (infra PR #49) + multi-day soak with crash/partition/equivocation scenarios recorded
-- [ ] Step-5 Byzantine test for finding #2 (COMMIT-without-3-chain)
+- [ ] Equivocation → `conflictGenerators` slashing wired (T5) before HotStuff is made authoritative
 - [ ] **External third-party consensus audit sign-off** (this package)
 - [ ] Decision + re-audit if/when HotStuff is made authoritative (raise finalized height on commitQC)

@@ -32,12 +32,19 @@
    `verifyQC`-checks `proposal.justify` before it can advance safety state (`:70`). **Audit focus:**
    confirm there is no path to `update`/`committedBlock` that bypasses `verifyQC`.
 
-2. **[MED-HIGH — engine invariant] Commit trusts the phase, not the chain.**
-   ⚠️ **Partially addressed — primary audit target.** `onQC` commits only on a cryptographically-verified
-   `COMMIT`-phase QC for a higher block (`HotStuffEngine.scala:43–54`). The full 3-chain progression
-   (prepare → pre-commit → commit for the same node across consecutive views) is the single most
-   important thing for the auditor to scrutinize, plus the step-5 Byzantine test that presents a COMMIT
-   QC without the preceding chain.
+2. **[MED-HIGH — design decision, verify the assumption] Commit trusts the verified COMMIT QC, not a
+   receiver-side chain replay.**
+   ✅ **Addressed by design (standard HotStuff).** `onQC` commits only on a cryptographically-verified
+   `COMMIT`-phase QC for a strictly higher block (`HotStuffEngine.scala:43–54`, guard
+   `qc.blockHeight > committedHeight`). A valid COMMIT QC already proves ≥2/3 stake voted COMMIT, which
+   the locking rule only permits after the pre-commit/prepare chain — so re-deriving the chain at the
+   receiver is unnecessary and would break catch-up. Safety therefore rests on two things the auditor
+   should confirm rather than on receiver chain-replay: (a) the **honest-≥2/3-stake** assumption, and
+   (b) the **voting/lock rules** (`safeToVote` + monotonic lock) that stop an honest node contributing
+   COMMIT votes to conflicting branches. Covered today by: `verifyQC` (forged/below-quorum rejected),
+   the height-monotonic commit guard (test *"not re-commit a lower/equal height"*), and the adversarial
+   `safeToVote`/lock tests. **Audit focus:** the safety proof under those two assumptions, not a missing
+   chain-replay check.
 
 3. **[MED — liveness, not safety] `formQC` is all-or-nothing.**
    ✅ **Addressed.** `HotStuffVotePool.onVote` drops invalid votes on ingress (`verifyVote` gate,
