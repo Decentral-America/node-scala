@@ -258,7 +258,10 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           val tip = info.height.toInt
           if (tip > hsLastHeight) {
             hsLastHeight = tip
-            val s = tip - 1 // parent height: now settled (tip moved on, no more microblocks for s)
+            // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,
+            // not a liquid tip that still differs across nodes) before it is proposed — else the
+            // canonical-block guard rejects and votes never converge. See HotStuffSettings.settledDepth.
+            val s = tip - settings.hotStuffSettings.settledDepth
             if (s > 0) {
               for {
                 canonicalId <- blockchainUpdater.blockId(s)

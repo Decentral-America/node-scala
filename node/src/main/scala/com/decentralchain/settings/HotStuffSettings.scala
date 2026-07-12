@@ -17,10 +17,20 @@ import scala.concurrent.duration.FiniteDuration
   * @param enabled      master switch for the T2 HotStuff fast-finality path
   * @param roundTimeout pacemaker round timeout; on expiry the round advances and finality falls back
   *                     to feature-25 Deterministic Finality (the chain never halts)
+  * @param settledDepth how many blocks behind the tip HotStuff runs. A view targets the canonical
+  *                     key-block at height `tip - settledDepth`; this must exceed the inter-node tip
+  *                     skew so that, by the time a leader proposes a view, every node has SETTLED that
+  *                     block (its id is final, not the liquid tip id) and votes converge on one target.
+  *                     Too small ⇒ replicas still see the height as their liquid tip and reject the
+  *                     proposal ⇒ no quorum. Too large ⇒ HotStuff finalizes further behind the tip.
   */
 case class HotStuffSettings(
     enabled: Boolean,
-    roundTimeout: FiniteDuration
+    roundTimeout: FiniteDuration,
+    settledDepth: Int = 3
 ) derives ConfigReader {
-  if (enabled) require(roundTimeout.toMillis > 0, "dcc.hotstuff.round-timeout must be positive when hotstuff is enabled")
+  if (enabled) {
+    require(roundTimeout.toMillis > 0, "dcc.hotstuff.round-timeout must be positive when hotstuff is enabled")
+    require(settledDepth >= 1, "dcc.hotstuff.settled-depth must be >= 1 when hotstuff is enabled")
+  }
 }

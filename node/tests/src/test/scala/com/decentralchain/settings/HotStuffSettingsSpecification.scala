@@ -17,9 +17,17 @@ class HotStuffSettingsSpecification extends FlatSpec {
     val settings = load("""
                           |enabled = true
                           |round-timeout = 1200ms
+                          |settled-depth = 3
       """.stripMargin)
     settings.enabled should be(true)
     settings.roundTimeout should be(1200.millis)
+    settings.settledDepth should be(3)
+  }
+
+  it should "reject a settled-depth below 1 when enabled" in {
+    assertThrows[IllegalArgumentException] {
+      HotStuffSettings(enabled = true, roundTimeout = 1200.millis, settledDepth = 0)
+    }
   }
 
   it should "default to disabled in the reference config (safety gate)" in {
