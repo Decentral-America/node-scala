@@ -1,10 +1,12 @@
 # T2 HotStuff — Implementation & Integration Design (SSOT)
 
-> **Status:** in implementation on `feature/hotstuff-t2`. Pure BFT core complete + unit-tested; the
-> side-effecting shell (step 4c) has **landed**, and the step-5 multi-node finality smoke is **green on
-> CI** — `FourNodeHotStuffTestSuite` passes on ubuntu-latest (PR #17): a HotStuff-enabled 4-node cluster
-> finalizes on every node without halting or forking. Adversarial multi-node scenarios + soak + audit
-> still remain. **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change today.**
+> **Status:** ⚠️ **REWORK PENDING — do not treat as ship-ready.** Pure BFT core is complete + unit-tested
+> and the CI simulation is green, BUT the first real multi-node run (step 5, live testnet, 2026-07-12)
+> showed the `view=block-height` shell model does not work on an NG chain: it took **four** fixes just to
+> get validators voting on the same block, and **QC formation is still unconfirmed live.** Full write-up
+> and the proposed rework (pacemaker/single-active-view, or lean on feature-25) are in
+> **[`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md)** — read that before
+> building further on §5. **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change today.**
 > **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
 > node-scala *implementation* of T2. Keep it updated as code lands.
 >
