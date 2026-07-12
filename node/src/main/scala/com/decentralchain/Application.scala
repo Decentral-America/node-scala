@@ -220,8 +220,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           ha <- blockchainUpdater.heightOf(ancestor)
         } yield hc >= ha).getOrElse(false)
 
+      // Replica safety guard: only vote for a proposal whose block is THE canonical block at height=view
+      // on our own settled chain (rejects a Byzantine leader proposing a fabricated / non-canonical block).
+      val proposalValid: (Int, BlockId) => Boolean =
+        (view, blockId) => blockchainUpdater.blockId(view).contains(blockId)
+
       val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
-      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch)
+      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid)
 
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
@@ -239,16 +244,31 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           hsCoordinator.onQC(qc)
         }(using hotStuffScheduler)
 
-      // Leader = FairPoS forger: when a block we produced is applied, propose it at view = height.
+      // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
+      // canonical block per view. view = settled height s = tip-1; the proposed block is the canonical
+      // key-block id `blockchainUpdater.blockId(s)` — stable once s is no longer the tip, and identical
+      // on every node — NOT the liquid `lastBlockInfo.id`, which changes as microblocks append and
+      // diverges across nodes (that divergence made votes fragment across blockIds so no QC ever formed).
+      // Leader(s) = the FairPoS generator of block s; only that node proposes. Trigger once per height
+      // increment (microblock updates at the same height carry the same height and are ignored).
+      var hsLastHeight = 0
       lastBlockInfo
         .observeOn(hotStuffScheduler)
         .foreach { info =>
-          val h = info.height.toInt
-          blockchainUpdater.blockHeader(h).foreach { sbh =>
-            val weForged = wallet.privateKeyAccount(sbh.header.generator.toAddress).isRight
-            log.info(s"[HotStuff] lastBlockInfo h=$h forger=${sbh.header.generator.toAddress} weForged=$weForged")
-            if (weForged)
-              hsCoordinator.onLeaderTurn(h, info.id, h)
+          val tip = info.height.toInt
+          if (tip > hsLastHeight) {
+            hsLastHeight = tip
+            val s = tip - 1 // parent height: now settled (tip moved on, no more microblocks for s)
+            if (s > 0) {
+              for {
+                canonicalId <- blockchainUpdater.blockId(s)
+                header      <- blockchainUpdater.blockHeader(s)
+              } {
+                val weAreLeader = wallet.privateKeyAccount(header.header.generator.toAddress).isRight
+                log.info(s"[HotStuff] settled view=$s leader=${header.header.generator.toAddress} weAreLeader=$weAreLeader block=$canonicalId")
+                if (weAreLeader) hsCoordinator.onLeaderTurn(s, canonicalId, s)
+              }
+            }
           }
         }(using hotStuffScheduler)
 

@@ -59,7 +59,11 @@ object HotStuffCoordinator {
   final class Enabled(
       committeeProvider: () => GeneratorSet,
       effects: HotStuffEffects,
-      extendsBranch: (BlockId, BlockId) => Boolean
+      extendsBranch: (BlockId, BlockId) => Boolean,
+      // Safety guard for HotStuff-over-FairPoS: is `blockId` THE canonical block at height `view`?
+      // A replica votes only for a proposal that matches its own settled chain, so a Byzantine leader
+      // cannot make honest nodes vote for a fabricated block. Default permissive for the in-memory sim.
+      proposalValid: (Int, BlockId) => Boolean = (_, _) => true
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine = EngineState(committeeProvider())
@@ -94,10 +98,14 @@ object HotStuffCoordinator {
 
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
-      val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
-      engine = nextEngine
-      logger.info(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
-      if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
+      if (!proposalValid(proposal.view, proposal.blockId)) {
+        logger.info(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not the canonical block at this view)")
+      } else {
+        val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
+        engine = nextEngine
+        logger.info(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
+        if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
+      }
     }
 
     def onVote(vote: HotStuffVote): Unit = {
