@@ -32,6 +32,11 @@ class MessageCodec(peerDatabase: PeerDatabase) extends MessageToMessageCodec[Raw
       case s: BlockSnapshotResponse      => RawBytes.from(BlockSnapshotResponseSpec, s)
       case s: MicroBlockSnapshotResponse => RawBytes.from(MicroBlockSnapshotResponseSpec, s)
       case e: EndorseBlock               => RawBytes.from(EndorseBlockSpec, e)
+      // T2 HotStuff (gated behind dcc.hotstuff.enabled). Without these cases the outbound encoder threw
+      // "unsupported" and silently dropped every HotStuff message, so QCs never formed across nodes.
+      case v: HotStuffVote       => RawBytes.from(HotStuffVoteSpec, v)
+      case qc: QuorumCertificate => RawBytes.from(QuorumCertificateSpec, qc)
+      case p: HotStuffProposal   => RawBytes.from(HotStuffProposalSpec, p)
 
       // Version switch
       case gs: GetSignatures if isNewMsgsSupported(ctx) =>
