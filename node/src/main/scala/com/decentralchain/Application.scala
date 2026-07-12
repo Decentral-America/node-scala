@@ -228,20 +228,37 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
       val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid)
 
+      // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
+      // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
+      // nodes bridged only via the main node) a validator sees <2/3 of votes and no QC ever forms.
+      // Like feature-25 endorsements, GOSSIP them: on first receipt relay to every peer except the
+      // sender, then process. A bounded seen-cache dedups so relaying cannot storm.
+      import com.google.common.cache.{Cache, CacheBuilder}
+      import io.netty.channel.Channel
+      import com.decentralchain.network.Message
+      val hsSeen: Cache[String, java.lang.Boolean]                          = CacheBuilder.newBuilder().maximumSize(100000).build()
+      def hsGossipOnce(sender: Channel, key: String, msg: Message): Boolean =
+        if (hsSeen.getIfPresent(key) != null) false
+        else {
+          hsSeen.put(key, java.lang.Boolean.TRUE)
+          allChannels.broadcast(msg, Set(sender)) // relay to all other peers (transitive delivery)
+          true
+        }
+
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
-        .foreach { case (_, p) =>
-          hsCoordinator.onProposal(p, blockchainUpdater.height)
+        .foreach { case (ch, p) =>
+          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p)) hsCoordinator.onProposal(p, blockchainUpdater.height)
         }(using hotStuffScheduler)
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
-        .foreach { case (_, v) =>
-          hsCoordinator.onVote(v)
+        .foreach { case (ch, v) =>
+          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v)) hsCoordinator.onVote(v)
         }(using hotStuffScheduler)
       messageObserver.hotStuffQCs
         .observeOn(hotStuffScheduler)
-        .foreach { case (_, qc) =>
-          hsCoordinator.onQC(qc)
+        .foreach { case (ch, qc) =>
+          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc)) hsCoordinator.onQC(qc)
         }(using hotStuffScheduler)
 
       // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
