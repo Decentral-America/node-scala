@@ -61,8 +61,16 @@ advances and **feature-25 Deterministic Finality continues underneath — the ch
 `Application` wiring** — gated coordinator construction, a dynamic per-period committee provider
 (`blockchain.currentGeneratorSet`), inbound subscriptions on a dedicated single-thread scheduler, the
 pacemaker timer (`round-timeout` → `onTimeout`), and the propose-if-we-forged hook via `lastBlockInfo`.
-Implementer decision: **view = block height, leader = FairPoS forger** (3 phases within one view; views
-advance with heights). Commit is **observational** (feature-25 stays authoritative).
+Implementer decision: **view = SETTLED block height (tip−1), leader = that block's FairPoS forger,
+proposed/voted target = the canonical key-block id `blockchain.blockId(view)`.** Rationale (step-5
+finding, 2026-07-12): the first cut used `view = tip height` and proposed the *liquid* `lastBlockInfo.id`.
+Under Waves-NG the tip block's id changes as microblocks append and differs across nodes, so several
+nodes proposed different blockIds at the *same* view → votes fragmented → **no QC ever formed**. Running
+one **settled** height behind the tip and voting on the canonical `blockId(s)` gives exactly one leader
+and one agreed block per view. A replica also enforces `proposalValid(view, blockId) =
+blockchain.blockId(view).contains(blockId)` — it votes only for the canonical block at that height, so a
+Byzantine leader cannot make honest nodes vote for a fabricated block. Commit is **observational**
+(feature-25 stays authoritative).
 
 ⚠️ **RUNTIME-PARTIALLY-VALIDATED:** compiled + unit/simulation-tested, **plus a real 4-node docker
 cluster smoke run** (`FourNodeHotStuffTestSuite`). What the live run established:

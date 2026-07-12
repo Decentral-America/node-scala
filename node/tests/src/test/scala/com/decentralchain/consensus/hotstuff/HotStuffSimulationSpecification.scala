@@ -67,4 +67,23 @@ class HotStuffSimulationSpecification extends FlatSpec {
     val result = run(Set(0, 1, 2)) // node 3 absent
     (0 to 2).foreach(i => result(i) should be(Some((B, H))))
   }
+
+  "the proposalValid guard" should "make a replica reject a non-canonical proposal (no vote) but accept the canonical one" in {
+    val sent = mutable.ListBuffer.empty[Message]
+    val fx   = new HotStuffEffects {
+      def broadcast(m: Message): Unit                                = sent += m
+      def myVoterIndexes: Set[Int]                                   = Set(1)
+      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(1).sign(msg))
+      def onCommit(blockId: BlockId, height: Int): Unit              = ()
+    }
+    // Real-world guard: only B is the canonical block at this view (blockchain.blockId(view) == B).
+    val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true, (_, b) => b == B)
+
+    val bogus: BlockId = ByteStr(Array.fill[Byte](32)(99))
+    node.onProposal(HotStuffProposal(0, bogus, None), H)
+    sent.collect { case v: HotStuffVote => v } shouldBe empty // Byzantine/non-canonical proposal -> no vote
+
+    node.onProposal(HotStuffProposal(0, B, None), H)
+    sent.collect { case v: HotStuffVote => v } should not be empty // canonical proposal -> votes
+  }
 }
