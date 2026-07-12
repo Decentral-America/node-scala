@@ -245,7 +245,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         .foreach { info =>
           val h = info.height.toInt
           blockchainUpdater.blockHeader(h).foreach { sbh =>
-            if (wallet.privateKeyAccount(sbh.header.generator.toAddress).isRight)
+            val weForged = wallet.privateKeyAccount(sbh.header.generator.toAddress).isRight
+            log.info(s"[HotStuff] lastBlockInfo h=$h forger=${sbh.header.generator.toAddress} weForged=$weForged")
+            if (weForged)
               hsCoordinator.onLeaderTurn(h, info.id, h)
           }
         }(using hotStuffScheduler)

@@ -4,6 +4,7 @@ import com.decentralchain.block.Block.BlockId
 import com.decentralchain.crypto.bls.BlsSignature
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorSet, Height}
+import com.typesafe.scalalogging.StrictLogging
 import io.decentralchain.protobuf.block.HotStuffPhase
 
 /** Side-effect sink injected into the HotStuff coordinator. The real (step 4c-bind) implementation
@@ -59,7 +60,8 @@ object HotStuffCoordinator {
       committeeProvider: () => GeneratorSet,
       effects: HotStuffEffects,
       extendsBranch: (BlockId, BlockId) => Boolean
-  ) extends HotStuffCoordinator {
+  ) extends HotStuffCoordinator
+      with StrictLogging {
     private var engine = EngineState(committeeProvider())
     private var pool   = VotePool()
     private var voted  = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
@@ -68,17 +70,23 @@ object HotStuffCoordinator {
     // the start of each event so reducers always see the current period's set.
     private def refreshCommittee(): Unit = engine = engine.copy(committee = committeeProvider())
 
+    private def bid(b: BlockId): String = b.toString.take(8)
+
     /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool. */
     private def castVotes(view: Int, phase: HotStuffPhase, blockId: BlockId, height: Int): Unit = {
       val key = (view, phase, blockId)
       if (!voted.contains(key)) {
         voted += key
         val message = HotStuffQuorum.voteMessage(view, phase, blockId, height)
-        effects.myVoterIndexes.foreach { idx =>
-          effects.signVote(message, idx).foreach { sig =>
-            val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr)
-            effects.broadcast(vote)
-            onVote(vote) // count our own vote locally
+        val mine    = effects.myVoterIndexes
+        logger.info(s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size}")
+        mine.foreach { idx =>
+          effects.signVote(message, idx) match {
+            case Some(sig) =>
+              val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr)
+              effects.broadcast(vote)
+              onVote(vote) // count our own vote locally
+            case None => logger.warn(s"[HotStuff] signVote returned None for idx=$idx (no BLS key for this committee slot?)")
           }
         }
       }
@@ -88,6 +96,7 @@ object HotStuffCoordinator {
       refreshCommittee()
       val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
       engine = nextEngine
+      logger.info(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
       if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
     }
 
@@ -95,6 +104,7 @@ object HotStuffCoordinator {
       refreshCommittee()
       val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
       pool = nextPool
+      logger.info(s"[HotStuff] onVote from #${vote.voterIndex} ${vote.phase} v=${vote.view} b=${bid(vote.blockId)} -> QC=${maybeQC.isDefined}")
       maybeQC.foreach { qc =>
         effects.broadcast(qc)
         onQC(qc)
@@ -106,6 +116,9 @@ object HotStuffCoordinator {
       val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
       engine = nextEngine
       val rejected = actions.exists { case _: HotStuffAction.Rejected => true; case _ => false }
+      logger.info(
+        s"[HotStuff] onQC ${qc.phase} v=${qc.view} b=${bid(qc.blockId)} signers=${qc.signerIndexes.size} rejected=$rejected actions=${actions.mkString(",")}"
+      )
       actions.foreach {
         case HotStuffAction.Committed(blockId, height) => effects.onCommit(blockId, height)
         case _                                         => ()
@@ -123,6 +136,7 @@ object HotStuffCoordinator {
 
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = {
       refreshCommittee()
+      logger.info(s"[HotStuff] onLeaderTurn v=$view b=${bid(blockId)} committee=${engine.committee.size} myIndexes=${effects.myVoterIndexes}")
       val proposal = HotStuffProposal(view, blockId, engine.safety.prepareQC)
       effects.broadcast(proposal)
       onProposal(proposal, blockHeight) // the leader also votes for its own proposal
