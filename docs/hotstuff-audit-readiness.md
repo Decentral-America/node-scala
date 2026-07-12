@@ -4,10 +4,13 @@
 > the threat scenarios to probe, the code surface, and the evidence already produced — so the audit can
 > start from a known baseline instead of rediscovering it.
 >
-> **Status of the thing being audited:** implemented, merged to node-scala `dev`, **gated behind
-> `dcc.hotstuff.enabled` (default `false`)** — it changes no node behaviour until explicitly enabled.
-> 45 unit tests pass; `FourNodeHotStuffTestSuite` (4-node finality) is green on CI. It has **not** run
-> on a live network yet; a testnet soak (infra PR #49) and this audit are the gates before mainnet.
+> **Status of the thing being audited:** ⚠️ **REWORK PENDING — audit the reworked model, not today's shell.**
+> The pure core + tests are sound, but the first live multi-node run (step 5) showed the `view=block-height`
+> shell model does not work on an NG chain and needs redesign. **Read
+> [`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md) first** — it records the
+> four bugs fixed live, the still-open QC-formation issue, and the pacemaker-vs-feature-25 decision the audit
+> should weigh in on. The scope/threat-model/evidence below remain valid for the *core*; the shell view/leader
+> mapping is being reworked. Gated behind `dcc.hotstuff.enabled` (default `false`) — no behaviour change today.
 
 ## 1. What it is, and the one property that bounds the whole audit
 Basic 3-phase HotStuff (prepare → pre-commit → commit) over the **committed-generator committee**
