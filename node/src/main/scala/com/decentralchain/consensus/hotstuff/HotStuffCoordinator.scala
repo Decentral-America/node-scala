@@ -112,7 +112,25 @@ object HotStuffCoordinator {
       refreshCommittee()
       val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
       pool = nextPool
-      logger.info(s"[HotStuff] onVote from #${vote.voterIndex} ${vote.phase} v=${vote.view} b=${bid(vote.blockId)} -> QC=${maybeQC.isDefined}")
+      // Pool-level instrumentation: the accumulated distinct signers + whether they clear the 2/3
+      // stake quorum, per target. When the bucket clears (QC formed) it is empty here => QC=true tells
+      // the story. This is the datum that distinguishes "votes don't co-reside / committee mismatch"
+      // (pooledVoters stays small) from a formation bug (quorum met yet QC=false).
+      val key    = (vote.view, vote.phase, vote.blockId)
+      val bucket = nextPool.pending.getOrElse(key, Vector.empty)
+      val voters = bucket.map(_.voterIndex).distinct.sorted
+      val quorum = HotStuffQuorum.hasQuorum(voters, engine.committee)
+      logger.info(
+        s"[HotStuff] onVote from #${vote.voterIndex} ${vote.phase} v=${vote.view} b=${bid(vote.blockId)} pooledVoters=$voters quorumByStake=$quorum -> QC=${maybeQC.isDefined}"
+      )
+      // Should be unreachable now that all votes carry the settled-view blockHeight, but if it ever
+      // fires it means the bucket reached quorum yet formQC rejected it — surface WHY loudly (do not
+      // let a QC-formation failure hide as it did before the blockHeight fix).
+      if (maybeQC.isEmpty && quorum)
+        logger.warn(
+          s"[HotStuff] QUORUM REACHED but no QC v=${vote.view} ${vote.phase} b=${bid(vote.blockId)} " +
+            s"— votes disagree on blockHeight=${bucket.map(_.blockHeight.toInt).distinct.sorted} (must be identical to form a QC)"
+        )
       maybeQC.foreach { qc =>
         effects.broadcast(qc)
         onQC(qc)

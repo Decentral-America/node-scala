@@ -31,8 +31,13 @@ object HotStuffVotePool {
 
       if (HotStuffQuorum.hasQuorum(updated.map(_.voterIndex), committee)) {
         HotStuffQuorum.formQC(updated, committee) match {
-          case Right(qc) => (pool.copy(pending = pool.pending - key), Some(qc))             // quorum → emit + clear bucket
-          case Left(_)   => (pool.copy(pending = pool.pending.updated(key, updated)), None) // unreachable: all pooled votes are valid
+          case Right(qc) => (pool.copy(pending = pool.pending - key), Some(qc)) // quorum → emit + clear bucket
+          // Reachable: `hasQuorum` only counts voter indexes, but `formQC` additionally requires every
+          // vote in the bucket to share the SAME blockHeight (its `sameTarget` check). Bucketing by
+          // (view, phase, blockId) ignores blockHeight, so votes that agree on the block but disagree on
+          // height reach quorum yet fail to form a QC. The shell logs this discrepancy (see
+          // HotStuffCoordinator.onVote). Keep the bucket so a later matching-height vote can still form.
+          case Left(_) => (pool.copy(pending = pool.pending.updated(key, updated)), None)
         }
       } else (pool.copy(pending = pool.pending.updated(key, updated)), None)
     }

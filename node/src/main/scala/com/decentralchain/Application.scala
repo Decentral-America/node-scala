@@ -248,7 +248,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, p) =>
-          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p)) hsCoordinator.onProposal(p, blockchainUpdater.height)
+          // blockHeight MUST be the proposal's settled view (`p.view`), NOT our local tip
+          // (`blockchainUpdater.height`). The leader signs its vote over height = s (the settled view);
+          // if a replica signed over its local tip (~s + settledDepth) instead, every replica's vote
+          // would carry a different blockHeight. Such votes still share the (view, phase, blockId) pool
+          // bucket and pass the voter-count quorum, but `HotStuffQuorum.formQC` requires an identical
+          // blockHeight across all votes, so the QC would never form (silently). view == settled height
+          // by construction, so p.view is the canonical, node-agnostic height.
+          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p)) hsCoordinator.onProposal(p, p.view)
         }(using hotStuffScheduler)
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
