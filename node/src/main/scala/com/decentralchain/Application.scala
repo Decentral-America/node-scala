@@ -292,7 +292,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
                 header      <- blockchainUpdater.blockHeader(s)
               } {
                 val weAreLeader = wallet.privateKeyAccount(header.header.generator.toAddress).isRight
-                log.info(s"[HotStuff] settled view=$s leader=${header.header.generator.toAddress} weAreLeader=$weAreLeader block=$canonicalId")
+                log.debug(s"[HotStuff] settled view=$s leader=${header.header.generator.toAddress} weAreLeader=$weAreLeader block=$canonicalId")
                 if (weAreLeader) hsCoordinator.onLeaderTurn(s, canonicalId, s)
               }
             }
@@ -302,7 +302,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
       hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onTimeout())
-      log.info("T2 HotStuff coordinator ENABLED (observational, view=height). Not audited/soaked — testnet only.")
+      log.info(
+        s"T2 HotStuff coordinator ENABLED (observational; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."
+      )
     }
 
     val history = History(
