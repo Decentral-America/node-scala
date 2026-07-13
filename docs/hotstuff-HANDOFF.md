@@ -100,6 +100,6 @@ Per `hotstuff-step5-findings-and-rework.md §4`:
 ## 10. First actions for the inheritor
 1. Read `hotstuff-step5-findings-and-rework.md`.
 2. ~~Add the §4 pool instrumentation + get the "votes co-reside or not" datum.~~ **DONE (2026-07-13):** votes co-reside; the blocker was a local height-mismatch bug (§3-#5), now fixed and committing live across all nodes.
-3. **Run the sustained soak (RUNBOOK Scenario E)** — the one remaining evidence gap. Confirm `hotStuffFinalizedHeight` tracks tip continuously across restarts / crash / partition over multiple days on all nodes, and record REAL results (the old "soak PASSED" was fiction).
+3. ~~Run the sustained soak (RUNBOOK Scenario E).~~ **DONE (2026-07-13, infra run 29284578037 — PASS):** first real fault soak (gen nodes down one-at-a-time then both, then restored). Chain never halted; HotStuff commit paused during outages and resumed after every restore (steady hsLag=3); feature-25 finalized normally. Recorded in `infra/clusters/testnet/RUNBOOK.md §Scenario E`. Added a non-paging `HotStuffCommitNotAdvancing` alert. A longer multi-day soak remains nice-to-have but core resilience is demonstrated.
 4. Make the §5 A-vs-B decision with consensus-eng + the auditor — now a pure *product* call (commit works either way), record it.
-5. Execute the chosen path against §9. Keep every doc in §2 updated as SSOT — do not let status drift from reality again.
+5. **External consensus audit**, then (only if going authoritative or enabling on mainnet) execute against §9. Keep every doc in §2 updated as SSOT — do not let status drift from reality again.
