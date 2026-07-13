@@ -83,7 +83,7 @@ object HotStuffCoordinator {
         voted += key
         val message = HotStuffQuorum.voteMessage(view, phase, blockId, height)
         val mine    = effects.myVoterIndexes
-        logger.info(s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size}")
+        logger.debug(s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size}")
         mine.foreach { idx =>
           effects.signVote(message, idx) match {
             case Some(sig) =>
@@ -99,11 +99,11 @@ object HotStuffCoordinator {
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
       if (!proposalValid(proposal.view, proposal.blockId)) {
-        logger.info(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not the canonical block at this view)")
+        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not the canonical block at this view)")
       } else {
         val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
         engine = nextEngine
-        logger.info(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
+        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
         if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
       }
     }
@@ -112,21 +112,28 @@ object HotStuffCoordinator {
       refreshCommittee()
       val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
       pool = nextPool
-      // Pool-level instrumentation: the accumulated distinct signers + whether they clear the 2/3
-      // stake quorum, per target. When the bucket clears (QC formed) it is empty here => QC=true tells
-      // the story. This is the datum that distinguishes "votes don't co-reside / committee mismatch"
-      // (pooledVoters stays small) from a formation bug (quorum met yet QC=false).
-      val key    = (vote.view, vote.phase, vote.blockId)
-      val bucket = nextPool.pending.getOrElse(key, Vector.empty)
-      val voters = bucket.map(_.voterIndex).distinct.sorted
-      val quorum = HotStuffQuorum.hasQuorum(voters, engine.committee)
-      logger.info(
-        s"[HotStuff] onVote from #${vote.voterIndex} ${vote.phase} v=${vote.view} b=${bid(vote.blockId)} pooledVoters=$voters quorumByStake=$quorum -> QC=${maybeQC.isDefined}"
+      // Pool-level instrumentation: distinct signers accumulated for this target and whether they clear
+      // the 2/3 stake quorum. On QC formation the bucket is cleared, so report the QC's own signer set
+      // instead of the (now-empty) bucket. High-volume => DEBUG (per the step-5 handoff: reduce from INFO
+      // once the QC-formation fix is in). `committeeReady` guards the degenerate hasQuorum([], empty)==true
+      // during the post-restart window before the committee has loaded from chain state.
+      val key            = (vote.view, vote.phase, vote.blockId)
+      val bucket         = nextPool.pending.getOrElse(key, Vector.empty)
+      val voters         = bucket.map(_.voterIndex).distinct.sorted
+      val committeeReady = engine.committee.nonEmpty
+      val quorum         = committeeReady && HotStuffQuorum.hasQuorum(voters, engine.committee)
+      logger.debug(
+        maybeQC match {
+          case Some(qc) =>
+            s"[HotStuff] onVote from #${vote.voterIndex} ${vote.phase} v=${vote.view} b=${bid(vote.blockId)} -> QC formed, signers=${qc.signerIndexes.sorted}"
+          case None =>
+            s"[HotStuff] onVote from #${vote.voterIndex} ${vote.phase} v=${vote.view} b=${bid(vote.blockId)} pooledVoters=$voters quorumByStake=$quorum -> QC=false"
+        }
       )
-      // Should be unreachable now that all votes carry the settled-view blockHeight, but if it ever
-      // fires it means the bucket reached quorum yet formQC rejected it — surface WHY loudly (do not
-      // let a QC-formation failure hide as it did before the blockHeight fix).
-      if (maybeQC.isEmpty && quorum)
+      // Safety net: after the blockHeight fix this should never fire. If it does, a non-empty bucket
+      // reached quorum yet formQC rejected it — surface WHY loudly. Guarded so the empty-bucket /
+      // empty-committee catch-up window cannot produce a false alarm.
+      if (maybeQC.isEmpty && quorum && bucket.nonEmpty)
         logger.warn(
           s"[HotStuff] QUORUM REACHED but no QC v=${vote.view} ${vote.phase} b=${bid(vote.blockId)} " +
             s"— votes disagree on blockHeight=${bucket.map(_.blockHeight.toInt).distinct.sorted} (must be identical to form a QC)"
@@ -142,9 +149,11 @@ object HotStuffCoordinator {
       val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
       engine = nextEngine
       val rejected = actions.exists { case _: HotStuffAction.Rejected => true; case _ => false }
-      logger.info(
+      val line     =
         s"[HotStuff] onQC ${qc.phase} v=${qc.view} b=${bid(qc.blockId)} signers=${qc.signerIndexes.size} rejected=$rejected actions=${actions.mkString(",")}"
-      )
+      // A rejected QC is worth surfacing (committee/view skew, e.g. during post-restart catch-up); a
+      // healthy QC is per-view chatter => DEBUG. The commit itself is logged by NodeHotStuffEffects.onCommit.
+      if (rejected) logger.warn(line) else logger.debug(line)
       actions.foreach {
         case HotStuffAction.Committed(blockId, height) => effects.onCommit(blockId, height)
         case _                                         => ()
@@ -162,7 +171,7 @@ object HotStuffCoordinator {
 
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = {
       refreshCommittee()
-      logger.info(s"[HotStuff] onLeaderTurn v=$view b=${bid(blockId)} committee=${engine.committee.size} myIndexes=${effects.myVoterIndexes}")
+      logger.debug(s"[HotStuff] onLeaderTurn v=$view b=${bid(blockId)} committee=${engine.committee.size} myIndexes=${effects.myVoterIndexes}")
       val proposal = HotStuffProposal(view, blockId, engine.safety.prepareQC)
       effects.broadcast(proposal)
       onProposal(proposal, blockHeight) // the leader also votes for its own proposal
