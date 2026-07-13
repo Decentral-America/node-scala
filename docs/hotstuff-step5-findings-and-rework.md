@@ -8,10 +8,13 @@
 > [`hotstuff-audit-readiness.md`](./hotstuff-audit-readiness.md) (audit scope/evidence).
 >
 > **Bottom line.** T2 was documented "done" but had never actually run across ≥2 nodes. Step-5 showed it
-> did **nothing** on the wire and took **four** distinct fixes just to get validators voting on the same
-> block. QC formation still isn't confirmed live. The `view = block-height, leader = that height's
-> forger` model in `hotstuff-integration-design.md §5` **fights** classic 3-phase HotStuff and should be
-> reworked (§3 below) — or reconsidered against feature-25, which already provides 2/3 finality (§4).
+> did **nothing** on the wire and took **five** distinct fixes to get validators voting on the same block
+> AND forming QCs. As of **2026-07-13 QC formation is confirmed live**: all three testnet nodes commit in
+> lockstep (`hotStuffFinalizedHeight` = tip − settled-depth, advancing). The final blocker was a **local
+> vote-message `blockHeight` mismatch** (fix #5), NOT the view model — the votes *did* co-reside; the pool
+> rejected them on a height field mismatch and swallowed it silently. The `view = block-height` model in
+> `hotstuff-integration-design.md §5` therefore does **not** prevent commit; a proper pacemaker (§3/§4
+> Option A) is now an optional upgrade for responsiveness + view-change, not a prerequisite for finality.
 >
 > **No production risk:** HotStuff commit is observational; feature-25 Deterministic Finality is
 > authoritative and healthy throughout. `dcc.hotstuff.enabled` is `false` by default.
@@ -34,18 +37,21 @@ resourced step-5 harness must automate; the local `node-it` suite could not surf
 | 2 | Votes fragmented across blockIds at one view | `view = tip height`, proposing the **liquid** `lastBlockInfo.id`, which changes as microblocks append and differs across nodes → many blocks per view | `view = settled height (tip−depth)`, propose the canonical `blockchain.blockId(s)`; replica `proposalValid` guard = only vote the canonical block at that height |
 | 3 | Steady-state stall after a catch-up burst | settled depth = 1 too shallow: a ~1-block-behind replica still has the view's height as its *liquid* tip → guard rejects → no quorum | configurable `dcc.hotstuff.settled-depth` (default 3 > inter-node tip skew) |
 | 4 | Each validator saw <2/3 of votes | `allChannels.broadcast` reaches **direct peers only**; in the hub topology (gen↔main, not gen↔gen) votes didn't reach all. feature-25 relays ("will be shared"); HotStuff didn't | gossip each HotStuff message once (relay to peers except sender) with a bounded dedup cache |
+| 5 | **QC never formed despite converged votes** (the last blocker) | A replica handling a received proposal voted with `blockHeight = blockchainUpdater.height` (its LOCAL tip, `≈ s + settledDepth`) while the leader voted with `blockHeight = s` (settled view). The vote is a BLS signature over `voteMessage(view, phase, blockId, blockHeight)`, and `formQC` requires an **identical `blockHeight`** across all votes. Votes shared the `(view,phase,blockId)` bucket and passed the voter-count quorum, but `formQC` returned `Left` on the height mismatch — swallowed in `HotStuffVotePool.onVote`'s branch mislabeled "unreachable". | replica votes over `p.view` (== settled height); pool-level instrumentation + guarded WARN safety-net in `HotStuffCoordinator.onVote`; regression tests in `HotStuffVotePoolSpecification` (mixed-height → no QC; same-height → QC). Corrected the false "unreachable" comment. |
 
-After #1–#4: **votes converge** — all three validators vote the same `(view, block)` (verified in logs).
+After #1–#4: **votes converge** — all three validators vote the same `(view, block)`. After #5: **QCs form
+and blocks commit** — confirmed live 2026-07-13, all three nodes advance `hotStuffFinalizedHeight` in
+lockstep at tip − settled-depth.
 
-### Open
-**QC still does not form / no sustained commit** despite converged votes. Three votes on one
-`(view, phase, block)` = 100% stake should satisfy `HotStuffQuorum.formQC`, yet `QC=false` persisted.
-The BLS path is almost certainly fine (`verifyVote` uses `BlsUtils.verifyBasic`, the *same* primitive
-feature-25 verifies endorsements with successfully). The likely culprit is **timing/model**, not crypto:
-with the current model there is no single *current view* all replicas dwell on, so a node rarely holds
-≥2/3 of the votes for one target *at the same time* before moving on. Confirming this needs pool-level
-instrumentation (log accumulated stake per target inside `HotStuffVotePool.onVote`) — but it is itself a
-symptom of the architecture in §3.
+### ~~Open~~ — RESOLVED (fix #5 above)
+The QC blocker was diagnosed by **static analysis of the QC-formation path**, not another deploy-guess.
+The earlier hypothesis here — "no single current view all replicas dwell on, so votes don't co-reside" —
+was **wrong**: the votes *did* co-reside in one pool bucket and *did* reach the stake quorum; `formQC`
+rejected them on a `blockHeight` field the voter-count quorum check ignored, and the pool discarded that
+`Left` silently. The requested pool-level instrumentation was added anyway (it now reports accumulated
+signers + stake-quorum per target and a guarded WARN if quorum is met yet no QC forms) and would have
+pinpointed this directly. **Lesson: a `Left`/"unreachable" branch on a safety-critical path must be
+logged, never swallowed.**
 
 ## 3. Root architectural finding
 The implemented model (`hotstuff-integration-design.md §5`):
@@ -59,8 +65,14 @@ busy leading the heights it forged while also replying to others. Classic 3-phas
 - all replicas focused on the current view so votes concentrate → QC → pipeline to the next view.
 
 Mapping "view" onto "block height with the block's own forger as leader" removes the single-active-view
-property HotStuff depends on. #2–#4 were consequences of forcing that mapping onto an NG chain; the open
-QC issue is the same mismatch at the voting layer. **This is a design problem, not another patch.**
+property HotStuff depends on. #2–#4 were consequences of forcing that mapping onto an NG chain.
+
+> **Correction (2026-07-13).** An earlier version of this section claimed "the open QC issue is the same
+> [architectural] mismatch at the voting layer." That was **wrong** — the QC blocker was a local vote-message
+> `blockHeight` mismatch (finding #5), and once fixed the current model **commits across all nodes**. The
+> concurrent-view model is therefore not a correctness blocker for observational finality. It remains
+> sub-optimal for *responsiveness* and lacks a real view-change/pacemaker, so Option A below is a genuine
+> improvement — but it is an **optional upgrade driven by product need, not a prerequisite for T2 to work.**
 
 ### What is salvageable
 - ✅ **Pure core** (`HotStuffQuorum`, `HotStuffSafety`, `HotStuffVotePool`, `HotStuffEngine`) — sound,
@@ -91,9 +103,13 @@ guarantees (responsiveness + view-change) beyond what a tuned feature-25 provide
 a proper pacemaker. If no → Option B, and T2-as-HotStuff is descoped.
 
 ## 5. Enable-gate impact (updates `hotstuff-audit-readiness.md §8`)
-- [ ] Resolve §2-Open (QC formation) — but only *after* the §4 decision, since Option B may retire it.
-- [ ] If Option A: pacemaker/single-active-view rework + new adversarial tests (leader rotation, view
-      change, concurrent-height safety) + fresh internal review before re-running step-5.
-- [ ] External audit must review the *reworked* model, not the current shell.
-- The four fixed transport/model bugs and the observability (`hotStuffFinalizedHeight`, instrumentation)
-  carry forward regardless of A/B.
+- [x] **Resolve §2-Open (QC formation) — DONE 2026-07-13** (fix #5); commits live on all nodes.
+- [ ] **Sustained soak (RUNBOOK Scenario E)** — the remaining evidence gap: `hotStuffFinalizedHeight`
+      tracks tip continuously across restarts / crash / partition over multiple days on all nodes,
+      recorded with REAL results.
+- [ ] §4 A-vs-B decision — now a pure *product* call (commit works either way); if Option A, add the
+      pacemaker/single-active-view rework + adversarial tests (leader rotation, view change,
+      concurrent-height safety) + fresh internal review before re-running step-5.
+- [ ] External audit before any mainnet enable (of the shipped model, or the reworked one if Option A).
+- The five fixed transport/model/height bugs and the observability (`hotStuffFinalizedHeight`,
+  instrumentation) carry forward regardless of A/B.

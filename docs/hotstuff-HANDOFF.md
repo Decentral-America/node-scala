@@ -15,13 +15,13 @@
 
 ---
 
-## 1. TL;DR state (as of 2026-07-12)
+## 1. TL;DR state (as of 2026-07-13)
 - **Works:** feature-25 Deterministic Finality (single-round BLS, 2/3 committed stake) is live, authoritative, healthy. HotStuff commit is **observational** → it can NOT harm the chain. `dcc.hotstuff.enabled` defaults **false**.
-- **HotStuff progress this session:** went from *silent on the wire* → *all validators converge voting the same (view, block)* via **four** fixes (transport, view-model, settled-depth, gossip — see §3 & the rework doc).
-- **OPEN blocker:** QC still does not form / no sustained commit despite converged votes. `hotStuffFinalizedHeight` reached 44103 once (during catch-up) then stuck.
-- **Decision gate (do this FIRST, §5):** rework as proper pacemaker/single-active-view HotStuff (**Option A**) vs extend the already-working feature-25 for low-latency finality and descope HotStuff (**Option B, recommended to evaluate first**).
+- **HotStuff progress:** went from *silent on the wire* → *all validators converge voting the same (view, block)* → **committing across all nodes on the live testnet** via **five** fixes (transport, view-model, settled-depth, gossip, and the blockHeight-consistency fix that closed the QC blocker — see §3).
+- **BLOCKER CLOSED (2026-07-13):** the open QC-formation blocker is **resolved**. Root cause: the leader signed its vote over `blockHeight = s` (settled view) but a replica signed over its local tip (`blockchainUpdater.height ≈ s + settledDepth`); both votes shared the `(view,phase,blockId)` pool bucket and passed the voter-count quorum, but `formQC`'s `sameTarget` check requires an identical `blockHeight`, so it returned `Left` and the pool swallowed it in a branch mislabeled "unreachable". Fix: replicas vote over `p.view`. **Verified live:** all 3 testnet nodes (VPS + gen-0 + gen-1) report `hotStuffFinalizedHeight` advancing in lockstep, tracking tip at exactly `settled-depth = 3` behind (e.g. tip 44754 → finalized 44751 on every node). First-ever multi-node HotStuff commit on a real network.
+- **Decision gate (§5) — now informed:** the QC blocker was a **local bug, not the architecture** (votes DID co-reside; the pool just rejected them on a height mismatch). So the §3-#2 "concurrent-leader / view-model" concern did NOT block commit. The remaining A-vs-B question is now purely about *product need* (does DCC want HotStuff responsiveness/view-change beyond a tuned feature-25?), no longer gated on "can it even commit." See §5.
 - **Branches:** all work on node-scala `dev` (via `feature/hotstuff-t2`, kept in sync). infra on `main` (Flux GitOps). Nothing on mainnet.
-- **Latest testnet image:** `ghcr.io/decentral-america/node-scala:dev-hotstuff` = `sha256:818179f9…` (all 4 fixes + INFO instrumentation), deployed to all testnet nodes.
+- **Latest testnet image:** `ghcr.io/decentral-america/node-scala:dev-hotstuff` = `sha256:6d4ca3ea…` (all 5 fixes; instrumentation reduced to DEBUG + false-positive-guarded, superseded `sha256:818179f9…`), deployed to all testnet nodes.
 
 ## 2. Read these (do not re-derive)
 | Doc | Purpose |
@@ -33,16 +33,17 @@
 | `../../infra/clusters/testnet/TOPOLOGY.md` | The testnet node inventory + the two deploy substrates + the one release workflow. **Read before any deploy.** |
 | `../../infra/clusters/testnet/RUNBOOK.md` | Scenario E soak plan (planned, not run) + generator commitment. |
 
-## 3. The four fixes already landed (keep these; they are correct regardless of A/B)
+## 3. The five fixes landed (keep these; correct regardless of A/B)
 1. **Transport** — `network/MessageCodec.scala` `encode` had no case for HotStuff types (default `throw`) → outbound dropped. Added 3 cases; `network/MessageCodecSpec` round-trip test.
 2. **View model** — was `view=tip height` on the *liquid* block id (diverges across nodes). Now `view = tip − settledDepth`, target = canonical `blockchainUpdater.blockId(s)`; replica `proposalValid` guard (vote only the canonical block at that height). `Application.scala` propose hook + `HotStuffCoordinator.Enabled`.
 3. **settled-depth** — configurable `dcc.hotstuff.settled-depth` (default 3) in `settings/HotStuffSettings.scala` + infra node configs. Must exceed inter-node tip skew.
 4. **Gossip** — `Application.scala` HotStuff message subscriptions now relay each message once (dedup cache) so votes reach ALL validators, not just direct peers (mirrors feature-25 "will be shared").
+5. **blockHeight consistency (closed the QC blocker)** — a replica handling a received proposal was calling `onProposal(p, blockchainUpdater.height)` (its LOCAL tip) instead of the proposal's settled view. Because the vote is a BLS signature over `voteMessage(view, phase, blockId, blockHeight)` and `formQC` requires an identical `blockHeight` across all votes, leader (`height=s`) and replica (`height≈s+settledDepth`) votes never formed a QC — silently, in the pool's mislabeled "unreachable" `Left` branch. Fix: `onProposal(p, p.view)` (view == settled height by construction). Regression tests in `HotStuffVotePoolSpecification` pin the contract (mixed-height votes reach quorum but form no QC; same-height votes do). `Application.scala` + instrumentation in `HotStuffCoordinator.onVote`.
 
-**Salvageable core (sound, unit-tested — do NOT rewrite):** `consensus/hotstuff/HotStuff{Quorum,Safety,VotePool,Engine}.scala`, the in-process 4-node sim (`HotStuffSimulationSpecification`), BLS committee/PoP reuse from feature-25. **What needs rework:** the shell view/leader/pacemaker mapping in `Application.scala` + how `HotStuffPacemaker` is (not) used.
+**Salvageable core (sound, unit-tested — do NOT rewrite):** `consensus/hotstuff/HotStuff{Quorum,Safety,VotePool,Engine}.scala`, the in-process 4-node sim (`HotStuffSimulationSpecification`), BLS committee/PoP reuse from feature-25. The shell view/leader mapping in `Application.scala` now demonstrably commits across nodes; a proper pacemaker/single-active-view model (§5 Option A) remains the path to true responsiveness + view-change liveness if the product needs it.
 
-## 4. The open blocker — precise next diagnostic
-Symptom: all 3 validators vote the same `(view, phase, block)` (confirmed in logs) but `QC=false`, no `observational commit`, `hotStuffFinalizedHeight` not sustaining. BLS is almost certainly fine (`HotStuffQuorum.verifyVote` uses `BlsUtils.verifyBasic` — the *same* primitive feature-25 verifies endorsements with). Suspect: no single *current view* all replicas dwell on, so no node holds ≥2/3 for one target *simultaneously* — i.e. a symptom of the §3-#2 architecture. **Before another cycle, add pool-level instrumentation:** in `HotStuffVotePool.onVote`, log the accumulated signer set + stake vs the 2/3 threshold per `(view,phase,blockId)`. That single data point decides "votes don't co-reside on a node (model problem → Option A/B)" vs "quorum/pool miscount (local bug → fix + done)."
+## 4. ~~The open blocker~~ — RESOLVED 2026-07-13
+The QC-formation blocker is **closed** by fix §3-#5. It was a **local bug (vote-message height mismatch), not the architecture** — the votes DID co-reside in one pool bucket; `formQC` rejected them on a `blockHeight` field mismatch that the voter-count quorum check didn't catch, and the pool swallowed the rejection silently. Diagnosed by static analysis of the QC-formation path, then confirmed live: all 3 testnet nodes commit in lockstep (`hotStuffFinalizedHeight` = tip − settled-depth, advancing continuously). The pool-level instrumentation the previous handoff requested was added (`HotStuffCoordinator.onVote` logs accumulated signers + stake-quorum per target, plus a guarded WARN safety-net) and would have caught this class of bug directly. **Next: sustained multi-day soak (§9), then the §5 product decision, then external audit before any mainnet enable.**
 
 ## 5. DECISION FIRST (don't code until this is made)
 Per `hotstuff-step5-findings-and-rework.md §4`:
@@ -98,6 +99,7 @@ Per `hotstuff-step5-findings-and-rework.md §4`:
 
 ## 10. First actions for the inheritor
 1. Read `hotstuff-step5-findings-and-rework.md`.
-2. Add the §4 pool instrumentation, one build/deploy/verify loop → get the "votes co-reside or not" datum.
-3. Make the §5 A-vs-B decision with consensus-eng + the auditor; record it.
-4. Execute the chosen path against §9. Keep every doc in §2 updated as SSOT — do not let status drift from reality again.
+2. ~~Add the §4 pool instrumentation + get the "votes co-reside or not" datum.~~ **DONE (2026-07-13):** votes co-reside; the blocker was a local height-mismatch bug (§3-#5), now fixed and committing live across all nodes.
+3. **Run the sustained soak (RUNBOOK Scenario E)** — the one remaining evidence gap. Confirm `hotStuffFinalizedHeight` tracks tip continuously across restarts / crash / partition over multiple days on all nodes, and record REAL results (the old "soak PASSED" was fiction).
+4. Make the §5 A-vs-B decision with consensus-eng + the auditor — now a pure *product* call (commit works either way), record it.
+5. Execute the chosen path against §9. Keep every doc in §2 updated as SSOT — do not let status drift from reality again.
