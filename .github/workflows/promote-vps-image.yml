@@ -49,9 +49,15 @@ jobs:
           ssh $SSHOPT "$SSH_USER@$SSH_HOST" "docker exec node-scala-testnet wget -qO- http://127.0.0.1:6869/node/version" || true
           echo ""
           echo "=== stream docker save from VPS -> load here (may be several hundred MB) ==="
-          ssh $SSHOPT "$SSH_USER@$SSH_HOST" "docker save $IMGID | gzip -1" | gunzip | docker load
+          # docker load assigns its OWN local image id (not the VPS's container .Image
+          # digest), so capture the loaded id from its output and tag THAT.
+          LOAD_OUT=$(ssh $SSHOPT "$SSH_USER@$SSH_HOST" "docker save $IMGID | gzip -1" | gunzip | docker load)
+          echo "$LOAD_OUT"
+          LOADED=$(echo "$LOAD_OUT" | grep -oE 'sha256:[0-9a-f]{64}' | head -1)
+          if [ -z "$LOADED" ]; then LOADED=$(echo "$LOAD_OUT" | sed -nE 's/.*Loaded image[^:]*: *(.+)$/\1/p' | head -1); fi
+          echo "loaded image ref: $LOADED"
           TARGET="ghcr.io/decentral-america/node-scala:${TARGET_TAG}"
-          docker tag "$IMGID" "$TARGET"
+          docker tag "$LOADED" "$TARGET"
           echo "=== login + push $TARGET ==="
           echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
           docker push "$TARGET"
