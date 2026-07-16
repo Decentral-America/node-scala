@@ -30,14 +30,14 @@ ThisBuild / publishMavenStyle    := true
 ThisBuild / organization         := "io.decentralchain"
 ThisBuild / homepage             := Some(url("https://github.com/Decentral-America/DCC"))
 ThisBuild / licenses             := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
-ThisBuild / developers := List(
+ThisBuild / developers           := List(
   Developer("decentral-america", "Decentral America", "dev@decentralchain.io", url("https://github.com/Decentral-America"))
 )
 ThisBuild / scmInfo := Some(
   ScmInfo(url("https://github.com/Decentral-America/DCC"), "scm:git:git@github.com:Decentral-America/DCC.git")
 )
 ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeCentralHost
-ThisBuild / publishTo := {
+ThisBuild / publishTo              := {
   if (isSnapshot.value)
     // GitHub Packages Maven registry for SNAPSHOT builds.
     // Central Portal uses Bearer token auth (incompatible with sbt Ivy Basic auth).
@@ -209,9 +209,9 @@ inScope(Global)(
     organization         := "io.decentralchain",
     organizationName     := "DecentralChain",
     organizationHomepage := Some(url("https://decentralchain.io")),
-    scmInfo := Some(ScmInfo(url("https://github.com/Decentral-America/node-scala"), "scm:git:https://github.com/Decentral-America/node-scala.git")),
-    licenses             := Seq(("MIT", url("https://github.com/Decentral-America/node-scala/blob/dev/LICENSE"))),
-    publish / skip       := true,
+    scmInfo  := Some(ScmInfo(url("https://github.com/Decentral-America/node-scala"), "scm:git:https://github.com/Decentral-America/node-scala.git")),
+    licenses := Seq(("MIT", url("https://github.com/Decentral-America/node-scala/blob/dev/LICENSE"))),
+    publish / skip := true,
     scalacOptions ++= Seq(
       "-feature",
       "-deprecation",
@@ -257,7 +257,7 @@ inScope(Global)(
   )
 )
 
-commands += Command.command("packageAll"){ state =>
+commands += Command.command("packageAll") { state =>
   "buildTarballsForDocker" :: "buildDebPackages" :: state
 }
 
@@ -307,7 +307,7 @@ checkPRRaw := Def
 def commandWithFatalWarnings(commandName: String, task: TaskKey[Unit]): Command =
   Command.command(commandName) { state =>
     val extracted = Project.extract(state)
-    val newState = extracted.appendWithoutSession(
+    val newState  = extracted.appendWithoutSession(
       Seq(Global / scalacOptions ++= Seq("-Werror")),
       state
     )
@@ -350,7 +350,7 @@ def generateGenesisCommand: Command =
     val ex = Project.extract(state)
 
     val rootBase = ex.get(LocalRootProject / baseDirectory)
-    val absFile = {
+    val absFile  = {
       val f = file(rawPath)
       if (f.isAbsolute) f else rootBase / rawPath
     }

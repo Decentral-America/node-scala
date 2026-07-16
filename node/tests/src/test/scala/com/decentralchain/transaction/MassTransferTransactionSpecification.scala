@@ -45,8 +45,11 @@ class MassTransferTransactionSpecification extends PropSpec {
       Seq(ParsedTransfer(recipient, TxNonNegativeAmount.unsafeFrom(Long.MaxValue - fee))),
       (1 to MaxTransferCount).map(_ => ParsedTransfer(recipient, TxNonNegativeAmount.unsafeFrom(1 / MaxTransferCount)))
     )
-    attachment <- Seq(ByteStr.empty, ByteStr({ val _b = new Array[Byte](TransferTransaction.MaxAttachmentSize); ThreadLocalRandom.current().nextBytes(_b); _b }))
-    proofs     <- proofs
+    attachment <- Seq(
+      ByteStr.empty,
+      ByteStr({ val _b = new Array[Byte](TransferTransaction.MaxAttachmentSize); ThreadLocalRandom.current().nextBytes(_b); _b })
+    )
+    proofs <- proofs
   } yield (chainId, version, asset, recipient, fee, transfers, attachment, proofs)
 
   private val massTransfersTable = Table(
@@ -67,7 +70,7 @@ class MassTransferTransactionSpecification extends PropSpec {
         proofs = Proofs(proofs),
         chainId = chainId
       )
-      val bytes = tx.bytes()
+      val bytes     = tx.bytes()
       val recovered = {
         if (PBSince.affects(tx)) PBTransactionSerializer.parseBytes(bytes)
         else MassTransferTransaction.parseBytes(bytes)

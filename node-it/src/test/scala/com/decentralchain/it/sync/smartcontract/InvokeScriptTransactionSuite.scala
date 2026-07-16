@@ -25,7 +25,7 @@ import scala.concurrent.duration.*
 
 class InvokeScriptTransactionSuite extends BaseTransactionSuite with CancelAfterFailure {
 
-  val activationHeight = Height(8)
+  val activationHeight                            = Height(8)
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs
       .Builder(NodeConfigs.Default, 1, Seq.empty)
@@ -138,7 +138,7 @@ class InvokeScriptTransactionSuite extends BaseTransactionSuite with CancelAfter
   test("contract caller invokes a function on a contract") {
     val arg = ByteStr(Array(42: Byte))
     for (v <- invokeScrTxSupportedVersions) {
-      val contract = (if (v < 2) firstContract else secondContract).toAddress.toString
+      val contract       = (if (v < 2) firstContract else secondContract).toAddress.toString
       val invokeScriptTx = sender.invokeScript(
         caller,
         contract,
@@ -190,7 +190,7 @@ class InvokeScriptTransactionSuite extends BaseTransactionSuite with CancelAfter
   test("contract caller invokes a default function on a contract") {
     for (v <- invokeScrTxSupportedVersions) {
       val contract = (if (v < 2) firstContract else secondContract).toAddress.toString
-      val _ = sender.invokeScript(
+      val _        = sender.invokeScript(
         caller,
         contract,
         func = None,

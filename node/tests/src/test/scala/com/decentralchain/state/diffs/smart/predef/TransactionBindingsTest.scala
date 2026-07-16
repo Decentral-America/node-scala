@@ -84,7 +84,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
 
   property("IssueTransaction binding") {
     val tx = TxHelpers.issue()
-    val s =
+    val s  =
       s"""
          |match tx {
          | case t : IssueTransaction =>
@@ -110,7 +110,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("BurnTransaction binding") {
-    val tx = TxHelpers.burn(IssuedAsset(ByteStr.fromLong(1)))
+    val tx     = TxHelpers.burn(IssuedAsset(ByteStr.fromLong(1)))
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -129,7 +129,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("ReissueTransaction binding") {
-    val tx = TxHelpers.reissue(IssuedAsset(ByteStr.fromLong(1)))
+    val tx     = TxHelpers.reissue(IssuedAsset(ByteStr.fromLong(1)))
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -149,7 +149,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("CreateAliasTransaction binding") {
-    val tx = TxHelpers.createAlias()
+    val tx     = TxHelpers.createAlias()
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -167,7 +167,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("LeaseTransaction binding") {
-    val tx = TxHelpers.lease()
+    val tx     = TxHelpers.lease()
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -189,7 +189,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("LeaseCancelTransaction binding") {
-    val tx = TxHelpers.leaseCancel(ByteStr.fill(32)(1))
+    val tx     = TxHelpers.leaseCancel(ByteStr.fill(32)(1))
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -231,7 +231,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("SetScriptTransaction binding") {
-    val tx = TxHelpers.setScript(TxHelpers.defaultSigner, ExprScript(CONST_BOOLEAN(true)).explicitGet())
+    val tx     = TxHelpers.setScript(TxHelpers.defaultSigner, ExprScript(CONST_BOOLEAN(true)).explicitGet())
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -251,7 +251,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("UpdateAssetInfoTransaction binding") {
-    val tx = TxHelpers.updateAssetInfo(ByteStr.fill(32)(1))
+    val tx           = TxHelpers.updateAssetInfo(ByteStr.fill(32)(1))
     val scriptSource =
       s"""
          |match tx {
@@ -335,7 +335,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
       .reverse
       .mkString("[", ",", "]")
 
-    val size = tx.payments.size
+    val size   = tx.payments.size
     val script =
       s"""
          | func assetsAmountSum(acc: Int, p: AttachedPayment) = acc + p.amount
@@ -424,8 +424,8 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val serviceDApp = TxHelpers.signer(3)
 
     withDomain(DomainPresets.RideV6, AddrWithBalance.enoughBalances(invoker, masterDApp, serviceDApp)) { d =>
-      val invoke = TxHelpers.invoke(masterDApp.toAddress, func = Some("foo"), invoker = invoker)
-      val issue  = TxHelpers.issue(masterDApp, script = Some(TestCompiler(V6).compileAsset("true")))
+      val invoke         = TxHelpers.invoke(masterDApp.toAddress, func = Some("foo"), invoker = invoker)
+      val issue          = TxHelpers.issue(masterDApp, script = Some(TestCompiler(V6).compileAsset("true")))
       val setAssetScript =
         TxHelpers.setAssetScript(masterDApp, issue.asset, assetVerifier(invoke, masterDApp, serviceDApp, issue.asset), fee = 1.dcc)
 
@@ -440,7 +440,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("InvokeExpressionTransaction binding") {
-    val expression = TestCompiler(V6).compileFreeCall("[]")
+    val expression                              = TestCompiler(V6).compileFreeCall("[]")
     def script(tx: InvokeExpressionTransaction) =
       s"""
          | match tx {
@@ -456,15 +456,17 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val fee     = ciFee(freeCall = true).sample.get
     val account = accountGen.sample.get
     val asset   = IssuedAsset(ByteStr.fromBytes(1, 2, 3))
-    val tx1     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, Dcc, ThreadLocalRandom.current().nextLong()).explicitGet()
-    val tx2     = InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, asset, ThreadLocalRandom.current().nextLong()).explicitGet()
+    val tx1     =
+      InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, Dcc, ThreadLocalRandom.current().nextLong()).explicitGet()
+    val tx2 =
+      InvokeExpressionTransaction.selfSigned(TxVersion.V1, account, expression, fee, asset, ThreadLocalRandom.current().nextLong()).explicitGet()
 
     runScriptWithCustomContext[CONST_BOOLEAN](script(tx1), tx1, V6) shouldBe evaluated(true)
     runScriptWithCustomContext[CONST_BOOLEAN](script(tx2), tx2, V6) shouldBe evaluated(true)
   }
 
   property("SetAssetScriptTransaction binding") {
-    val tx = TxHelpers.setAssetScript(TxHelpers.defaultSigner, IssuedAsset(ByteStr.fill(32)(1)), ExprScript(CONST_BOOLEAN(true)).explicitGet())
+    val tx     = TxHelpers.setAssetScript(TxHelpers.defaultSigner, IssuedAsset(ByteStr.fill(32)(1)), ExprScript(CONST_BOOLEAN(true)).explicitGet())
     val result = runScript[CONST_BOOLEAN](
       s"""
          |match tx {
@@ -517,7 +519,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
         tx.data(i) match {
           case e: IntegerDataEntry => check(i, FieldNames.IntegerEntry, Some(e.value))
           case e: BooleanDataEntry => check(i, FieldNames.BooleanEntry, Some(e.value))
-          case e: BinaryDataEntry =>
+          case e: BinaryDataEntry  =>
             check(
               i,
               FieldNames.BinaryEntry,
@@ -566,7 +568,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
   }
 
   property("MassTransferTransaction binding") {
-    val tx = TxHelpers.massTransfer()
+    val tx         = TxHelpers.massTransfer()
     def pg(i: Int) =
       s"""let recipient$i = match (t.transfers[$i].recipient) {
          |case a: Address => a.bytes == base58'${tx.transfers(i).address.cast[Address].fold("")(a => Base58.encode(a.bytes))}'
@@ -614,7 +616,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
       TxHelpers.orderV3(OrderType.SELL, IssuedAsset(ByteStr.fill(32)(1)))
     )
     def pg(ord: Order) = {
-      val oType = ord.orderType.toString
+      val oType  = ord.orderType.toString
       val script =
         s"""
            |   let ${oType}Id = t.${oType}Order.id == base58'${ord.idStr()}'
@@ -685,7 +687,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
 
   property("Order binding") {
     val order = TxHelpers.orderV3(OrderType.BUY, IssuedAsset(ByteStr.fill(32)(1)))
-    val s =
+    val s     =
       s"""
          |match tx {
          | case t : Order =>
@@ -791,7 +793,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
     val buyer   = TxHelpers.signer(2)
     val matcher = TxHelpers.signer(3)
 
-    val attachment = ByteStr.fill(32)(1)
+    val attachment       = ByteStr.fill(32)(1)
     val exchangeTxScript =
       s"""
          |match tx {
@@ -821,7 +823,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
          |}
          |""".stripMargin
 
-    val issue = TxHelpers.issue(issuer)
+    val issue               = TxHelpers.issue(issuer)
     val orderWithAttachment =
       TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, sender = buyer, matcher = matcher, attachment = Some(attachment))
     val exchange = () =>
@@ -892,7 +894,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
 
     val expr       = Parser.parseExpr(script).get.value
     val directives = DirectiveSet(V2, AssetType, Expression).explicitGet()
-    val ctx =
+    val ctx        =
       PureContext.build(V2, useNewPowPrecision = true).withEnvironment[Environment] |+|
         CryptoContext.build(Global, V2, fixEcrecover = true).withEnvironment[Environment] |+|
         DccContext.build(Global, DirectiveSet(V2, AssetType, Expression).explicitGet(), fixBigScriptField = true)

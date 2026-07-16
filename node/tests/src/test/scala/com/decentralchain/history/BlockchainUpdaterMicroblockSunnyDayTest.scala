@@ -120,7 +120,7 @@ class BlockchainUpdaterMicroblockSunnyDayTest extends PropSpec with DomainScenar
       val block0                 = buildBlockOfTxs(randomSig, Seq(genesis))
       val (block1, microBlocks1) = chainBaseAndMicro(block0.id(), masterToAlice, Seq(Seq(aliceToBob)))
       val otherSigner            = KeyPair(ByteStr(Array.fill(KeyLength)(1: Byte)))
-      val block2 =
+      val block2                 =
         customBuildBlockOfTxs(block0.id(), Seq(masterToAlice, aliceToBob2), otherSigner, 1, block1.header.timestamp - 1)
       domain.blockchainUpdater.processBlock(block0) should beRight
       domain.blockchainUpdater.processBlock(block1) should beRight

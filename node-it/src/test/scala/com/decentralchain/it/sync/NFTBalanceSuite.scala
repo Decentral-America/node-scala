@@ -46,7 +46,7 @@ class NFTBalanceSuite extends BaseFreeSpec {
         _      <- traverse(nodes)(_.waitForHeight(Height(2)))
         fundTx <- node.transfer(node.keyPair, issuer.toAddress.toString, 1000.dcc, 0.001.dcc)
         _      <- node.waitForTransaction(fundTx.id)
-        _ <- Future.sequence((simple ++ nft) map { tx =>
+        _      <- Future.sequence((simple ++ nft) map { tx =>
           for {
             itx <- node.signedBroadcast(tx.json())
             _   <- node.waitForTransaction(itx.id)

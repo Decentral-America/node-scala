@@ -6,7 +6,7 @@ import fastparse.MultiLineWhitespace.*
 
 sealed abstract class BinaryOperation {
   val func: String
-  def parser[A: P]: P[BinaryOperation] = P(func).map(_ => this)
+  def parser[A: P]: P[BinaryOperation]                                     = P(func).map(_ => this)
   def expr(shiftedStart: Int, shiftedEnd: Int, op1: EXPR, op2: EXPR): EXPR = {
     BINARY_OP(Pos.fromShifted(shiftedStart, shiftedEnd), op1, this, op2)
   }
@@ -65,21 +65,21 @@ object BinaryOperation {
     override val func: String = "%"
   }
   case object LE_OP extends BinaryOperation {
-    val func                                      = ">="
-    override def parser[A: P]: P[BinaryOperation] = P("<=").map(_ => this)
+    val func                                                                          = ">="
+    override def parser[A: P]: P[BinaryOperation]                                     = P("<=").map(_ => this)
     override def expr(shiftedStart: Int, shiftedEnd: Int, op1: EXPR, op2: EXPR): EXPR = {
       BINARY_OP(Pos.fromShifted(shiftedStart, shiftedEnd), op2, LE_OP, op1)
     }
   }
   case object LT_OP extends BinaryOperation {
-    val func                                      = ">"
-    override def parser[A: P]: P[BinaryOperation] = P("<" ~ !P("=")).map(_ => this)
+    val func                                                                          = ">"
+    override def parser[A: P]: P[BinaryOperation]                                     = P("<" ~ !P("=")).map(_ => this)
     override def expr(shiftedStart: Int, shiftedEnd: Int, op1: EXPR, op2: EXPR): EXPR = {
       BINARY_OP(Pos.fromShifted(shiftedStart, shiftedEnd), op2, LT_OP, op1)
     }
   }
   case object CONS_OP extends BinaryOperation {
-    override val func: String = "::"
+    override val func: String                                                         = "::"
     override def expr(shiftedStart: Int, shiftedEnd: Int, op1: EXPR, op2: EXPR): EXPR = {
       val pos = Pos.fromShifted(shiftedStart, shiftedEnd)
       FUNCTION_CALL(pos, PART.VALID(pos, "cons"), List(op1, op2))

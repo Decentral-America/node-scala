@@ -104,19 +104,22 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
 
         scriptMain   = Some(contractMain(secondAcc.toAddress))
         scriptSecond = Some(contractSecond())
-        ssTxMain     = SetScriptTransaction.create(1.toByte, mainAcc.publicKey, scriptMain, fee, ts + 5, Proofs.empty).map(_.signWith(mainAcc.privateKey)).explicitGet()
+        ssTxMain     = SetScriptTransaction
+          .create(1.toByte, mainAcc.publicKey, scriptMain, fee, ts + 5, Proofs.empty)
+          .map(_.signWith(mainAcc.privateKey))
+          .explicitGet()
         ssTxSecond = SetScriptTransaction
           .create(1.toByte, secondAcc.publicKey, scriptSecond, fee, ts + 5, Proofs.empty)
           .map(_.signWith(secondAcc.privateKey))
           .explicitGet()
 
-        dataEntry = StringDataEntry(invokeEntry2Key, "strData")
+        dataEntry    = StringDataEntry(invokeEntry2Key, "strData")
         dataTxSecond = DataTransaction
           .create(1.toByte, secondAcc.publicKey, Seq(dataEntry), fee, ts + 6, Proofs.empty)
           .map(_.signWith(secondAcc.privateKey))
           .explicitGet()
 
-        dataEntry2 = StringDataEntry(invokeEntry3Key, "deleted entry")
+        dataEntry2    = StringDataEntry(invokeEntry3Key, "deleted entry")
         dataTxSecond2 = DataTransaction
           .create(1.toByte, secondAcc.publicKey, Seq(dataEntry2), fee, ts + 6, Proofs.empty)
           .map(_.signWith(secondAcc.privateKey))
@@ -205,13 +208,13 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
           .map(_.signWith(mainAcc.privateKey))
           .explicitGet()
 
-        dataEntry = StringDataEntry(invokeEntry2Key, "strData")
+        dataEntry  = StringDataEntry(invokeEntry2Key, "strData")
         dataTxMain = DataTransaction
           .create(1.toByte, mainAcc.publicKey, Seq(dataEntry), fee, ts + 6, Proofs.empty)
           .map(_.signWith(mainAcc.privateKey))
           .explicitGet()
 
-        dataEntry2 = StringDataEntry(invokeEntry3Key, "deleted entry")
+        dataEntry2  = StringDataEntry(invokeEntry3Key, "deleted entry")
         dataTxMain2 = DataTransaction
           .create(1.toByte, mainAcc.publicKey, Seq(dataEntry2), fee, ts + 6, Proofs.empty)
           .map(_.signWith(mainAcc.privateKey))
@@ -393,7 +396,10 @@ class InvokeScriptTransactionCrosscontractInvokeDiffTest extends PropSpec with W
         scriptMain   = Some(contractMain(secondAcc.toAddress, thirdAcc.toAddress, paymentIssue.id()))
         scriptSecond = Some(contractSecond(thirdAcc.toAddress, transferIssue.id()))
         scriptThird  = Some(contractThird)
-        ssTxMain     = SetScriptTransaction.create(1.toByte, mainAcc.publicKey, scriptMain, fee, ts + 5, Proofs.empty).map(_.signWith(mainAcc.privateKey)).explicitGet()
+        ssTxMain     = SetScriptTransaction
+          .create(1.toByte, mainAcc.publicKey, scriptMain, fee, ts + 5, Proofs.empty)
+          .map(_.signWith(mainAcc.privateKey))
+          .explicitGet()
         ssTxSecond = SetScriptTransaction
           .create(1.toByte, secondAcc.publicKey, scriptSecond, fee, ts + 5, Proofs.empty)
           .map(_.signWith(secondAcc.privateKey))

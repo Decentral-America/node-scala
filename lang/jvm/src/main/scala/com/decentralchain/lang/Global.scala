@@ -99,7 +99,7 @@ object Global extends BaseGlobal {
       val baseBD  = BD.valueOf(base, basePrecision)
       val expBD   = BD.valueOf(exponent, exponentPrecision)
       val context = if (useNewPrecision) longContext else oldLongContext
-      val result = if (expBD == BigDecimal(0.5).bigDecimal) {
+      val result  = if (expBD == BigDecimal(0.5).bigDecimal) {
         BigDecimalMath.sqrt(baseBD, context)
       } else {
         BigDecimalMath.pow(baseBD, expBD, context)
@@ -128,7 +128,7 @@ object Global extends BaseGlobal {
       val exp  = toJBig(e, ep)
 
       val context = if (useNewPrecision) bigMathContext else oldBigMathContext
-      val res = if (exp == BigDecimal(0.5).bigDecimal) {
+      val res     = if (exp == BigDecimal(0.5).bigDecimal) {
         BigDecimalMath.sqrt(base, context)
       } else {
         BigDecimalMath.pow(base, exp, context)

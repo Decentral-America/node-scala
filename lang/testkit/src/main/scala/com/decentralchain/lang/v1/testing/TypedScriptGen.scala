@@ -13,7 +13,7 @@ import org.scalacheck.*
 
 trait TypedScriptGen {
 
-  def exprGen = BOOLEANgen(100)
+  def exprGen        = BOOLEANgen(100)
   private def letGen =
     for {
       name <- Gen.alphaStr

@@ -35,7 +35,7 @@ class DBResource(db: RocksDB, iteratorCfHandle: Option[ColumnFamilyHandle] = Non
   }
 
   @volatile private var fullIteratorWasOpened = false
-  lazy val fullIterator: RocksIterator = {
+  lazy val fullIterator: RocksIterator        = {
     fullIteratorWasOpened = true
     db.newIterator(iteratorCfHandle.getOrElse(db.getDefaultColumnFamily), readOptions.setTotalOrderSeek(true))
   }

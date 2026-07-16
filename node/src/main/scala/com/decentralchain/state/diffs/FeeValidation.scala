@@ -51,7 +51,7 @@ object FeeValidation {
     if (Height(blockchain.height) >= Sponsorship.sponsoredFeesSwitchHeight(blockchain)) {
       for {
         feeDetails <- getMinFee(blockchain, tx)
-        _ <- Either.cond(
+        _          <- Either.cond(
           feeDetails.minFeeInAsset <= tx.fee,
           (),
           notEnoughFeeError(tx.tpe, feeDetails, tx.fee)
@@ -126,8 +126,8 @@ object FeeValidation {
     } else {
       for {
         feeInUnits <- feeInUnits(blockchain, tx)
-        r <- txAsset match {
-          case Dcc => Right(FeeInfo(None, Chain.empty, feeInUnits * FeeUnit))
+        r          <- txAsset match {
+          case Dcc                      => Right(FeeInfo(None, Chain.empty, feeInUnits * FeeUnit))
           case assetId @ IssuedAsset(_) =>
             for {
               assetInfo <- blockchain
@@ -187,7 +187,7 @@ object FeeValidation {
       case _                              => 0
     }
 
-    val extraFee = smartAccountScriptsCount * ScriptExtraFee
+    val extraFee          = smartAccountScriptsCount * ScriptExtraFee
     val extraRequirements =
       if (smartAccountScriptsCount > 0) Chain(s"Transaction sent from smart account. Requires $extraFee extra fee")
       else Chain.empty

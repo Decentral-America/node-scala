@@ -22,7 +22,7 @@ class ScriptV1Test extends PropSpec with TypedScriptGen {
 
   property("Script.estimate should deny too complex scripts") {
     val byteStr = CONST_BYTESTR(ByteStr.fromBytes(1)).explicitGet()
-    val expr = (1 to 21)
+    val expr    = (1 to 21)
       .map { _ =>
         FUNCTION_CALL(
           function = FunctionHeader.Native(SIGVERIFY),
@@ -55,7 +55,7 @@ class ScriptV1Test extends PropSpec with TypedScriptGen {
 
   property("19 sigVerify should fit in maxSizeInBytes") {
     val byteStr = CONST_BYTESTR(ByteStr.fromBytes(1)).explicitGet()
-    val expr = (1 to 19)
+    val expr    = (1 to 19)
       .map { _ =>
         FUNCTION_CALL(
           function = FunctionHeader.Native(SIGVERIFY),

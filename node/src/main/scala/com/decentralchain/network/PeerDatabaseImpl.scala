@@ -62,12 +62,37 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   override def touch(socketAddress: InetSocketAddress): Unit = doTouch(socketAddress, System.currentTimeMillis())
 
+  // Trusted addresses (committee generators / sentries / seeds) that are NEVER blacklisted, from the
+  // dedicated `blacklist-exempt` config — decoupled from `known-peers` so a node can exempt a peer it
+  // does NOT dial (the main node keeps known-peers=[] + peers-exchange=no to avoid a handshake-collision
+  // loop, yet must still exempt the committee). Rationale: `blacklistAndClose` fires on transient/honest
+  // conditions too (a peer briefly on a different fork tip, a validation failure during a normal reorg),
+  // and a black-list-residence-time IP ban of an honest generator can drop a small finality committee
+  // below its 2/3 threshold (the RC#2 loop) — worse still, LKE generators share one egress IP, so one
+  // ban takes out the whole cluster. Resolved once at startup (never DNS on a netty handler thread);
+  // entries may be "ip", "host", or "host:port" (only the address matters). See infra/MAINNET-LAUNCH.md §Phase 4.
+  private lazy val blacklistExemptAddresses: Set[InetAddress] =
+    settings.blacklistExempt.flatMap { entry =>
+      val host = if (entry.contains(":")) entry.substring(0, entry.lastIndexOf(':')) else entry
+      try InetAddress.getAllByName(host).toSeq
+      catch { case NonFatal(e) => log.warn(s"Could not resolve blacklist-exempt entry '$entry': $e"); Nil }
+    }.toSet
+
+  def isBlacklistExempt(inetAddress: InetAddress): Boolean = blacklistExemptAddresses.contains(inetAddress)
+
   override def blacklist(inetAddress: InetAddress, reason: String): Unit =
     if (settings.enableBlacklisting) {
-      unverifiedPeers.synchronized {
-        unverifiedPeers.removeIf(_.getAddress == inetAddress)
-        blacklist.put(inetAddress, ticker.read())
-        reasons.put(inetAddress, reason)
+      if (isBlacklistExempt(inetAddress)) {
+        // Exempt: drop from unverified + the channel still closes at the call site, but do NOT ban the
+        // trusted peer. It may reconnect immediately (the brief suspend-on-close still applies).
+        unverifiedPeers.synchronized(unverifiedPeers.removeIf(_.getAddress == inetAddress))
+        log.debug(s"Not blacklisting $inetAddress ($reason) — in blacklist-exempt, trusted")
+      } else {
+        unverifiedPeers.synchronized {
+          unverifiedPeers.removeIf(_.getAddress == inetAddress)
+          blacklist.put(inetAddress, ticker.read())
+          reasons.put(inetAddress, reason)
+        }
       }
     }
 
@@ -120,7 +145,7 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     @tailrec
     def nextUnverified(): Option[InetSocketAddress] =
       unverifiedPeers.poll() match {
-        case null => None
+        case null    => None
         case nonNull =>
           if (!excludeAddress(nonNull)) Some(nonNull) else nextUnverified()
       }
@@ -131,8 +156,9 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     val selectedNextUnverified = nextUnverified()
 
     val filteredKnownPeers = knownPeers.keySet.filterNot(excludeAddress)
-    val randomKnownPeer =
-      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(ThreadLocalRandom.current().nextInt(filteredKnownPeers.size)) else filteredKnownPeers).headOption
+    val randomKnownPeer    =
+      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(ThreadLocalRandom.current().nextInt(filteredKnownPeers.size))
+       else filteredKnownPeers).headOption
 
     val selectedCandidate = resolvedPeersFromConfig
       .filterNot(excludeAddress)
@@ -176,7 +202,7 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   private def getRemoteAddress(channel: Channel): Option[InetSocketAddress] = channel match {
     case x: NioSocketChannel => Option(x.remoteAddress())
-    case x =>
+    case x                   =>
       log.debug(s"Doesn't know how to get a remoteAddress from $x")
       None
   }

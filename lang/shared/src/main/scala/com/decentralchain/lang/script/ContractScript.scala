@@ -39,7 +39,7 @@ object ContractScript {
 
   case class ContractScriptImpl(stdLibVersion: StdLibVersion, expr: DApp) extends Script {
     override type Expr = DApp
-    override val isFreeCall: Boolean = false
+    override val isFreeCall: Boolean    = false
     override val bytes: Coeval[ByteStr] = Coeval.fromTry(
       Global
         .serializeContract(expr, stdLibVersion)

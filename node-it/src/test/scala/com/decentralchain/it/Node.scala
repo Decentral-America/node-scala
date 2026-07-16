@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory
 abstract class Node(val config: Config) extends AutoCloseable {
   lazy val log: Logger = Logger(LoggerFactory.getLogger(this.name))
 
-  val settings: DCCSettings = DCCSettings.fromRootConfig(config)
+  val settings: DCCSettings   = DCCSettings.fromRootConfig(config)
   val client: AsyncHttpClient = asyncHttpClient(
     clientConfig()
       .setKeepAlive(false)

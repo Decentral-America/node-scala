@@ -121,7 +121,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
 
             override val preEvents = Seq(mkEmptyAppendBlockEvent(1))
 
-            private val filledAppend = mkFilledAppendBlockEvent(2)
+            private val filledAppend         = mkFilledAppendBlockEvent(2)
             override val trackAffectedEvents = Seq(
               filledAppend,
               mkRollbackEvent(filledAppend)
@@ -144,7 +144,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
           "ignores unrelated updates" in new Test {
             override val preEvents = Seq(mkEmptyAppendBlockEvent())
 
-            private val filledAppend = mkFilledAppendMicroBlockEvent()
+            private val filledAppend         = mkFilledAppendMicroBlockEvent()
             override val trackAffectedEvents = Seq(
               filledAppend,
               mkRollbackEvent(filledAppend)
@@ -160,7 +160,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
 
             override val preEvents = Seq(mkEmptyAppendBlockEvent())
 
-            private val filledAppend = mkFilledAppendMicroBlockEvent()
+            private val filledAppend         = mkFilledAppendMicroBlockEvent()
             override val trackAffectedEvents = Seq(
               filledAppend,
               mkRollbackEvent(filledAppend)
@@ -231,7 +231,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
 
               override val preEvents = Seq(mkEmptyAppendBlockEvent(1))
 
-              private val block2 = mkFilledAppendBlockEvent(2)
+              private val block2     = mkFilledAppendBlockEvent(2)
               private val microBlock = mkMicroBlockAppendEvent(
                 2,
                 1,
@@ -255,8 +255,8 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
         "block" in new Test {
           override val dependencies = allDependencies
 
-          private val emptyAppend2 = mkEmptyAppendBlockEvent(2)
-          private val emptyAppend3 = mkEmptyAppendBlockEvent(3)
+          private val emptyAppend2         = mkEmptyAppendBlockEvent(2)
+          private val emptyAppend3         = mkEmptyAppendBlockEvent(3)
           override val trackAffectedEvents = Seq(
             mkFilledAppendBlockEvent(1),
             emptyAppend2,
@@ -297,7 +297,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
 
   private val transactionId = TransactionId(ByteStr(Array.fill[Byte](32)(1)))
 
-  private val asset = Asset.IssuedAsset(ByteStr(Array.fill[Byte](AssetIdLength)(2)))
+  private val asset            = Asset.IssuedAsset(ByteStr(Array.fill[Byte](AssetIdLength)(2)))
   private val assetDescription = AssetDescription(
     originTransactionId = TransactionId(asset.id),
     issuer = alice.publicKey,
@@ -365,7 +365,7 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
     )
 
   private val pbTransactionIds = Seq(transactionId.toByteString)
-  private val pbTransactions = Seq(
+  private val pbTransactions   = Seq(
     SignedTransaction.defaultInstance.withDccTransaction(
       Transaction.defaultInstance
         .withCreateAlias(CreateAliasTransactionData.defaultInstance.withAlias("foo-alias"))
@@ -485,20 +485,20 @@ class LazyBlockchainTestSuite extends BaseTestSuite with HasTestDb with HasGrpc 
   }
 
   private val testBlockchainApi = new TestBlockchainApi()(using monix.execution.schedulers.TestScheduler()) {
-    override def getCurrentBlockchainHeight(): Height = Height(1)
+    override def getCurrentBlockchainHeight(): Height                     = Height(1)
     override def getActivatedFeatures(height: Height): Map[Short, Height] =
       DefaultBlockchainSettings.functionalitySettings.preActivatedFeatures.view.mapValues(Height(_)).toMap
   }
 
-  private lazy val heightKey        = MemCacheKey.Height
-  private lazy val accountScriptKey = MemCacheKey.AccountScript(aliceAddr)
+  private lazy val heightKey                                 = MemCacheKey.Height
+  private lazy val accountScriptKey                          = MemCacheKey.AccountScript(aliceAddr)
   private lazy val allDependencies: Map[MemCacheKey[?], Tag] = Map(
     MemCacheKey.AccountData(aliceAddr, "x")                    -> 1,
     MemCacheKey.Transaction(transactionId)                     -> 2,
     heightKey                                                  -> 3,
     MemCacheKey.Alias(Alias.create("foo-alias").explicitGet()) -> 4,
     MemCacheKey.Asset(asset)                                   -> 5,
-    MemCacheKey.AccountBalance(aliceAddr, Asset.Dcc)         -> 6,
+    MemCacheKey.AccountBalance(aliceAddr, Asset.Dcc)           -> 6,
     MemCacheKey.AccountBalance(bobAddr, asset)                 -> 7,
     MemCacheKey.AccountLeaseBalance(aliceAddr)                 -> 8,
     accountScriptKey                                           -> 9

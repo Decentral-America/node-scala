@@ -27,8 +27,8 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
       .withDefault(1)
       .buildNonConflicting()
   private val initialDccBalance = 100.dcc
-  private val setScriptPrice      = 0.01.dcc
-  private val accountCounter      = AtomicInt(1000)
+  private val setScriptPrice    = 0.01.dcc
+  private val accountCounter    = AtomicInt(1000)
 
   private val CallableMethod    = "@Callable"
   private val TransactionMethod = "Transaction"
@@ -313,8 +313,8 @@ class IssueReissueBurnAssetSuite extends BaseFreeSpec {
   }
 
   def createDapp(scriptParts: String*): KeyPair = {
-    val script  = scriptParts.mkString(" ")
-    val address = TxHelpers.signer(accountCounter.getAndIncrement())
+    val script         = scriptParts.mkString(" ")
+    val address        = TxHelpers.signer(accountCounter.getAndIncrement())
     val compiledScript = ScriptCompiler
       .compile(
         script,

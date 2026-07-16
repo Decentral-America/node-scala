@@ -47,7 +47,7 @@ object InvokeDccTxCheckers extends BlockchainUpdatesTestBase {
     val dataEntries             = append.transactionStateUpdates.head.dataEntries
     val assetDetails            = append.transactionStateUpdates.head.assets
     val expectedArgumentsValues = List(assetId, secondTxParticipantAddress.bytes)
-    val actualArgumentsValues = List(
+    val actualArgumentsValues   = List(
       arguments.head.value.binaryValue.get.toByteArray,
       arguments.apply(1).value.binaryValue.get.toByteArray
     )
@@ -87,7 +87,7 @@ object InvokeDccTxCheckers extends BlockchainUpdatesTestBase {
       nestedTransferAddress: Address,
       doubleNestedTransferAddress: Address
   ): Unit = {
-    val scriptTransferDccSum               = scriptTransferUnitNum * 2
+    val scriptTransferDccSum                 = scriptTransferUnitNum * 2
     val asset                                = issue.asset
     val actualData                           = Seq(("bar", scriptTransferDccSum))
     val arguments                            = invokeScript.arguments
@@ -97,7 +97,7 @@ object InvokeDccTxCheckers extends BlockchainUpdatesTestBase {
     val actualDataEntries                    = append.transactionStateUpdates.head.dataEntries
     val expectDataEntries: Seq[DataEntry[?]] = Seq[DataEntry[?]](IntegerDataEntry(bar, scriptTransferDccSum))
     val expectedValues: List[Any]            = List(secondAddress.bytes, assetDappAddress.bytes, scriptTransferUnitNum, bar, issue.asset.id.arr)
-    val actualArguments: List[Any] = List(
+    val actualArguments: List[Any]           = List(
       arguments.head.value.binaryValue.get.toByteArray,
       arguments(1).value.binaryValue.get.toByteArray,
       arguments(2).value.integerValue.get,

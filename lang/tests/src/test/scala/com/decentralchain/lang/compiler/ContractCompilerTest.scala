@@ -268,7 +268,7 @@ class ContractCompilerTest extends PropSpec {
   property("contract compiles fails when incorrect return type") {
     import com.decentralchain.lang.v1.evaluator.ctx.impl.*
 
-    val ctx = compilerContext
+    val ctx  = compilerContext
     val expr = {
       val script =
         """
@@ -293,7 +293,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("annotation binding can have the same name as annotated function") {
-    val ctx = compilerContext
+    val ctx  = compilerContext
     val expr = {
       val script =
         """
@@ -311,7 +311,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("contract compiles fails if has more than one verifier function") {
-    val ctx = compilerContext
+    val ctx  = compilerContext
     val expr = {
       val script =
         """
@@ -334,7 +334,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("contract compiles fails if has unknown annotation") {
-    val ctx = compilerContext
+    val ctx  = compilerContext
     val expr = {
       val script =
         """
@@ -349,7 +349,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("verifier function must have 0 arguments") {
-    val ctx = compilerContext
+    val ctx  = compilerContext
     val expr = {
       val script =
         """
@@ -364,7 +364,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("hodlContract") {
-    val ctx = dAppV3Ctx
+    val ctx  = dAppV3Ctx
     val expr = {
       val script =
         """
@@ -445,7 +445,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("dccBalanceV4 have type BalanceDetails with fields") {
-    val ctx = dAppV4Ctx
+    val ctx  = dAppV4Ctx
     val expr = {
       val script =
         """
@@ -465,7 +465,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("assetBalanceV4 allow issued assets only") {
-    val ctx = dAppV4Ctx
+    val ctx  = dAppV4Ctx
     val expr = {
       val script =
         """
@@ -480,7 +480,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("assetBalanceV3 allow issued assets and dcc") {
-    val ctx = dAppV3Ctx
+    val ctx  = dAppV3Ctx
     val expr = {
       val script =
         """
@@ -797,7 +797,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("Asset has no name") {
-    val ctx = dAppV3Ctx
+    val ctx  = dAppV3Ctx
     val expr = {
       val script =
         """
@@ -812,7 +812,7 @@ class ContractCompilerTest extends PropSpec {
   }
 
   property("Asset has some name") {
-    val ctx = dAppV4Ctx
+    val ctx  = dAppV4Ctx
     val expr = {
       val script =
         """

@@ -15,7 +15,7 @@ import scala.io.Source
 
 case class CompositeHttpService(routes: Seq[ApiRoute], settings: RestAPISettings) extends ScorexLogging {
 
-  private val redirectToApiDocs = redirect("/api-docs/index.html", StatusCodes.PermanentRedirect)
+  private val redirectToApiDocs   = redirect("/api-docs/index.html", StatusCodes.PermanentRedirect)
   private val swaggerRoute: Route =
     (pathEndOrSingleSlash | path("swagger") | path("api-docs"))(redirectToApiDocs) ~
       pathPrefix("api-docs") {

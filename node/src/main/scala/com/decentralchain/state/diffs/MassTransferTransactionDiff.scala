@@ -45,7 +45,7 @@ object MassTransferTransactionDiff {
         .flatMap { completePortfolio =>
           val assetIssued =
             tx.assetId match {
-              case Dcc                  => true
+              case Dcc                    => true
               case asset @ IssuedAsset(_) => blockchain.assetDescription(asset).isDefined
             }
           Either

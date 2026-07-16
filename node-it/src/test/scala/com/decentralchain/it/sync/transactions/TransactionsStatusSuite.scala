@@ -60,7 +60,10 @@ class TransactionsStatusSuite extends BaseTransactionSuite with NTPTime {
     assertBadRequestAndMessage(notMiner.transactionStatus(maxTxList :+ txIds.head), "Too big sequence requested")
     assertBadRequestAndMessage(notMiner.transactionStatus(Seq()), "Empty request")
 
-    assertApiError(notMiner.transactionStatus(new scala.util.Random(ThreadLocalRandom.current()).shuffle(txIds :+ "illegal id")), InvalidIds(Seq("illegal id")))
+    assertApiError(
+      notMiner.transactionStatus(new scala.util.Random(ThreadLocalRandom.current()).shuffle(txIds :+ "illegal id")),
+      InvalidIds(Seq("illegal id"))
+    )
   }
 
   private def check(data: CheckData, result: Seq[TransactionStatus]): Unit = {

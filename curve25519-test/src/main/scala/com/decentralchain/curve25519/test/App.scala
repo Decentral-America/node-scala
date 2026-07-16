@@ -29,7 +29,7 @@ object App extends StrictLogging {
 
   class Dispatcher(startWith: Int, modulus: Int, itemCount: Option[Int] = None) {
     @volatile var maxSeedNr = startWith
-    private val iterator =
+    private val iterator    =
       Iterator
         .from(startWith)
         .flatMap { maxSeedNr =>

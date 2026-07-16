@@ -20,8 +20,8 @@ class BurnTransactionSpecification extends PropSpec {
   }
 
   property("Burn binary parse roundtrip") {
-    val asset = IssuedAsset(ByteStr(Array.fill(32)(1: Byte)))
-    val tx = TxHelpers.burn(asset, amount = 34639959482919L, version = TxVersion.V2)
+    val asset  = IssuedAsset(ByteStr(Array.fill(32)(1: Byte)))
+    val tx     = TxHelpers.burn(asset, amount = 34639959482919L, version = TxVersion.V2)
     val parsed = BurnTransaction.serializer.parseBytes(tx.bytes()).get
     parsed.json() shouldBe tx.json()
     assert(crypto.verify(tx.signature, tx.bodyBytes(), tx.sender), "signature should be valid")

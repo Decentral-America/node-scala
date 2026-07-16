@@ -38,7 +38,7 @@ object BlockchainUpdateTriggers {
         blockchainBeforeWithReward: Blockchain,
         totalBlockId: ByteStr,
         totalTransactionsRoot: ByteStr
-    ): Unit = {}
+    ): Unit                                                                                        = {}
     override def onRollback(blockchainBefore: Blockchain, toBlockId: ByteStr, toHeight: Int): Unit = {}
     override def onMicroBlockRollback(blockchainBefore: Blockchain, toBlockId: ByteStr): Unit      = {}
   }

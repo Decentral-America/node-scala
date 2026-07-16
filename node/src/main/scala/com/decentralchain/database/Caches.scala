@@ -130,7 +130,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     cache(dbSettings.maxCacheSize, loadVolumeAndFee, keys => loadVolumesAndFees(keys.asScala.toSeq).asJava)
   protected def loadVolumeAndFee(orderId: ByteStr): CurrentVolumeAndFee
   protected def loadVolumesAndFees(orders: Seq[ByteStr]): Map[ByteStr, CurrentVolumeAndFee]
-  protected def discardVolumeAndFee(orderId: ByteStr): Unit = volumeAndFeeCache.invalidate(orderId)
+  protected def discardVolumeAndFee(orderId: ByteStr): Unit       = volumeAndFeeCache.invalidate(orderId)
   override def filledVolumeAndFee(orderId: ByteStr): VolumeAndFee = {
     val curVf = volumeAndFeeCache.get(orderId)
     VolumeAndFee(curVf.volume, curVf.fee)
@@ -145,7 +145,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
       .weigher((_: Address, asi: Option[AccountScriptInfo]) => asi.map(s => memMeter.measureDeep(s).toInt).getOrElse(0))
       .recordStats()
       .build(new CacheLoader[Address, Option[AccountScriptInfo]] {
-        override def load(key: Address): Option[AccountScriptInfo] = loadScript(key)
+        override def load(key: Address): Option[AccountScriptInfo]                                            = loadScript(key)
         override def loadAll(keys: lang.Iterable[? <: Address]): util.Map[Address, Option[AccountScriptInfo]] =
           new util.HashMap[Address, Option[AccountScriptInfo]]()
       })
@@ -154,7 +154,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
   protected def discardScript(address: Address): Unit = scriptCache.invalidate(address)
 
   override def accountScript(address: Address): Option[AccountScriptInfo] = scriptCache.get(address)
-  override def hasAccountScript(address: Address): Boolean =
+  override def hasAccountScript(address: Address): Boolean                =
     Option(scriptCache.getIfPresent(address)).fold(hasScriptBytes(address))(_.nonEmpty)
 
   private val assetScriptCache: LoadingCache[IssuedAsset, Option[AssetScriptInfo]] =
@@ -193,7 +193,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
   protected def loadAccountData(acc: Address, key: String): CurrentData
   protected def loadEntryHeights(keys: Seq[(Address, String)], addressIdOf: Address => AddressId): Map[(Address, String), Height]
 
-  private[database] def addressId(address: Address): Option[AddressId] = addressIdCache.get(address)
+  private[database] def addressId(address: Address): Option[AddressId]                       = addressIdCache.get(address)
   private[database] def addressIds(addresses: Seq[Address]): Map[Address, Option[AddressId]] =
     addressIdCache.getAll(addresses.asJava).asScala.toMap
 
@@ -233,7 +233,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
   protected def loadCommittedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)]
 
   @volatile
-  private var conflictGeneratorsCache = Map.empty[GenerationPeriod, ConflictGenerators]
+  private var conflictGeneratorsCache                                       = Map.empty[GenerationPeriod, ConflictGenerators]
   override def conflictGenerators(at: GenerationPeriod): ConflictGenerators =
     this.currentGenerationPeriod.fold(ConflictGenerators.empty) { curr =>
       if (at == curr || at == curr.next) {
@@ -417,7 +417,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
 
     val stateHash = new StateHashBuilder
     for (((address, asset), (amount, _)) <- updatedBalanceNodes) asset match {
-      case Dcc              => stateHash.addDccBalance(address, amount.balance)
+      case Dcc                => stateHash.addDccBalance(address, amount.balance)
       case asset: IssuedAsset => stateHash.addAssetBalance(address, asset, amount.balance)
     }
     for (((address, _), (entry, _)) <- updatedDataWithNodes) stateHash.addDataEntry(address, entry.entry)

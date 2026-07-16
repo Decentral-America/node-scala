@@ -33,7 +33,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
     assert { d =>
       val i     = issue(script = Some(assetFailScript))
       val asset = IssuedAsset(i.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp  = TestCompiler(V5).compileContract(
         """
           | @Callable(i)
           | func default() = []
@@ -52,7 +52,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
     assert { d =>
       val i     = issue(secondSigner, script = Some(assetFailScript))
       val asset = IssuedAsset(i.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp  = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() = [
@@ -72,7 +72,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
       val trueAssetIssue = issue(secondSigner, script = Some(ExprScriptImpl(V3, false, TRUE)))
       val failAsset      = IssuedAsset(failAssetIssue.id())
       val trueAsset      = IssuedAsset(trueAssetIssue.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp           = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() = [
@@ -93,7 +93,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
     assert { d =>
       val failAssetIssue = issue(script = Some(assetFailScript))
       val failAsset      = IssuedAsset(failAssetIssue.id())
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp           = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() = if (true) then throw() else []
@@ -114,7 +114,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
       val trueAsset      = IssuedAsset(trueAssetIssue.id())
       val leaseTx        = lease(secondSigner, defaultAddress)
       val dataTx         = data(secondSigner, Seq(StringDataEntry("old", "value")))
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp           = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() = [
@@ -161,7 +161,7 @@ class RideV5FailRejectTest extends PropSpec with WithDomain {
   property("invoke is always rejected if action address is from other network") {
     assert { d =>
       Seq(true, false).foreach { above1000Complexity =>
-        val c = if (above1000Complexity) (1 to 5).map(_ => "sigVerify(base58'', base58'', base58'')").mkString(" || ") else "1"
+        val c    = if (above1000Complexity) (1 to 5).map(_ => "sigVerify(base58'', base58'', base58'')").mkString(" || ") else "1"
         val dApp = TestCompiler(V5).compileContract(
           s"""
              | @Callable(i)

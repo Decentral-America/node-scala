@@ -28,7 +28,7 @@ object HasTestDb {
     )
     new RideDb {
       override def access: RideDbAccess = db.access
-      override def close(): Unit = {
+      override def close(): Unit        = {
         db.close()
         MoreFiles.deleteRecursively(path, RecursiveDeleteOption.ALLOW_INSECURE)
       }

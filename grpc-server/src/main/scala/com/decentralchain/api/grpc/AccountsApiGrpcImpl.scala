@@ -50,7 +50,7 @@ class AccountsApiGrpcImpl(commonApi: CommonAccountsApi)(implicit sc: Scheduler) 
         Observable
           .fromIterable(nonEmptyList)
           .map {
-            case Asset.Dcc           => loadDccBalance(address)
+            case Asset.Dcc             => loadDccBalance(address)
             case ia: Asset.IssuedAsset => assetBalanceResponse(ia -> commonApi.assetBalance(address, ia))
           }
       case (None, Seq(_)) => // NOTE: Asset distribution endpoint not yet implemented

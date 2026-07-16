@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactionSuiteLike {
   private val initialDccBalance = 100.dcc
-  private val setScriptPrice      = 0.01.dcc
+  private val setScriptPrice    = 0.01.dcc
 
   private val CallableMethod    = "@Callable"
   private val TransactionMethod = "Transaction"
@@ -224,9 +224,9 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
     }
 
     "liquid block works" in {
-      val acc   = createDapp(script(simpleReissuableAsset))
-      val asset = issueValidated(acc, simpleReissuableAsset)
-      val tx    = invokeScript(acc, "reissueIssueAndNft", assetId = asset, fee = invocationCost(1))
+      val acc            = createDapp(script(simpleReissuableAsset))
+      val asset          = issueValidated(acc, simpleReissuableAsset)
+      val tx             = invokeScript(acc, "reissueIssueAndNft", assetId = asset, fee = invocationCost(1))
       def checks(): Unit = {
         assertStateChanges(tx) { sd =>
           sd.issues should have size 2
@@ -243,11 +243,13 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
     }
   }
 
-  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+  private def randomString(n: Int): String = {
+    val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString
+  }
 
   def createDapp(scriptParts: String*): KeyPair = {
-    val script  = scriptParts.mkString(" ")
-    val address = KeyPair.fromSeed(Base58.encode(randomString(10).getBytes())).explicitGet()
+    val script         = scriptParts.mkString(" ")
+    val address        = KeyPair.fromSeed(Base58.encode(randomString(10).getBytes())).explicitGet()
     val compiledScript = ScriptCompiler
       .compile(
         script,

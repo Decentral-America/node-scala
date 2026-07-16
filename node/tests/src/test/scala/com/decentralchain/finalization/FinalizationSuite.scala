@@ -17,7 +17,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
   private val node2Acc = TxHelpers.signer(2)
   private val node3Acc = TxHelpers.signer(3)
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings
     .copy(minerSettings = baseSettings.minerSettings.copy(quorum = 0))
     .configure(_.copy(generationPeriodLength = 3, generationBalanceDepthFrom50To1000AfterHeight = 1000))
@@ -33,7 +33,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
       log.debug(s"Append block 3 with commitments")
       val endorsers = Seq(node0Acc, node1Acc)
-      val block3 = d.createBlock(
+      val block3    = d.createBlock(
         version = Block.ProtoBlockVersion,
         txs = endorsers.map(x => TxHelpers.commitToGeneration(Height(4), x)),
         generator = node1Acc
@@ -69,7 +69,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
       log.debug(s"Append block 3 with commitments")
       val endorsers = Seq(node0Acc, node1Acc)
-      val block3 = d.createBlock(
+      val block3    = d.createBlock(
         version = Block.ProtoBlockVersion,
         txs = endorsers.map(x => TxHelpers.commitToGeneration(Height(4), x)),
         generator = node1Acc
@@ -112,7 +112,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with commitments")
     val endorsers = Seq(node0Acc, node1Acc, node2Acc)
-    val block3 = d.createBlock(
+    val block3    = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = endorsers.map(x => TxHelpers.commitToGeneration(Height(4), x)),
       generator = node0Acc
@@ -158,7 +158,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with commitments")
     val endorsers = Seq(node0Acc, node1Acc, node2Acc)
-    val block3 = d.createBlock(
+    val block3    = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = endorsers.map(x => TxHelpers.commitToGeneration(Height(4), x)),
       generator = node1Acc
@@ -167,7 +167,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append worse key (from worse fork) block 4")
     val betterBlock4 = d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = node2Acc, strictTime = true)
-    val worseBlock4 = d.createBlock(
+    val worseBlock4  = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = Nil,
       generator = node1Acc,
@@ -198,7 +198,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with commitments")
     val endorsers = Seq(node0Acc, node1Acc)
-    val block3 = d.createBlock(
+    val block3    = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = endorsers.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(4), x)),
       generator = node1Acc
@@ -229,7 +229,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with commitments")
     val endorsers = Seq(node1Acc, node0Acc)
-    val block3 = d.createBlock(
+    val block3    = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = endorsers.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(4), x)),
       generator = node1Acc
@@ -261,7 +261,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
       log.debug(s"Append block 3 with commitments")
       val endorsers = Seq(node0Acc, node1Acc)
-      val block3 = d.createBlock(
+      val block3    = d.createBlock(
         version = Block.ProtoBlockVersion,
         txs = endorsers.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(4), x)),
         generator = node1Acc
@@ -316,7 +316,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with commitments")
     val endorsers = Seq(node0Acc, node1Acc, node2Acc, node3Acc)
-    val block3 = d.createBlock(
+    val block3    = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = endorsers.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(4), x)),
       generator = node3Acc
@@ -359,7 +359,7 @@ class FinalizationSuite extends BaseFinalizationSpec {
 
     log.debug(s"Append block 3 with commitments")
     val endorsers = Seq(node0Acc, node1Acc, node2Acc)
-    val block3 = d.createBlock(
+    val block3    = d.createBlock(
       version = Block.ProtoBlockVersion,
       txs = endorsers.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(4), x)),
       generator = node1Acc
@@ -372,8 +372,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
         version = Block.ProtoBlockVersion,
         txs = Seq(
           TxHelpers.transfer(
-            node0Acc,                                                                            // Endorser
-            to = node3Acc.toAddress,                                                             // Not endorser
+            node0Acc,                                                                        // Endorser
+            to = node3Acc.toAddress,                                                         // Not endorser
             amount = d.blockchain.dccPortfolio(node0Acc.toAddress).spendableBalance - 1.dcc, // All dcc
             fee = 1.dcc
           )
@@ -403,8 +403,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
         // Generating balance of node1Acc increased on 2 + 50 (generationBalanceDepthFrom50To1000AfterHeight) = 52
         d.appendBlock(
           TxHelpers.transfer(
-            node3Acc,                                                                            // Not endorser
-            to = node1Acc.toAddress,                                                             // Miner
+            node3Acc,                                                                        // Not endorser
+            to = node1Acc.toAddress,                                                         // Miner
             amount = d.blockchain.dccPortfolio(node3Acc.toAddress).spendableBalance - 1.dcc, // Enough for finalization
             fee = 1.dcc
           )
@@ -444,8 +444,8 @@ class FinalizationSuite extends BaseFinalizationSpec {
           // Generating balance of node1Acc increased on 2 + 50 (generationBalanceDepthFrom50To1000AfterHeight) = 52
           d.appendBlock(
             TxHelpers.transfer(
-              node3Acc,                                                                            // Not endorser
-              to = node0Acc.toAddress,                                                             // Endorser
+              node3Acc,                                                                        // Not endorser
+              to = node0Acc.toAddress,                                                         // Endorser
               amount = d.blockchain.dccPortfolio(node3Acc.toAddress).spendableBalance - 1.dcc, // Enough for finalization
               fee = 1.dcc
             )

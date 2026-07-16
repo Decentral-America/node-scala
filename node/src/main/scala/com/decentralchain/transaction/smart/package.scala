@@ -30,8 +30,8 @@ package object smart {
       scriptContainerAddress: Tthis
   ): AttachedPaymentTarget =
     (ds.scriptType, ds.contentType) match {
-      case (Account, DAppType)   => DAppTarget
-      case (Account, Expression) => InvokerScript
+      case (Account, DAppType)     => DAppTarget
+      case (Account, Expression)   => InvokerScript
       case (AssetType, Expression) =>
         scriptContainerAddress match {
           case _: Recipient.Address => throw new Exception("Not a AssetId")

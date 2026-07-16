@@ -63,7 +63,7 @@ case class UtilsApiRoute(
 
     (post & entity(as[String])) { code =>
       Script.fromBase64String(code.trim) match {
-        case Left(err) => complete(err)
+        case Left(err)     => complete(err)
         case Right(script) =>
           executeLimited(Script.decompile(script)) { case (scriptText, meta) =>
             val directives: List[(String, JsValue)] = meta.map { case (k, v) =>
@@ -110,7 +110,7 @@ case class UtilsApiRoute(
           e => complete(ScriptCompilerError(e)),
           { cr =>
             val v5Activated = blockchain.isFeatureActivated(BlockchainFeatures.SynchronousCalls)
-            val extraFee =
+            val extraFee    =
               if (cr.verifierComplexity <= ContractLimits.FreeVerifierComplexity && v5Activated)
                 0
               else

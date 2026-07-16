@@ -32,5 +32,5 @@ class PkSt {
 
   val dccPk   = ByteStr(curve25519.generateKeypair._2)
   val exprDcc = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'$dccPk')").expr
-  val exprEth   = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'${PublicKey(dccPk.arr ++ dccPk.arr)}')").expr
+  val exprEth = TestCompiler(V6).compileExpression(s"addressFromPublicKey(base58'${PublicKey(dccPk.arr ++ dccPk.arr)}')").expr
 }

@@ -42,9 +42,9 @@ object BaseTargetChecker {
 
       NodeConfigs.Default.map(_.withFallback(sharedConfig)).collect {
         case cfg if ConfigSource.fromConfig(cfg).at("dcc.miner.enable").loadOrThrow[Boolean] =>
-          val account = KeyPair.fromSeed(cfg.getString("account-seed")).explicitGet()
-          val address = account.toAddress
-          val balance = blockchainUpdater.balance(address, Dcc)
+          val account   = KeyPair.fromSeed(cfg.getString("account-seed")).explicitGet()
+          val address   = account.toAddress
+          val balance   = blockchainUpdater.balance(address, Dcc)
           val timeDelay = poSSelector
             .getValidBlockDelay(blockchainUpdater.height, account, genesisBlock.header.baseTarget, balance)
             .explicitGet()

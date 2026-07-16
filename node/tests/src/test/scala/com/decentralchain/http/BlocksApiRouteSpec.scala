@@ -40,7 +40,7 @@ class BlocksApiRouteSpec
     with TestWallet
     with WithDomain
     with SharedSchedulerMixin {
-  private val blocksApi = mock[CommonBlocksApi]
+  private val blocksApi                      = mock[CommonBlocksApi]
   private val blocksApiRoute: BlocksApiRoute =
     BlocksApiRoute(restAPISettings, blocksApi, SystemTime, new RouteTimeout(60.seconds)(using sharedScheduler))
   private val route = blocksApiRoute.route
@@ -73,11 +73,11 @@ class BlocksApiRouteSpec
 
   private val finalizedBlockHeaderJson =
     BlockHeaderSerializer.toJson(finalizedBlock.header, finalizedBlock.bytes().length, 0, finalizedBlock.signature) ++ Json.obj(
-      "height"       -> 3,
-      "totalFee"     -> 0L,
-      "reward"       -> 5,
-      "rewardShares" -> Json.obj(finalizedBlock.header.generator.toAddress.toString -> 5),
-      "VRF"          -> finalizedBlock.id().toString,
+      "height"             -> 3,
+      "totalFee"           -> 0L,
+      "reward"             -> 5,
+      "rewardShares"       -> Json.obj(finalizedBlock.header.generator.toAddress.toString -> 5),
+      "VRF"                -> finalizedBlock.id().toString,
       "finalizationVoting" -> Json.obj(
         "endorserIndexes" -> Seq(1, 0),
         "finalizedHeight" -> 1,
@@ -420,7 +420,7 @@ class BlocksApiRouteSpec
     withDomain(TransactionStateSnapshot, balances = AddrWithBalance.enoughBalances(sender, issuer)) { d =>
       val attachment = ByteStr.fill(32)(1)
       val issue      = TxHelpers.issue(issuer)
-      val exchange =
+      val exchange   =
         TxHelpers.exchangeFromOrders(
           TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(attachment)),
           TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer),
@@ -465,7 +465,7 @@ class BlocksApiRouteSpec
     val daoAddress        = TxHelpers.address(3)
     val xtnBuybackAddress = TxHelpers.address(4)
 
-    val settings = DomainPresets.ConsensusImprovements
+    val settings             = DomainPresets.ConsensusImprovements
     val settingsWithFeatures = settings
       .copy(blockchainSettings =
         settings.blockchainSettings.copy(

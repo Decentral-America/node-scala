@@ -39,7 +39,7 @@ case class SignedMassTransferRequest(
     for {
       _sender    <- PublicKey.fromBase58String(senderPublicKey)
       _transfers <- MassTransferTransaction.parseTransfersList(transfers)
-      t <- MassTransferTransaction.create(
+      t          <- MassTransferTransaction.create(
         version.getOrElse(1.toByte),
         _sender,
         assetId.getOrElse(Asset.Dcc),

@@ -35,7 +35,7 @@ case class Handshake(
     } yield (address.getAddress, inetAddress.getPort)
 
     peer match {
-      case None => out.writeInt(0)
+      case None                           => out.writeInt(0)
       case Some((addressBytes, peerPort)) =>
         out.writeInt(addressBytes.length + Integer.BYTES)
         out.writeBytes(addressBytes)

@@ -88,7 +88,7 @@ case class UtilsInvocationRequest(
       senderPK <- PublicKey.fromBase58String(senderPublicKey)
       id       <- decodeBase58(id)
       functionCall = InvokeScriptRequest.buildFunctionCall(call)
-      feeAssetId <- feeAssetId.traverse(decodeBase58)
+      feeAssetId    <- feeAssetId.traverse(decodeBase58)
       senderAddress <- sender
         .fold(RideAddress(ByteStr(senderPK.toAddress.bytes)).asRight[ValidationError]) { s =>
           Address.fromString(s).map(a => RideAddress(ByteStr(a.bytes)))

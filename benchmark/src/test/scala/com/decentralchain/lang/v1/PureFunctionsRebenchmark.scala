@@ -228,7 +228,7 @@ object PureFunctionsRebenchmark {
   @State(Scope.Benchmark)
   abstract class ToBaseStr(functionId: Short) {
     def byteCount: Int
-    var expr: EXPR = uninitialized
+    var expr: EXPR           = uninitialized
     @Setup def setup(): Unit = {
       expr = FUNCTION_CALL(Native(functionId), List(CONST_BYTESTR(ByteStr(randomBytes(byteCount))).explicitGet()))
     }
@@ -271,7 +271,7 @@ object PureFunctionsRebenchmark {
 
   @State(Scope.Benchmark)
   class LongToBytes {
-    val long = Long.MinValue
+    val long       = Long.MinValue
     val expr: EXPR =
       FUNCTION_CALL(
         Native(FunctionIds.LONG_TO_BYTES),
@@ -283,7 +283,7 @@ object PureFunctionsRebenchmark {
 
   @State(Scope.Benchmark)
   class StringToBytes {
-    val string = "\uD834\uDD1E\uD833\uDD1E" * 4095
+    val string     = "\uD834\uDD1E\uD833\uDD1E" * 4095
     val expr: EXPR =
       FUNCTION_CALL(
         Native(FunctionIds.STRING_TO_BYTES),
@@ -347,7 +347,7 @@ object PureFunctionsRebenchmark {
 
   @State(Scope.Benchmark)
   class ListConstructor {
-    val list = Vector.fill(999)(CONST_LONG(1))
+    val list       = Vector.fill(999)(CONST_LONG(1))
     val expr: EXPR =
       FUNCTION_CALL(
         Native(FunctionIds.CREATE_LIST),
@@ -360,7 +360,7 @@ object PureFunctionsRebenchmark {
 
   @State(Scope.Benchmark)
   class ListAppend {
-    val list = Vector.fill(999)(CONST_LONG(1))
+    val list       = Vector.fill(999)(CONST_LONG(1))
     val expr: EXPR =
       FUNCTION_CALL(
         Native(FunctionIds.APPEND_LIST),
@@ -391,7 +391,7 @@ object PureFunctionsRebenchmark {
 
   @State(Scope.Benchmark)
   class ToUtf8String {
-    val bytes = RandomStringUtils.insecure().next(10000).getBytes("utf-8")
+    val bytes      = RandomStringUtils.insecure().next(10000).getBytes("utf-8")
     val expr: EXPR =
       FUNCTION_CALL(
         Native(FunctionIds.UTF8STRING),
@@ -403,7 +403,7 @@ object PureFunctionsRebenchmark {
 
   @State(Scope.Benchmark)
   class BytesToLong {
-    val longBytes = Longs.toByteArray(Long.MinValue)
+    val longBytes  = Longs.toByteArray(Long.MinValue)
     val expr: EXPR =
       FUNCTION_CALL(
         Native(FunctionIds.BININT),

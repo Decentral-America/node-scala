@@ -46,7 +46,7 @@ object JsAPI {
           "name"       -> name,
           "doc"        -> funcDoc,
           "resultType" -> typeRepr(signature.result),
-          "args" -> (args zip signature.args zip paramsDoc).map { arg =>
+          "args"       -> (args zip signature.args zip paramsDoc).map { arg =>
             js.Dynamic.literal("name" -> arg._1._1, "type" -> typeRepr(arg._1._2._2), "doc" -> arg._2)
           }.toJSArray
         )
@@ -170,12 +170,12 @@ object JsAPI {
               di.dApp.meta.compactNameAndOriginalNamePairList.map(pair => pair.compactName -> pair.originalName).toMap
 
             val resultFields: Seq[(String, Any)] = Seq(
-              "result"               -> Global.toBuffer(di.bytes),
-              "ast"                  -> toJs(),
-              "meta"                 -> mappedMeta,
-              "complexity"           -> di.maxComplexity._2.toDouble,
-              "verifierComplexity"   -> di.verifierComplexity.toDouble,
-              "callableComplexities" -> di.callableComplexities.view.mapValues(_.toDouble).toMap.toJSDictionary,
+              "result"                   -> Global.toBuffer(di.bytes),
+              "ast"                      -> toJs(),
+              "meta"                     -> mappedMeta,
+              "complexity"               -> di.maxComplexity._2.toDouble,
+              "verifierComplexity"       -> di.verifierComplexity.toDouble,
+              "callableComplexities"     -> di.callableComplexities.view.mapValues(_.toDouble).toMap.toJSDictionary,
               "userFunctionComplexities" -> di.userFunctionComplexities.map { case (name, complexity) =>
                 compactNameToOriginalName.getOrElse(name, name) -> complexity.toDouble
               }.toJSDictionary,

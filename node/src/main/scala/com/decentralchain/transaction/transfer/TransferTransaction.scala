@@ -30,7 +30,7 @@ case class TransferTransaction(
 ) extends Transaction(
       TransactionType.Transfer,
       assetId match {
-        case Dcc          => Seq()
+        case Dcc            => Seq()
         case a: IssuedAsset => Seq(a)
       }
     )

@@ -117,7 +117,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
       val issue         = TxHelpers.issue(issuer, ENOUGH_AMT, version = TxVersion.V1)
       val asset         = IssuedAsset(issue.id())
       val assetTransfer = TxHelpers.transfer(issuer, burner.toAddress, 1, asset, version = TxVersion.V1)
-      val dccTransfer = TxHelpers.transfer(issuer, burner.toAddress, version = TxVersion.V1)
+      val dccTransfer   = TxHelpers.transfer(issuer, burner.toAddress, version = TxVersion.V1)
       val burn          = TxHelpers.burn(asset, assetTransfer.amount.value, burner, fee = dccTransfer.amount.value, version = TxVersion.V1)
 
       (genesis, issue, assetTransfer, dccTransfer, burn)
@@ -182,10 +182,10 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
       val issuer = TxHelpers.signer(1)
       val holder = TxHelpers.signer(2)
 
-      val genesis = TxHelpers.genesis(issuer.toAddress)
-      val amount  = 100
-      val issue   = TxHelpers.issue(issuer, amount, version = TxVersion.V1)
-      val asset   = issue.asset
+      val genesis  = TxHelpers.genesis(issuer.toAddress)
+      val amount   = 100
+      val issue    = TxHelpers.issue(issuer, amount, version = TxVersion.V1)
+      val asset    = issue.asset
       val transfer = TxHelpers.transfer(
         issuer,
         holder.toAddress,
@@ -327,7 +327,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
 
   property(s"Can update after ${assetInfoUpdateEnabled.minAssetInfoUpdateInterval} blocks") {
     val (gen, issue, update) = genesisIssueUpdate
-    val blocks =
+    val blocks               =
       TestBlock.create(gen :+ issue) +: Seq.fill(assetInfoUpdateEnabled.minAssetInfoUpdateInterval)(
         TestBlock.create(Seq.empty, Block.ProtoBlockVersion)
       )
@@ -517,7 +517,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
     withDomain(DomainPresets.RideV5) { d =>
       val genesis = GenesisTransaction.create(issuer.toAddress, ENOUGH_AMT, ts).explicitGet()
 
-      val successfulIssue = issue(Some(TestCompiler(V5).compileAsset("true")))
+      val successfulIssue          = issue(Some(TestCompiler(V5).compileAsset("true")))
       val setAssetScriptWithInvoke = TxHelpers
         .setAssetScript(issuer, successfulIssue.asset, getScriptWithSyncCall("invoke"), 1.dcc, version = TxVersion.V2)
       val setAssetScriptWithReentrantInvoke = TxHelpers
@@ -546,7 +546,7 @@ class AssetTransactionsDiffTest extends PropSpec with BlocksTransactionsHelpers 
       val sponsor      = TxHelpers.sponsor(sponsorIssue.asset, sender = sponsoredIssuer)
       val transfer     = TxHelpers.transfer(sponsoredIssuer, updatedIssuer.toAddress, sponsorIssue.quantity.value / 2, sponsorIssue.asset)
 
-      val updatedIssue = TxHelpers.issue(updatedIssuer)
+      val updatedIssue    = TxHelpers.issue(updatedIssuer)
       val updateAssetInfo = () =>
         TxHelpers.updateAssetInfo(
           assetId = updatedIssue.assetId,

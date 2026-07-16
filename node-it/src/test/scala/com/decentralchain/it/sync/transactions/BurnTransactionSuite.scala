@@ -20,7 +20,7 @@ class BurnTransactionSuite extends BaseTransactionSuite {
   test("burning assets changes issuer's asset balance; issuer's dcc balance is decreased by fee") {
     for (v <- burnTxSupportedVersions) {
       val (balance, effectiveBalance) = miner.accountBalances(firstAddress)
-      val issuedAssetId =
+      val issuedAssetId               =
         sender.issue(firstKeyPair, s"name+$v", "description", issueAmount, decimals, reissuable = false, fee = issueFee, waitForTx = true).id
 
       miner.assertBalances(firstAddress, balance - issueFee, effectiveBalance - issueFee)

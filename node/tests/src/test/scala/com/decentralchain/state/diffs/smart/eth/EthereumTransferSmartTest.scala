@@ -79,8 +79,8 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
       version <- DirectiveDictionary[StdLibVersion].all
       asset   <- Seq(Dcc, IssuedAsset(issue.id()))
     } {
-      val ethTransfer = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, recipient.toAddress, transferAmount, asset)
-      val ethSender   = ethTransfer.senderAddress()
+      val ethTransfer         = EthTxGenerator.generateEthTransfer(TxHelpers.defaultEthSigner, recipient.toAddress, transferAmount, asset)
+      val ethSender           = ethTransfer.senderAddress()
       val transferIssuedAsset =
         TransferTransaction.selfSigned(2.toByte, recipient, ethSender, asset, ENOUGH_AMT, Dcc, 0.001.dcc, ByteStr.empty, ts).explicitGet()
 
@@ -130,7 +130,7 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
     DirectiveDictionary[StdLibVersion].all
       .foreach { version =>
         val script = assetScript(version, dummyEthTransfer, recipient.toAddress)
-        val issue =
+        val issue  =
           IssueTransaction.selfSigned(2.toByte, recipient, "Asset", "", ENOUGH_AMT, 8, reissuable = true, Some(script), 1.dcc, ts).explicitGet()
         val asset       = IssuedAsset(issue.id())
         val ethTransfer = dummyEthTransfer.copy(dummyTransfer.copy(Some(ERC20Address(asset.id.take(20)))))

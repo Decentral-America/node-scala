@@ -125,7 +125,7 @@ trait ScriptGen {
   private val spaceChars: Seq[Char] = " \t\n\r"
 
   val whitespaceChar: Gen[Char] = Gen.oneOf(spaceChars)
-  val whitespaces: Gen[String] = for {
+  val whitespaces: Gen[String]  = for {
     n  <- Gen.choose(1, 5)
     xs <- Gen.listOfN(n, whitespaceChar)
   } yield xs.mkString
@@ -143,12 +143,12 @@ trait ScriptGen {
   }
 
   def toString(expr: EXPR): Gen[String] = expr match {
-    case CONST_LONG(_, x, _)    => withWhitespaces(s"$x")
-    case REF(_, x, _, _)        => withWhitespaces(toString(x))
-    case CONST_STRING(_, x, _)  => withWhitespaces(s"""\"${toString(x)}\"""")
-    case CONST_BYTESTR(_, x, _) => withWhitespaces(s"""base58'${toString(x)}'""")
-    case _: TRUE                => withWhitespaces("true")
-    case _: FALSE               => withWhitespaces("false")
+    case CONST_LONG(_, x, _)                           => withWhitespaces(s"$x")
+    case REF(_, x, _, _)                               => withWhitespaces(toString(x))
+    case CONST_STRING(_, x, _)                         => withWhitespaces(s"""\"${toString(x)}\"""")
+    case CONST_BYTESTR(_, x, _)                        => withWhitespaces(s"""base58'${toString(x)}'""")
+    case _: TRUE                                       => withWhitespaces("true")
+    case _: FALSE                                      => withWhitespaces("false")
     case BINARY_OP(_, x, op: BinaryOperation, y, _, _) =>
       for {
         arg1 <- toString(x)

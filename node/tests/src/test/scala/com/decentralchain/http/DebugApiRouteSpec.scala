@@ -59,7 +59,7 @@ class DebugApiRouteSpec
 
   override def genesisBalances: Seq[AddrWithBalance] = Seq(AddrWithBalance(richAccount.toAddress, 50_000.dcc))
 
-  val block: Block = TestBlock.create(Nil).block
+  val block: Block             = TestBlock.create(Nil).block
   val testStateHash: StateHash = {
     import com.decentralchain.utils.byteStrOrdering
     def randomHash: ByteStr = ByteStr(Array.fill(32)(ThreadLocalRandom.current().nextInt(256).toByte))
@@ -175,7 +175,7 @@ class DebugApiRouteSpec
 
         val expectedResponse = Json.obj(
           "stateHash"         -> field("stateHash"),
-          "dccBalanceHash"  -> field("dccBalanceHash"),
+          "dccBalanceHash"    -> field("dccBalanceHash"),
           "assetBalanceHash"  -> field("assetBalanceHash"),
           "dataEntryHash"     -> field("dataEntryHash"),
           "accountScriptHash" -> field("accountScriptHash"),
@@ -2011,7 +2011,7 @@ class DebugApiRouteSpec
            """.stripMargin
       )
       val leaseTx = lease(dApp2Kp, leaseAddress)
-      val dApp2 = TestCompiler(V6).compileContract(
+      val dApp2   = TestCompiler(V6).compileContract(
         s"""
            | @Callable(i)
            | func default() = {
@@ -3109,8 +3109,8 @@ class DebugApiRouteSpec
     }
 
     "InvokeExpression" in {
-      val sender = TxHelpers.signer(1080)
-      val issue  = TxHelpers.issue(sender)
+      val sender     = TxHelpers.signer(1080)
+      val issue      = TxHelpers.issue(sender)
       val expression = TestCompiler(V6).compileFreeCall(
         s"""
            | let assetId = base58'${issue.asset}'

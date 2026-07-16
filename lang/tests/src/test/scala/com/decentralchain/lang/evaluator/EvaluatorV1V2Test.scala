@@ -102,7 +102,7 @@ class EvaluatorV1V2Test extends PropSpec with EitherValues {
     eval[T](context.asInstanceOf[EvaluationContext[Environment, Id]], expr)
 
   private def evalWithLogging(context: EvaluationContext[Environment, Id], expr: EXPR): Either[(ExecutionError, Log[Id]), (EVALUATED, Log[Id])] = {
-    val evaluatorV1Result = defaultEvaluator.applyWithLogging[EVALUATED](context, expr)
+    val evaluatorV1Result                      = defaultEvaluator.applyWithLogging[EVALUATED](context, expr)
     val (evaluatorV2Log, _, evaluatorV2Result) =
       EvaluatorV2.applyCompleted(
         context,
@@ -267,7 +267,7 @@ class EvaluatorV1V2Test extends PropSpec with EitherValues {
   property("lazy let evaluation doesn't throw if not used") {
     val pointType     = CASETYPEREF("Point", List(("X", LONG), ("Y", LONG)))
     val pointInstance = CaseObj(pointType, Map("X" -> 3L, "Y" -> 4L))
-    val context = Monoid.combine(
+    val context       = Monoid.combine(
       pureEvalContext,
       EvaluationContext[NoContext, Id](
         Contextful.empty[Id],
@@ -1213,7 +1213,7 @@ class EvaluatorV1V2Test extends PropSpec with EitherValues {
   }
 
   property("fromBase16String limit 32768 digits from V4") {
-    val string32Kb = ("fedcba9876543210" * (32 * 1024 / 16))
+    val string32Kb                   = ("fedcba9876543210" * (32 * 1024 / 16))
     def script(base16String: String) =
       FUNCTION_CALL(
         Native(FunctionIds.FROMBASE16),

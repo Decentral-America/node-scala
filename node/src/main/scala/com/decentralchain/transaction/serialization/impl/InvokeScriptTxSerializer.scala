@@ -19,7 +19,7 @@ object InvokeScriptTxSerializer {
   def functionCallToJson(fc: Terms.FUNCTION_CALL): JsObject = {
     Json.obj(
       "function" -> JsString(fc.function.funcName),
-      "args" -> JsArray(
+      "args"     -> JsArray(
         fc.args.map {
           case Terms.ARR(elements) => Json.obj("type" -> "list", "value" -> elements.map(mapSingleArg))
           case other               => mapSingleArg(other)
@@ -34,7 +34,7 @@ object InvokeScriptTxSerializer {
       case Terms.CONST_BOOLEAN(bool)  => Json.obj("type" -> "boolean", "value" -> bool)
       case Terms.CONST_BYTESTR(bytes) => Json.obj("type" -> "binary", "value" -> bytes.base64)
       case Terms.CONST_STRING(str)    => Json.obj("type" -> "string", "value" -> str)
-      case Terms.ARR(_) =>
+      case Terms.ARR(_)               =>
         Json.obj(
           "type"  -> "list",
           "value" -> "unsupported"

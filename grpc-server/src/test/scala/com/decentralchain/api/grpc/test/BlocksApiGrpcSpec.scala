@@ -109,7 +109,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
 
       val attachment = ByteStr.fill(32)(1)
       val issue      = TxHelpers.issue(issuer)
-      val exchange =
+      val exchange   =
         TxHelpers.exchangeFromOrders(
           TxHelpers.order(OrderType.BUY, Dcc, issue.asset, version = Order.V4, attachment = Some(attachment)),
           TxHelpers.order(OrderType.SELL, Dcc, issue.asset, version = Order.V4, sender = issuer),
@@ -149,7 +149,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
     blockRewardSharesTestCase { case (daoAddress, xtnBuybackAddress, d, grpcApi) =>
       val miner                       = d.appendBlock().sender.toAddress
       val blockBeforeBlockRewardDistr = d.appendBlock()
-      val heightToBlock = (3 to 5).map { h =>
+      val heightToBlock               = (3 to 5).map { h =>
         h -> d.appendBlock().id()
       }.toMap
       d.appendBlock()
@@ -269,7 +269,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
       (1 to 999).foreach(_ => d.appendBlock())
 
       val invalidStateHash = ByteStr.fill(DigestLength)(1)
-      val originalBlock = d.createBlock(
+      val originalBlock    = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(TxHelpers.transfer(sender)),
         strictTime = true,
@@ -323,7 +323,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
       (1 to 999).foreach(_ => d.appendBlock())
 
       val invalidStateHash = ByteStr.fill(DigestLength)(1)
-      val originalBlock = d.createBlock(
+      val originalBlock    = d.createBlock(
         Block.ProtoBlockVersion,
         Seq(TxHelpers.transfer(sender)),
         strictTime = true,
@@ -382,7 +382,7 @@ class BlocksApiGrpcSpec extends FreeSpec with BeforeAndAfterAll with DiffMatcher
     val daoAddress        = TxHelpers.address(3)
     val xtnBuybackAddress = TxHelpers.address(4)
 
-    val settings = DomainPresets.ConsensusImprovements
+    val settings             = DomainPresets.ConsensusImprovements
     val settingsWithFeatures = settings
       .copy(blockchainSettings =
         settings.blockchainSettings.copy(

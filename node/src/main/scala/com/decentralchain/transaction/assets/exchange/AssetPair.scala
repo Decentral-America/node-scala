@@ -22,7 +22,7 @@ case class AssetPair(
   def key: String                 = amountAssetStr + "-" + priceAssetStr
   def isValid: Validation         = (amountAsset != priceAsset) :| "Invalid AssetPair"
   def bytes: Array[Byte]          = Bytes.concat(amountAsset.byteRepr, priceAsset.byteRepr)
-  def json: JsObject = Json.obj(
+  def json: JsObject              = Json.obj(
     "amountAsset" -> amountAsset.maybeBase58Repr,
     "priceAsset"  -> priceAsset.maybeBase58Repr
   )
@@ -37,13 +37,13 @@ object AssetPair {
   }
 
   def assetIdStr(aid: Asset): String = aid match {
-    case Dcc           => DccName
+    case Dcc             => DccName
     case IssuedAsset(id) => id.toString
   }
 
   def extractAssetId(a: String): Try[Asset] = a match {
     case `DccName` => Success(Dcc)
-    case other       => ByteStr.decodeBase58(other).map(IssuedAsset(_))
+    case other     => ByteStr.decodeBase58(other).map(IssuedAsset(_))
   }
 
   def createAssetPair(amountAsset: String, priceAsset: String): Try[AssetPair] =

@@ -127,8 +127,8 @@ object Importer extends ScorexLogging {
     else {
       val extensionContext: Context = {
         new Context {
-          override def settings: DCCSettings  = dccSettings
-          override def blockchain: Blockchain = blockchainUpdater
+          override def settings: DCCSettings                                                        = dccSettings
+          override def blockchain: Blockchain                                                       = blockchainUpdater
           override def rollbackTo(blockId: ByteStr): Task[Either[ValidationError, DiscardedBlocks]] =
             Task(blockchainUpdater.removeAfter(blockId)).executeOn(appenderScheduler)
           override def time: Time     = extensionTime
@@ -137,7 +137,7 @@ object Importer extends ScorexLogging {
 
           override def broadcastTransaction(tx: Transaction): TracedResult[ValidationError, Boolean] =
             TracedResult.wrapE(Left(GenericError("Not implemented during import")))
-          override def utxEvents: Observable[UtxEvent] = Observable.empty
+          override def utxEvents: Observable[UtxEvent]        = Observable.empty
           override def transactionsApi: CommonTransactionsApi =
             CommonTransactionsApi(
               blockchainUpdater.bestLiquidSnapshot.map(Height(blockchainUpdater.height) -> _),
@@ -229,8 +229,8 @@ object Importer extends ScorexLogging {
           val blockSize     = Ints.fromByteArray(lenBlockBytes)
           val snapshotsSize = lenSnapshotsBytes.map(Ints.fromByteArray)
 
-          lazy val blockBytes     = new Array[Byte](blockSize)
-          lazy val snapshotsBytes = snapshotsSize.map(new Array[Byte](_))
+          lazy val blockBytes                            = new Array[Byte](blockSize)
+          lazy val snapshotsBytes                        = snapshotsSize.map(new Array[Byte](_))
           val (factReadBlockSize, factReadSnapshotsSize) =
             if (blocksToSkip > 0) {
               // File IO optimization
@@ -249,7 +249,7 @@ object Importer extends ScorexLogging {
             if (blocksToSkip > 0) {
               blocksToSkip -= 1
             } else {
-              val rideV6 = blockchain.isFeatureActivated(BlockchainFeatures.RideV6, blockchain.height + (maxCount - remainCount) + 1)
+              val rideV6                = blockchain.isFeatureActivated(BlockchainFeatures.RideV6, blockchain.height + (maxCount - remainCount) + 1)
               lazy val parsedProtoBlock =
                 PBBlocks.vanilla(PBBlocks.addChainId(io.decentralchain.protobuf.block.PBBlock.parseFrom(blockBytes)), unsafe = true)
               val block = (if (1 < blockBytes.head && blockBytes.head < 5 && Longs.fromByteArray(blockBytes.slice(1, 9)) < CurrentTS)
@@ -349,7 +349,7 @@ object Importer extends ScorexLogging {
     val scheduler = Schedulers.singleThread("appender")
     val time      = new NTP(settings.ntpServer)
 
-    val rdb = RDB.open(settings.dbSettings)
+    val rdb                            = RDB.open(settings.dbSettings)
     val (blockchainUpdater, rdbWriter) =
       StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers))
     val utxPool = new UtxPoolImpl(time, blockchainUpdater, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
@@ -367,7 +367,7 @@ object Importer extends ScorexLogging {
           rdb.db.iterateOver(KeyTag.BlockInfoAtHeight) { e =>
             e.getKey match {
               case Array(_, _, 0, 0, 0, 1) => // Skip genesis
-              case _ =>
+              case _                       =>
                 val meta = com.decentralchain.database.readBlockMeta(e.getValue)
                 blocksOffset += meta.size + 4
             }
@@ -376,7 +376,7 @@ object Importer extends ScorexLogging {
         case _ =>
           0
       }
-    val blocksInputStream = new BufferedInputStream(initFileStream(importOptions.blockchainFile, blocksFileOffset), 2 * 1024 * 1024)
+    val blocksInputStream    = new BufferedInputStream(initFileStream(importOptions.blockchainFile, blocksFileOffset), 2 * 1024 * 1024)
     val snapshotsInputStream =
       importOptions.snapshotsFile
         .map { file =>
@@ -395,7 +395,7 @@ object Importer extends ScorexLogging {
       lock.synchronized {
         if (blockchainUpdater.isFeatureActivated(BlockchainFeatures.NG) && blockchainUpdater.liquidBlockMeta.nonEmpty) {
           // Force store liquid block in rocksdb
-          val lastHeader = blockchainUpdater.lastBlockHeader.get.header
+          val lastHeader  = blockchainUpdater.lastBlockHeader.get.header
           val pseudoBlock = Block(
             BlockHeader(
               blockchainUpdater.blockVersionAt(blockchainUpdater.height),

@@ -61,7 +61,7 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
     val mt2           = massTransfer(master, massTransfers, issueScr.asset, fee = 1.dcc)
     val l             = lease(master, acc.toAddress, 1)
     val lc            = leaseCancel(l.id(), master)
-    val o1 = order(
+    val o1            = order(
       OrderType.BUY,
       issueScr.asset,
       issueSp.asset,
@@ -82,7 +82,7 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
       matcher = master
     )
     val exchange = exchangeFromOrders(o1, o2, master, version = TxVersion.V2, fee = 1.dcc)
-    val o1a = order(
+    val o1a      = order(
       OrderType.BUY,
       issueScr.asset,
       issueSp.asset,
@@ -105,7 +105,7 @@ class ScriptComplexityCountTest extends PropSpec with WithDomain with Inside {
     val exchangea    = exchangeFromOrders(o1a, o2a, acc, version = TxVersion.V2, fee = 1.dcc)
     val setContractB = setScript(acc, script)
     val issueScrB    = issue(acc, issueAmount + additionalAmount, script = Some(script))
-    val o1b = order(
+    val o1b          = order(
       OrderType.BUY,
       issueScrB.asset,
       issueScr.asset,

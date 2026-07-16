@@ -234,7 +234,7 @@ class Repo(db: RocksDB, blocksApi: CommonBlocksApi)(implicit s: Scheduler)
   def getBlockUpdate(height: Height): GetBlockUpdateResponse = liquidState match {
     case Some(ls) if Height(ls.keyBlock.height) == height => GetBlockUpdateResponse(Some(ls.solidify().protobuf))
     case Some(ls) if Height(ls.keyBlock.height) < height  => throw new IllegalArgumentException()
-    case _ =>
+    case _                                                =>
       db.withResource { res =>
         GetBlockUpdateResponse(Some(Loader.loadUpdate(res, blocksApi, height)))
       }

@@ -132,7 +132,7 @@ object RocksDBWriter extends ScorexLogging {
     dbSettings,
     isLightMode,
     dbSettings.cleanupInterval match {
-      case None => MoreExecutors.newDirectExecutorService() // We don't care if disabled
+      case None    => MoreExecutors.newDirectExecutorService() // We don't care if disabled
       case Some(_) =>
         forceCleanupExecutorService.getOrElse {
           new ThreadPoolExecutor(
@@ -274,7 +274,7 @@ class RocksDBWriter(
     val reqWithKeys = req.flatMap { case (address, asset) =>
       addrToId.get(address).map { aid =>
         (address, asset) -> (asset match {
-          case Dcc                    => Keys.dccBalance(aid)
+          case Dcc                      => Keys.dccBalance(aid)
           case issuedAsset: IssuedAsset => Keys.assetBalance(aid, issuedAsset)
         })
       }
@@ -383,7 +383,7 @@ class RocksDBWriter(
       assetStatics: Map[IssuedAsset, (AssetStaticInfo, Int)],
       rw: RW
   ): Unit = {
-    var changedDccBalances = List.empty[AddressId]
+    var changedDccBalances   = List.empty[AddressId]
     val changedAssetBalances = MultimapBuilder.hashKeys().hashSetValues().build[IssuedAsset, java.lang.Long]()
     val updatedNftLists      = MultimapBuilder.hashKeys().linkedHashSetValues().build[java.lang.Long, IssuedAsset]()
 
@@ -442,7 +442,7 @@ class RocksDBWriter(
   private var TxFilterResetTs = lastBlock.fold(0L)(_.header.timestamp)
   private def mkFilter()      = BloomFilter.create[Array[Byte]](Funnels.byteArrayFunnel(), dbSettings.txBloomFilterSize, 0.001f)
   private var currentTxFilter = mkFilter()
-  private var prevTxFilter = lastBlock match {
+  private var prevTxFilter    = lastBlock match {
     case Some(b) =>
       TxFilterResetTs = b.header.timestamp
       val prevFilter = mkFilter()
@@ -582,7 +582,7 @@ class RocksDBWriter(
       val updatedAssetSet = snapshot.assetVolumes.keySet ++ snapshot.assetNamesAndDescriptions.keySet
       for (asset <- updatedAssetSet) {
         lazy val dbInfo = rw.fromHistory(Keys.assetDetailsHistory(asset), Keys.assetDetails(asset))
-        val volume =
+        val volume      =
           snapshot.assetVolumes
             .get(asset)
             .map(v => AssetVolumeInfo(v.isReissuable, BigInt(v.volume.toByteArray)))
@@ -659,7 +659,7 @@ class RocksDBWriter(
         rw.multiGetInts(addressTxs.view.map(_._3).toVector)
           .zip(addressTxs)
           .foreach { case (prevSeqNr, (addressId, txIds, txSeqNrKey)) =>
-            val nextSeqNr = prevSeqNr.getOrElse(0) + 1
+            val nextSeqNr    = prevSeqNr.getOrElse(0) + 1
             val txTypeNumSeq = txIds.asScala.map { txId =>
               val (num, tx, size) = transactionsWithSize(txId)
               (tx.tpe.id.toByte, num, size)
@@ -702,7 +702,7 @@ class RocksDBWriter(
 
       val activationWindowSize = settings.functionalitySettings.activationWindowSize(height)
       if (height % activationWindowSize == 0) {
-        val minVotes = settings.functionalitySettings.blocksForFeatureActivation(height)
+        val minVotes              = settings.functionalitySettings.blocksForFeatureActivation(height)
         val newlyApprovedFeatures = featureVotes(h)
           .filterNot { case (featureId, _) => settings.functionalitySettings.preActivatedFeatures.contains(featureId) }
           .collect {
@@ -794,7 +794,7 @@ class RocksDBWriter(
     log.trace(s"Finished persisting block ${blockMeta.id} at height $height")
   }
 
-  @volatile private var lastCleanupHeight = writableDB.get(Keys.lastCleanupHeight)
+  @volatile private var lastCleanupHeight                                                      = writableDB.get(Keys.lastCleanupHeight)
   private def runCleanupTask(newLastSafeHeightForDeletion: Height, cleanupInterval: Int): Unit =
     if (lastCleanupHeight + cleanupInterval < newLastSafeHeightForDeletion) {
       cleanupExecutorService.submit(new Runnable {
@@ -1011,7 +1011,7 @@ class RocksDBWriter(
         val aliasesToInvalidate      = Seq.newBuilder[Alias]
         val blockHeightsToInvalidate = Seq.newBuilder[ByteStr]
 
-        val currentPeriod = this.generationPeriodOf(currentHeight)
+        val currentPeriod  = this.generationPeriodOf(currentHeight)
         val discardedBlock = readWrite { rw =>
           val blockchainHeight = currentHeight.prev
           rw.put(Keys.height, blockchainHeight)
@@ -1117,7 +1117,7 @@ class RocksDBWriter(
                 rw.delete(Keys.assetScript(asset)(currentHeight))
                 rw.filterHistory(Keys.assetScriptHistory(asset), currentHeight)
 
-              case _: DataTransaction => // see changed data keys removal
+              case _: DataTransaction                                          => // see changed data keys removal
               case _: InvokeScriptTransaction | _: InvokeExpressionTransaction =>
                 rw.delete(Keys.invokeScriptResult(currentHeight, num, rdb.apiHandle))
 
@@ -1299,7 +1299,7 @@ class RocksDBWriter(
       tx <- db
         .get(Keys.transactionAt(Height(tm.height), TxNum(tm.num.toShort), rdb.txHandle))
         .collect {
-          case (m, t: TransferTransaction) if m.status == TxMeta.Status.Succeeded => t
+          case (m, t: TransferTransaction) if m.status == TxMeta.Status.Succeeded                           => t
           case (_, e @ EthereumTransaction(transfer: Transfer, _, _, _)) if tm.status == PBStatus.SUCCEEDED =>
             val asset = transfer.tokenAddress.fold[Asset](Dcc)(resolveERC20Address(_).get)
             e.toTransferLike(TxPositiveAmount.unsafeFrom(transfer.amount), transfer.recipient, asset)
@@ -1310,7 +1310,7 @@ class RocksDBWriter(
   override def transactionInfo(id: ByteStr): Option[(TxMeta, Transaction)] = readOnly(transactionInfo(id, _))
 
   override def transactionInfos(ids: Seq[ByteStr]): Seq[Option[(TxMeta, Transaction)]] = readOnly { db =>
-    val tms = db.multiGetOpt(ids.view.map(id => Keys.transactionMetaById(TransactionId(id), rdb.txMetaHandle)).toVector, 36)
+    val tms           = db.multiGetOpt(ids.view.map(id => Keys.transactionMetaById(TransactionId(id), rdb.txMetaHandle)).toVector, 36)
     val (keys, sizes) = tms.view
       .map {
         case Some(tm) => Keys.transactionAt(Height(tm.height), TxNum(tm.num.toShort), rdb.txHandle) -> tm.size
@@ -1377,7 +1377,7 @@ class RocksDBWriter(
   override def balanceAtHeight(address: Address, height: Int, assetId: Asset = Dcc): Option[(Int, Long)] = readOnly { db =>
     db.get(Keys.addressId(address)).flatMap { aid =>
       val key = assetId match {
-        case Dcc              => Keys.dccBalanceAt(aid, Height(height))
+        case Dcc                => Keys.dccBalanceAt(aid, Height(height))
         case asset: IssuedAsset => Keys.assetBalanceAt(aid, asset, Height(height))
       }
       Using(db.newIterator) { iter =>
@@ -1393,7 +1393,7 @@ class RocksDBWriter(
 
     val depositPeriods = for {
       activation <- this.featureActivationHeight(BlockchainFeatures.DeterministicFinality)
-      r <- GenerationPeriod.enclosedPeriods(
+      r          <- GenerationPeriod.enclosedPeriods(
         activation,
         this.settings.functionalitySettings.generationPeriodLength,
         Height(from),
@@ -1466,7 +1466,7 @@ class RocksDBWriter(
 
     if (depositDiffHeights.isEmpty) (Seq(Height(0)), Map(Height(0) -> 0L))
     else {
-      val sortedDiffHeights = depositDiffHeights.toList.sortBy { case (h, _) => h }
+      val sortedDiffHeights                = depositDiffHeights.toList.sortBy { case (h, _) => h }
       val (_, changedHeights, depositSize) = sortedDiffHeights.foldLeft((0L, List.empty[Height], Map.empty[Height, Long])) {
         case ((currentDeposit, changedHeights, depositSize), (depositHeight, diffN)) =>
           val updatedDeposit = currentDeposit + diffN * DepositInDcclets
@@ -1484,7 +1484,7 @@ class RocksDBWriter(
       fromIncl: GenerationPeriod,
       toIncl: GenerationPeriod
   ): Seq[CommittedHeightsResult] = {
-    val committedGeneratorsKey = Keys.committedGenerators(fromIncl, Height(0))
+    val committedGeneratorsKey                          = Keys.committedGenerators(fromIncl, Height(0))
     def getSeekBytes(at: GenerationPeriod): Array[Byte] =
       Keys.committedGenerators(at, Height(0)).keyBytes.dropRight(Ints.BYTES) // Drop height
 
@@ -1516,7 +1516,7 @@ class RocksDBWriter(
           }
 
           val committedGenerators = committedGeneratorsKey.parse(committedIter.value()).getOrElse(Seq.empty)
-          val generatorIndex = committedGenerators.view.zipWithIndex.collectFirst {
+          val generatorIndex      = committedGenerators.view.zipWithIndex.collectFirst {
             case ((currentAddressId, _), i) if currentAddressId == addressId => GeneratorIndex(currentGeneratorIndex + i)
           }
 
@@ -1603,7 +1603,7 @@ class RocksDBWriter(
     val rawGenerators    = new mutable.ArrayBuffer[BlsPublicKey](approxGenerators)
     val addressIds       = new mutable.ArrayBuffer[AddressId](approxGenerators)
 
-    val key = Keys.committedGenerators(at, at.start)
+    val key       = Keys.committedGenerators(at, at.start)
     val addresses = rdb.db.readOnly { ro =>
       ro.iterateOver(key.keyBytes.dropRight(Ints.BYTES)) { dbEntry => // Drop height
         val xs = key.parse(dbEntry.getValue).getOrElse(Seq.empty)

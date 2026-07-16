@@ -66,7 +66,7 @@ case class Domain(
   @volatile
   var triggers: Seq[BlockchainUpdateTriggers] = Nil
 
-  val posSelector: PoSSelector = PoSSelector(blockchainUpdater, None)
+  val posSelector: PoSSelector                = PoSSelector(blockchainUpdater, None)
   def nextBlockTime(generator: KeyPair): Long = {
     val parentHeight = blockchain.height
     val parent       = blockchain.blockHeader(parentHeight).map(_.header).getOrElse(lastBlock.header)
@@ -91,14 +91,17 @@ case class Domain(
   lazy val utxPool: UtxPoolImpl =
     new UtxPoolImpl(SystemTime, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
 
-  lazy val endorsementStorage: EndorsementStorage = EndorsementStorage.Disabled
+  lazy val endorsementStorage: EndorsementStorage                                                                     = EndorsementStorage.Disabled
   def createBlockEndorser(allChannels: ChannelGroup, storage: EndorsementStorage = endorsementStorage): BlockEndorser =
     new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchain, wallet, storage, allChannels)
 
   lazy val wallet: Wallet = Wallet(settings.walletSettings.copy(file = None, seed = Some(ByteStr(DefaultWalletSeed))))
 
   lazy val blockAppender: Block => Task[Either[ValidationError, BlockApplyResult]] =
-    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, Scheduler.singleThread("appender"))(_, None) // NOTE: Appender uses default scheduler
+    BlockAppender(blockchain, testTime, utxPool, posSelector, BlockEndorser.Disabled, Scheduler.singleThread("appender"))(
+      _,
+      None
+    ) // NOTE: Appender uses default scheduler
   lazy val blockChallenger: Option[BlockChallenger] =
     if (!settings.enableLightMode)
       Some(
@@ -327,7 +330,7 @@ case class Domain(
   )(txs: Transaction*): Either[ValidationError, MicroBlock] = {
     val lastBlock   = this.lastBlock
     val blockSigner = signer.getOrElse(defaultSigner)
-    val stateHashE = if (blockchain.supportsLightNodeBlockFields()) {
+    val stateHashE  = if (blockchain.supportsLightNodeBlockFields()) {
       stateHash
         .map(Right(_))
         .getOrElse(
@@ -348,7 +351,7 @@ case class Domain(
     } else Right(None)
 
     for {
-      sh <- stateHashE
+      sh    <- stateHashE
       block <- Block.buildAndSign(
         lastBlock.header.version,
         lastBlock.header.timestamp,

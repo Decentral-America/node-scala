@@ -17,7 +17,7 @@ class ChallengingAfterFinalizationSuite extends BaseFinalizationSpec, TestSchedu
   private val thisNodeAcc  = Wallet.generateNewAccount(Domain.DefaultWalletSeed, nonce = 0)
   private val otherNodeAcc = TxHelpers.defaultSigner
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings
     .copy(minerSettings = baseSettings.minerSettings.copy(quorum = 0, microBlockInterval = 100.millis))
     .configure(_.copy(generationPeriodLength = 2))
@@ -34,7 +34,7 @@ class ChallengingAfterFinalizationSuite extends BaseFinalizationSpec, TestSchedu
 
     log.debug("Append block3 with invalid state hash and challenge")
     val invalidStateHash = ByteStr.fill(DigestLength)(1)
-    val invalidBlock = d.createBlock(
+    val invalidBlock     = d.createBlock(
       Block.ProtoBlockVersion,
       txs = Nil,
       strictTime = true,

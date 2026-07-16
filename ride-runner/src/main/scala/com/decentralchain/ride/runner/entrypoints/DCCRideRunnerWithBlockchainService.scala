@@ -112,7 +112,7 @@ object DCCRideRunnerWithBlockchainService extends ScorexLogging {
       rideDb.close()
     }
 
-    val allTags = new CacheKeyTags[RideScriptRunRequest]
+    val allTags          = new CacheKeyTags[RideScriptRunRequest]
     val sharedBlockchain = rideDb.access.batchedReadOnly { implicit ro =>
       val dbCaches = DefaultDiskCaches(rideDb.access)
       LazyBlockchain.init(
@@ -146,7 +146,7 @@ object DCCRideRunnerWithBlockchainService extends ScorexLogging {
     val processor = new BlockchainProcessor(sharedBlockchain, requestService)
 
     @volatile var lastServiceStatus = ServiceStatus()
-    val events = blockchainUpdatesStream.downstream
+    val events                      = blockchainUpdatesStream.downstream
       .doOnError(e => Task { log.error("Error!", e) })
       .scanEval(Task.now[BlockchainState](BlockchainState.Starting(heights.lastKnownHardened, heights.working))) {
         BlockchainState.applyWithRestarts(settings.blockchainState, processor, blockchainUpdatesStream, _, _)
@@ -197,7 +197,7 @@ object DCCRideRunnerWithBlockchainService extends ScorexLogging {
     )
 
     val httpService = CompositeHttpService(apiRoutes, settings.restApi)
-    val httpFuture = Http()
+    val httpFuture  = Http()
       .newServerAt(settings.restApi.bindAddress, settings.restApi.port)
       .bindFlow(httpService.loggingCompositeRoute)
     val http = Await.result(httpFuture, 20.seconds)

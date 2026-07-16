@@ -82,7 +82,7 @@ class NestedBlocks {
   val expr: EXPR = {
     val blockCount = 300
     val cond       = FUNCTION_CALL(PureContext.eq, List(REF(s"v$blockCount"), CONST_LONG(0)))
-    val blocks = (1 to blockCount).foldRight[EXPR](cond) { (i, e) =>
+    val blocks     = (1 to blockCount).foldRight[EXPR](cond) { (i, e) =>
       BLOCK(LET(s"v$i", REF(s"v${i - 1}")), e)
     }
     BLOCK(LET("v0", CONST_LONG(0)), blocks)
@@ -93,7 +93,7 @@ class NestedBlocks {
 class Base58Perf {
   val encode: EXPR = {
     val base58Count = 120
-    val sum = (1 to base58Count).foldRight[EXPR](CONST_LONG(0)) { case (i, e) =>
+    val sum         = (1 to base58Count).foldRight[EXPR](CONST_LONG(0)) { case (i, e) =>
       FUNCTION_CALL(PureContext.sumLong, List(REF("v" + i), e))
     }
     (1 to base58Count)
@@ -113,7 +113,7 @@ class Base58Perf {
 
   val decode: EXPR = {
     val base58Count = 60
-    val sum = (1 to base58Count).foldRight[EXPR](CONST_LONG(0)) { case (i, e) =>
+    val sum         = (1 to base58Count).foldRight[EXPR](CONST_LONG(0)) { case (i, e) =>
       FUNCTION_CALL(PureContext.sumLong, List(REF("v" + i), e))
     }
     (1 to base58Count)
@@ -133,7 +133,7 @@ class Base58Perf {
 class Signatures {
   val expr: EXPR = {
     val sigCount = 20
-    val sum = (1 to sigCount).foldRight[EXPR](CONST_LONG(0)) { case (i, e) =>
+    val sum      = (1 to sigCount).foldRight[EXPR](CONST_LONG(0)) { case (i, e) =>
       FUNCTION_CALL(PureContext.sumLong, List(REF("v" + i), e))
     }
     (1 to sigCount)

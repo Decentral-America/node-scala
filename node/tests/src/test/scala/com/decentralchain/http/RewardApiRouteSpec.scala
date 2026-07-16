@@ -41,7 +41,7 @@ class RewardApiRouteSpec extends RouteSpec("/blockchain") with WithDomain {
     )
   )
 
-  val blockRewardActivationHeight = 1
+  val blockRewardActivationHeight         = 1
   val settingsWithVoteParams: DCCSettings = ConsensusImprovements
     .copy(blockchainSettings =
       ConsensusImprovements.blockchainSettings

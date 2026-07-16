@@ -65,7 +65,7 @@ object RideRocksDb extends ScorexLogging {
     dbDir.getParentFile.mkdirs()
 
     val handles = new util.ArrayList[ColumnFamilyHandle]()
-    val db = RocksDB.open(
+    val db      = RocksDB.open(
       options,
       settings.directory,
       Seq(

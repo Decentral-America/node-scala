@@ -86,7 +86,7 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
         )
         .getOrElse(List.empty)
       unionInCallableErrs <- checkCallableUnions(af, annotationsWithErr._1.toList.flatten)
-      compiledBody <- local {
+      compiledBody        <- local {
         modify[Id, CompilerContext, CompilationError](ctx => ctx.copy(varDefs = ctx.varDefs ++ annotationBindings)).flatMap(_ =>
           compileFunc(af.f.position, af.f, saveExprContext, annotationBindings.map(_._1), allowIllFormedStrings)
         )
@@ -141,8 +141,8 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
       )
       decs           = decsCompileResult.map(_.dec)
       parsedNodeDecs = decsCompileResult.map(_.parseNodeExpr)
-      duplicateVarsErr   <- validateDuplicateVarsInContract(parsedDapp).handleError()
-      annFuncArgTypesErr <- validateAnnotatedFuncsArgTypes(parsedDapp).handleError()
+      duplicateVarsErr        <- validateDuplicateVarsInContract(parsedDapp).handleError()
+      annFuncArgTypesErr      <- validateAnnotatedFuncsArgTypes(parsedDapp).handleError()
       compiledAnnFuncsWithErr <- parsedDapp.fs
         .traverse[CompileM, (Option[AnnotatedFunction], List[(String, Types.FINAL)], Expressions.ANNOTATEDFUNC, Iterable[CompilationError])](af =>
           local(compileAnnotatedFunc(af, saveExprContext, allowIllFormedStrings, source))
@@ -175,7 +175,7 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
 
       callableFuncsWithParams = compiledAnnFuncsWithErr.filter(_._1.exists(_.isInstanceOf[CallableFunction]))
       callableFuncs           = callableFuncsWithParams.map(_._1.get.asInstanceOf[CallableFunction])
-      callableFuncsTypeInfo = callableFuncsWithParams.map { case (_, typedParams, _, _) =>
+      callableFuncsTypeInfo   = callableFuncsWithParams.map { case (_, typedParams, _, _) =>
         typedParams.map(_._2)
       }
 
@@ -192,7 +192,7 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
 
       verifierFunctions = annotatedFuncs.filter(_.isInstanceOf[VerifierFunction]).map(_.asInstanceOf[VerifierFunction])
       verifierFuncOptWithErr <- (verifierFunctions match {
-        case Nil => Option.empty[VerifierFunction].pure[CompileM]
+        case Nil       => Option.empty[VerifierFunction].pure[CompileM]
         case vf :: Nil =>
           if (vf.u.args.isEmpty)
             Option.apply(vf).pure[CompileM]
@@ -243,7 +243,7 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
         for {
           funcName <- handleValid(func.f.name)
           funcArgs <- func.f.args.map(_._2).toList.flatTraverse(resolveGenericType(func, funcName, _))
-          _ <- funcArgs
+          _        <- funcArgs
             .map { case (argType, typeParam) => (argType.v, typeParam.map(_.v)) }
             .find(!checkAnnotatedParamType(_))
             .map(t => argTypesError[Unit](func, funcName, typeStr(t)))
@@ -290,7 +290,7 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
     t match {
       case (singleType, None)                                               => primitiveCallableTypes.contains(singleType)
       case (genericType, Some(Expressions.Single(PART.VALID(_, tp), None))) => primitiveCallableTypes.contains(tp) && genericType == Type.ListTypeName
-      case (genericType, Some(Expressions.Union(u))) =>
+      case (genericType, Some(Expressions.Union(u)))                        =>
         genericType == Type.ListTypeName && u.forall { t =>
           t match {
             case Expressions.Single(PART.VALID(_, tp), None) => primitiveCallableTypes.contains(tp)
@@ -323,7 +323,7 @@ class ContractCompiler(version: StdLibVersion) extends ExpressionCompiler(versio
       )
       _ <- annAndFuncArgsIntersection.flatMap {
         _.headOption.flatten match {
-          case None => ().pure[CompileM]
+          case None                   => ().pure[CompileM]
           case Some(PART.VALID(p, n)) =>
             raiseError[Id, CompilerContext, CompilationError, Unit](Generic(p.start, p.start, s"Script func arg `$n` override annotation bindings"))
         }

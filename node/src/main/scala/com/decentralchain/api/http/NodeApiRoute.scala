@@ -4,6 +4,7 @@ import java.time.Instant
 
 import org.apache.pekko.http.scaladsl.server.Route
 import com.decentralchain.Shutdownable
+import com.decentralchain.consensus.hotstuff.HotStuffObservation
 import com.decentralchain.settings.{Constants, RestAPISettings}
 import com.decentralchain.state.Blockchain
 import com.decentralchain.utils.ScorexLogging
@@ -30,13 +31,16 @@ case class NodeApiRoute(settings: RestAPISettings, blockchain: Blockchain, appli
 
   def status: Route = (get & path("status")) {
     val lastUpdated = blockchain.lastBlockHeader.get.header.timestamp
+    // `hotStuffFinalizedHeight` is included only when the (observational) HotStuff coordinator is
+    // enabled and has committed at least one block — /node/status is unchanged when HotStuff is off.
+    val hotStuff = HotStuffObservation.committedHeightOpt.fold(Json.obj())(h => Json.obj("hotStuffFinalizedHeight" -> h))
     complete(
       Json.obj(
         "blockchainHeight" -> blockchain.height,
         "stateHeight"      -> blockchain.height,
         "updatedTimestamp" -> lastUpdated,
         "updatedDate"      -> Instant.ofEpochMilli(lastUpdated).toString
-      )
+      ) ++ hotStuff
     )
   }
 }

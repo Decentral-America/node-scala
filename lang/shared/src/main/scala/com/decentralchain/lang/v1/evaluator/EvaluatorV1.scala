@@ -45,7 +45,7 @@ class EvaluatorV1[F[_]: Monad, C[_[_]]](implicit ev: Monad[EvalF[F]], ev2: Monad
 
   private def evalFuncBlock(func: FUNC, inner: EXPR): EvalM[F, C, (EvaluationContext[C, F], EVALUATED)] = {
     val funcHeader = FunctionHeader.User(func.name)
-    val function = UserFunction(func.name, 0, NOTHING, func.args.map(n => (n, NOTHING))*)(func.body)
+    val function   = UserFunction(func.name, 0, NOTHING, func.args.map(n => (n, NOTHING))*)(func.body)
       .asInstanceOf[UserFunction[C]]
     local {
       modify[F, EnabledLogEvaluationContext[C, F], ExecutionError](ctx =>
@@ -58,7 +58,7 @@ class EvaluatorV1[F[_]: Monad, C[_[_]]](implicit ev: Monad[EvalF[F]], ev2: Monad
   private def evalRef(key: String): EvalM[F, C, (EvaluationContext[C, F], EVALUATED)] =
     for {
       ctx <- get[F, EnabledLogEvaluationContext[C, F], ExecutionError]
-      r <- ctx.ec.letDefs.get(key) match {
+      r   <- ctx.ec.letDefs.get(key) match {
         case Some(lzy) => liftTER[F, C, EVALUATED](lzy.value)
         case None      => raiseError[F, EnabledLogEvaluationContext[C, F], ExecutionError, EVALUATED](s"A definition of '$key' not found")
       }
@@ -82,7 +82,7 @@ class EvaluatorV1[F[_]: Monad, C[_[_]]](implicit ev: Monad[EvalF[F]], ev2: Monad
 
   private def evalFunctionCall(header: FunctionHeader, args: List[EXPR]): EvalM[F, C, (EvaluationContext[C, F], EVALUATED)] =
     for {
-      ctx <- get[F, EnabledLogEvaluationContext[C, F], ExecutionError]
+      ctx    <- get[F, EnabledLogEvaluationContext[C, F], ExecutionError]
       result <- ctx.ec.functions
         .get(header)
         .map {
@@ -131,7 +131,7 @@ class EvaluatorV1[F[_]: Monad, C[_[_]]](implicit ev: Monad[EvalF[F]], ev2: Monad
   private def evalExprWithCtx(t: EXPR): EvalM[F, C, (EvaluationContext[C, F], EVALUATED)] =
     t match {
       case LET_BLOCK(let, inner) => evalLetBlock(let, inner)
-      case BLOCK(dec, inner) =>
+      case BLOCK(dec, inner)     =>
         dec match {
           case l: LET        => evalLetBlock(l, inner)
           case f: FUNC       => evalFuncBlock(f, inner)

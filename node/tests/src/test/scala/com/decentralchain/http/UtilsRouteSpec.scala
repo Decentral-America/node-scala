@@ -488,27 +488,27 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
               JsObject(Seq("name" -> JsString("lendSize"), "type" -> JsString("Int")))
             )
           ),
-          "borrow"  -> JsArray(),
-          "buyBack" -> JsArray(),
+          "borrow"          -> JsArray(),
+          "buyBack"         -> JsArray(),
           "closeExpiredFor" -> JsArray(
             Seq(
               JsObject(Seq("name" -> JsString("address"), "type" -> JsString("String")))
             )
           ),
-          "discard" -> JsArray(),
+          "discard"    -> JsArray(),
           "sendProfit" -> JsArray(
             Seq(
               JsObject(Seq("name" -> JsString("lender"), "type" -> JsString("String")))
             )
           ),
-          "takeProfit" -> JsArray(),
+          "takeProfit"    -> JsArray(),
           "enableLending" -> JsArray(
             Seq(
               JsObject(Seq("name" -> JsString("b"), "type" -> JsString("Boolean")))
             )
           ),
-          "depositBtc"  -> JsArray(),
-          "withdrawBtc" -> JsArray(),
+          "depositBtc"       -> JsArray(),
+          "withdrawBtc"      -> JsArray(),
           "enableDepositBtc" -> JsArray(
             Seq(
               JsObject(Seq("name" -> JsString("b"), "type" -> JsString("Boolean")))

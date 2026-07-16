@@ -20,8 +20,8 @@ import com.decentralchain.transaction.assets.exchange.{AssetPair, Order}
 import scala.concurrent.duration.*
 
 class VRFProtobufActivationSuite extends BaseTransactionSuite {
-  val activationHeight = Height(9)
-  val updateInterval   = 3
+  val activationHeight                            = Height(9)
+  val updateInterval                              = 3
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs
       .Builder(Default, 1, Seq.empty)
@@ -214,9 +214,9 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
   }
 
   private def mkOrders: (Order, Order) = {
-    val ts     = System.currentTimeMillis()
-    val amount = 1000000
-    val price  = 1000
+    val ts       = System.currentTimeMillis()
+    val amount   = 1000000
+    val price    = 1000
     val buyOrder = Order
       .buy(
         version = TxVersion.V2,

@@ -45,7 +45,9 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     (json \ "senderPublicKey").as[String] shouldBe "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z"
     (json \ "generationPeriodStart").as[Int] shouldBe 3000
     (json \ "endorserPublicKey").as[String] shouldBe "6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU"
-    (json \ "commitmentSignature").as[String] shouldBe "oJUBPLXnqejpwkkifzBbyQp63mPwypYq9GV7eAYqQGAvsE2LxU6csrrwLWgK1HdW28Ygku7vfkcMW1TCDCFymVXoqi7SpCwWGp3P6gegHusSPBsuVQQiQ5BWTYpUpSJjiBL"
+    (json \ "commitmentSignature").as[
+      String
+    ] shouldBe "oJUBPLXnqejpwkkifzBbyQp63mPwypYq9GV7eAYqQGAvsE2LxU6csrrwLWgK1HdW28Ygku7vfkcMW1TCDCFymVXoqi7SpCwWGp3P6gegHusSPBsuVQQiQ5BWTYpUpSJjiBL"
     (json \ "proofs").as[Seq[String]] shouldBe Seq("28kE1uN1pX2bwhzr9UHw5UuB9meTFEDFgeunNgy6nZWpHX4pzkGYotu8DhQ88AdqUG6Yy5wcXgHseKPBUygSgRMJ")
     (json \ "chainId").as[Int] shouldBe AddressScheme.current.chainId.toInt
     (json \ "id").asOpt[String].isDefined shouldBe true
@@ -128,7 +130,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
 
     "public BLS key twice" in withDomain(DeterministicFinality, AddrWithBalance.enoughBalances(sender, TxHelpers.secondSigner)) { d =>
       def mkTx(sender: KeyPair, blsKp: BlsKeyPair): CommitToGenerationTransaction = {
-        val baseTx = TxHelpers.commitToGeneration(Height(3001), sender)
+        val baseTx  = TxHelpers.commitToGeneration(Height(3001), sender)
         val withPop = baseTx.copy(
           endorserPublicKey = blsKp.publicKey,
           commitmentSignature = CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart)
@@ -176,7 +178,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         )
       ) { d =>
         val periodStart = Height(3001)
-        val unsignedTx = TxHelpers
+        val unsignedTx  = TxHelpers
           .commitToGeneration(periodStart, newGenerator)
           .copy(commitmentSignature = CommitToGenerationTransaction.mkPopSignature(otherGeneratorKp, periodStart))
         val signedTx = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))

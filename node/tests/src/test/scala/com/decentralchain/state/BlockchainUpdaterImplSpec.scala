@@ -57,7 +57,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
 
     val genesis      = TxHelpers.genesis(master.toAddress, timestamp = ts)
     val genesisBlock = TestBlock.create(ts, Seq(genesis)).block
-    val b1 = TestBlock
+    val b1           = TestBlock
       .create(
         ts + 10,
         genesisBlock.id(),
@@ -164,7 +164,7 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
           val master    = TxHelpers.signer(1)
           val recipient = TxHelpers.signer(2)
 
-          val genesis = TxHelpers.genesis(master.toAddress, timestamp = ts)
+          val genesis   = TxHelpers.genesis(master.toAddress, timestamp = ts)
           val transfers = Seq(
             createTransfer(master, recipient.toAddress, ts + 1),
             createTransfer(master, recipient.toAddress, ts + 2),
@@ -305,8 +305,17 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
       d.appendBlockE(currentBlock) should beRight
 
       val scheduler = Schedulers.singleThread("appender")
-      val appender =
-        BlockAppender(d.blockchainUpdater, SystemTime, d.utxPool, d.posSelector, BlockEndorser.Disabled, scheduler, verify = false, txSignParCheck = true)(_, None)
+      val appender  =
+        BlockAppender(
+          d.blockchainUpdater,
+          SystemTime,
+          d.utxPool,
+          d.posSelector,
+          BlockEndorser.Disabled,
+          scheduler,
+          verify = false,
+          txSignParCheck = true
+        )(_, None)
 
       appender(worseBlock).runSyncUnsafe(1.minute) shouldBe Left(
         BlockAppendError(

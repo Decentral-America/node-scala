@@ -115,7 +115,7 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
       assertBadRequestAndMessage(sender.postJson("/transactions/broadcast", json), expectedMessage)
 
     val timestamp = System.currentTimeMillis
-    val jsonV1 = Json.obj(
+    val jsonV1    = Json.obj(
       "type"            -> CreateAliasTransaction.typeId,
       "senderPublicKey" -> sender.publicKey.toString,
       "alias"           -> "alias",
@@ -263,7 +263,7 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
         "type"    -> DataTransaction.typeId,
         "version" -> 1,
         "sender"  -> sender.address,
-        "data" -> List[DataEntry[?]](
+        "data"    -> List[DataEntry[?]](
           IntegerDataEntry("int", 923275292849183L),
           BooleanDataEntry("bool", value = true),
           BinaryDataEntry("blob", ByteStr(Array.tabulate(445)(_.toByte))),
@@ -434,13 +434,13 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
       val buyAmount           = 2
       val sellAmount          = 3
       val assetPair           = AssetPair.createAssetPair("DCC", issueTx).get
-      val buy =
+      val buy                 =
         Order.buy(o1ver, buyer, matcher.publicKey, assetPair, buyAmount, buyPrice, ts, expirationTimestamp, mf, matcherFeeOrder1).explicitGet()
       val sell =
         Order.sell(o2ver, seller, matcher.publicKey, assetPair, sellAmount, sellPrice, ts, expirationTimestamp, mf, matcherFeeOrder2).explicitGet()
 
       val amount = math.min(buy.amount.value, sell.amount.value)
-      val tx =
+      val tx     =
         if (tver == 1) {
           ExchangeTransaction
             .signed(
@@ -489,7 +489,9 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
     sender.postForm("/addresses")
   }
 
-  private def alphanumericStream: LazyList[Char] = { val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62))) }
+  private def alphanumericStream: LazyList[Char] = {
+    val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62)))
+  }
 
   private def signBroadcastAndCalcFee(json: JsObject, usesProofs: Boolean, version: TxVersion): String = {
     val jsWithPK  = json ++ Json.obj("senderPublicKey" -> sender.publicKey.toString)
@@ -497,7 +499,7 @@ class SignAndBroadcastApiSuite extends BaseTransactionSuite with NTPTime with Be
     val js        = if (Option(version).isDefined) jsWithFee ++ Json.obj("version" -> version) else jsWithFee
     val rs        = sender.postJsonWithApiKey("/transactions/sign", js)
     assert(rs.getStatusCode == HttpConstants.ResponseStatusCodes.OK_200)
-    val body = Json.parse(rs.getResponseBody)
+    val body            = Json.parse(rs.getResponseBody)
     val signed: Boolean = if (usesProofs) {
       val proofs = (body \ "proofs").as[Seq[String]]
       proofs.lengthCompare(1) == 0 && proofs.head.nonEmpty

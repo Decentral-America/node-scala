@@ -35,7 +35,7 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest {
   it should "generate valid blocks ignoring time errors " in {
     @volatile var minedBlock: Block = null
     val genesis                     = TestBlock.create(System.currentTimeMillis(), Nil).block
-    val blockchainUpdater = new EmptyBlockchain with BlockchainUpdater with NG {
+    val blockchainUpdater           = new EmptyBlockchain with BlockchainUpdater with NG {
       override def height: Int = 1
 
       override def heightOf(blockId: ByteStr): Option[Int] = Some(1)
@@ -139,7 +139,7 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest {
       val scheduler   = Scheduler.singleThread("appender")
       val allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
       val wallet      = Wallet(WalletSettings(None, Some("123"), None))
-      val utxPool =
+      val utxPool     =
         new UtxPoolImpl(ntpTime, blockchainUpdater, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
       val pos = PoSSelector(blockchainUpdater, dccSettings.synchronizationSettings.maxBaseTarget)
       new MinerImpl(

@@ -22,7 +22,7 @@ class GenesisTransactionDiffTest extends PropSpec with WithDomain {
     assertDiffAndState(Seq.empty, TestBlock.create(genesis)) { (blockDiff, _) =>
       blockDiff.balances.collect {
         case ((_, Dcc), amount) => amount
-        case ((_, asset), _)      => throw new TestFailedException(s"unexpected $asset", 0)
+        case ((_, asset), _)    => throw new TestFailedException(s"unexpected $asset", 0)
       }.sum shouldBe genesis.map(_.amount.value).sum
       blockDiff.leaseBalances shouldBe empty
       genesis.foreach { gtx =>

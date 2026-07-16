@@ -121,7 +121,7 @@ object DCCEnvironmentBenchmark {
   @State(Scope.Benchmark)
   class BaseSt {
     protected val benchSettings: Settings = Settings.fromConfig(ConfigFactory.load())
-    private val dccSettings: DCCSettings = {
+    private val dccSettings: DCCSettings  = {
       val config = loadConfig(ConfigFactory.parseFile(new File(benchSettings.networkConfigFile)))
       DCCSettings.fromRootConfig(config)
     }
@@ -136,7 +136,7 @@ object DCCEnvironmentBenchmark {
       RDB.open(dccSettings.dbSettings)
     }
 
-    val state = RocksDBWriter(rdb, dccSettings.blockchainSettings, dccSettings.dbSettings, dccSettings.enableLightMode)
+    val state                        = RocksDBWriter(rdb, dccSettings.blockchainSettings, dccSettings.dbSettings, dccSettings.enableLightMode)
     val environment: Environment[Id] = {
       DCCEnvironment(
         AddressScheme.current.chainId,

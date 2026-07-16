@@ -38,7 +38,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
   override def genesisBalances: Seq[WithState.AddrWithBalance] =
     Seq(generator1, generator2).map(x => AddrWithBalance(x.toAddress, initBalance)) ++ AddrWithBalance.enoughBalances(TxHelpers.defaultSigner)
 
-  private val api = CommonGeneratorsApi(domain.rdb, domain.blockchainUpdater)
+  private val api   = CommonGeneratorsApi(domain.rdb, domain.blockchainUpdater)
   private val route = seal(
     GeneratorsApiRoute(
       restAPISettings,
@@ -84,7 +84,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
 
     log.debug("At conflict endorsement")
     val otherFinalizedBlockId = TxHelpers.randomBlockId
-    val block5 = domain.createBlock(
+    val block5                = domain.createBlock(
       Block.PlainBlockVersion,
       txs = Nil,
       strictTime = true,
@@ -108,7 +108,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
     )
     domain.appender.appendBlock(block5)
     val conflictEndorsementHeight = domain.blockchain.height
-    val expectedOnConflictHeight = Json.arr(
+    val expectedOnConflictHeight  = Json.arr(
       Json.obj(
         "address"       -> generator1.toAddress.toString,
         "balance"       -> (initBalance - depositAndFee),

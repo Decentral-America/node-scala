@@ -38,7 +38,7 @@ object ContractEvaluator {
 
   def buildSyntheticCall(contract: DApp, call: EXPR, callerAddress: ByteStr, callerPk: ByteStr): EXPR = {
     val callables = contract.callableFuncs.flatMap { cf =>
-      val argName = cf.annotation.invocationArgName
+      val argName    = cf.annotation.invocationArgName
       val invocation = Invocation(
         null,
         Recipient.Address(callerAddress),
@@ -63,7 +63,7 @@ object ContractEvaluator {
     contractFuncAndCallOpt match {
       case None =>
         val otherFuncs = c.decs.filter(_.isInstanceOf[FUNC]).map(_.asInstanceOf[FUNC].name)
-        val message =
+        val message    =
           if (otherFuncs contains functionName)
             s"function '$functionName exists in the script but is not marked as @Callable, therefore cannot not be invoked"
           else s"@Callable function '$functionName' doesn't exist in the script"
@@ -101,7 +101,7 @@ object ContractEvaluator {
       entity: CaseObj
   ): (Log[Id], Int, Either[ExecutionError, EVALUATED]) = {
     val invocationArgLet = LET(v.annotation.invocationArgName, entity)
-    val verifierBlock =
+    val verifierBlock    =
       BLOCK(
         invocationArgLet,
         BLOCK(v.u, FUNCTION_CALL(FunctionHeader.User(v.u.name), List(entity)))

@@ -1,0 +1,60 @@
+name: Promote VPS Node Image to ghcr
+# One-off recovery: the testnet VPS main node runs the canonical chain-forging
+# build (git describe v0.2.0-RC3-13367-gbe2dcfc055 = commit be2dcfc0, the DCC
+# HotStuff/T2 branch). That build has NO surviving ghcr tag -- the
+# node-scala-testnet-latest tag drifted to an incompatible mainline build, and
+# the VPS's GHCR_TOKEN is read-only so the VPS cannot re-publish it. Meanwhile
+# the k8s gen nodes ended up on the wrong (mainline) build and reject main's
+# blocks with InvalidStateHash (different block state-hash logic), so they can't
+# join the committee.
+#
+# This captures main's EXACT running image (docker save over SSH -> load here ->
+# retag -> push) and republishes it to the node-scala ghcr package under a
+# stable tag, so the gen nodes can pin to it and finally validate the canonical
+# chain. Republishing to the SAME package means the gen nodes' existing
+# imagePullSecret already grants pull access.
+on:
+  workflow_dispatch:
+    inputs:
+      target_tag:
+        description: 'ghcr tag to publish the VPS main image as'
+        required: true
+        default: 'node-scala-testnet-be2dcfc0'
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: promote-vps-image
+  cancel-in-progress: false
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Capture VPS main image and republish to ghcr
+        env:
+          SSH_KEY: ${{ secrets.TESTNET_DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.TESTNET_DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.TESTNET_DEPLOY_USER }}
+          TARGET_TAG: ${{ inputs.target_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          echo "$SSH_KEY" > /tmp/id_rsa && chmod 600 /tmp/id_rsa
+          SSHOPT="-i /tmp/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+          echo "=== resolve main's running image id + version ==="
+          IMGID=$(ssh $SSHOPT "$SSH_USER@$SSH_HOST" "docker inspect -f '{{.Image}}' node-scala-testnet")
+          echo "main image id: $IMGID"
+          ssh $SSHOPT "$SSH_USER@$SSH_HOST" "docker exec node-scala-testnet wget -qO- http://127.0.0.1:6869/node/version" || true
+          echo ""
+          echo "=== stream docker save from VPS -> load here (may be several hundred MB) ==="
+          ssh $SSHOPT "$SSH_USER@$SSH_HOST" "docker save $IMGID | gzip -1" | gunzip | docker load
+          TARGET="ghcr.io/decentral-america/node-scala:${TARGET_TAG}"
+          docker tag "$IMGID" "$TARGET"
+          echo "=== login + push $TARGET ==="
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker push "$TARGET"
+          echo "=== pushed. RepoDigests: ==="
+          docker inspect -f '{{json .RepoDigests}}' "$TARGET"
+          rm -f /tmp/id_rsa

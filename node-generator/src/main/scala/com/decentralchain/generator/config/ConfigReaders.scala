@@ -59,7 +59,7 @@ trait ConfigReaders {
       reconnectDelay <- obj.required[FiniteDuration]("reconnect-delay")
       warmUpObj      <- obj.atKey("warm-up").flatMap(_.asObjectCursor)
       warmUp         <- readWarmUp(warmUpObj, utxLimit)
-      initWarmUp <- obj
+      initWarmUp     <- obj
         .atKeyOrUndefined("init-warm-up")
         .asObjectCursor
         .fold[ConfigReader.Result[Option[Worker.WarmUp]]](_ => Right(None), v => readWarmUp(v, utxLimit).map(v => Some(v)))

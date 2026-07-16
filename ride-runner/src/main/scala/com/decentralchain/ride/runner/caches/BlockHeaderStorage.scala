@@ -46,7 +46,7 @@ class BlockHeaderStorage(blockchainApi: BlockchainApi, diskCache: BlockDiskCache
     diskCache.get(atHeight).orElse {
       blockchainApi.getBlockHeader(atHeight).tap {
         case Some(r) => diskCache.set(atHeight, r)
-        case None =>
+        case None    =>
           log.error(s"Can't find block on height=$atHeight (lastHeight=${diskCache.getLastHeight}), please contact with developers")
           None
       }
@@ -54,12 +54,12 @@ class BlockHeaderStorage(blockchainApi: BlockchainApi, diskCache: BlockDiskCache
 
   def update(event: BlockchainUpdated)(implicit ctx: ReadWrite): Unit = writeLock {
     event.update match {
-      case Update.Empty => // Ignore
+      case Update.Empty          => // Ignore
       case Update.Append(append) =>
         append.body match {
-          case Body.Empty => // Ignore
+          case Body.Empty        => // Ignore
           case Body.Block(block) =>
-            val stateUpdate = append.getStateUpdate
+            val stateUpdate  = append.getStateUpdate
             val newFullBlock = BlockInfo(
               Height(event.height),
               event.id.toByteStr,

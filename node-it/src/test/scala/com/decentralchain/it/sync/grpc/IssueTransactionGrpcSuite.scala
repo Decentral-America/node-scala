@@ -18,9 +18,13 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
 
   val (issuer, issuerAddress) = (firstAcc, firstAddress)
 
-  private def alphanumericStream: LazyList[Char] = { val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62))) }
+  private def alphanumericStream: LazyList[Char] = {
+    val a = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9'); LazyList.continually(a(ThreadLocalRandom.current().nextInt(62)))
+  }
 
-  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+  private def randomString(n: Int): String = {
+    val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString
+  }
 
   test("asset issue changes issuer's asset balance") {
     for (v <- issueTxSupportedVersions) {
@@ -179,8 +183,8 @@ class IssueTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime wi
     }
   }
 
-  val tooSmallAssetName = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength - 1).mkString
-  val tooBigAssetName   = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MaxAssetNameLength + 1).mkString
+  val tooSmallAssetName    = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MinAssetNameLength - 1).mkString
+  val tooBigAssetName      = alphanumericStream.filter(_.isLetter).take(IssueTransaction.MaxAssetNameLength + 1).mkString
   val invalid_assets_names =
     Table(
       tooSmallAssetName,

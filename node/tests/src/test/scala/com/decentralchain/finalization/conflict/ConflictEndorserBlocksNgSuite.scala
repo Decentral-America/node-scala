@@ -29,7 +29,7 @@ class ConflictEndorserBlocksNgSuite extends BaseFinalizationSpec {
   private val conflictGenerator     = TxHelpers.signer(1)
   private val conflictGeneratorAddr = conflictGenerator.toAddress
 
-  private val baseSettings = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+  private val baseSettings    = DomainPresets.DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
   private val defaultSettings = baseSettings.configure(
     _.copy(
       generationPeriodLength = 2,

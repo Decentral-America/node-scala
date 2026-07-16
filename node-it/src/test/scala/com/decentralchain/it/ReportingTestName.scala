@@ -50,7 +50,7 @@ object ReportingTestName {
     case Unknown, Succeeded, Failed, Ignored, Canceled
   }
   class CaptureCancel(testName: String, inner: Reporter) extends Reporter {
-    @volatile var status: Status = Status.Unknown
+    @volatile var status: Status           = Status.Unknown
     override def apply(event: Event): Unit = {
       event match {
         case TestSucceeded(testName = `testName`) => status = Status.Succeeded

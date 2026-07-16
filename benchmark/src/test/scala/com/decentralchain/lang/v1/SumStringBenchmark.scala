@@ -46,7 +46,7 @@ object SumStringBenchmark {
   abstract class SumString(size1: Int, size2: Int) {
     val string1 = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * size1
     val string2 = (ThreadLocalRandom.current().nextInt(95) + 32).toChar.toString * size2
-    val expr =
+    val expr    =
       FUNCTION_CALL(
         Native(FunctionIds.SUM_STRING),
         List(

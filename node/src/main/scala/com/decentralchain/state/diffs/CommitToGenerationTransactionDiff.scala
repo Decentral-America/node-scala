@@ -22,7 +22,7 @@ object CommitToGenerationTransactionDiff {
         BlsUtils.verifyBasic(tx.commitmentSignature.arr, tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray, tx.endorserPublicKey.arr)
       )(GenericError("Invalid commitment signature"))
       _ <- blockchain.committedGenerators(next).foldLeft(Either.unit[GenericError]) {
-        case (r @ Left(_), _) => r
+        case (r @ Left(_), _)          => r
         case (Right(_), (addr, blsPk)) =>
           if (addr == sender) GenericError(s"$sender is already committed").asLeft
           else if (blsPk == tx.endorserPublicKey) GenericError(s"BLS key ${tx.endorserPublicKey} is already committed, try another key").asLeft

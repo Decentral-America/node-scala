@@ -258,7 +258,7 @@ class DefaultBlockchainApi(
     getBalanceInternal(address, asset)
       .fold(0L) {
         case Balance.Empty               => 0L
-        case Balance.Dcc(dccBalance) => dccBalance.regular
+        case Balance.Dcc(dccBalance)     => dccBalance.regular
         case Balance.Asset(assetBalance) => assetBalance.amount
       }
       .tap(r => log.trace(s"getBalance($address, $asset): $r"))
@@ -267,7 +267,7 @@ class DefaultBlockchainApi(
     getBalanceInternal(address, Asset.Dcc)
       .fold(BalanceResponse.DccBalances.defaultInstance) {
         case Balance.Dcc(dccBalance) => dccBalance
-        case x                           => throw new RuntimeException(s"Expected Balance.Dcc, but got $x")
+        case x                       => throw new RuntimeException(s"Expected Balance.Dcc, but got $x")
       }
       .tap(r => log.trace(s"getLeaseBalance($address): $r"))
 

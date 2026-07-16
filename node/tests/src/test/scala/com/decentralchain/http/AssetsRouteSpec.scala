@@ -248,8 +248,8 @@ class AssetsRouteSpec
   }
 
   routePath(s"/details/{id} - smart asset") in routeTest() { (d, route) =>
-    val issuer = TxHelpers.signer(1)
-    val script = ExprScript(CONST_BOOLEAN(true)).explicitGet()
+    val issuer     = TxHelpers.signer(1)
+    val script     = ExprScript(CONST_BOOLEAN(true)).explicitGet()
     val assetDescr = assetDesc.copy(
       script = Some(
         AssetScriptInfo(
@@ -300,7 +300,7 @@ class AssetsRouteSpec
     val issueTransaction = TxHelpers.issue(issuer, 100_0000, 4, "PA_01")
     d.appendBlock(TxHelpers.genesis(issuer.toAddress, 10.dcc))
     val recipients = testWallet.generateNewAccounts(5)
-    val transfers = recipients.zipWithIndex.map { case (kp, i) =>
+    val transfers  = recipients.zipWithIndex.map { case (kp, i) =>
       MassTransferTransaction.ParsedTransfer(kp.toAddress, TxNonNegativeAmount.unsafeFrom((i + 1) * 10000))
     }
     d.appendBlock(
@@ -359,8 +359,8 @@ class AssetsRouteSpec
     d.appendBlock(GenesisTransaction.create(sender.toAddress, 100.dcc, System.currentTimeMillis()).explicitGet())
 
     forAll(nonNftTestData) { case (version, reissuable, script) =>
-      val name        = s"IA_$version"
-      val description = s"v${version}_${if (reissuable) "" else "non-"}reissuable"
+      val name             = s"IA_$version"
+      val description      = s"v${version}_${if (reissuable) "" else "non-"}reissuable"
       val issueTransaction =
         TxHelpers.issue(sender, 500000, 4, name, reissuable = reissuable, description = description, version = version, script = script)
 
@@ -508,7 +508,7 @@ class AssetsRouteSpec
     "NFTs in 1 block" in {
       routeTest() { (d, route) =>
         val issuer = testWallet.generateNewAccount().get
-        val nfts = Seq.tabulate(5) { i =>
+        val nfts   = Seq.tabulate(5) { i =>
           TxHelpers.issue(issuer, 1, name = s"NFT_0$i", reissuable = false, fee = 0.001.dcc)
         }
         d.appendBlock(TxHelpers.genesis(issuer.toAddress, 100.dcc))

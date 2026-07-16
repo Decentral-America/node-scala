@@ -160,7 +160,7 @@ class BlockchainUpdatesGetBlockUpdatesSpec extends BlockchainUpdatesTestBase {
 
     "BU-200. Return correct data for massTransfer" in {
       val massTransferFee = fee * 6
-      val massTransfer =
+      val massTransfer    =
         TxHelpers.massTransfer(firstTxParticipant, recipients.map(r => r.address -> r.amount.value), firstToken.asset, massTransferFee)
 
       withGenerateGetBlockUpdate(

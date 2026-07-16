@@ -81,7 +81,7 @@ package object settings {
     }
 
     def withNetwork(config: Config): String = {
-      val bc = config.getString("dcc.blockchain.type")
+      val bc     = config.getString("dcc.blockchain.type")
       val suffix =
         if (bc == "CUSTOM") {
           val char = config.getString("dcc.blockchain.custom.address-scheme-character").headOption.getOrElse(0.toChar)

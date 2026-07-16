@@ -224,7 +224,7 @@ object CryptoContext {
       }
 
     def sigVerifyF(contextVer: StdLibVersion): BaseFunction[NoContext] = {
-      val lim = global.MaxByteStrSizeForVerifyFuncs
+      val lim        = global.MaxByteStrSizeForVerifyFuncs
       val complexity =
         if (version < V4)
           100
@@ -362,7 +362,7 @@ object CryptoContext {
         case CONST_STRING(str: String) :: Nil =>
           for {
             bs <- global.base64Decode(str, inputSizeLimit).leftMap(CommonError(_))
-            _ <- resultSizeLimit
+            _  <- resultSizeLimit
               .toLeft(())
               .leftFlatMap { limit =>
                 Either.raiseWhen(bs.length > limit)(s"byte vector length ${bs.length} exceeds limit $limit")
@@ -679,7 +679,9 @@ object CryptoContext {
         rsaVerifyF,
         toBase16String(checkLength = true),
         fromBase16String(checkLength = true) // from V3
-      ) ++ sigVerifyL ++ rsaVerifyL(version) ++ keccak256F_lim ++ blake2b256F_lim ++ sha256F_lim ++ bls12Groth16VerifyL ++ bn256Groth16VerifyL ++ groth16V2Functions
+      ) ++ sigVerifyL ++ rsaVerifyL(
+        version
+      ) ++ keccak256F_lim ++ blake2b256F_lim ++ sha256F_lim ++ bls12Groth16VerifyL ++ bn256Groth16VerifyL ++ groth16V2Functions
 
     val fromV9Functions = fromV4Functions(V9) ++ Array(
       fromBase64String_1C,
@@ -705,7 +707,12 @@ object CryptoContext {
     }
   }
 
-  def evalContext[F[_]: Monad](global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean, fixGroth16: Boolean = false): EvaluationContext[NoContext, F] =
+  def evalContext[F[_]: Monad](
+      global: BaseGlobal,
+      version: StdLibVersion,
+      fixEcrecover: Boolean,
+      fixGroth16: Boolean = false
+  ): EvaluationContext[NoContext, F] =
     build(global, version, fixEcrecover, fixGroth16).evaluationContext[F]
 
   def compilerContext(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean, fixGroth16: Boolean = false): CompilerContext =

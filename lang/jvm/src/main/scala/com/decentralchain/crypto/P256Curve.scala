@@ -21,7 +21,7 @@ object P256Curve extends StrictLogging {
   private val certPathValidatorPool = ThreadLocal.withInitial(() => CertPathValidator.getInstance("PKIX"))
   private val certificateFactory    = CertificateFactory.getInstance("X.509")
   private val keyFactory            = KeyFactory.getInstance("EC")
-  private val ecSpec = {
+  private val ecSpec                = {
     val params = AlgorithmParameters.getInstance("EC")
     params.init(new ECGenParameterSpec("secp256r1"))
     params.getParameterSpec(classOf[ECParameterSpec])

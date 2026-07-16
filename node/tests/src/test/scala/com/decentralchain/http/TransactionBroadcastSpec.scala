@@ -655,7 +655,7 @@ class TransactionBroadcastSpec
   "transactions with asset id field" - {
     "return error when asset id with wrong size is passed" in {
       val validSizeAssetId = ByteStr.fill(AssetIdLength)(1)
-      val wrongAssetIds = Seq(
+      val wrongAssetIds    = Seq(
         Array.fill(AssetIdLength - 1)(1.toByte),
         Array.fill(AssetIdLength + 1)(1.toByte)
       ).map(arr => IssuedAsset(ByteStr(arr)))

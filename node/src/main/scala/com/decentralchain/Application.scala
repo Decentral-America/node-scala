@@ -85,7 +85,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
   private val appenderScheduler = singleThread("appender", stopOnAppendError)
 
-  private val extensionLoaderScheduler = singleThread("rx-extension-loader", reporter = log.error("Error in Extension Loader", _))
+  private val extensionLoaderScheduler        = singleThread("rx-extension-loader", reporter = log.error("Error in Extension Loader", _))
   private val microblockSynchronizerScheduler =
     singleThread("microblock-synchronizer", reporter = log.error("Error in Microblock Synchronizer", _))
   private val endorseBlockSynchronizerScheduler =
@@ -93,6 +93,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   private val scoreObserverScheduler  = singleThread("rx-score-observer", reporter = log.error("Error in Score Observer", _))
   private val historyRepliesScheduler = fixedPool(poolSize = 2, "history-replier", reporter = log.error("Error in History Replier", _))
   private val minerScheduler          = singleThread("block-miner", reporter = log.error("Error in Miner", _))
+  private val hotStuffScheduler       = singleThread("hotstuff-coordinator", reporter = log.error("Error in HotStuff coordinator", _))
 
   private val utxEvents = ConcurrentSubject.publish[UtxEvent](using scheduler)
 
@@ -101,7 +102,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   private var triggers = Seq.empty[BlockchainUpdateTriggers]
 
   private var miner: Miner & MinerDebugInfo = Miner.StrictDisabledMiner
-  private val (blockchainUpdater, rocksDB) =
+  private val (blockchainUpdater, rocksDB)  =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
   private val messageObserver = new MessageObserver
@@ -124,13 +125,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
     val establishedConnections = new ConcurrentHashMap[Channel, PeerInfo]
     val allChannels            = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
-    val utxStorage =
+    val utxStorage             =
       new UtxPoolImpl(time, blockchainUpdater, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable, utxEvents.onNext)
     maybeUtx = Some(utxStorage)
 
     val timer                 = new HashedWheelTimer()
     val utxSynchronizerLogger = Logger(LoggerFactory.getLogger(classOf[TransactionPublisher]))
-    val timedTxValidator =
+    val timedTxValidator      =
       Schedulers.timeBoundedFixedPool(
         timer,
         5.seconds,
@@ -144,7 +145,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     val pos = PoSSelector(blockchainUpdater, settings.synchronizationSettings.maxBaseTarget)
 
     val endorsementStorage = EndorsementStorage.InMemory((blockId, height) => blockchainUpdater.blockId(height.toInt).contains(blockId))
-    val blockEndorser =
+    val blockEndorser      =
       new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchainUpdater, wallet, endorsementStorage, allChannels)
 
     if (settings.minerSettings.enable)
@@ -201,6 +202,111 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         allChannels.broadcast(LocalScoreChanged(x))
       }(using scheduler)
 
+    // ---- T2 HotStuff (gated behind dcc.hotstuff.enabled; observational commit). ----
+    // See docs/hotstuff-integration-design.md. Skipped entirely when disabled (the default) => zero
+    // behaviour change. When enabled: a single-thread scheduler confines all coordinator state; the
+    // committee is read fresh per period; view = block height, leader = FairPoS forger. NOT validated
+    // on a running multi-node network yet (that is step 5) -- must not be enabled on mainnet before
+    // step 5 + an external audit. Commit is observational only (feature-25 stays authoritative).
+    if (settings.hotStuffSettings.enabled) {
+      import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, NodeHotStuffEffects}
+      import com.decentralchain.block.Block.BlockId
+      import com.decentralchain.state.GeneratorSet
+
+      val committee: () => GeneratorSet                = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
+      val extendsBranch: (BlockId, BlockId) => Boolean = (child, ancestor) =>
+        child == ancestor || (for {
+          hc <- blockchainUpdater.heightOf(child)
+          ha <- blockchainUpdater.heightOf(ancestor)
+        } yield hc >= ha).getOrElse(false)
+
+      // Replica safety guard: only vote for a proposal whose block is THE canonical block at height=view
+      // on our own settled chain (rejects a Byzantine leader proposing a fabricated / non-canonical block).
+      val proposalValid: (Int, BlockId) => Boolean =
+        (view, blockId) => blockchainUpdater.blockId(view).contains(blockId)
+
+      val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
+      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid)
+
+      // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
+      // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
+      // nodes bridged only via the main node) a validator sees <2/3 of votes and no QC ever forms.
+      // Like feature-25 endorsements, GOSSIP them: on first receipt relay to every peer except the
+      // sender, then process. A bounded seen-cache dedups so relaying cannot storm.
+      import com.google.common.cache.{Cache, CacheBuilder}
+      import io.netty.channel.Channel
+      import com.decentralchain.network.Message
+      val hsSeen: Cache[String, java.lang.Boolean]                          = CacheBuilder.newBuilder().maximumSize(100000).build()
+      def hsGossipOnce(sender: Channel, key: String, msg: Message): Boolean =
+        if (hsSeen.getIfPresent(key) != null) false
+        else {
+          hsSeen.put(key, java.lang.Boolean.TRUE)
+          allChannels.broadcast(msg, Set(sender)) // relay to all other peers (transitive delivery)
+          true
+        }
+
+      messageObserver.hotStuffProposals
+        .observeOn(hotStuffScheduler)
+        .foreach { case (ch, p) =>
+          // blockHeight MUST be the proposal's settled view (`p.view`), NOT our local tip
+          // (`blockchainUpdater.height`). The leader signs its vote over height = s (the settled view);
+          // if a replica signed over its local tip (~s + settledDepth) instead, every replica's vote
+          // would carry a different blockHeight. Such votes still share the (view, phase, blockId) pool
+          // bucket and pass the voter-count quorum, but `HotStuffQuorum.formQC` requires an identical
+          // blockHeight across all votes, so the QC would never form (silently). view == settled height
+          // by construction, so p.view is the canonical, node-agnostic height.
+          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p)) hsCoordinator.onProposal(p, p.view)
+        }(using hotStuffScheduler)
+      messageObserver.hotStuffVotes
+        .observeOn(hotStuffScheduler)
+        .foreach { case (ch, v) =>
+          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v)) hsCoordinator.onVote(v)
+        }(using hotStuffScheduler)
+      messageObserver.hotStuffQCs
+        .observeOn(hotStuffScheduler)
+        .foreach { case (ch, qc) =>
+          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc)) hsCoordinator.onQC(qc)
+        }(using hotStuffScheduler)
+
+      // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
+      // canonical block per view. view = settled height s = tip-1; the proposed block is the canonical
+      // key-block id `blockchainUpdater.blockId(s)` — stable once s is no longer the tip, and identical
+      // on every node — NOT the liquid `lastBlockInfo.id`, which changes as microblocks append and
+      // diverges across nodes (that divergence made votes fragment across blockIds so no QC ever formed).
+      // Leader(s) = the FairPoS generator of block s; only that node proposes. Trigger once per height
+      // increment (microblock updates at the same height carry the same height and are ignored).
+      var hsLastHeight = 0
+      lastBlockInfo
+        .observeOn(hotStuffScheduler)
+        .foreach { info =>
+          val tip = info.height.toInt
+          if (tip > hsLastHeight) {
+            hsLastHeight = tip
+            // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,
+            // not a liquid tip that still differs across nodes) before it is proposed — else the
+            // canonical-block guard rejects and votes never converge. See HotStuffSettings.settledDepth.
+            val s = tip - settings.hotStuffSettings.settledDepth
+            if (s > 0) {
+              for {
+                canonicalId <- blockchainUpdater.blockId(s)
+                header      <- blockchainUpdater.blockHeader(s)
+              } {
+                val weAreLeader = wallet.privateKeyAccount(header.header.generator.toAddress).isRight
+                log.debug(s"[HotStuff] settled view=$s leader=${header.header.generator.toAddress} weAreLeader=$weAreLeader block=$canonicalId")
+                if (weAreLeader) hsCoordinator.onLeaderTurn(s, canonicalId, s)
+              }
+            }
+          }
+        }(using hotStuffScheduler)
+
+      // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
+      val rt = settings.hotStuffSettings.roundTimeout.toMillis
+      hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onTimeout())
+      log.info(
+        s"T2 HotStuff coordinator ENABLED (observational; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."
+      )
+    }
+
     val history = History(
       blockchainUpdater,
       blockchainUpdater.liquidBlock,
@@ -238,14 +344,17 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
     // Extensions start
     val extensionContext: Context = new Context {
-      override def settings: DCCSettings                                                        = app.settings
-      override def blockchain: Blockchain                                                       = app.blockchainUpdater
-      override def rollbackTo(blockId: ByteStr): Task[Either[ValidationError, DiscardedBlocks]] = rollbackTask(blockId, returnTxsToUtx = false)
-      override def time: Time                                                                   = app.time
-      override def wallet: Wallet                                                               = app.wallet
-      override def utx: UtxPool                                                                 = utxStorage
+      override def settings: DCCSettings                                                         = app.settings
+      override def blockchain: Blockchain                                                        = app.blockchainUpdater
+      override def rollbackTo(blockId: ByteStr): Task[Either[ValidationError, DiscardedBlocks]]  = rollbackTask(blockId, returnTxsToUtx = false)
+      override def time: Time                                                                    = app.time
+      override def wallet: Wallet                                                                = app.wallet
+      override def utx: UtxPool                                                                  = utxStorage
       override def broadcastTransaction(tx: Transaction): TracedResult[ValidationError, Boolean] =
-        Await.result(transactionPublisher.validateAndBroadcast(tx, None), Duration.Inf) // NOTE: Blocking call — async replacement requires significant refactor of tx publishing pipeline
+        Await.result(
+          transactionPublisher.validateAndBroadcast(tx, None),
+          Duration.Inf
+        ) // NOTE: Blocking call — async replacement requires significant refactor of tx publishing pipeline
       override def utxEvents: Observable[UtxEvent] = app.utxEvents
 
       override val transactionsApi: CommonTransactionsApi = CommonTransactionsApi(
@@ -493,7 +602,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       )
 
       val httpService = CompositeHttpService(apiRoutes, settings.restAPISettings)
-      val httpFuture =
+      val httpFuture  =
         Http().newServerAt(settings.restAPISettings.bindAddress, settings.restAPISettings.port).bindFlow(httpService.loggingCompositeRoute)
       serverBinding = Await.result(httpFuture, 20.seconds)
       serverBinding.whenTerminated.foreach(_ => heavyRequestScheduler.shutdown())

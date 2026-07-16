@@ -37,9 +37,9 @@ class PeerDatabaseImplSpecification extends FreeSpec {
     .resolve()
   private val settings2 = ConfigSource.fromConfig(config2).at("dcc.network").loadOrThrow[NetworkSettings]
 
-  private var ts                 = 0L
-  private def sleepLong(): Unit  = { ts += 2200.millis.toNanos }
-  private def sleepShort(): Unit = { ts += 200.millis.toNanos }
+  private var ts                                                                     = 0L
+  private def sleepLong(): Unit                                                      = { ts += 2200.millis.toNanos }
+  private def sleepShort(): Unit                                                     = { ts += 200.millis.toNanos }
   private def withDatabase(settings: NetworkSettings)(f: PeerDatabase => Unit): Unit = {
     val pdb = new PeerDatabaseImpl(
       settings,
@@ -141,6 +141,33 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       database.blacklist(address1.getAddress, "I don't like it")
 
       database.detailedBlacklist shouldBe empty
+    }
+
+    "should NOT blacklist a blacklist-exempt address, but still blacklist untrusted peers" in {
+      // RC#2 fix: blacklistAndClose fires on transient/honest conditions (reorg / fork-tip mismatch),
+      // so a trusted committee peer listed in blacklist-exempt must be exempt from the
+      // black-list-residence-time IP ban — else a small finality committee can be knocked below 2/3.
+      // blacklist-exempt is decoupled from known-peers (a node exempts a peer it does not dial).
+      val config = ConfigFactory
+        .parseString(s"""dcc.network {
+                        |  file = null
+                        |  known-peers = []
+                        |  blacklist-exempt = ["$host1"]
+                        |  peers-data-residence-time = 100s
+                        |  enable-blacklisting = yes
+                        |}""".stripMargin)
+        .withFallback(ConfigFactory.load())
+        .resolve()
+      val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
+      val database = new PeerDatabaseImpl(settings)
+
+      // host1 is in blacklist-exempt -> must NOT be blacklisted
+      database.blacklist(address1.getAddress, "transient fork-validation failure during reorg")
+      database.detailedBlacklist.keySet should not contain address1.getAddress
+
+      // host2 is untrusted -> still blacklisted (eclipse resistance preserved)
+      database.blacklist(address2.getAddress, "malformed message")
+      database.detailedBlacklist.keySet should contain(address2.getAddress)
     }
   }
 

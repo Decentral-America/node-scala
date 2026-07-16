@@ -127,9 +127,9 @@ object Blockchain {
 
     def blockId(atHeight: Int): Option[BlockId] = blockchain.blockHeader(atHeight).map(_.id())
 
-    def lastBlockHeader: Option[SignedBlockHeader] = blockchain.blockHeader(blockchain.height)
-    def lastBlockId: Option[BlockId]               = lastBlockHeader.map(_.id())
-    def lastBlockTimestamp: Option[Long]           = lastBlockHeader.map(_.header.timestamp)
+    def lastBlockHeader: Option[SignedBlockHeader]         = blockchain.blockHeader(blockchain.height)
+    def lastBlockId: Option[BlockId]                       = lastBlockHeader.map(_.id())
+    def lastBlockTimestamp: Option[Long]                   = lastBlockHeader.map(_.header.timestamp)
     def lastBlockIds(maxRollbackLength: Int): Seq[ByteStr] =
       (blockchain.height to blockchain.finalizedHeightOrFallback(maxRollbackLength).toInt by -1).flatMap(blockId)
 
@@ -177,8 +177,8 @@ object Blockchain {
     // NOTE: Efficiency reviewed — acceptable for current workload
     // NOTE: Optimization opportunity noted — not a bottleneck
     def generationDeposit(address: Address, at: Height = Height(blockchain.height)): Long = blockchain.generationPeriodOf(at).fold(0L) { period =>
-      val committed = blockchain.committedGenerators(period)
-      val conflict  = blockchain.conflictGenerators(period)
+      val committed    = blockchain.committedGenerators(period)
+      val conflict     = blockchain.conflictGenerators(period)
       val idxOnCurrent = committed.zipWithIndex
         .collectFirst { case ((currentAddress, _), i) if currentAddress == address => GeneratorIndex(i) }
         .filterNot { idx => conflict.hasInUpTo(at.prev, idx) } // Prev, because punishment on next height
@@ -195,7 +195,7 @@ object Blockchain {
     def lastBlockReward: Option[Long] = blockchain.blockReward(blockchain.height)
 
     def hasAssetScript(asset: IssuedAsset): Boolean = blockchain.assetScript(asset).isDefined
-    def hasPaidVerifier(account: Address): Boolean =
+    def hasPaidVerifier(account: Address): Boolean  =
       if (blockchain.isFeatureActivated(BlockchainFeatures.SynchronousCalls))
         blockchain.accountScript(account).exists(_.verifierComplexity > ContractLimits.FreeVerifierComplexity)
       else
@@ -228,7 +228,7 @@ object Blockchain {
     def isConflict(height: Height, generator: Address): Boolean = {
       val maybeConflict = for {
         period <- blockchain.generationPeriodOf(height)
-        idx <- GeneratorIndex.checked {
+        idx    <- GeneratorIndex.checked {
           blockchain.committedGenerators(period).indexWhere { case (addr, _) => addr == generator }
         }
       } yield blockchain.conflictGenerators(period).hasInUpTo(height, idx)

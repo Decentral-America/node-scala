@@ -17,7 +17,7 @@ object JsonManipulations {
     *   An object with a replaced string at the given path.
     */
   def regexReplace(js: JsValue, path: String, find: String, replace: String): Either[String, JsValue] = for {
-    _ <- Either.cond(path.nonEmpty, "", "Expected a non-empty path")
+    _  <- Either.cond(path.nonEmpty, "", "Expected a non-empty path")
     js <- js match {
       case js: JsObject => js.asRight
       case _            => s"Can't find a value at path '$path': expected an object, but got ${js.getClass.getSimpleName}".asLeft
@@ -86,7 +86,7 @@ object JsonManipulations {
     */
   private def pick(js: JsValue, path: List[String]): Option[JsValue] = {
     @tailrec def loop(js: JsValue, path: List[String]): Option[JsValue] = path match {
-      case Nil => Some(js)
+      case Nil                     => Some(js)
       case segment :: restSegments =>
         (js \ segment).asOpt[JsValue] match {
           case None          => None

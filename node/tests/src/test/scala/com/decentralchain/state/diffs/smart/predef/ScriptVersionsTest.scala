@@ -155,7 +155,7 @@ class ScriptVersionsTest extends FreeSpec {
         isDApp      <- List(true, false)
         version     <- DirectiveDictionary[StdLibVersion].all.filter(if (isDApp) _ >= V3 else _ => true)
         activateFix <- List(true, false)
-        entry <- List(
+        entry       <- List(
           StringDataEntry("key", "value"),
           IntegerDataEntry("key", 1),
           BinaryDataEntry("key", ByteStr.decodeBase58("aaaa").get),

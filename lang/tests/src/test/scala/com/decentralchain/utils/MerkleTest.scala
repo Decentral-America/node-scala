@@ -35,7 +35,7 @@ class MerkleTest extends PropSpec {
           .grouped(2)
           .collect {
             case Seq(l, r) => hash(ScryptoMerkleProof.InternalNodePrefix +: (l ++ r))
-            case Seq(l) =>
+            case Seq(l)    =>
               hash(ScryptoMerkleProof.InternalNodePrefix +: (l ++ EmptyNodeHash))
           }
           .toSeq

@@ -60,9 +60,9 @@ object ScriptPreprocessor {
   private val importRegexCompiled = importRegex.r
 
   private def gatherScriptText(src: String, libraries: Map[String, String]) = {
-    val additionalDecls        = libraries.values.map(removeDirectives).mkString("\n")
-    val importDirectivesStart  = importRegexCompiled.findFirstMatchIn(src).map(_.start)
-    val importDirectivesLength = importRegexCompiled.findFirstIn(src).map(_.length).getOrElse(0)
+    val additionalDecls                  = libraries.values.map(removeDirectives).mkString("\n")
+    val importDirectivesStart            = importRegexCompiled.findFirstMatchIn(src).map(_.start)
+    val importDirectivesLength           = importRegexCompiled.findFirstIn(src).map(_.length).getOrElse(0)
     val librariesOffset: LibrariesOffset =
       if (libraries.isEmpty)
         LibrariesOffset.NoLibraries

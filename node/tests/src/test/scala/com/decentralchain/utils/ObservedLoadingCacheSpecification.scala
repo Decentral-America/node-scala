@@ -63,7 +63,7 @@ class ObservedLoadingCacheSpecification extends FreeSpec {
         override def load(key: String): Integer = key.length
       })
 
-    val sw = new StringWriter()
+    val sw           = new StringWriter()
     val loadingCache = new ObservedLoadingCache(
       delegate,
       Observer.dump("", new PrintStream(WriterOutputStream.builder().setWriter(sw).setWriteImmediately(true).get()))
@@ -81,7 +81,7 @@ private object ObservedLoadingCacheSpecification {
     private var autoIncrementStepNanos = 0L
 
     def advance(time: Long, timeUnit: TimeUnit): FakeTicker = advance(timeUnit.toNanos(time))
-    def advance(nanoseconds: Long): FakeTicker = {
+    def advance(nanoseconds: Long): FakeTicker              = {
       nanos.addAndGet(nanoseconds)
       this
     }

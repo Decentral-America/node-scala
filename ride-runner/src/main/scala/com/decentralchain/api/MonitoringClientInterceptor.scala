@@ -10,7 +10,7 @@ object MonitoringClientInterceptor extends ClientInterceptor {
   ): ClientCall[ReqT, RespT] = new ForwardingClientCall.SimpleForwardingClientCall[ReqT, RespT](channel.newCall(methodDescriptor, callOptions)) {
     override def start(responseListener: ClientCall.Listener[RespT], headers: Metadata): Unit = super.start(
       new ForwardingClientCallListener.SimpleForwardingClientCallListener[RespT](responseListener) {
-        private val start = System.nanoTime()
+        private val start                                              = System.nanoTime()
         override def onClose(status: Status, trailers: Metadata): Unit = {
           val method = GrpcMethod.of(methodDescriptor)
           GrpcStats.status(method, status.getCode).increment()

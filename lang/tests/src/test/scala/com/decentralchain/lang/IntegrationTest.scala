@@ -850,7 +850,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("big let assignment chain") {
-    val count = 5000
+    val count  = 5000
     val script =
       s"""
          | let a0 = 1
@@ -862,7 +862,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("big function assignment chain") {
-    val count = 2000
+    val count  = 2000
     val script =
       s"""
          | func a0() = {
@@ -876,7 +876,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("big let assignment chain with function") {
-    val count = 5000
+    val count  = 5000
     val script =
       s"""
          | let a0 = 1
@@ -973,7 +973,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("extract functions with message") {
-    val message = "Custom error message"
+    val message                        = "Custom error message"
     def script(error: Boolean): String =
       s"""
          |
@@ -1062,7 +1062,7 @@ class IntegrationTest extends PropSpec with Inside {
 
   property("list result size limit") {
     val maxLongList = "[1" + ",1" * (PureContext.MaxListLengthV4 - 1) + "]"
-    val consScript =
+    val consScript  =
       s"""
          | let list1 = $maxLongList
          | let list2 = 1 :: list1
@@ -1129,7 +1129,7 @@ class IntegrationTest extends PropSpec with Inside {
   property("List[Int] median - 100 elements") {
     val arr       = (1 to 100).map(_ => ThreadLocalRandom.current().nextLong())
     val arrSorted = arr.sorted
-    val src =
+    val src       =
       s"[${arr.mkString(",")}].median()"
     eval(src, version = V4) shouldBe Right(CONST_LONG(Math.floorDiv(arrSorted(49) + arrSorted(50), 2)))
   }
@@ -1137,7 +1137,7 @@ class IntegrationTest extends PropSpec with Inside {
   property("List[Int] median - 99 elements") {
     val arr       = (1 to 99).map(_ => ThreadLocalRandom.current().nextLong())
     val arrSorted = arr.sorted
-    val src =
+    val src       =
       s"[${arr.mkString(",")}].median()"
     eval(src, version = V4) shouldBe Right(CONST_LONG(arrSorted(49)))
   }
@@ -1395,7 +1395,7 @@ class IntegrationTest extends PropSpec with Inside {
     val quantity     = 1234567
     val nonce        = 1
     val issue        = Issue.create(compiledScript = None, decimals, description, isReissuable, name, quantity, nonce, ByteStr.empty)
-    val script =
+    val script       =
       s"""
          | let issue = Issue("$name", "$description", $quantity, $decimals, $isReissuable, unit, $nonce)
          | calculateAssetId(issue)
@@ -1454,7 +1454,7 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("bytes limit") {
-    val bytes = ByteStr(("a" * (Terms.DataEntryValueMax / 4)).getBytes(StandardCharsets.UTF_8))
+    val bytes                = ByteStr(("a" * (Terms.DataEntryValueMax / 4)).getBytes(StandardCharsets.UTF_8))
     val constructingMaxBytes =
       s""" base64'${bytes.base64Raw}' +
          | base64'${bytes.base64Raw}' +
@@ -1656,7 +1656,7 @@ class IntegrationTest extends PropSpec with Inside {
     def check(size: Int) = {
       val valueDefinition = (1 to size).map(i => getElement(i)._1).mkString("(", ", ", ")")
       val typeDefinition  = (1 to size).map(i => getElement(i)._2).mkString("(", ", ", ")")
-      val script =
+      val script          =
         s"""
            | let a = $valueDefinition
            | func f(x: $typeDefinition) = x
@@ -2063,9 +2063,9 @@ class IntegrationTest extends PropSpec with Inside {
   }
 
   property("calculateLeaseId") {
-    val txId = ByteStr.decodeBase58("aaaa").get
-    val id1  = Lease.calculateId(Lease(Address(ByteStr.decodeBase58("bbbb").get), 1234567, 123), txId)
-    val id2  = Lease.calculateId(Lease(Alias("alias"), 9876, 100), txId)
+    val txId   = ByteStr.decodeBase58("aaaa").get
+    val id1    = Lease.calculateId(Lease(Address(ByteStr.decodeBase58("bbbb").get), 1234567, 123), txId)
+    val id2    = Lease.calculateId(Lease(Alias("alias"), 9876, 100), txId)
     val script =
       s"""
          | calculateLeaseId(Lease(Address(base58'bbbb'), 1234567, 123)) == base58'$id1' &&

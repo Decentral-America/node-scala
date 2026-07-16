@@ -23,7 +23,7 @@ import scala.util.Either.cond
 object AssetTransactionsDiffs {
   def updateInfo(blockchain: Blockchain)(tx: UpdateAssetInfoTransaction): Either[ValidationError, StateSnapshot] =
     for {
-      _ <- validateAsset(blockchain, tx.assetId, tx.sender.toAddress, issuerOnly = true)
+      _                <- validateAsset(blockchain, tx.assetId, tx.sender.toAddress, issuerOnly = true)
       lastUpdateHeight <- blockchain
         .assetDescription(tx.assetId)
         .map(_.lastUpdatedAt)
@@ -73,10 +73,10 @@ object AssetTransactionsDiffs {
     for {
       _      <- validateAsset(blockchain, tx.asset, tx.sender.toAddress, issuerOnly = true)
       script <- countVerifierComplexity(tx.script, blockchain, isAsset = true)
-      _ <-
+      _      <-
         if (!blockchain.hasAssetScript(tx.asset)) Left(GenericError("Cannot set script on an asset issued without a script"))
         else checkEstimationOverflow(blockchain, script)
-      _ <- checkScriptSize(blockchain, tx.script)
+      _        <- checkScriptSize(blockchain, tx.script)
       snapshot <- StateSnapshot.build(
         blockchain,
         assetScripts = script.fold(Map[IssuedAsset, AssetScriptInfo]()) { case (script, complexity) =>
@@ -115,11 +115,11 @@ object AssetTransactionsDiffs {
     val asset       = IssuedAsset(tx.id())
 
     for {
-      _      <- cond(requireUnique(), (), GenericError(s"Asset ${tx.asset} is already issued"))
-      _      <- cond(requireValidUtf(), (), GenericError("Valid UTF-8 strings required"))
-      _      <- checkScriptSize(blockchain, tx.script)
-      script <- countVerifierComplexity(tx.script, blockchain, isAsset = true)
-      _      <- checkEstimationOverflow(blockchain, script)
+      _        <- cond(requireUnique(), (), GenericError(s"Asset ${tx.asset} is already issued"))
+      _        <- cond(requireValidUtf(), (), GenericError("Valid UTF-8 strings required"))
+      _        <- checkScriptSize(blockchain, tx.script)
+      script   <- countVerifierComplexity(tx.script, blockchain, isAsset = true)
+      _        <- checkEstimationOverflow(blockchain, script)
       snapshot <- StateSnapshot.build(
         blockchain,
         assetScripts = script.fold(Map[IssuedAsset, AssetScriptInfo]()) { case (script, complexity) =>

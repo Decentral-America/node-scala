@@ -295,8 +295,8 @@ trait BaseGlobal {
     val sign                  = a.sign * b.sign
     val (division, remainder) = a.abs /% b.abs
     rounding match {
-      case Down => Right(division * sign)
-      case Up   => Right((division + remainder.sign) * sign)
+      case Down   => Right(division * sign)
+      case Up     => Right((division + remainder.sign) * sign)
       case HalfUp =>
         val x = b.abs - remainder * 2
         if (x <= 0) {

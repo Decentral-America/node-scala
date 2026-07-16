@@ -42,7 +42,7 @@ case class DApp(
         case ExprWithCtx(FUNCTION_CALL(Native(CALLDAPP), _), _) :: _          => true
         case ExprWithCtx(FUNCTION_CALL(Native(CALLDAPPREENTRANT), _), _) :: _ => true
         case ewc :: l if checked.contains(ewc)                                => checkLoop(l, checked)
-        case (ewc @ ExprWithCtx(GETTER(expr, _), ctx)) :: l =>
+        case (ewc @ ExprWithCtx(GETTER(expr, _), ctx)) :: l                   =>
           checkLoop(ExprWithCtx(expr, ctx) :: l, checked + ewc)
         case (ewc @ ExprWithCtx(LET_BLOCK(LET(name, value), body), ctx)) :: l =>
           checkLoop(ExprWithCtx(value, ctx) :: ExprWithCtx(body, ctx + name) :: l, checked + ewc)

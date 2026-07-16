@@ -20,7 +20,9 @@ class InvokeListForCallable extends BaseTransactionSuite with CancelAfterFailure
 
   private lazy val dAppAddress: String = dApp.toAddress.toString
 
-  private def randomString(n: Int): String = { val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString }
+  private def randomString(n: Int): String = {
+    val a = "abcdefghijklmnopqrstuvwxyz0123456789"; (0 until n).map(_ => a.charAt(ThreadLocalRandom.current().nextInt(a.length))).mkString
+  }
 
   test("prerequisite: set contract and issue asset") {
     val source =

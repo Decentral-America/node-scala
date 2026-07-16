@@ -42,7 +42,7 @@ object DCCRideRunnerCompareService extends ScorexLogging {
     try Right(Json.parse(v.render(ConfigRenderOptions.concise())).as[JsObject])
     catch { case NonFatal(e) => ConfigReader.Result.fail(ThrowableFailure(e, Some(v.origin()))) }
   }
-  given ConfigReader[Address] = ConfigReader.fromStringTry(str => Try(Address.fromString(str).explicitGet()))
+  given ConfigReader[Address]             = ConfigReader.fromStringTry(str => Try(Address.fromString(str).explicitGet()))
   given ConfigReader[(Address, JsObject)] = ConfigReader.fromCursor(cur =>
     for {
       l    <- cur.asList
@@ -132,7 +132,7 @@ object DCCRideRunnerCompareService extends ScorexLogging {
 
     def now: Long                   = scheduler.clockMonotonic(TimeUnit.MILLISECONDS)
     @volatile var lastServiceStatus = ServiceStatus()
-    val loop = {
+    val loop                        = {
       val s = Observable
         .intervalWithFixedDelay(settings.rideCompareService.requestsDelay)
         .mapEval(_ => task)
@@ -179,7 +179,7 @@ object DCCRideRunnerCompareService extends ScorexLogging {
     )
 
     val httpService = CompositeHttpService(apiRoutes, settings.restApi)
-    val httpFuture = Http()
+    val httpFuture  = Http()
       .newServerAt(settings.restApi.bindAddress, settings.restApi.port)
       .bindFlow(httpService.loggingCompositeRoute)
     Await.result(httpFuture, 20.seconds)

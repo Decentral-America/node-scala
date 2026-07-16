@@ -31,10 +31,10 @@ class MicroBlockSpecification extends FunSuite {
 
   test("MicroBlock with txs bytes/parse roundtrip, without finalizationVoting") {
 
-    val ts = System.currentTimeMillis() - 5000
+    val ts                      = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 2, ByteStr.empty, ts + 1).explicitGet()
-    val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)))
+    val assetId                  = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)))
     val tr2: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Dcc, 2, ByteStr.empty, ts + 2).explicitGet()
 
@@ -56,10 +56,10 @@ class MicroBlockSpecification extends FunSuite {
   }
 
   test("MicroBlock with txs bytes/parse roundtrip, with finalizationVoting") {
-    val ts = System.currentTimeMillis() - 5000
+    val ts                      = System.currentTimeMillis() - 5000
     val tr: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, Dcc, 5, Dcc, 2, ByteStr.empty, ts + 1).explicitGet()
-    val assetId = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)))
+    val assetId                  = IssuedAsset(ByteStr(Array.fill(AssetIdLength)(ThreadLocalRandom.current().nextInt(100).toByte)))
     val tr2: TransferTransaction =
       TransferTransaction.selfSigned(1.toByte, sender, gen.toAddress, assetId, 5, Dcc, 2, ByteStr.empty, ts + 2).explicitGet()
 
@@ -67,10 +67,10 @@ class MicroBlockSpecification extends FunSuite {
 
     val aggregatedEndorsement = Some(BlsSignature(Array.fill(BlsSignature.SizeInBytes)(1.toByte)).explicitGet())
 
-    val finalizedHeight = Height(5)
-    val finalizedId     = ByteStr(Array.fill(Block.BlockIdLength)(2.toByte))
-    val endorsedId      = ByteStr(Array.fill(Block.BlockIdLength)(3.toByte))
-    val blsEndorser     = BlsKeyPair(TxHelpers.signer(7).privateKey)
+    val finalizedHeight                                    = Height(5)
+    val finalizedId                                        = ByteStr(Array.fill(Block.BlockIdLength)(2.toByte))
+    val endorsedId                                         = ByteStr(Array.fill(Block.BlockIdLength)(3.toByte))
+    val blsEndorser                                        = BlsKeyPair(TxHelpers.signer(7).privateKey)
     val conflictEndorsements: IndexedSeq[BlockEndorsement] =
       IndexedSeq(BlockEndorsement.signed(blsEndorser, GeneratorIndex(7), finalizedId, finalizedHeight, endorsedId))
 
@@ -105,8 +105,8 @@ class MicroBlockSpecification extends FunSuite {
   test("FinalizationVoting serialization matches Go reference output") {
     def decode(s: String): ByteStr = ByteStr.decodeBase58(s).get
 
-    val referenceId = decode("37ex9gonRZtUddDHgSzSes5Ds9UeQyS74DyAXtGFrDpJnEg7sjGdi2ncaV4rVpZnLboQmid3whcbZUWS49FV3ZCs")
-    val endorsedId  = decode("5GszB5vY2KTxLvYq4zAFQvRkJxv5Rt5BcuTGHZrxgSLTzPtni7eY5k1DN1mJ7mY4ixP5fiHD9z1AfM99AA8yxhjg")
+    val referenceId   = decode("37ex9gonRZtUddDHgSzSes5Ds9UeQyS74DyAXtGFrDpJnEg7sjGdi2ncaV4rVpZnLboQmid3whcbZUWS49FV3ZCs")
+    val endorsedId    = decode("5GszB5vY2KTxLvYq4zAFQvRkJxv5Rt5BcuTGHZrxgSLTzPtni7eY5k1DN1mJ7mY4ixP5fiHD9z1AfM99AA8yxhjg")
     val aggregatedSig = BlsSignature(
       decode("nBWfaRLW7EdcwxhDMaXuZZFMhHyowAxY7476rkBsUUeguTXrMSNuTVkuWLmZjRmRfgMXEGuvdHiu1V7joRFSLz3X6MQBF8m88kHJEj6Tc2ktBnMTzihh2JMGpuuWBLSK8rv")
     ).explicitGet()
@@ -115,7 +115,7 @@ class MicroBlockSpecification extends FunSuite {
     ).explicitGet()
 
     val conflictFinalizedHeight = 12345
-    val conflictEndorsement = BlockEndorsement(
+    val conflictEndorsement     = BlockEndorsement(
       endorserIndex = GeneratorIndex(1),
       finalizedId = referenceId,
       finalizedHeight = Height(conflictFinalizedHeight),
@@ -130,7 +130,7 @@ class MicroBlockSpecification extends FunSuite {
       conflict = IndexedSeq(conflictEndorsement)
     )
 
-    val serialized = PBUtils.encodeDeterministic(PBFinalizationVotings.protobuf(finalizationVoting))
+    val serialized                 = PBUtils.encodeDeterministic(PBFinalizationVotings.protobuf(finalizationVoting))
     val goFinalizationVotingBase64 =
       "CgMBAgMQARpggyjkX2gT2YmzoqT+gCY7zgdxeJ75Sa+EtYjQy6qfDfIKLnJ6SCRCC8fsD8C8+wAiFmd4kWccRfX8pk/1PFgUjGZtfmFwIQJ5G4pVexxDURku8z4evXcse64vV2XLxb6LIusBCAESQGnFvj8CErOF62bQ6KthEkYLJjwHfER97mTynkydHHc4/snMkWT+BSNdniltRtW24p82GYZyGWbFPdE1ARnRgIAYuWAiQNXC8WrfOjQIpVQ2uBsNsPL5E5jzxlNj8p81bvr3d1wPKFjE4rJc4ASXV5PalnIEHuT+YB5fApSdfHv6lRMU54MqYEa9cH8UoVCJUqToKlo2aqh6sYXYb9TzGYYph1cDrsbd3IDZWqNEq0glrbvEdKxIoW+1yHsWszKiSQMAEvxrpsfydh6PhGOvEYDlB3YZv49Vhmj8Wr8ZNnU8CHqv0Rjn0w=="
     Base64.encode(serialized) shouldBe goFinalizationVotingBase64
@@ -139,8 +139,8 @@ class MicroBlockSpecification extends FunSuite {
   test("MicroBlock serialization matches Go reference output (without signature)") {
     def decode(s: String): ByteStr = ByteStr.decodeBase58(s).get
 
-    val referenceId = decode("37ex9gonRZtUddDHgSzSes5Ds9UeQyS74DyAXtGFrDpJnEg7sjGdi2ncaV4rVpZnLboQmid3whcbZUWS49FV3ZCs")
-    val endorsedId  = decode("5GszB5vY2KTxLvYq4zAFQvRkJxv5Rt5BcuTGHZrxgSLTzPtni7eY5k1DN1mJ7mY4ixP5fiHD9z1AfM99AA8yxhjg")
+    val referenceId   = decode("37ex9gonRZtUddDHgSzSes5Ds9UeQyS74DyAXtGFrDpJnEg7sjGdi2ncaV4rVpZnLboQmid3whcbZUWS49FV3ZCs")
+    val endorsedId    = decode("5GszB5vY2KTxLvYq4zAFQvRkJxv5Rt5BcuTGHZrxgSLTzPtni7eY5k1DN1mJ7mY4ixP5fiHD9z1AfM99AA8yxhjg")
     val aggregatedSig = BlsSignature(
       decode("nBWfaRLW7EdcwxhDMaXuZZFMhHyowAxY7476rkBsUUeguTXrMSNuTVkuWLmZjRmRfgMXEGuvdHiu1V7joRFSLz3X6MQBF8m88kHJEj6Tc2ktBnMTzihh2JMGpuuWBLSK8rv")
     ).explicitGet()
@@ -149,7 +149,7 @@ class MicroBlockSpecification extends FunSuite {
     ).explicitGet()
 
     val conflictFinalizedHeight = 12345
-    val conflictEndorsement = BlockEndorsement(
+    val conflictEndorsement     = BlockEndorsement(
       endorserIndex = GeneratorIndex(1),
       finalizedId = referenceId,
       finalizedHeight = Height(conflictFinalizedHeight),
@@ -182,7 +182,7 @@ class MicroBlockSpecification extends FunSuite {
       finalizationVoting = Some(finalizationVoting)
     )
 
-    val serializedWithoutSignature = Base64.encode(microBlock.bytesWithoutSignature())
+    val serializedWithoutSignature   = Base64.encode(microBlock.bytesWithoutSignature())
     val goSerializedWithoutSignature =
       "BWnFvj8CErOF62bQ6KthEkYLJjwHfER97mTynkydHHc4/snMkWT+BSNdniltRtW24p82GYZyGWbFPdE1ARnRgICQgaVdHK4QxQyEYihza6fh1tiQTYDXp9blQTt7S97AiU5A38jSKWoMXr4Q/80NLX0tqB7bHpBBMSzTM5ac6MKPAAAAowAAAAEAAACbClcIVBIg7FlNNgjs8B4KV3mLFwdyeS2xRTKEN3fgrPVEXywc8wQaBBCgjQYgydOsyLgtKAHCBiEKFgoUflp9MfPSElPDgt8e0bJfEbpsP6wSBxCA7oO7rwESQEz8sQx7qThcCFVSdgGm5Dk0VKETkPcJXXJYxnt70rxfsarlD7D4gHB5yTXdDzfndnHAyXH7NwZfzy8YR/CizgbElKnkSNWP6a/gfVPTrZ62oVuqwNg37tT6xi6ELp94YgoDAQIDEAEaYIMo5F9oE9mJs6Kk/oAmO84HcXie+UmvhLWI0Muqnw3yCi5yekgkQgvH7A/AvPsAIhZneJFnHEX1/KZP9TxYFIxmbX5hcCECeRuKVXscQ1EZLvM+Hr13LHuuL1dly8W+iyLrAQgBEkBpxb4/AhKzhetm0OirYRJGCyY8B3xEfe5k8p5MnRx3OP7JzJFk/gUjXZ4pbUbVtuKfNhmGchlmxT3RNQEZ0YCAGLlgIkDVwvFq3zo0CKVUNrgbDbDy+ROY88ZTY/KfNW7693dcDyhYxOKyXOAEl1eT2pZyBB7k/mAeXwKUnXx7+pUTFOeDKmBGvXB/FKFQiVKk6CpaNmqoerGF2G/U8xmGKYdXA67G3dyA2VqjRKtIJa27xHSsSKFvtch7FrMyokkDABL8a6bH8nYej4RjrxGA5Qd2Gb+PVYZo/Fq/GTZ1PAh6r9EY59M="
 

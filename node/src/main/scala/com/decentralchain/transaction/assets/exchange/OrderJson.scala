@@ -26,7 +26,7 @@ object OrderJson {
   }
 
   implicit val optionByteArrayReads: Reads[Option[Array[Byte]]] = {
-    case JsString(s) if s.isEmpty => JsSuccess(Option.empty[Array[Byte]])
+    case JsString(s) if s.isEmpty  => JsSuccess(Option.empty[Array[Byte]])
     case JsString(s) if s.nonEmpty =>
       Base58.tryDecodeWithLimit(s) match {
         case Success(bytes) => JsSuccess(Some(bytes))

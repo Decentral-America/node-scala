@@ -87,7 +87,7 @@ class StateSnapshotStorageTest extends PropSpec with WithDomain {
         StateSnapshot(
           balances = VectorMap(
             (senderAddress, asset) -> issueTx.quantity.value,
-            (senderAddress, Dcc) -> (d.balance(senderAddress) - 1.dcc)
+            (senderAddress, Dcc)   -> (d.balance(senderAddress) - 1.dcc)
           ),
           assetStatics = Map(
             asset -> (AssetStaticInfo(asset.id, TransactionId(issueTx.id()), sender.publicKey, issueTx.decimals.value, false), 1)
@@ -110,7 +110,7 @@ class StateSnapshotStorageTest extends PropSpec with WithDomain {
         StateSnapshot(
           balances = VectorMap(
             (senderAddress, asset) -> (issueTx.quantity.value + 1000),
-            (senderAddress, Dcc) -> (d.balance(senderAddress) - fee)
+            (senderAddress, Dcc)   -> (d.balance(senderAddress) - fee)
           ),
           assetVolumes = Map(
             asset -> AssetVolumeInfo(isReissuable = true, BigInt(issueTx.quantity.value + 1000))
@@ -124,7 +124,7 @@ class StateSnapshotStorageTest extends PropSpec with WithDomain {
         StateSnapshot(
           balances = VectorMap(
             (senderAddress, asset) -> (issueTx.quantity.value + 1000 - 1),
-            (senderAddress, Dcc) -> (d.balance(senderAddress) - fee)
+            (senderAddress, Dcc)   -> (d.balance(senderAddress) - fee)
           ),
           assetVolumes = Map(
             asset -> AssetVolumeInfo(isReissuable = true, BigInt(issueTx.quantity.value + 1000 - 1))
@@ -145,9 +145,9 @@ class StateSnapshotStorageTest extends PropSpec with WithDomain {
         StateSnapshot(
           balances = VectorMap(
             (senderAddress, Dcc) -> (d.balance(senderAddress) - fee + order1.matcherFee.value + order2.matcherFee.value),
-            (recipient, asset)     -> (d.balance(recipient, asset) + order1.amount.value),
+            (recipient, asset)   -> (d.balance(recipient, asset) + order1.amount.value),
             (recipient, Dcc)     -> (d.balance(recipient) - order1.matcherFee.value - priceAssetDiff),
-            (recipient2, asset)    -> (d.balance(recipient2, asset) - order1.amount.value),
+            (recipient2, asset)  -> (d.balance(recipient2, asset) - order1.amount.value),
             (recipient2, Dcc)    -> (d.balance(recipient2) - order2.matcherFee.value + priceAssetDiff)
           ),
           orderFills = Map(
@@ -358,7 +358,7 @@ class StateSnapshotStorageTest extends PropSpec with WithDomain {
         ethTransfer,
         StateSnapshot(
           balances = VectorMap(
-            (ethTransfer.senderAddress(), Dcc)  -> (d.balance(ethTransfer.senderAddress()) - 100_000),
+            (ethTransfer.senderAddress(), Dcc)    -> (d.balance(ethTransfer.senderAddress()) - 100_000),
             (ethTransfer.senderAddress(), asset2) -> (d.balance(ethTransfer.senderAddress(), asset2) - 1),
             (recipient, asset2)                   -> 1
           )

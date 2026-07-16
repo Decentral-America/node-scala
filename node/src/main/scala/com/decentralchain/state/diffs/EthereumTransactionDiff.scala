@@ -59,10 +59,10 @@ object EthereumTransactionDiff {
     val baseDiff = tx.payload match {
       case et: EthereumTransaction.Transfer =>
         for {
-          _        <- checkLeadingZeros(tx, blockchain)
-          _        <- TracedResult(et.checkTransferDataSize(blockchain, tx.underlying.getData))
-          asset    <- TracedResult(et.tryResolveAsset(blockchain))
-          transfer <- TracedResult(et.toTransferLike(tx, blockchain))
+          _             <- checkLeadingZeros(tx, blockchain)
+          _             <- TracedResult(et.checkTransferDataSize(blockchain, tx.underlying.getData))
+          asset         <- TracedResult(et.tryResolveAsset(blockchain))
+          transfer      <- TracedResult(et.toTransferLike(tx, blockchain))
           assetSnapshot <- TransactionDiffer.assetsVerifierDiff(
             blockchain,
             transfer,
@@ -76,10 +76,10 @@ object EthereumTransactionDiff {
 
       case ei: EthereumTransaction.Invocation =>
         for {
-          _          <- checkLeadingZeros(tx, blockchain)
-          invocation <- TracedResult(ei.toInvokeScriptLike(tx, blockchain))
-          _          <- TracedResult(InvokeDiffsCommon.checkPayments(blockchain, invocation.payments))
-          snapshot   <- InvokeScriptTransactionDiff(blockchain, currentBlockTs, limitedExecution, enableExecutionLog)(invocation)
+          _              <- checkLeadingZeros(tx, blockchain)
+          invocation     <- TracedResult(ei.toInvokeScriptLike(tx, blockchain))
+          _              <- TracedResult(InvokeDiffsCommon.checkPayments(blockchain, invocation.payments))
+          snapshot       <- InvokeScriptTransactionDiff(blockchain, currentBlockTs, limitedExecution, enableExecutionLog)(invocation)
           resultSnapshot <- TransactionDiffer.assetsVerifierDiff(
             blockchain,
             invocation,

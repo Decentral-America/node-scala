@@ -134,7 +134,7 @@ class InvokeMultiplePaymentsSuite extends BaseTransactionSuite with CancelAfterF
   }
 
   test("can't attach more than balance") {
-    val dccBalance  = sender.accountBalances(callerAddress)._1
+    val dccBalance    = sender.accountBalances(callerAddress)._1
     val asset1Balance = sender.assetBalance(callerAddress, asset1.id.toString).balance
 
     assertApiError(

@@ -424,8 +424,8 @@ class SyncDAppPaymentTest extends PropSpec with WithDomain {
 
     val balances = AddrWithBalance.enoughBalances(invoker, dApp1, dApp2)
 
-    val issue = TxHelpers.issue(dApp2, 100)
-    val asset = if (customAsset) IssuedAsset(issue.id()) else Dcc
+    val issue     = TxHelpers.issue(dApp2, 100)
+    val asset     = if (customAsset) IssuedAsset(issue.id()) else Dcc
     val setScript = Seq(
       TxHelpers.setScript(dApp1, invokerDAppScript(dApp2.toAddress, bigComplexityDApp1, asset, -1)),
       TxHelpers.setScript(dApp2, simpleDAppScript(bigComplexityDApp2))

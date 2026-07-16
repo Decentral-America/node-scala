@@ -90,7 +90,7 @@ object PBBlocks {
       _.header.chainId := 0,
       _.transactions.foreach(_.transaction.modify {
         case Transaction.DccTransaction(value) => Transaction.DccTransaction(value.update(_.chainId := 0))
-        case other                               => other
+        case other                             => other
       })
     )
 
@@ -101,7 +101,7 @@ object PBBlocks {
       _.header.chainId := chainId,
       _.transactions.foreach(_.transaction.modify {
         case Transaction.DccTransaction(value) => Transaction.DccTransaction(value.update(_.chainId := chainId))
-        case other                               => other
+        case other                             => other
       })
     )
   }

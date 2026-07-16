@@ -27,17 +27,17 @@ class BlockchainUpdatesInvokeTxSpec extends BlockchainUpdatesTestBase {
     val args: Seq[EXPR] = Seq(assetByteStr, addressByteStr)
     val invoke = TxHelpers.invoke(firstTxParticipantAddress, Some(invokeFunctionName), args, Seq.empty, secondTxParticipant, fee = 100500000L)
     val issuerAssetBalanceAfterTx: Long = issue.quantity.value - burnNum - scriptTransferAssetNum + reissueNum
-    val senderDccBalanceAfterTx: Long = secondTxParticipantBalanceBefore - invoke.fee.value + scriptTransferUnitNum
+    val senderDccBalanceAfterTx: Long   = secondTxParticipantBalanceBefore - invoke.fee.value + scriptTransferUnitNum
     val issuerBalanceBeforeInvoke: Long = firstTxParticipantBalanceBefore - issue.fee.value - fee
     val issuerBalanceAfterInvoke: Long  = issuerBalanceBeforeInvoke - scriptTransferUnitNum
-    val balances = Seq(
+    val balances                        = Seq(
       AddrWithBalance(firstTxParticipantAddress, firstTxParticipantBalanceBefore),
       AddrWithBalance(secondTxParticipantAddress, secondTxParticipantBalanceBefore)
     )
     val expectBalanceMap = Map(
-      (secondTxParticipantAddress, Dcc) -> (secondTxParticipantBalanceBefore, senderDccBalanceAfterTx),
+      (secondTxParticipantAddress, Dcc)   -> (secondTxParticipantBalanceBefore, senderDccBalanceAfterTx),
       (secondTxParticipantAddress, asset) -> (0L, scriptTransferAssetNum),
-      (firstTxParticipantAddress, Dcc)  -> (issuerBalanceBeforeInvoke, issuerBalanceAfterInvoke),
+      (firstTxParticipantAddress, Dcc)    -> (issuerBalanceBeforeInvoke, issuerBalanceAfterInvoke),
       (firstTxParticipantAddress, asset)  -> (issue.quantity.value, issuerAssetBalanceAfterTx)
     )
 
@@ -83,7 +83,7 @@ class BlockchainUpdatesInvokeTxSpec extends BlockchainUpdatesTestBase {
     val issue: IssueTransaction         = TxHelpers.issue(assetDappAccount)
     val asset: Asset                    = issue.asset
     val issueAssetFee                   = issue.fee.value
-    val massTx = TxHelpers.massTransfer(
+    val massTx                          = TxHelpers.massTransfer(
       assetDappAccount,
       Seq(
         firstTxParticipantAddress -> amount,
@@ -109,30 +109,30 @@ class BlockchainUpdatesInvokeTxSpec extends BlockchainUpdatesTestBase {
     val dAppAddressAssetBalanceForCaller: Long              = amount + scriptTransferAssetNum - paymentNum
     val invokerDappAddressAssetBalanceForOriginCaller: Long = amount + scriptTransferAssetNum
     val dAppAddressAssetBalanceForOriginCaller: Long        = amount - paymentNum
-    val secondAddressDccBalanceBefore: Long               = secondAddressBalance - fee
-    val secondAddressDccBalanceAfter: Long                = secondAddressDccBalanceBefore + scriptTransferUnitNum
-    val assetDappAddressDccBalanceBefore: Long            = assetDappBalance - issueAssetFee - massTx.fee.value - fee
-    val assetDappAddressDccBalanceAfter: Long             = assetDappAddressDccBalanceBefore - scriptTransferUnitNum
-    val invokerDappAddressDccBalance: Long                = invokerDappBalance - invoke.fee.value
-    val balancesSeq = Seq(
+    val secondAddressDccBalanceBefore: Long                 = secondAddressBalance - fee
+    val secondAddressDccBalanceAfter: Long                  = secondAddressDccBalanceBefore + scriptTransferUnitNum
+    val assetDappAddressDccBalanceBefore: Long              = assetDappBalance - issueAssetFee - massTx.fee.value - fee
+    val assetDappAddressDccBalanceAfter: Long               = assetDappAddressDccBalanceBefore - scriptTransferUnitNum
+    val invokerDappAddressDccBalance: Long                  = invokerDappBalance - invoke.fee.value
+    val balancesSeq                                         = Seq(
       AddrWithBalance(firstTxParticipantAddress, firstTxParticipantBalanceBefore),
       AddrWithBalance(secondAddress, secondAddressBalance),
       AddrWithBalance(invokerDappAddress, invokerDappBalance),
       AddrWithBalance(assetDappAddress, assetDappBalance)
     )
     val callerBalancesMap = Map(
-      (secondAddress, Dcc)             -> (secondAddressDccBalanceBefore, secondAddressDccBalanceAfter),
+      (secondAddress, Dcc)               -> (secondAddressDccBalanceBefore, secondAddressDccBalanceAfter),
       (secondAddress, asset)             -> (amount, secondAddressAssetBalanceForAll),
       (firstTxParticipantAddress, asset) -> (amount, dAppAddressAssetBalanceForCaller),
-      (assetDappAddress, Dcc)          -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
-      (invokerDappAddress, Dcc)        -> (invokerDappBalance, invokerDappAddressDccBalance)
+      (assetDappAddress, Dcc)            -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
+      (invokerDappAddress, Dcc)          -> (invokerDappBalance, invokerDappAddressDccBalance)
     )
     val originalCallerBalancesMap = Map(
       (invokerDappAddress, asset)        -> (amount, invokerDappAddressAssetBalanceForOriginCaller),
       (secondAddress, asset)             -> (amount, secondAddressAssetBalanceForAll),
       (firstTxParticipantAddress, asset) -> (amount, dAppAddressAssetBalanceForOriginCaller),
-      (assetDappAddress, Dcc)          -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
-      (invokerDappAddress, Dcc)        -> (invokerDappBalance, invokerDappAddressDccBalance + scriptTransferUnitNum)
+      (assetDappAddress, Dcc)            -> (assetDappAddressDccBalanceBefore, assetDappAddressDccBalanceAfter),
+      (invokerDappAddress, Dcc)          -> (invokerDappBalance, invokerDappAddressDccBalance + scriptTransferUnitNum)
     )
 
     "BU-77. doubles nested i.caller. Invoke have to return correct data for subscribe" in {

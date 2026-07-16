@@ -26,7 +26,7 @@ import scala.concurrent.duration.*
 
 class UpdateAssetInfoTransactionSuite extends BaseTransactionSuite with CancelAfterFailure with TableDrivenPropertyChecks {
   import UpdateAssetInfoTransactionSuite.*
-  val updateInterval = 2
+  val updateInterval                              = 2
   override protected def nodeConfigs: Seq[Config] =
     Seq(
       configWithUpdateIntervalSetting(updateInterval).withFallback(Miners.head),
@@ -370,8 +370,8 @@ class UpdateAssetInfoTransactionSuite extends BaseTransactionSuite with CancelAf
   }
 
   test("check increased fee for smart sender/asset") {
-    val scriptText = s"""true""".stripMargin
-    val script     = TestCompiler.DefaultVersion.compileAsset(scriptText).bytes().base64
+    val scriptText   = s"""true""".stripMargin
+    val script       = TestCompiler.DefaultVersion.compileAsset(scriptText).bytes().base64
     val smartAssetId =
       sender.broadcastIssue(issuer, "smartAsset", "description", someAssetAmount, 8, reissuable = true, script = Some(script), waitForTx = true).id
     sender.waitForHeight(sender.height + updateInterval + 1, 3.minutes)

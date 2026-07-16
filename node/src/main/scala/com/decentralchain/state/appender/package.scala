@@ -46,7 +46,7 @@ package object appender {
       newBlock: Block
   ): Either[ValidationError, (parentHeight: Height, generatorSet: GeneratorSet)] = {
     val parentBlockId = newBlock.header.reference
-    val r = for {
+    val r             = for {
       parentHeight <- blockchain
         .heightOf(parentBlockId)
         .map(Height(_))
@@ -58,7 +58,7 @@ package object appender {
 
       conflictGenerators  = currentPeriod.fold(ConflictGenerators.empty)(blockchain.conflictGenerators).upTo(blockHeight)
       committedGenerators = currentPeriod.fold(Nil)(blockchain.committedGenerators)
-      validGenerators = committedGenerators.view
+      validGenerators     = committedGenerators.view
         .map { case v @ (address, _) => v -> blockchain.generatingBalance(address, Some(parentBlockId)) }
         .zipWithIndex
         .collect {
@@ -91,7 +91,7 @@ package object appender {
       txSignParCheck: Boolean
   )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] =
     for {
-      data <- findBlockAndGetGenerators(blockchainUpdater, block)
+      data                  <- findBlockAndGetGenerators(blockchainUpdater, block)
       (hitSource, balances) <-
         if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(block, data.parentHeight)
         else pos.validateGenerationSignature(block).map(_ -> Seq.empty)
@@ -136,7 +136,7 @@ package object appender {
       processBlockWithChallenge(blockchainUpdater, pos, time, verify, txSignParCheck)(block, snapshot)
     } else {
       for {
-        data <- findBlockAndGetGenerators(blockchainUpdater, block)
+        data                  <- findBlockAndGetGenerators(blockchainUpdater, block)
         (hitSource, balances) <-
           if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(block, data.parentHeight)
           else pos.validateGenerationSignature(block).map(_ -> Seq.empty)
@@ -246,7 +246,7 @@ package object appender {
           _            <- Either.cond(blockTime - currentTs < MaxTimeDrift, (), BlockFromFuture(blockTime, currentTs))
           _            <- pos.validateBaseTarget(parentHeight.toInt, block, parent, grandParent)
           hitSource    <- pos.validateGenerationSignature(block)
-          _ <- pos
+          _            <- pos
             .validateBlockDelay(parentHeight.toInt, block.header, parent, minerBalance)
             .leftFlatMap(checkExceptions(parentHeight, block, _))
         } yield hitSource
@@ -395,7 +395,7 @@ package object appender {
               else
                 for {
                   finalizedBlockId <- blockchain.blockId(fv.finalizedHeight.toInt).toRight(s"Unable to get block ID at height ${fv.finalizedHeight}")
-                  _ <-
+                  _                <-
                     if (validEndorsers.isEmpty) Either.unit
                     else
                       BlsUtils.verifyAgg(

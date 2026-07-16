@@ -9,8 +9,8 @@ object PublishedModule extends AutoPlugin {
       packageDoc / mappings        := Seq(baseDirectory.value / "README.md" -> "README.md")
     )
   ) ++ Seq(
-    publish / skip := false,
+    publish / skip                      := false,
     Test / packageDoc / publishArtifact := false,
-    versionScheme := Some("pvp")
+    versionScheme                       := Some("pvp")
   )
 }

@@ -63,8 +63,8 @@ abstract class BaseIntegrationTestSuite extends BaseTestSuite with HasGrpc with 
         BalanceResponse.DccBalances(getBalance(address, Asset.Dcc))
     }
 
-    val testDb  = use(mkTestDb())
-    val allTags = new CacheKeyTags[RideScriptRunRequest]
+    val testDb     = use(mkTestDb())
+    val allTags    = new CacheKeyTags[RideScriptRunRequest]
     val blockchain = testDb.access.batchedReadWrite { implicit ctx =>
       LazyBlockchain.init(
         blockchainSettings,
@@ -76,7 +76,7 @@ abstract class BaseIntegrationTestSuite extends BaseTestSuite with HasGrpc with 
       )
     }
 
-    val request = RideScriptRunRequest(aliceAddr, Json.obj("expr" -> "foo()"), trace = false, intAsString = true)
+    val request                = RideScriptRunRequest(aliceAddr, Json.obj("expr" -> "foo()"), trace = false, intAsString = true)
     val requestServiceSettings = DefaultRequestService.Settings(
       enableTraces = true,
       enableStateChanges = false,
@@ -110,7 +110,7 @@ abstract class BaseIntegrationTestSuite extends BaseTestSuite with HasGrpc with 
 
     val blockchainStateSettings = BlockchainState.Settings(1.second)
     val workingHeight           = Height(1)
-    val eventsStream = blockchainUpdatesStream.downstream
+    val eventsStream            = blockchainUpdatesStream.downstream
       .doOnError(e =>
         Task {
           log.error("Error!", e)

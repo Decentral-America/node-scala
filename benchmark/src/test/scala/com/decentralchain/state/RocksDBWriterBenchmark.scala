@@ -73,7 +73,7 @@ object RocksDBWriterBenchmark {
   @State(Scope.Benchmark)
   class BaseSt {
     protected val benchSettings: Settings = Settings.fromConfig(ConfigFactory.load())
-    private val dccSettings: DCCSettings = {
+    private val dccSettings: DCCSettings  = {
       val config = loadConfig(ConfigFactory.parseFile(new File(benchSettings.networkConfigFile)))
       DCCSettings.fromRootConfig(config)
     }

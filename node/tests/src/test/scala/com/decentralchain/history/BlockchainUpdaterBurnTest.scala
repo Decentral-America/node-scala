@@ -21,10 +21,10 @@ class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenProper
   val preconditions: Gen[Setup] = for {
     master                                                   <- accountGen
     ts                                                       <- timestampGen
-    transferAssetDccFee                                    <- smallFeeGen
+    transferAssetDccFee                                      <- smallFeeGen
     alice                                                    <- accountGen
     (_, assetName, description, quantity, decimals, _, _, _) <- issueParamGen
-    genesis: GenesisTransaction = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
+    genesis: GenesisTransaction        = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
     masterToAlice: TransferTransaction = TxHelpers.transfer(
       from = master,
       to = alice.toAddress,
@@ -48,7 +48,7 @@ class BlockchainUpdaterBurnTest extends PropSpec with DomainScenarioDrivenProper
       timestamp = ts + 100,
       version = TxVersion.V1
     )
-    burn: BurnTransaction = BurnTransaction.selfSigned(1.toByte, alice, issue.asset, quantity / 2, Dcc, ts + 200).explicitGet()
+    burn: BurnTransaction       = BurnTransaction.selfSigned(1.toByte, alice, issue.asset, quantity / 2, Dcc, ts + 200).explicitGet()
     reissue: ReissueTransaction = ReissueTransaction
       .selfSigned(1.toByte, alice, issue.asset, burn.quantity.value, reissuable = true, Dcc, ts + 300)
       .explicitGet()

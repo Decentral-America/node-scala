@@ -1,0 +1,152 @@
+# T2 HotStuff — Implementation & Integration Design (SSOT)
+
+> **Status:** ⚠️ **REWORK PENDING — do not treat as ship-ready.** Pure BFT core is complete + unit-tested
+> and the CI simulation is green, BUT the first real multi-node run (step 5, live testnet, 2026-07-12)
+> showed the `view=block-height` shell model does not work on an NG chain: it took **four** fixes just to
+> get validators voting on the same block, and **QC formation is still unconfirmed live.** Full write-up
+> and the proposed rework (pacemaker/single-active-view, or lean on feature-25) are in
+> **[`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md)** — read that before
+> building further on §5. **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change today.**
+> **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
+> node-scala *implementation* of T2. Keep it updated as code lands.
+>
+> ⚠️ Enabling on mainnet is gated on: schemas 1.6.4 published, step-5 multi-node + soak, and an
+> **external audit** (see `hotstuff-security-review.md`).
+
+## 1. Protocol
+Basic 3-phase HotStuff (prepare → pre-commit → commit) over the **committed-generator committee**
+(generators who submitted `CommitToGenerationTransaction` with a BLS key, PoP-verified on-chain at
+`CommitToGenerationTransactionDiff.scala:22`). Quorum = **≥2/3 of committed stake** (reuses
+feature-25's `FinalizationVoting.isFinalized`: `endorsed*3 ≥ total*2`). On stall/timeout the view
+advances and **feature-25 Deterministic Finality continues underneath — the chain never halts.**
+
+## 2. Architecture — functional core / imperative shell
+- **Functional core (done):** deterministic, no I/O, no clock (`Date.now`/random unavailable; block
+  ancestry injected as `(BlockId, BlockId) => Boolean`). Fully unit-testable.
+- **Coordinator (done):** `HotStuffCoordinator.Enabled` orchestrates the reducers into the 3-phase loop,
+  side effects injected via `HotStuffEffects`. Validated by an in-process deterministic 4-node
+  simulation (happy path + one crashed node). `Disabled` is a no-op used when the flag is off.
+- **Shell binding (step 4c-bind, not built):** the real `HotStuffEffects` (broadcast via `allChannels`,
+  sign via `wallet`/BLS, commit → finalized height), plus `Application`/`Miner`/network-dispatch/timer
+  wiring. Pure I/O — validated only by step 5.
+
+## 3. Module inventory
+
+| Module | Package `com.decentralchain.consensus.hotstuff` (unless noted) | Status | Tests |
+|--------|----------------------------------------------------------------|--------|-------|
+| `HotStuffSettings` | `settings` — pureconfig, wired in `DCCSettings`, default off | ✅ | 4 |
+| `HotStuffVote` / `QuorumCertificate` / `HotStuffProposal` | `network` — domain + PB (schemas 1.6.4) + `MessageSpec` codes **39/40/41** in `BasicMessagesRepo` | ✅ | 5 |
+| `HotStuffQuorum` | `voteMessage`, `verifyVote`, `formQC`, `verifyQC`, `hasQuorum` | ✅ | 7 |
+| `HotStuffSafety` | `SafetyState`, `safeToVote`, `update`, `committedBlock`, `equivocators` | ✅ | 8 |
+| `HotStuffPacemaker` | `leaderFor`, `onQC`, `onTimeout` | ✅ | 6 |
+| `HotStuffVotePool` | `onVote` (accumulate → `formQC` at 2/3; drops invalid) | ✅ | 6 |
+| `HotStuffEngine` | reducer: `onQC`, `onProposal`, `onTimeout` | ✅ | 8 |
+| `HotStuffCoordinator` + `HotStuffEffects` | orchestration (Disabled no-op + Enabled); validated by in-process 4-node simulation | ✅ | 2 (sim) |
+| **shell binding** | real `HotStuffEffects` impl + `Application`/`Miner`/network/timer wiring (see §5) | ❌ 4c-bind | — (step 5) |
+
+## 4. Protocol ↔ code (one block, view v, leader L forging block N)
+
+| Step | Actor | Handled by | Layer |
+|------|-------|-----------|-------|
+| Forge N, broadcast `HotStuffProposal(v, id(N), highQC=prepareQC)` | L | shell → `Miner` hook | 4c |
+| Decide vote: verify justify, safety rule | each | `HotStuffEngine.onProposal` (→ `verifyQC`, `safety.update`, `safeToVote`) | core |
+| If safe: sign `HotStuffVote(v, PREPARE, …)` + broadcast | each | shell (`BlsKeyPair.sign(HotStuffQuorum.voteMessage)`, `allChannels.broadcast`) | 4c |
+| Tally PREPARE votes → `prepareQC` | L | `HotStuffVotePool.onVote` → `formQC` | core |
+| On `prepareQC`: track, then vote PRE_COMMIT | each | `HotStuffEngine.onQC` → shell re-votes | core+4c |
+| Tally PRE_COMMIT → `precommitQC`; on it **lock** + vote COMMIT | each | `onVote` → `onQC` (`update` sets `lockedQC`) | core+4c |
+| Tally COMMIT → `commitQC`; **finalize N** | each | `onVote` → `onQC` → `committedBlock` → `HotStuffAction.Committed` → shell applies | core+4c |
+| Leader silent → rotate leader, next view | all | `HotStuffEngine.onTimeout` → `leaderFor(v+1)`; shell timer | core+4c |
+
+## 5. Step 4c — the shell (integration seams)
+**Landed (compiled, gated OFF — zero behaviour change when disabled):** `NodeHotStuffEffects`
+(broadcast/BLS-sign/observational commit), `MessageObserver` inbound routing (39/40/41), **and the full
+`Application` wiring** — gated coordinator construction, a dynamic per-period committee provider
+(`blockchain.currentGeneratorSet`), inbound subscriptions on a dedicated single-thread scheduler, the
+pacemaker timer (`round-timeout` → `onTimeout`), and the propose-if-we-forged hook via `lastBlockInfo`.
+Implementer decision: **view = SETTLED block height (tip−1), leader = that block's FairPoS forger,
+proposed/voted target = the canonical key-block id `blockchain.blockId(view)`.** Rationale (step-5
+finding, 2026-07-12): the first cut used `view = tip height` and proposed the *liquid* `lastBlockInfo.id`.
+Under Waves-NG the tip block's id changes as microblocks append and differs across nodes, so several
+nodes proposed different blockIds at the *same* view → votes fragmented → **no QC ever formed**. Running
+one **settled** height behind the tip and voting on the canonical `blockId(s)` gives exactly one leader
+and one agreed block per view. A replica also enforces `proposalValid(view, blockId) =
+blockchain.blockId(view).contains(blockId)` — it votes only for the canonical block at that height, so a
+Byzantine leader cannot make honest nodes vote for a fabricated block. Commit is **observational**
+(feature-25 stays authoritative).
+
+⚠️ **RUNTIME-PARTIALLY-VALIDATED:** compiled + unit/simulation-tested, **plus a real 4-node docker
+cluster smoke run** (`FourNodeHotStuffTestSuite`). What the live run established:
+- **Non-destructive / no crash:** with `dcc.hotstuff.enabled = true` the 4 nodes start, the coordinator
+  initialises (`T2 HotStuff coordinator ENABLED`), blocks + microblocks keep being produced, and there
+  are **zero** exceptions, decode/serialization errors, or netty pipeline failures. Enabling HotStuff
+  behaves **identically** to the disabled baseline on the same cluster — the gated wiring does not alter
+  node behaviour, which is exactly what step 5 must confirm before mainnet.
+- **Finality-advances assertion is GREEN on a properly-resourced runner.** On CI (ubuntu-latest, PR #17
+  run `29162581781`) `FourNodeHotStuffTestSuite` **passed**: *"a HotStuff-enabled 4-node cluster finalizes
+  on every node without halting or forking (12.8s)."* So with HotStuff enabled, feature-25 finality keeps
+  advancing on all 4 nodes — confirmed on real nodes, not just locally.
+  On a resource-constrained host (Docker capped at ~7.75 GiB shared with other containers) the same suite
+  is flaky: the node-it peer mesh fragments (asymmetric peer suspensions; some nodes hold only 2–3 of 3
+  links), so cross-node endorsements miss the 2/3 quorum and `finalizedHeight` stalls at 1. **That was
+  reproduced with HotStuff DISABLED too** → a node-it mesh/resource issue, **not** caused by HotStuff
+  (`known-peers` is correctly wired — Docker.scala:215). Lesson: run step 5 where node-it has real memory
+  headroom, never a memory-pressured laptop sandbox.
+- **Harness prerequisite fixed:** node-it published the image's EXPOSE'd P2P port (6868) instead of the
+  node's configured port (`dcc.network.port = 6863`), NPE-ing on every container start. Fixed in
+  Docker.scala (publish the resolved-config ports; wait for host bindings). Benefits all node-it suites.
+
+The view=height mapping, cross-period state, and proposing still need a **green** multi-node run +
+external audit before `hotstuff.enabled` is ever set true on mainnet.
+
+**Remaining:** a clean green step-5 finality run (adequately-resourced node-it) + testnet soak; external audit.
+
+Mirror the existing feature-25 endorsement path:
+- **Construct & wire** a `HotStuffEngine` shell/actor in `Application.scala` next to
+  `BlockEndorser.InMemory` (`Application.scala:147-148`) — needs `wallet`, `allChannels`, `blockchain`,
+  committee lookups, finalized-height writer.
+- **Trigger** off the post-apply hook `blockEndorser.vote(gs)` in `BlockAppender.scala:48` and `Miner`
+  (`Miner.scala:59,320`): as leader → emit proposal; as replica → `onProposal` → sign+broadcast vote.
+- **Inbound dispatch:** decode `RawBytes(39|40|41)` (registered in `BasicMessagesRepo.specsByCodes`) →
+  domain → `onProposal`/`onVote`/`onQC`. Mirror `EndorseBlockSpec` consumption.
+- **Committee/stake:** `CommonGeneratorsApi.generators(h)` / `blockchain.committedGenerators(period)` /
+  `currentGeneratorSet`.
+- **Commit application (⚠️ the hard part / design decision):** there is **no external setter** for
+  finalized height — it is computed internally by feature-25's `FinalizationState` inside
+  `BlockchainUpdaterImpl` (see `:395`, `:440-447`). Applying a HotStuff commit therefore requires an
+  invasive, reviewed change to the node's core state machine. **Decision needed:** does the HotStuff
+  fast-commit (a) *raise* `finalizedHeight` ahead of feature-25 when a `commitQC` lands (HotStuff as the
+  faster finality source, feature-25 as fallback), or (b) run purely observational (expose a separate
+  `hotStuffFinalizedHeight`, leave feature-25 authoritative) for the first soak? Recommend **(b) for the
+  initial testnet soak** (zero risk to the authoritative finalized height), then **(a)** after the soak +
+  external audit. Either way this is core-state work validated only by step 5, not a plug-in effect.
+- **Pacemaker timer:** monix `Scheduler` task firing `onTimeout` at `hotStuffSettings.roundTimeout`,
+  reset on each QC.
+- **Gate:** everything behind `settings.hotStuffSettings.enabled`.
+- **Open design point:** the HotStuff-view ↔ block-height/forger mapping (CONSENSUS.md: "forger =
+  leader"). First view of a height aligns with the FairPoS forger; timeouts rotate via `leaderFor`.
+
+## 6. Testing strategy
+- **Unit (done):** 45 tests — the 7 core modules (adversarial: forged aggregate sig, below-quorum,
+  stale-justify no-vote, monotonic commit, equivocation, invalid-vote drop) plus a deterministic
+  in-process 4-node coordinator simulation (happy path + one crashed node).
+- **Step 5 (smoke green):** `node-it` multi-node suites (pattern: `node-it/.../sync/finalization/*`).
+  `FourNodeHotStuffTestSuite` **passes on CI** (ubuntu-latest, PR #17) — the enabled wiring is
+  non-destructive and feature-25 finality advances on all 4 nodes with HotStuff on. (Flaky only on a
+  memory-pressured host; see §5 — not a HotStuff issue.) Still TODO: crashed-leader, network-partition,
+  equivocating-validator scenarios, then testnet soak behind the flag. BFT safety/liveness only manifest
+  across ≥4 nodes; no unit test substitutes.
+
+## 7. Wire format (schemas 1.6.4, `dcc/block.proto`)
+`HotStuffPhase{UNSPECIFIED,PREPARE,PRE_COMMIT,COMMIT}`;
+`HotStuffVote{view, phase, block_id, block_height, voter_index, signature(BLS)}`;
+`QuorumCertificate{view, phase, block_id, block_height, signer_indexes[], aggregated_signature(BLS)}`;
+`HotStuffProposal{view, block_id, justify:QuorumCertificate}`.
+**1.6.4 is published** — live on Maven Central (`io.decentralchain:protobuf-schemas:1.6.4`, autoPublish
+via central-publishing-maven-plugin); node-scala CI resolves it. (Was the last pre-merge blocker.)
+
+## 8. Open gates
+1. ✅ Publish `protobuf-schemas` 1.6.4 (credentialed release) — **done**, live on Maven Central.
+2. ✅ Step 4c shell landed + step-5 smoke **green on CI** (`FourNodeHotStuffTestSuite` passes on
+   ubuntu-latest, PR #17: 4-node cluster finalizes with HotStuff enabled).
+   ◻ Remaining: crashed-leader / partition / equivocator scenarios + testnet soak.
+3. ◻ External audit before `hotstuff.enabled = true` on mainnet.

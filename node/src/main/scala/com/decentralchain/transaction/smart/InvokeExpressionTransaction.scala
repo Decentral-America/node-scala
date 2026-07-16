@@ -38,7 +38,7 @@ case class InvokeExpressionTransaction(
 
   override val bodyBytes: Coeval[Array[Byte]] = Coeval.evalOnce(PBTransactionSerializer.bodyBytes(this))
   override val bytes: Coeval[Array[Byte]]     = Coeval.evalOnce(PBTransactionSerializer.bytes(this))
-  override val json: Coeval[JsObject] =
+  override val json: Coeval[JsObject]         =
     Coeval.evalOnce(
       BaseTxJson.toJson(this) ++ Json.obj(
         "chainId"    -> this.chainId,
@@ -77,7 +77,7 @@ object InvokeExpressionTransaction extends TransactionParser {
   ): Either[ValidationError, InvokeExpressionTransaction] =
     for {
       fee <- TxPositiveAmount(feeAmount)(TxValidationError.InsufficientFee)
-      tx <- InvokeExpressionTransaction(
+      tx  <- InvokeExpressionTransaction(
         version,
         sender,
         expression,

@@ -149,7 +149,7 @@ object FunctionIds {
   val GETASSETINFOBYID: Short        = 1004
   val BLOCKINFOBYHEIGHT: Short       = 1005
   val TRANSFERTRANSACTIONBYID: Short = 1006
-  val ACCOUNTDCCBALANCE: Short     = 1007
+  val ACCOUNTDCCBALANCE: Short       = 1007
   val ACCOUNTASSETONLYBALANCE: Short = 1008
   val ACCOUNTSCRIPTHASH: Short       = 1009
 

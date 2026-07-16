@@ -47,7 +47,7 @@ case class LeaseApiRoute(
       complete(result)
     } ~ anyParam("id", limit = settings.transactionsByAddressLimit) { ids =>
       leasingInfosMap(ids) match {
-        case Left(err) => complete(err)
+        case Left(err)               => complete(err)
         case Right(leaseInfoByIdMap) =>
           val results = ids.map(leaseInfoByIdMap).toVector
           complete(results)

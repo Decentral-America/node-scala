@@ -51,14 +51,14 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
   "zero secret/public keys and signatures" - {
     val message = "test".getBytes()
 
-    val zeroSk = BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1))
-    val zeroPk = new blst.P1(zeroSk)
+    val zeroSk  = BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1))
+    val zeroPk  = new blst.P1(zeroSk)
     val zeroSig = new blst.P2()
       .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
       .sign_with(zeroSk)
 
-    val okSk = BlsUtils.mkBlsSecretKey(Array.fill[Byte](32)(0))
-    val okPk = new blst.P1(okSk)
+    val okSk  = BlsUtils.mkBlsSecretKey(Array.fill[Byte](32)(0))
+    val okPk  = new blst.P1(okSk)
     val okSig = new blst.P2()
       .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
       .sign_with(okSk)
@@ -158,6 +158,6 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     pkRestored2 shouldBe pk
   }
 
-  private def mkRandomSecretKey(): SecretKey  = mkBlsSecretKey(mkRandomDccKeyPair().privateKey.arr)
-  private def mkRandomDccKeyPair(): KeyPair = KeyPair(Array.fill(32)(ThreadLocalRandom.current().nextInt().toByte))
+  private def mkRandomSecretKey(): SecretKey = mkBlsSecretKey(mkRandomDccKeyPair().privateKey.arr)
+  private def mkRandomDccKeyPair(): KeyPair  = KeyPair(Array.fill(32)(ThreadLocalRandom.current().nextInt().toByte))
 }

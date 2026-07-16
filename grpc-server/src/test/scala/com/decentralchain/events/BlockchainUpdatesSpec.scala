@@ -73,7 +73,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
   val reissue: ReissueTransaction         = TxHelpers.reissue(issue.asset)
   val data: DataTransaction               = TxHelpers.dataSingle(fee = TestValues.fee * 3) // for compatibility with expected values
   val createAlias: CreateAliasTransaction = TxHelpers.createAlias("alias")
-  val setScript1: SetScriptTransaction = TxHelpers.setScript(
+  val setScript1: SetScriptTransaction    = TxHelpers.setScript(
     TxHelpers.defaultSigner,
     TestCompiler(V6).compileContract(
       """@Callable(i)
@@ -317,7 +317,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
     "should include correct dcc amount" - {
       val totalDcc = 100_000_000_0000_0000L
-      val reward     = 6_0000_0000
+      val reward   = 6_0000_0000
 
       "on preactivated block reward" in {
         val settings = currentSettings.setFeaturesHeight((BlockReward, 0))
@@ -493,7 +493,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
     }
 
     "should return issued assets" in {
-      val issue = TxHelpers.issue()
+      val issue       = TxHelpers.issue()
       val description = AssetDescription(
         TransactionId(issue.assetId),
         issue.sender,
@@ -701,7 +701,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
       val issuer        = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
       val invoker       = KeyPair(Longs.toByteArray(ThreadLocalRandom.current().nextLong()))
       val issuerAddress = issuer.toAddress
-      val dAppScript = TestCompiler(V5).compileContract(
+      val dAppScript    = TestCompiler(V5).compileContract(
         s"""
            |@Callable(i)
            |func issue() = {
@@ -831,7 +831,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
         val txTimestamp      = genesis.header.timestamp + 1
         val invalidStateHash = ByteStr.fill(DigestLength)(1)
-        val txs = Seq(
+        val txs              = Seq(
           TxHelpers.transfer(sender, recipient.toAddress, 1.dcc, timestamp = txTimestamp),
           TxHelpers.transfer(sender, recipient.toAddress, 2.dcc, timestamp = txTimestamp + 1)
         )
@@ -856,7 +856,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
         val daoAddress        = d.settings.blockchainSettings.functionalitySettings.daoAddressParsed.toOption.flatten
         val xtnBuybackAddress = d.settings.blockchainSettings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
-        val blockRewards = BlockRewardCalculator.getBlockRewardShares(
+        val blockRewards      = BlockRewardCalculator.getBlockRewardShares(
           Height(2),
           d.settings.blockchainSettings.rewardsSettings.initial,
           daoAddress,
@@ -1211,7 +1211,7 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
     val daoAddress        = TxHelpers.address(3)
     val xtnBuybackAddress = TxHelpers.address(4)
 
-    val settings = DomainPresets.ConsensusImprovements
+    val settings             = DomainPresets.ConsensusImprovements
     val settingsWithFeatures = settings
       .copy(blockchainSettings =
         settings.blockchainSettings.copy(

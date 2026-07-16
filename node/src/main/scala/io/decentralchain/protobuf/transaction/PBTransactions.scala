@@ -77,7 +77,7 @@ object PBTransactions {
     signedTx.transaction match {
       case SignedTransaction.Transaction.Empty                      => Left(GenericError("Transaction must be specified"))
       case SignedTransaction.Transaction.EthereumTransaction(value) => EthereumTransaction(value.toByteArray)
-      case SignedTransaction.Transaction.DccTransaction(parsedTx) =>
+      case SignedTransaction.Transaction.DccTransaction(parsedTx)   =>
         val (feeAsset, feeAmount) = PBAmounts.toAssetAndAmount(parsedTx.fee.getOrElse(Amount.defaultInstance))
         for {
           tx <-
@@ -97,7 +97,7 @@ object PBTransactions {
             else
               for {
                 proofs <- Proofs.create(signedTx.proofs.map(_.toByteStr))
-                tx <- createVanilla(
+                tx     <- createVanilla(
                   parsedTx.version,
                   parsedTx.chainId.toByte,
                   parsedTx.senderPublicKey,
@@ -122,7 +122,7 @@ object PBTransactions {
       data: PBTransaction.Data
   ): Either[ValidationError, VanillaTransaction] = {
 
-    val signature = proofs.toSignature
+    val signature                                           = proofs.toSignature
     val result: Either[ValidationError, VanillaTransaction] = data match {
       case Data.Genesis(GenesisTransactionData(recipient, amount, `empty`)) =>
         for {
@@ -139,7 +139,7 @@ object PBTransactions {
       case Data.Transfer(TransferTransactionData(Some(recipient), Some(amount), attachment, `empty`)) =>
         for {
           address <- recipient.toAddressOrAlias(chainId)
-          tx <- vt.transfer.TransferTransaction.create(
+          tx      <- vt.transfer.TransferTransaction.create(
             version.toByte,
             sender.toPublicKey,
             address,
@@ -233,7 +233,7 @@ object PBTransactions {
         for {
           order1 <- PBOrders.vanilla(order1)
           order2 <- PBOrders.vanilla(order2)
-          tx <- vt.assets.exchange.ExchangeTransaction.create(
+          tx     <- vt.assets.exchange.ExchangeTransaction.create(
             version.toByte,
             order1,
             order2,
@@ -329,7 +329,7 @@ object PBTransactions {
       case Data.CommitToGeneration(CommitToGenerationTransactionData(generationPeriodStart, endorserPublicKey, commitmentSignature, `empty`)) =>
         for {
           sig <- BlsSignature(commitmentSignature.toByteArray)
-          tx <- CommitToGenerationTransaction.create(
+          tx  <- CommitToGenerationTransaction.create(
             version.toByte,
             sender.toPublicKey,
             BlsPublicKey(endorserPublicKey.toByteStr).explicitGet(),

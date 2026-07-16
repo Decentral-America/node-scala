@@ -57,7 +57,7 @@ class MaxCallableComplexityTest extends PropSpec with WithDomain with Transactio
       val genLargeDApp  = GenesisTransaction.create(largeDApp.toAddress, ENOUGH_AMT, ts).explicitGet()
       val genInvokeDApp = GenesisTransaction.create(invokeDApp.toAddress, ENOUGH_AMT, ts).explicitGet()
 
-      val setLargeScript = SetScriptTransaction.selfSigned(TxVersion.V2, largeDApp, Some(largeScript(V6, 100)), 0.01.dcc, ts).explicitGet()
+      val setLargeScript  = SetScriptTransaction.selfSigned(TxVersion.V2, largeDApp, Some(largeScript(V6, 100)), 0.01.dcc, ts).explicitGet()
       val setInvokeScript =
         SetScriptTransaction.selfSigned(TxVersion.V2, invokeDApp, Some(invokeScript(V5, largeDApp.toAddress)), 0.01.dcc, ts).explicitGet()
 

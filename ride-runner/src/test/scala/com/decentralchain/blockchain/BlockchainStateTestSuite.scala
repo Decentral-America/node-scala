@@ -35,7 +35,7 @@ class BlockchainStateTestSuite extends BaseTestSuite {
         }
 
         "found the same block - ignore" in {
-          val event = mkBlockAppendEvent(9)
+          val event     = mkBlockAppendEvent(9)
           val processor = new TestProcessor {
             override def hasLocalBlockAt(height: Height, id: ByteStr): Option[Boolean] = Some(true)
           }
@@ -45,7 +45,7 @@ class BlockchainStateTestSuite extends BaseTestSuite {
         }
 
         "found a difference - remove old fork data and process the event" in {
-          val event = mkBlockAppendEvent(9)
+          val event     = mkBlockAppendEvent(9)
           val processor = new TestProcessor {
             override def hasLocalBlockAt(height: Height, id: ByteStr): Option[Boolean] = Some(false)
           }

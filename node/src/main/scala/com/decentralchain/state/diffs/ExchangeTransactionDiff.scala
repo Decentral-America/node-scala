@@ -107,7 +107,7 @@ object ExchangeTransactionDiff {
       for {
         buyOrderPrice  <- orderPrice(tx.buyOrder, amountDecimals, priceDecimals)
         sellOrderPrice <- orderPrice(tx.sellOrder, amountDecimals, priceDecimals)
-        _ <- Either.cond(
+        _              <- Either.cond(
           tx.price.value <= buyOrderPrice,
           (),
           GenericError(s"exchange.price = $formatTxPrice should be <= buyOrder.price = ${formatOrderPrice(tx.buyOrder, buyOrderPrice)}")

@@ -2,7 +2,7 @@ enablePlugins(JmhPlugin)
 
 Jmh / version := "1.37"
 
-incOptions := incOptions.value.withEnabled(false)
+incOptions       := incOptions.value.withEnabled(false)
 exportPipelining := false
 
 Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.Flat

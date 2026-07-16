@@ -4,7 +4,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions}
 
 object SystemInformationReporter extends ScorexLogging {
   def report(config: Config): Unit = {
-    val resolved = config.resolve()
+    val resolved      = config.resolve()
     val configForLogs = {
       val orig = Seq(
         "dcc",

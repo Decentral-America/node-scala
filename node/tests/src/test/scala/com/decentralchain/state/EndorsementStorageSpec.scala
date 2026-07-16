@@ -31,7 +31,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
 
   private def mkGenerator(i: Int, initBalance: Long): TestGenerator = {
     val dccKp = TxHelpers.signer(i)
-    val blsKp   = BlsKeyPair(dccKp.privateKey)
+    val blsKp = BlsKeyPair(dccKp.privateKey)
     (dccKp.toAddress, blsKp, initBalance)
   }
 
@@ -329,7 +329,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
           }
           withClue("signature and valid endorsements: ") {
             v.aggregatedEndorsement match {
-              case None => if (valid.nonEmpty) fail(s"Signature can't be empty if endorsers nonempty: [${valid.mkString(", ")}]")
+              case None         => if (valid.nonEmpty) fail(s"Signature can't be empty if endorsers nonempty: [${valid.mkString(", ")}]")
               case Some(aggEnd) =>
                 if (valid.isEmpty) fail(s"Signature must be empty if endorsers empty: $aggEnd, [${valid.mkString(", ")}]")
                 else

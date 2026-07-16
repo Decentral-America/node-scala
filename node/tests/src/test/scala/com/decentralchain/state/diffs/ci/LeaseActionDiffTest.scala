@@ -178,11 +178,11 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
     val dAppAcc = TxHelpers.signer(1)
     val invoker = TxHelpers.signer(2)
 
-    val invokerAlias   = Alias.create("invoker_alias").explicitGet()
-    val dAppAlias      = Alias.create("dapp_alias").explicitGet()
-    val fee            = TxHelpers.ciFee(1)
-    val leaseTxAmount1 = 5.dcc
-    val leaseTxAmount2 = 10.dcc
+    val invokerAlias       = Alias.create("invoker_alias").explicitGet()
+    val dAppAlias          = Alias.create("dapp_alias").explicitGet()
+    val fee                = TxHelpers.ciFee(1)
+    val leaseTxAmount1     = 5.dcc
+    val leaseTxAmount2     = 10.dcc
     val generatedRecipient =
       if (selfLease)
         if (useAlias)
@@ -203,7 +203,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
     val invoke        = TxHelpers.invoke(dAppAcc.toAddress, func = None, invoker = invoker, fee = fee, version = TxVersion.V1)
     val invokeAliasTx = TxHelpers.createAlias(invokerAlias.name, invoker, fee)
     val dAppAliasTx   = TxHelpers.createAlias(dAppAlias.name, dAppAcc, fee)
-    val aliasTxs =
+    val aliasTxs      =
       if (useAlias)
         if (selfLease)
           Seq(invokeAliasTx, dAppAliasTx)
@@ -213,7 +213,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
         Seq.empty[CreateAliasTransaction]
 
     val leasesFromDApp = (1 to leaseCancelCount).toList.map(_ => TxHelpers.lease(dAppAcc, invoker.toAddress, leaseTxAmount1, fee))
-    val setScript = TxHelpers.setScript(
+    val setScript      = TxHelpers.setScript(
       acc = dAppAcc,
       script = if (useLeaseCancelDApp) {
         multipleLeaseCancelsDApp(leasesFromDApp.map(_.id()), version)
@@ -224,7 +224,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
     )
     val preparingTxs = genesis ++ aliasTxs ++ Seq(setScript)
 
-    val leaseToDApp = TxHelpers.lease(invoker, dAppAcc.toAddress, leaseTxAmount2, fee)
+    val leaseToDApp   = TxHelpers.lease(invoker, dAppAcc.toAddress, leaseTxAmount2, fee)
     val leaseCancelId =
       if (cancelLeaseActionByTx)
         Lease.calculateId(Lease(recipient, leaseAmount, 0), invoke.id())
@@ -399,7 +399,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       case (preparingTxs, invoke, leaseAmount, dAppAcc, invoker, leaseTxFromDApp :: leaseTxToDApp :: Nil, leaseTxFromDAppCancel) =>
         withDomain(domainSettingsWithFS(v5Features)) { d =>
           val invokerSpentFee = (preparingTxs :+ leaseTxToDApp).collect(extractFee(invoker)).sum
-          val dAppSpentFee =
+          val dAppSpentFee    =
             (preparingTxs ++ Seq(leaseTxFromDApp, leaseTxFromDAppCancel)).collect(extractFee(dAppAcc)).sum
 
           d.appendBlock(preparingTxs*)
@@ -666,7 +666,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
     property(s"$limit Lease actions for V${version.id}") {
       val recipient = TxHelpers.signer(3).toAddress
       val amount    = 100
-      val dApp = multipleActionsDApp(
+      val dApp      = multipleActionsDApp(
         recipient.toRide,
         amount,
         leaseCount = limit,
@@ -690,7 +690,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
     property(s"${limit + 1} Lease actions for V${version.id}") {
       val recipient = TxHelpers.signer(3).toAddress
       val amount    = 100
-      val dApp = multipleActionsDApp(
+      val dApp      = multipleActionsDApp(
         recipient.toRide,
         amount,
         leaseCount = limit + 1,
@@ -757,8 +757,8 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
   }
 
   property(s"LeaseCancel action between two Lease actions with different nonces") {
-    val recipient = TxHelpers.signer(3).toAddress
-    val amount    = 100
+    val recipient                                         = TxHelpers.signer(3).toAddress
+    val amount                                            = 100
     val (preparingTxs, invoke, _, dAppAcc, invoker, _, _) =
       leasePreconditions(customDApp = Some(differentLeaseAfterLeaseCancelDApp(recipient.toRide, amount)))
     assertDiffAndState(
@@ -892,7 +892,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       val leaseCount       = ThreadLocalRandom.current().nextInt(actionsCount) + 1
       val leaseCancelCount = ThreadLocalRandom.current().nextInt(leaseCount).min(actionsCount - leaseCount)
       val transfersCount   = actionsCount - leaseCancelCount - leaseCount
-      val dApp = multipleActionsDApp(
+      val dApp             = multipleActionsDApp(
         recipient.toRide,
         amount,
         leaseCount,
@@ -922,7 +922,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       val leaseCount        = ThreadLocalRandom.current().nextInt(totalActionsCount) + 1
       val leaseCancelCount  = ThreadLocalRandom.current().nextInt(leaseCount).min(totalActionsCount - leaseCount)
       val transfersCount    = totalActionsCount - leaseCancelCount - leaseCount
-      val dApp = multipleActionsDApp(
+      val dApp              = multipleActionsDApp(
         recipient.toRide,
         amount,
         leaseCount,
@@ -1010,7 +1010,7 @@ class LeaseActionDiffTest extends PropSpec with WithDomain {
       Seq(AddrWithBalance(secondAddress, 1.006.dcc))
     ) { d =>
       val leaseTx = lease(secondSigner, defaultAddress, amount = 1)
-      val dApp = TestCompiler(V5).compileContract(
+      val dApp    = TestCompiler(V5).compileContract(
         s"""
            | @Callable(i)
            | func default() =

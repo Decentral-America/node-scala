@@ -70,7 +70,7 @@ object SerdeV2 extends Serde[CodedInputStream, CodedOutputStream] {
       case E_BYTES  => Coeval.now(CONST_BYTESTR(ByteStr(in.readByteArray())).explicitGet())
       case E_STRING => Coeval.now(CONST_STRING(in.readString()).explicitGet())
       case E_IF     => (desAuxR(in, allowObjects, acc), desAuxR(in, allowObjects, acc), desAuxR(in, allowObjects, acc)).mapN(IF.apply)
-      case E_BLOCK =>
+      case E_BLOCK  =>
         for {
           name     <- Coeval.now(in.readString())
           letValue <- desAuxR(in, allowObjects, acc)
@@ -85,10 +85,10 @@ object SerdeV2 extends Serde[CodedInputStream, CodedOutputStream] {
           dec     <- deserializeDeclaration(in, desAuxR(in, allowObjects, acc), decType)
           body    <- desAuxR(in, allowObjects, acc)
         } yield BLOCK(dec, body)
-      case E_REF    => Coeval.now(REF(in.readString()))
-      case E_TRUE   => Coeval.now(TRUE)
-      case E_FALSE  => Coeval.now(FALSE)
-      case E_GETTER => desAuxR(in, allowObjects, acc).map(GETTER(_, field = in.readString()))
+      case E_REF     => Coeval.now(REF(in.readString()))
+      case E_TRUE    => Coeval.now(TRUE)
+      case E_FALSE   => Coeval.now(FALSE)
+      case E_GETTER  => desAuxR(in, allowObjects, acc).map(GETTER(_, field = in.readString()))
       case E_FUNCALL =>
         Coeval
           .now((in.getFunctionHeader, in.readRawByte()))
@@ -111,7 +111,7 @@ object SerdeV2 extends Serde[CodedInputStream, CodedOutputStream] {
       case E_CASE_OBJ if allowObjects =>
         for {
           (typeName, fieldsNumber) <- Coeval((in.readString(), in.readRawByte()))
-          fields <- (1 to fieldsNumber)
+          fields                   <- (1 to fieldsNumber)
             .to(LazyList)
             .traverse { _ =>
               for {
@@ -124,7 +124,7 @@ object SerdeV2 extends Serde[CodedInputStream, CodedOutputStream] {
   }
 
   def deserialize(bytes: Array[Byte], all: Boolean = true, allowObjects: Boolean = false): Either[String, (EXPR, Int)] = {
-    val in = CodedInputStream.newInstance(bytes)
+    val in  = CodedInputStream.newInstance(bytes)
     val res = Try(desAux(in, allowObjects).value()).toEither.left
       .map(_.getMessage)
     (if (all)

@@ -19,7 +19,8 @@ class IssueTransactionV1Specification extends PropSpec {
   }
 
   property("IssueV1 binary parse roundtrip") {
-    val tx = TxHelpers.issue(name = "Gigacoin", description = "Gigacoin", amount = 10000000000L, decimals = 8, reissuable = true, version = TxVersion.V1)
+    val tx =
+      TxHelpers.issue(name = "Gigacoin", description = "Gigacoin", amount = 10000000000L, decimals = 8, reissuable = true, version = TxVersion.V1)
     val parsed = IssueTxSerializer.parseBytes(tx.bytes()).get
     parsed.json() shouldBe tx.json()
     assert(crypto.verify(tx.signature, tx.bodyBytes(), tx.sender), "signature should be valid")

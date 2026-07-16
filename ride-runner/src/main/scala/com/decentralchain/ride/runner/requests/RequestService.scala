@@ -47,8 +47,8 @@ class DefaultRequestService(
 
   private val ignoredRequests = ConcurrentHashMap.newKeySet[RideScriptRunRequest]()
 
-  private def ignore(request: RideScriptRunRequest): Unit       = ignoredRequests.add(request)
-  private def isIgnored(request: RideScriptRunRequest): Boolean = ignoredRequests.contains(request)
+  private def ignore(request: RideScriptRunRequest): Unit               = ignoredRequests.add(request)
+  private def isIgnored(request: RideScriptRunRequest): Boolean         = ignoredRequests.contains(request)
   private def removeFromIgnored(request: RideScriptRunRequest): Boolean = {
     val r = isIgnored(request)
     ignoredRequests.remove(request)
@@ -163,12 +163,12 @@ class DefaultRequestService(
       RideRunnerStats.rideRequestCacheMisses.increment()
       Option(currJobs.get(request)) match {
         case Some(job) => Task.fromCancelablePromise(job.result)
-        case None =>
+        case None      =>
           Task {
             blockchain.accountScript(request.address)
           }.flatMap {
             case None => Task.now(fail(CustomValidationError(s"Address ${request.address} is not dApp")))
-            case _ =>
+            case _    =>
               if (removeFromIgnored(request)) {
                 RideRunnerStats.rideRequestTrackReAdded.increment()
                 log.info(s"Re-added ${request.shortLogPrefix}")

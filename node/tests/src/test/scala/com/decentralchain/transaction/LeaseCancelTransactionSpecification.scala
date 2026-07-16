@@ -20,8 +20,8 @@ class LeaseCancelTransactionSpecification extends PropSpec {
 
   property("Lease cancel binary parse roundtrip") {
     val leaseId = ByteStr(Array.fill(32)(2: Byte))
-    val tx = TxHelpers.leaseCancel(leaseId, version = TxVersion.V2)
-    val parsed = LeaseCancelTxSerializer.parseBytes(tx.bytes()).get
+    val tx      = TxHelpers.leaseCancel(leaseId, version = TxVersion.V2)
+    val parsed  = LeaseCancelTxSerializer.parseBytes(tx.bytes()).get
     parsed.json() shouldBe tx.json()
   }
 

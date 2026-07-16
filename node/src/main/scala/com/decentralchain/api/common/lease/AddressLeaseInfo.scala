@@ -39,7 +39,7 @@ object AddressLeaseInfo {
 
   private def leasesFromDb(rdb: RDB, subject: Address): Observable[LeaseInfo] =
     for {
-      dbResource <- rdb.db.resourceObservable(rdb.apiHandle.handle)
+      dbResource         <- rdb.db.resourceObservable(rdb.apiHandle.handle)
       (leaseId, details) <- dbResource
         .get(Keys.addressId(subject))
         .map(fromLeaseDbIterator(dbResource, rdb.apiHandle, _))

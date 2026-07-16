@@ -14,7 +14,7 @@ import com.decentralchain.test.*
 
 class VarsDocTest extends PropSpec {
   def buildFullContext(ds: DirectiveSet): CTX[Environment] = {
-    val dccCtx  = DccContext.build(Global, ds, fixBigScriptField = true)
+    val dccCtx    = DccContext.build(Global, ds, fixBigScriptField = true)
     val cryptoCtx = CryptoContext.build(Global, ds.stdLibVersion, fixEcrecover = true).withEnvironment[Environment]
     val pureCtx   = PureContext.build(ds.stdLibVersion, useNewPowPrecision = true).withEnvironment[Environment]
     pureCtx |+| cryptoCtx |+| dccCtx

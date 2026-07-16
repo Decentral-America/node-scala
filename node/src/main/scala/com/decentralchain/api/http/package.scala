@@ -43,8 +43,8 @@ package object http {
     }
 
   val versionReads: Reads[Byte] = {
-    val defaultByteReads = implicitly[Reads[Byte]]
-    val intToByteReads   = implicitly[Reads[Int]].map(_.toByte)
+    val defaultByteReads  = implicitly[Reads[Byte]]
+    val intToByteReads    = implicitly[Reads[Int]].map(_.toByte)
     val stringToByteReads = implicitly[Reads[String]]
       .map(s => Try(s.toByte))
       .collect(JsonValidationError("Can't parse version")) { case Success(v) =>
@@ -62,7 +62,7 @@ package object http {
     val typeId = (jsv \ "type").as[Byte]
 
     (jsv \ "version").validateOpt[Byte](using versionReads) match {
-      case JsError(errors) => WrongJson(None, errors)
+      case JsError(errors)     => WrongJson(None, errors)
       case JsSuccess(value, _) =>
         val version = value.getOrElse(1: Byte)
         val txJson  = jsv ++ Json.obj("version" -> version)

@@ -91,7 +91,7 @@ object CompilationError {
       varName: Option[String]
   ) extends CompilationError {
     val message = {
-      val varStr = varName.fold("")(v => s" of variable `$v`")
+      val varStr           = varName.fold("")(v => s" of variable `$v`")
       val expectedTypesStr =
         if (expectedTypes.nonEmpty) s", expected: ${expectedTypes.mkString(", ")}"
         else ""

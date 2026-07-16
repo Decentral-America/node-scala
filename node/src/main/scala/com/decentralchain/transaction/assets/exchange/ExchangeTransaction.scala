@@ -84,7 +84,7 @@ object ExchangeTransaction extends TransactionParser {
       fee    <- TxPositiveAmount(fee)(TxValidationError.InsufficientFee)
       amount <- TxExchangeAmount(amount)(GenericError(TxExchangeAmount.errMsg))
       price  <- TxExchangePrice(price)(GenericError(TxExchangePrice.errMsg))
-      tx <- ExchangeTransaction(
+      tx     <- ExchangeTransaction(
         version,
         order1,
         order2,

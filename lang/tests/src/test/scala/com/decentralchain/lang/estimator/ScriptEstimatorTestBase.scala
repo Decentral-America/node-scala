@@ -51,7 +51,7 @@ class ScriptEstimatorTestBase(estimators: ScriptEstimator*) extends PropSpec {
       )
   }
 
-  private val env = Common.emptyBlockchainEnvironment()
+  private val env                 = Common.emptyBlockchainEnvironment()
   protected val lets: Set[String] =
     ctx.evaluationContext(env).letDefs.keySet
 

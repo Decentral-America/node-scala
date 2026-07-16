@@ -204,7 +204,7 @@ class BlockChallengerImpl(
         None
       )
       initialBlockSnapshot <- BlockDiffer.createInitialBlockSnapshot(blockchainUpdater, challengedBlock.header.reference, bestMinerAccount.toAddress)
-      stateHash <- TxStateSnapshotHashBuilder
+      stateHash            <- TxStateSnapshotHashBuilder
         .computeStateHash(
           txs,
           TxStateSnapshotHashBuilder.createHashFromSnapshot(initialBlockSnapshot, None).createHash(prevStateHash),

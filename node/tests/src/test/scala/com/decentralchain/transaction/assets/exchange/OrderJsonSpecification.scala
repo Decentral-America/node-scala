@@ -195,7 +195,7 @@ class OrderJsonSpecification extends PropSpec with JsonMatchers with EthHelpers 
     }
   }
 
-  val base58Str = "DZUxn4pC7QdYrRqacmaAJghatvnn1Kh1mkE2scZoLuGJ"
+  val base58Str     = "DZUxn4pC7QdYrRqacmaAJghatvnn1Kh1mkE2scZoLuGJ"
   val json: JsValue = Json.parse(s"""
     {
       "sender": "$base58Str",

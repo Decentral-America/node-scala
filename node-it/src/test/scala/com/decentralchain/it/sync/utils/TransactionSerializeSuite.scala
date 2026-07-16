@@ -328,7 +328,7 @@ class TransactionSerializeSuite extends BaseTransactionSuite with TableDrivenPro
     )
     .explicitGet()
 
-  private lazy val recipient = Address.fromString(sender.address).explicitGet()
+  private lazy val recipient  = Address.fromString(sender.address).explicitGet()
   private lazy val transferV1 = TransferTransaction(
     1.toByte,
     publicKey,

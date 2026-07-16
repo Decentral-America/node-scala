@@ -15,7 +15,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 class RouteTimeout(timeout: FiniteDuration)(implicit sc: Scheduler) extends ApiMarshallers with LazyLogging {
-  private val ece = fromExecutor(sc, t => logger.warn(s"Exception in RouteTimeout", t))
+  private val ece     = fromExecutor(sc, t => logger.warn(s"Exception in RouteTimeout", t))
   private val handler = ExceptionHandler { case _: TimeoutException =>
     complete(ApiError.ServerRequestTimeout)
   }

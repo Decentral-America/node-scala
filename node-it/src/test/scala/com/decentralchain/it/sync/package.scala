@@ -69,7 +69,7 @@ package object sync {
   val scriptBase64: String    = script.bytes().base64
   val scriptBase64Raw: String = script.bytes().base64Raw
 
-  val errNotAllowedByToken = "Transaction is not allowed by token-script"
+  val errNotAllowedByToken                            = "Transaction is not allowed by token-script"
   val errNotAllowedByTokenApiError: AssertiveApiError =
     AssertiveApiError(
       TransactionNotAllowedByAssetScript.Id,

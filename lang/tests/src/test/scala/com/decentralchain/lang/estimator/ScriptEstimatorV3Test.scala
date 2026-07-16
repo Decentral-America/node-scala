@@ -117,7 +117,7 @@ class ScriptEstimatorV3Test
   }
 
   property("big function call tree") {
-    val n = 750
+    val n      = 750
     val script =
       s"""
          | func f0() = 0
@@ -253,7 +253,7 @@ class ScriptEstimatorV3Test
   }
 
   property("overflow on sum of function args costs") {
-    val n = 62
+    val n      = 62
     val script =
       s"""
          | func f0() = true

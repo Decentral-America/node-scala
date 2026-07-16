@@ -191,7 +191,7 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
     }
 
     for {
-      accountScript <- verifiers
+      accountScript         <- verifiers
       additionalAssetScript <-
         if (additionalAssetScripts.exists(_.nonEmpty)) {
           additionalAssetScripts.toSeq.flatten.map(Some(_))
@@ -226,9 +226,9 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
       assetsScriptVersions: Seq[StdLibVersion] = Seq(V4)
   ): Unit = {
     for {
-      dAppVersion         <- dAppVersions
-      verifierVersion     <- verifierVersions
-      assetsScriptVersion <- assetsScriptVersions
+      dAppVersion                                          <- dAppVersions
+      verifierVersion                                      <- verifierVersions
+      assetsScriptVersion                                  <- assetsScriptVersions
       (genesis, setVerifier, setDApp, ci, issues, _, _, _) <- paymentPreconditions(
         dApp(dAppVersion, transferPaymentAmount = 1, _),
         accountVerifiers(verifierVersion),
@@ -272,7 +272,7 @@ class MultiPaymentInvokeDiffTest extends PropSpec with WithState {
 
   private def dAppVerifier(version: StdLibVersion, usePaymentsField: Boolean): Script = {
     val paymentsField = if (version >= V4) "payments" else "payment"
-    val verifierExpr =
+    val verifierExpr  =
       if (usePaymentsField)
         s"""
            | match tx {

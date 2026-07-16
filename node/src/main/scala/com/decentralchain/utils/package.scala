@@ -78,7 +78,7 @@ package object utils {
   }
 
   implicit val byteStrFormat: Format[ByteStr] = new Format[ByteStr] {
-    override def writes(o: ByteStr): JsValue = JsString(o.toString)
+    override def writes(o: ByteStr): JsValue             = JsString(o.toString)
     override def reads(json: JsValue): JsResult[ByteStr] = json match {
       case JsString(v) => byteArrayFromString(v, xs => JsSuccess(ByteStr(xs)), JsError(_))
       case _           => JsError("Expected JsString")
@@ -94,11 +94,11 @@ package object utils {
 
   implicit val evaluatedWrites: Writes[EVALUATED] = (o: EVALUATED) =>
     (o: @unchecked) match {
-      case CONST_LONG(num)    => Json.obj("type" -> "Int", "value" -> num)
-      case CONST_BIGINT(b)    => Json.obj("type" -> "BigInt", "value" -> b.toString)
-      case CONST_BYTESTR(bs)  => Json.obj("type" -> "ByteVector", "value" -> bs.toString)
-      case CONST_STRING(str)  => Json.obj("type" -> "String", "value" -> str)
-      case CONST_BOOLEAN(b)   => Json.obj("type" -> "Boolean", "value" -> b)
+      case CONST_LONG(num)           => Json.obj("type" -> "Int", "value" -> num)
+      case CONST_BIGINT(b)           => Json.obj("type" -> "BigInt", "value" -> b.toString)
+      case CONST_BYTESTR(bs)         => Json.obj("type" -> "ByteVector", "value" -> bs.toString)
+      case CONST_STRING(str)         => Json.obj("type" -> "String", "value" -> str)
+      case CONST_BOOLEAN(b)          => Json.obj("type" -> "Boolean", "value" -> b)
       case CaseObj(caseType, fields) =>
         Json.obj("type" -> caseType.name, "value" -> JsObject(fields.view.mapValues(evaluatedWrites.writes).toSeq))
       case ARR(xs)      => Json.obj("type" -> "Array", "value" -> xs.map(evaluatedWrites.writes))

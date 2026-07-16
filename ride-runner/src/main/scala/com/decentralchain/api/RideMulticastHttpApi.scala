@@ -21,7 +21,7 @@ class RideMulticastHttpApi(settings: Settings, httpBackend: SttpBackend[Identity
 
   private def evaluate(baseUri: String, address: Address, request: JsObject, trace: Boolean): AskServerResponse = {
     val start = System.nanoTime()
-    val r = basicRequest
+    val r     = basicRequest
       .post(uri"$baseUri/utils/script/evaluate/$address".withParam("trace", Some(trace.toString)))
       .body(Json.stringify(request))
       .header("Content-Type", "application/json")

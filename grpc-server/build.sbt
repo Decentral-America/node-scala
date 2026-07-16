@@ -11,11 +11,10 @@ extensionClasses ++= Seq(
 
 inConfig(Compile)(
   Seq(
-    Compile / PB.protoSources := Seq(PB.externalIncludePath.value),
-    PB.generate / includeFilter := new SimpleFileFilter(
-      (f: File) =>
-        ((** / "dcc" / "node" / "grpc" / ** / "*.proto") || (** / "dcc" / "events" / ** / "*.proto"))
-          .accept(f.toPath, FileAttributes(f.toPath).getOrElse(FileAttributes.NonExistent))
+    Compile / PB.protoSources   := Seq(PB.externalIncludePath.value),
+    PB.generate / includeFilter := new SimpleFileFilter((f: File) =>
+      ((** / "dcc" / "node" / "grpc" / ** / "*.proto") || (** / "dcc" / "events" / ** / "*.proto"))
+        .accept(f.toPath, FileAttributes(f.toPath).getOrElse(FileAttributes.NonExistent))
     ),
     PB.targets += scalapb.gen(flatPackage = true) -> sourceManaged.value
   )
@@ -25,11 +24,14 @@ inConfig(Compile)(
 publish / skip := false
 
 enablePlugins(RunApplicationSettings, ExtensionPackaging)
-Universal / maintainer := "com.decentralchain"
+Universal / maintainer     := "com.decentralchain"
 Debian / debianControlFile := {
   val generatedFile = (Debian / debianControlFile).value
-  IO.append(generatedFile, s"""Conflicts: grpc-server${network.value.packageSuffix}
-      |Replaces: grpc-server${network.value.packageSuffix}
-      |""".stripMargin)
+  IO.append(
+    generatedFile,
+    s"""Conflicts: grpc-server${network.value.packageSuffix}
+       |Replaces: grpc-server${network.value.packageSuffix}
+       |""".stripMargin
+  )
   generatedFile
 }

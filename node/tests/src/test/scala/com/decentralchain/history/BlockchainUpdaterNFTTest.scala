@@ -155,7 +155,7 @@ class BlockchainUpdaterNFTTest extends PropSpec with DomainScenarioDrivenPropert
         richAccount   <- accountGen
         secondAccount <- accountGen
         blockTime = ntpNow
-        issue <- QuickTX.nftIssue(richAccount, Gen.const(blockTime))
+        issue     <- QuickTX.nftIssue(richAccount, Gen.const(blockTime))
         setScript <- {
           val scriptText =
             s"""

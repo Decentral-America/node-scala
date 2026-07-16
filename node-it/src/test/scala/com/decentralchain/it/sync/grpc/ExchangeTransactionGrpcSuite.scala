@@ -18,7 +18,7 @@ import scala.collection.immutable
 
 class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime {
 
-  val transactionV1versions: (TxVersion, TxVersion, TxVersion) = (1: Byte, 1: Byte, 1: Byte)
+  val transactionV1versions: (TxVersion, TxVersion, TxVersion)                = (1: Byte, 1: Byte, 1: Byte)
   val transactionV2versions: immutable.Seq[(TxVersion, TxVersion, TxVersion)] = for {
     o1ver <- 1 to 3
     o2ver <- 1 to 3
@@ -40,12 +40,12 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
     val priceAssetSpending = amount * price / 100000000L
     val pair               = AssetPair.createAssetPair("DCC", exchAssetId).get
     for ((o1ver, o2ver, tver) <- versions) {
-      val ts                  = ntpTime.correctedTime()
-      val expirationTimestamp = ts + Order.MaxLiveTime / 2
-      val buy                 = Order.buy(o1ver, buyer, matcher.publicKey, pair, amount, price, ts, expirationTimestamp, matcherFee).explicitGet()
-      val sell                = Order.sell(o2ver, seller, matcher.publicKey, pair, amount, price, ts, expirationTimestamp, matcherFee).explicitGet()
-      val buyerDccBalanceBefore  = sender.dccBalance(buyerAddress).available
-      val sellerDccBalanceBefore = sender.dccBalance(sellerAddress).available
+      val ts                    = ntpTime.correctedTime()
+      val expirationTimestamp   = ts + Order.MaxLiveTime / 2
+      val buy                   = Order.buy(o1ver, buyer, matcher.publicKey, pair, amount, price, ts, expirationTimestamp, matcherFee).explicitGet()
+      val sell                  = Order.sell(o2ver, seller, matcher.publicKey, pair, amount, price, ts, expirationTimestamp, matcherFee).explicitGet()
+      val buyerDccBalanceBefore = sender.dccBalance(buyerAddress).available
+      val sellerDccBalanceBefore   = sender.dccBalance(sellerAddress).available
       val buyerAssetBalanceBefore  = sender.assetsBalance(buyerAddress, Seq(exchAssetId)).getOrElse(exchAssetId, 0L)
       val sellerAssetBalanceBefore = sender.assetsBalance(sellerAddress, Seq(exchAssetId)).getOrElse(exchAssetId, 0L)
 
@@ -95,15 +95,15 @@ class ExchangeTransactionGrpcSuite extends GrpcBaseTransactionSuite with NTPTime
         )
       }
 
-      val buyerDccBalanceBefore  = sender.dccBalance(buyerAddress).available
-      val sellerDccBalanceBefore = sender.dccBalance(sellerAddress).available
+      val buyerDccBalanceBefore    = sender.dccBalance(buyerAddress).available
+      val sellerDccBalanceBefore   = sender.dccBalance(sellerAddress).available
       val buyerAssetBalanceBefore  = sender.assetsBalance(buyerAddress, Seq(feeAssetId.toString)).getOrElse(feeAssetId.toString, 0L)
       val sellerAssetBalanceBefore = sender.assetsBalance(sellerAddress, Seq(feeAssetId.toString)).getOrElse(feeAssetId.toString, 0L)
 
       val ts                  = ntpTime.correctedTime()
       val expirationTimestamp = ts + Order.MaxLiveTime / 2
       val assetPair           = AssetPair.createAssetPair("DCC", feeAssetId.toString).get
-      val buy =
+      val buy                 =
         Order.buy(o1ver, buyer, matcher.publicKey, assetPair, amount, price, ts, expirationTimestamp, matcherFee, matcherFeeOrder1).explicitGet()
       val sell =
         Order.sell(o2ver, seller, matcher.publicKey, assetPair, amount, price, ts, expirationTimestamp, matcherFee, matcherFeeOrder2).explicitGet()

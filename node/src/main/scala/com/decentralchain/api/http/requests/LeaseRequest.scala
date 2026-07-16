@@ -22,7 +22,7 @@ case class LeaseRequest(
     for {
       validRecipient <- AddressOrAlias.fromString(recipient)
       validProofs    <- toProofs(signature, proofs)
-      tx <- LeaseTransaction.create(
+      tx             <- LeaseTransaction.create(
         version.getOrElse(1.toByte),
         sender,
         validRecipient,

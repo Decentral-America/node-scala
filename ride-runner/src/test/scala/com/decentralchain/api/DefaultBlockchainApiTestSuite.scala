@@ -28,7 +28,7 @@ class DefaultBlockchainApiTestSuite extends BaseTestSuite with HasGrpc with Scor
           override def subscribe(request: SubscribeRequest, responseObserver: StreamObserver[SubscribeEvent]): Unit = {
             val subscriptionId = subscriptions.incrementAndGet()
             val currHeight     = new AtomicInteger(request.fromHeight)
-            val tasks = if (subscriptionId == 1) {
+            val tasks          = if (subscriptionId == 1) {
               Task {
                 responseObserver.onNext(mkAppend(currHeight.get()))
               }.delayExecution(1.milli) *> Task {
@@ -65,7 +65,7 @@ class DefaultBlockchainApiTestSuite extends BaseTestSuite with HasGrpc with Scor
 
           val stream        = blockchainApi.mkBlockchainUpdatesStream(testScheduler)
           val currentHeight = new AtomicInteger(0)
-          val r = stream.downstream
+          val r             = stream.downstream
             .doOnNext {
               case WrappedEvent.Next(x)                             => Task(currentHeight.set(x.getUpdate.height))
               case WrappedEvent.Closed                              => Task(stream.close())
@@ -124,12 +124,12 @@ class DefaultBlockchainApiTestSuite extends BaseTestSuite with HasGrpc with Scor
       "restart on upstream completed" in {
         implicit val testScheduler: TestScheduler = TestScheduler(ExecutionModel.AlwaysAsyncExecution)
 
-        val subscriptions = new AtomicInteger(0)
+        val subscriptions                = new AtomicInteger(0)
         val blockchainUpdatesGrpcService = new BlockchainUpdatesApiGrpc.BlockchainUpdatesApi {
           override def subscribe(request: SubscribeRequest, responseObserver: StreamObserver[SubscribeEvent]): Unit = {
             val subscriptionId = subscriptions.incrementAndGet()
             val currHeight     = new AtomicInteger(request.fromHeight)
-            val tasks = if (subscriptionId == 1) {
+            val tasks          = if (subscriptionId == 1) {
               Task {
                 responseObserver.onNext(mkAppend(currHeight.get()))
               }.delayExecution(1.milli) *> Task {
@@ -164,10 +164,10 @@ class DefaultBlockchainApiTestSuite extends BaseTestSuite with HasGrpc with Scor
 
           val stream        = blockchainApi.mkBlockchainUpdatesStream(testScheduler)
           val currentHeight = new AtomicInteger(0)
-          val r = stream.downstream
+          val r             = stream.downstream
             .doOnNext {
               case WrappedEvent.Next(x) => Task(currentHeight.set(x.getUpdate.height))
-              case WrappedEvent.Closed =>
+              case WrappedEvent.Closed  =>
                 if (subscriptions.get() == 2) Task(stream.close())
                 else {
                   Task {
@@ -257,7 +257,7 @@ class DefaultBlockchainApiTestSuite extends BaseTestSuite with HasGrpc with Scor
 
           val stream        = blockchainApi.mkBlockchainUpdatesStream(testScheduler)
           val currentHeight = new AtomicInteger(0)
-          val r = stream.downstream
+          val r             = stream.downstream
             .doOnNext {
               case WrappedEvent.Next(x)                             => Task(currentHeight.set(x.getUpdate.height))
               case WrappedEvent.Closed                              => Task(stream.close())

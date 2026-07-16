@@ -29,7 +29,7 @@ class ScriptComplexityMiningConstraintSuite extends FlatSpec {
         override lazy val settings: BlockchainSettings                          = defaultSettings.blockchainSettings
         override def height: Int                                                = 1
         override def activatedFeatures: Map[Short, Height]                      = Map(BlockchainFeatures.DataTransaction.id -> Height(0))
-        override def dccBalances(addresses: Seq[Address]): Map[Address, Long] = Map(acc1.toAddress -> 10000000, acc2.toAddress -> 10000000)
+        override def dccBalances(addresses: Seq[Address]): Map[Address, Long]   = Map(acc1.toAddress -> 10000000, acc2.toAddress -> 10000000)
         override def balance(address: Address, mayBeAssetId: Asset): Long       = 10000000
         override def accountScript(address: Address): Option[AccountScriptInfo] =
           if (address == tx1.sender.toAddress) Some(AccountScriptInfo(acc1.publicKey, script, 1000, Map.empty)) else None

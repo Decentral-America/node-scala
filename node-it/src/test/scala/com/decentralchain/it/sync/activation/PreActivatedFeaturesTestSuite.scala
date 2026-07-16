@@ -64,9 +64,9 @@ class PreActivatedFeaturesTestSuite extends BaseFreeSpec with ActivationStatusRe
 
 object PreActivatedFeaturesTestSuite {
   import com.decentralchain.it.NodeConfigs.*
-  val votingInterval    = 10
-  val featureNum: Short = BlockchainFeatures.SmallerMinimalGeneratingBalance.id
-  val featureDescr      = BlockchainFeatures.SmallerMinimalGeneratingBalance.description
+  val votingInterval          = 10
+  val featureNum: Short       = BlockchainFeatures.SmallerMinimalGeneratingBalance.id
+  val featureDescr            = BlockchainFeatures.SmallerMinimalGeneratingBalance.description
   private val supportedConfig = ConfigFactory.parseString(s"""dcc {
                                                              |  blockchain.custom.functionality {
                                                              |    pre-activated-features = {}

@@ -20,13 +20,13 @@ import java.nio.file.Files
 trait BaseState {
   import BaseState.*
 
-  val benchSettings: Settings = Settings.fromConfig(ConfigFactory.load())
+  val benchSettings: Settings  = Settings.fromConfig(ConfigFactory.load())
   val dccSettings: DCCSettings = {
     val config = loadConfig(ConfigFactory.parseFile(new File(benchSettings.networkConfigFile)))
     DCCSettings.fromRootConfig(config)
   }
   private val fsSettings: FunctionalitySettings = updateFunctionalitySettings(FunctionalitySettings.TESTNET)
-  private val rdb: RDB = {
+  private val rdb: RDB                          = {
     val dir = Files.createTempDirectory("state-synthetic").toAbsolutePath.toString
     RDB.open(dccSettings.dbSettings.copy(directory = dir))
   }
@@ -39,7 +39,7 @@ trait BaseState {
   private var _lastBlock: Block = scala.compiletime.uninitialized
   def lastBlock: Block          = _lastBlock
 
-  protected def dcc(n: Float): Long = (n * 100000000L).toLong
+  protected def dcc(n: Float): Long      = (n * 100000000L).toLong
   protected val accountGen: Gen[KeyPair] =
     Gen.containerOfN[Array, Byte](32, Arbitrary.arbitrary[Byte]).map(seed => KeyPair(seed))
 

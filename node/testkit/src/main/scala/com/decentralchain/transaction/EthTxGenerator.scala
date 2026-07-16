@@ -121,7 +121,7 @@ object EthTxGenerator {
       val tuples = payments.toVector.map { p =>
         val assetId = p.assetId match {
           case Asset.IssuedAsset(id) => id
-          case Asset.Dcc           => EthABIConverter.DccByteRepr
+          case Asset.Dcc             => EthABIConverter.DccByteRepr
         }
         Arg.Struct(Arg.Bytes(assetId, "bytes32"), Arg.Integer(p.amount))
       }
@@ -131,7 +131,7 @@ object EthTxGenerator {
     val fullArgs = args :+ paymentsArg
 
     val argsAsEth = fullArgs.map(toEthType)
-    val function = new org.web3j.abi.datatypes.Function(
+    val function  = new org.web3j.abi.datatypes.Function(
       funcName,
       argsAsEth.asJava,
       Nil.asJava

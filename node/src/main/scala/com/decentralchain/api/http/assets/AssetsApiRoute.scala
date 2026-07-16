@@ -113,7 +113,7 @@ case class AssetsApiRoute(
       case (Nil, assetIds) =>
         assetIds.map(id => assetDetails(IssuedAsset(id), full)).separate match {
           case (Nil, details) => details
-          case (errors, _) =>
+          case (errors, _)    =>
             val notFoundErrors = errors.collect { case AssetDoesNotExist(assetId) => assetId }
             if (notFoundErrors.isEmpty) {
               errors.head
@@ -206,7 +206,7 @@ case class AssetsApiRoute(
             Json.obj(
               "hasNext"  -> (l.length == limit),
               "lastItem" -> l.lastOption.map(_._1),
-              "items" -> Json.toJson(l.map { case (a, b) =>
+              "items"    -> Json.toJson(l.map { case (a, b) =>
                 a.toString -> accept.fold[JsValue](JsNumber(b)) {
                   case a if a.mediaRanges.exists(CustomJson.acceptsNumbersAsStrings) => JsString(b.toString)
                   case _                                                             => JsNumber(b)
@@ -273,7 +273,7 @@ object AssetsApiRoute {
     for {
       limit  <- validateLimit(limitParam, maxLimit)
       height <- validateHeight(blockchain, heightParam, maxDistributionDepth)
-      after <- afterParam
+      after  <- afterParam
         .fold[Either[ValidationError, Option[Address]]](Right(None))(addrString => Address.fromString(addrString).map(Some(_)))
     } yield (height, limit, after)
   }
@@ -382,17 +382,17 @@ object AssetsApiRoute {
       desc   = description.description.toStringUtf8
     } yield JsObject(
       Seq(
-        "assetId"         -> JsString(id.id.toString),
-        "issueHeight"     -> JsNumber(description.issueHeight.toInt),
-        "issueTimestamp"  -> JsNumber(timestamp),
-        "issuer"          -> JsString(description.issuer.toAddress.toString),
-        "issuerPublicKey" -> JsString(description.issuer.toString),
-        "name"            -> JsString(name),
-        "description"     -> JsString(desc),
-        "decimals"        -> JsNumber(description.decimals),
-        "reissuable"      -> JsBoolean(description.reissuable),
-        "quantity"        -> JsNumber(BigDecimal(description.totalVolume)),
-        "scripted"        -> JsBoolean(description.script.nonEmpty),
+        "assetId"              -> JsString(id.id.toString),
+        "issueHeight"          -> JsNumber(description.issueHeight.toInt),
+        "issueTimestamp"       -> JsNumber(timestamp),
+        "issuer"               -> JsString(description.issuer.toAddress.toString),
+        "issuerPublicKey"      -> JsString(description.issuer.toString),
+        "name"                 -> JsString(name),
+        "description"          -> JsString(desc),
+        "decimals"             -> JsNumber(description.decimals),
+        "reissuable"           -> JsBoolean(description.reissuable),
+        "quantity"             -> JsNumber(BigDecimal(description.totalVolume)),
+        "scripted"             -> JsBoolean(description.script.nonEmpty),
         "minSponsoredAssetFee" -> (description.sponsorship match {
           case 0           => JsNull
           case sponsorship => JsNumber(sponsorship)

@@ -25,7 +25,7 @@ case class TransferRequest(
     for {
       validRecipient <- AddressOrAlias.fromString(recipient)
       validProofs    <- toProofs(signature, proofs)
-      tx <- TransferTransaction.create(
+      tx             <- TransferTransaction.create(
         version.getOrElse(1.toByte),
         sender,
         validRecipient,

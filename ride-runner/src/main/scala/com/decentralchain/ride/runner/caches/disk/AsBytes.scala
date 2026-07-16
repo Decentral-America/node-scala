@@ -23,7 +23,7 @@ trait AsBytes[T] {
 }
 
 object AsBytes {
-  def apply[T](implicit r: AsBytes[T]): AsBytes[T] = r
+  def apply[T](implicit r: AsBytes[T]): AsBytes[T]                        = r
   def mk[T](w: (OutputStream, T) => Unit, r: ByteBuffer => T): AsBytes[T] = new AsBytes[T] {
     override def write(output: OutputStream, x: T): Unit = w(output, x)
     override def read(from: ByteBuffer): T               = r(from)

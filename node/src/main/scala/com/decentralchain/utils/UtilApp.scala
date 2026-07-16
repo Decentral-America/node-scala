@@ -64,7 +64,7 @@ object UtilApp {
   def main(args: Array[String]): Unit = {
     OParser.parse(commandParser, args, Command()).foreach { cmd =>
       val inBytes = IO.readInput(cmd)
-      val result = cmd.mode match {
+      val result  = cmd.mode match {
         case Mode.CompileScript   => Actions.doCompile(Application.loadApplicationConfig(cmd.configFile.map(new File(_))))(cmd, inBytes)
         case Mode.DecompileScript => Actions.doDecompile(inBytes)
         case Mode.SignBytes       => Actions.doSign(cmd, inBytes)
@@ -314,7 +314,7 @@ object UtilApp {
       } yield currentPeriod
 
       val signedTx = for {
-        tpe <- (unsignedTx \ "type").validate[Int].asEither.left.map { _ => s"Can't parse as transaction request: $unsignedTx" }
+        tpe           <- (unsignedTx \ "type").validate[Int].asEither.left.map { _ => s"Can't parse as transaction request: $unsignedTx" }
         currentPeriod <-
           if (tpe == TransactionType.CommitToGeneration.id)
             currentPeriod.toRight("Finality activation height is required for signing CommitToGeneration transaction")

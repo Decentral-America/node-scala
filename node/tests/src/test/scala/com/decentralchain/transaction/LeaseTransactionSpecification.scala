@@ -19,7 +19,7 @@ class LeaseTransactionSpecification extends PropSpec {
   }
 
   property("Lease binary parse roundtrip") {
-    val tx = TxHelpers.lease(version = TxVersion.V2)
+    val tx     = TxHelpers.lease(version = TxVersion.V2)
     val parsed = LeaseTxSerializer.parseBytes(tx.bytes()).get
     parsed.json() shouldBe tx.json()
   }

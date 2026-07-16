@@ -80,7 +80,7 @@ class MicroblocksFeeTestSuite extends BaseFreeSpec {
   }
 
   private val microblockActivationHeight = Height(10)
-  private val minerConfig = ConfigFactory.parseString(
+  private val minerConfig                = ConfigFactory.parseString(
     s"""dcc {
        |  blockchain.custom.functionality.pre-activated-features.2 = $microblockActivationHeight
        |  miner.quorum = 3

@@ -14,10 +14,10 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 
 class StateHashSpec extends FreeSpec {
   "state hash" - {
-    val stateHash = new StateHashBuilder
-    val address   = Address.fromString("3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB").explicitGet()
-    val address1  = Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet()
-    val assetId   = IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get)
+    val stateHash  = new StateHashBuilder
+    val address    = Address.fromString("3DckX66a9NEzR2cGuwHQ4ShAuF2ZSXUdGxB").explicitGet()
+    val address1   = Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet()
+    val assetId    = IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get)
     val testScript = ScriptCompiler
       .compile(
         """
@@ -30,9 +30,9 @@ class StateHashSpec extends FreeSpec {
       )
       .explicitGet()
       ._1
-    val dataEntry    = StringDataEntry("test", "test")
+    val dataEntry  = StringDataEntry("test", "test")
     val dccAccount = TxHelpers.defaultSigner
-    val blsAccount   = BlsKeyPair(dccAccount.privateKey)
+    val blsAccount = BlsKeyPair(dccAccount.privateKey)
 
     stateHash.addLeaseBalance(address, 10000L, 10000L)
     stateHash.addAccountScript(address, Some(testScript))

@@ -168,10 +168,10 @@ object InvokeScriptTransactionDiff {
         process = (actions: List[CallableAction], unusedComplexity: Long) => {
           val storingComplexity = limit - unusedComplexity
 
-          val dataEntries  = actions.collect { case d: DataOp => InvokeDiffsCommon.dataItemToEntry(d) }
-          val dataCount    = dataEntries.length
-          val dataSize     = DataTxValidator.invokeWriteSetSize(blockchain, dataEntries)
-          val actionsCount = actions.length - dataCount
+          val dataEntries         = actions.collect { case d: DataOp => InvokeDiffsCommon.dataItemToEntry(d) }
+          val dataCount           = dataEntries.length
+          val dataSize            = DataTxValidator.invokeWriteSetSize(blockchain, dataEntries)
+          val actionsCount        = actions.length - dataCount
           val balanceActionsCount = actions.collect {
             case tr: AssetTransfer => tr
             case l: Lease          => l
@@ -215,7 +215,7 @@ object InvokeScriptTransactionDiff {
       case Right((dAppAddress, (pk, version, funcCall, contract, _))) =>
         val invocationTracker = DAppEnvironment.InvocationTreeTracker(DAppEnvironment.DAppInvocation(dAppAddress, funcCall, tx.payments))
         (for {
-          _ <- TracedResult(checkCall(funcCall, blockchain).leftMap(GenericError(_)))
+          _                          <- TracedResult(checkCall(funcCall, blockchain).leftMap(GenericError(_)))
           (directives, tthis, input) <- TracedResult(for {
             directives <- DirectiveSet(version, Account, DAppType)
             tthis = RideRecipient.Address(ByteStr(dAppAddress.bytes))
@@ -254,8 +254,8 @@ object InvokeScriptTransactionDiff {
             paymentsPart,
             invocationTracker
           )
-          invoker  = RideRecipient.Address(ByteStr(tx.sender.toAddress.bytes))
-          payments = AttachedPaymentExtractor.extractPayments(tx, version, blockchain, DAppTarget).explicitGet()
+          invoker    = RideRecipient.Address(ByteStr(tx.sender.toAddress.bytes))
+          payments   = AttachedPaymentExtractor.extractPayments(tx, version, blockchain, DAppTarget).explicitGet()
           invocation = ContractEvaluator.Invocation(
             funcCall,
             invoker,
@@ -342,7 +342,7 @@ object InvokeScriptTransactionDiff {
           InvokeRejectError(msg, log)
         case (error, unusedComplexity, log) =>
           val usedComplexity = startLimit - unusedComplexity.max(0)
-          val msg = error match {
+          val msg            = error match {
             case CommonError(_, Some(fte: FailedTransactionError)) => fte.error.getOrElse(error.message)
             case _                                                 => error.message
           }
@@ -359,7 +359,7 @@ object InvokeScriptTransactionDiff {
               InvokeRejectError(message, log)
             case error =>
               val usedComplexity = startLimit - r.unusedComplexity
-              val msg = error match {
+              val msg            = error match {
                 case fte: FailedTransactionError => fte.error.getOrElse(error.toString)
                 case _                           => error.toString
               }

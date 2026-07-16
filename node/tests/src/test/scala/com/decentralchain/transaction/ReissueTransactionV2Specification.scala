@@ -94,7 +94,7 @@ class ReissueTransactionV2Specification extends GenericTransactionSpecification[
 
   override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
     val asset = IssuedAsset(ByteStr(Array.fill(32)(4: Byte)))
-    val tx = TxHelpers.reissue(asset, version = TxVersion.V2)
+    val tx    = TxHelpers.reissue(asset, version = TxVersion.V2)
     Some(tx.bytes() -> tx.json())
   }
 }

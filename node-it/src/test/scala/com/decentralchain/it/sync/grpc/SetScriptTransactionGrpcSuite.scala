@@ -27,7 +27,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
   test("able to set script to account (multisig)") {
     for (v <- setScrTxSupportedVersions) {
       val (contract, contractAddr) = if (v < 2) (firstAcc, firstAddress) else (secondAcc, secondAddress)
-      val scriptText =
+      val scriptText               =
         s"""
         match tx {
           case _: Transaction => {
@@ -41,8 +41,8 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
         }
       """.stripMargin
 
-      val script      = ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
-      val estimatorV3 = ScriptEstimatorV3(fixOverflow = true, overhead = true, letFixes = false)
+      val script           = ScriptCompiler.compile(scriptText, ScriptEstimatorV2).explicitGet()._1
+      val estimatorV3      = ScriptEstimatorV3(fixOverflow = true, overhead = true, letFixes = false)
       val scriptComplexity = Script
         .estimate(
           Script.fromBase64String(script.bytes().base64).explicitGet(),
@@ -130,7 +130,7 @@ class SetScriptTransactionGrpcSuite extends GrpcBaseTransactionSuite {
   test("able to clear script from scripted account") {
     for (v <- setScrTxSupportedVersions) {
       val (contract, contractAddr) = if (v < 2) (firstAcc, firstAddress) else (secondAcc, secondAddress)
-      val unsignedSetScript = PBTransaction(
+      val unsignedSetScript        = PBTransaction(
         chainId = AddressScheme.current.chainId,
         senderPublicKey = ByteString.copyFrom(contract.publicKey.arr),
         fee = Some(Amount.of(ByteString.EMPTY, setScriptFee + smartFee)),

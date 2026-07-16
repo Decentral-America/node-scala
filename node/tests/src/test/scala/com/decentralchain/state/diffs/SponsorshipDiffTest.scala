@@ -51,7 +51,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property("validation fails if asset doesn't exist") {
-    val s = settings(0)
+    val s     = settings(0)
     val setup = {
       val master = TxHelpers.signer(1)
 
@@ -76,7 +76,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property("validation fails prior to feature activation") {
-    val s = settings(100)
+    val s     = settings(100)
     val setup = {
       val master = TxHelpers.signer(1)
 
@@ -97,16 +97,16 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property("not enough fee") {
-    val s = settings(0)
+    val s     = settings(0)
     val setup = {
       val master    = TxHelpers.signer(1)
       val recipient = TxHelpers.signer(2)
 
       val sponsorTxFee = (0.001 * Constants.UnitsInDcc).toLong
 
-      val genesis = TxHelpers.genesis(master.toAddress, 400000000)
-      val issue   = TxHelpers.issue(master, version = TxVersion.V1)
-      val sponsor = TxHelpers.sponsor(issue.asset, Some(400000), master, fee = sponsorTxFee)
+      val genesis        = TxHelpers.genesis(master.toAddress, 400000000)
+      val issue          = TxHelpers.issue(master, version = TxVersion.V1)
+      val sponsor        = TxHelpers.sponsor(issue.asset, Some(400000), master, fee = sponsorTxFee)
       val assetOverspend =
         TxHelpers.transfer(master, recipient.toAddress, 1000000, feeAsset = issue.asset, fee = issue.quantity.value + 1, version = TxVersion.V1)
       val insufficientFee = TxHelpers.transfer(
@@ -118,14 +118,14 @@ class SponsorshipDiffTest extends PropSpec with WithState {
         version = TxVersion.V1
       )
 
-      val fee            = 3000 * sponsor.minSponsoredAssetFee.get.value
+      val fee          = 3000 * sponsor.minSponsoredAssetFee.get.value
       val dccOverspend = TxHelpers.transfer(master, recipient.toAddress, 1000000, feeAsset = issue.asset, fee = fee, version = TxVersion.V1)
 
       (genesis, issue, sponsor, assetOverspend, insufficientFee, dccOverspend)
     }
 
     val (genesis, issue, sponsor, assetOverspend, insufficientFee, dccOverspend) = setup
-    val setupBlocks                                                                = Seq(block(Seq(genesis, issue, sponsor)))
+    val setupBlocks                                                              = Seq(block(Seq(genesis, issue, sponsor)))
     assertDiffEi(setupBlocks, block(Seq(assetOverspend)), s) { blockDiffEi =>
       blockDiffEi should produce("unavailable funds")
     }
@@ -151,7 +151,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property("not enough dcc to pay fee after leasing") {
-    val s = settings(0)
+    val s     = settings(0)
     val setup = {
       val master = TxHelpers.signer(1)
       val alice  = TxHelpers.signer(2)
@@ -191,7 +191,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property("cannot cancel sponsorship") {
-    val s = settings(0)
+    val s     = settings(0)
     val setup = {
       val master     = TxHelpers.signer(1)
       val notSponsor = TxHelpers.signer(2)
@@ -219,7 +219,7 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property("cannot change sponsorship fee") {
-    val s = settings(0)
+    val s     = settings(0)
     val setup = {
       val master     = TxHelpers.signer(1)
       val notSponsor = TxHelpers.signer(2)
@@ -247,15 +247,15 @@ class SponsorshipDiffTest extends PropSpec with WithState {
   }
 
   property(s"sponsor has no DCC but receives them just in time before $BlockV5 activation") {
-    val s = settings(0)
+    val s     = settings(0)
     val setup = {
       val master    = TxHelpers.signer(1)
       val recipient = TxHelpers.signer(2)
 
-      val genesis           = TxHelpers.genesis(master.toAddress, 300000000)
-      val issue             = TxHelpers.issue(master, amount = 100, decimals = 2, reissuable = false, fee = 100000000, version = TxVersion.V1)
-      val sponsor           = TxHelpers.sponsor(issue.asset, Some(100), master, fee = 100000000)
-      val assetTransfer     = TxHelpers.transfer(master, recipient.toAddress, issue.quantity.value, issue.asset, fee = 100000, version = TxVersion.V1)
+      val genesis         = TxHelpers.genesis(master.toAddress, 300000000)
+      val issue           = TxHelpers.issue(master, amount = 100, decimals = 2, reissuable = false, fee = 100000000, version = TxVersion.V1)
+      val sponsor         = TxHelpers.sponsor(issue.asset, Some(100), master, fee = 100000000)
+      val assetTransfer   = TxHelpers.transfer(master, recipient.toAddress, issue.quantity.value, issue.asset, fee = 100000, version = TxVersion.V1)
       val dccTransfer     = TxHelpers.transfer(master, recipient.toAddress, 99800000, fee = 100000, version = TxVersion.V1)
       val backDccTransfer = TxHelpers.transfer(recipient, master.toAddress, 100000, feeAsset = issue.asset, fee = 100, version = TxVersion.V1)
 

@@ -24,11 +24,11 @@ package object protobuf {
   }
 
   extension (bs: ByteString) {
-    def toByteStr: ByteStr           = ByteStr(bs.toByteArray)
-    def toTxId: TransactionId        = TransactionId(toByteStr)
-    def toIssuedAssetId: IssuedAsset = IssuedAsset(ByteStr(bs.toByteArray))
-    def toAssetId: Asset             = if (bs.isEmpty) Dcc else toIssuedAssetId
-    def toPublicKey: PublicKey       = PublicKey(bs.toByteArray)
+    def toByteStr: ByteStr                                                = ByteStr(bs.toByteArray)
+    def toTxId: TransactionId                                             = TransactionId(toByteStr)
+    def toIssuedAssetId: IssuedAsset                                      = IssuedAsset(ByteStr(bs.toByteArray))
+    def toAssetId: Asset                                                  = if (bs.isEmpty) Dcc else toIssuedAssetId
+    def toPublicKey: PublicKey                                            = PublicKey(bs.toByteArray)
     def toAddress(chainId: Byte = AddressScheme.current.chainId): Address =
       PBRecipients
         .toAddress(bs.toByteArray, chainId)

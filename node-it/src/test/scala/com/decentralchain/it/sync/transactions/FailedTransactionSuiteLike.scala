@@ -282,7 +282,7 @@ object FailedTransactionSuiteLike {
       sellMatcherFee: Long
   ): ExchangeTransaction = {
     val timestamp = System.currentTimeMillis()
-    val buy = Order
+    val buy       = Order
       .buy(
         Order.V4,
         buyer,

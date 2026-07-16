@@ -59,8 +59,8 @@ class AmountAsStringSuite extends BaseTransactionSuite with OverflowBlock {
     transferTxInfo.amount shouldBe Some(transferAmount)
     transferTxInfo.fee shouldBe minFee
 
-    val amount = 1000000
-    val price  = 1000
+    val amount                                                        = 1000000
+    val price                                                         = 1000
     def checkExchangeTx(exchangeTx: Transaction): scalatest.Assertion = {
       exchangeTx.amount shouldBe Some(amount)
       exchangeTx.price shouldBe Some(price)
@@ -73,7 +73,7 @@ class AmountAsStringSuite extends BaseTransactionSuite with OverflowBlock {
     val exchAssetId = sender
       .broadcastIssue(exchanger, "exchange asset", "", someAssetAmount, 8, fee = issueFee, reissuable = true, script = None, waitForTx = true)
       .id
-    val ts = System.currentTimeMillis()
+    val ts       = System.currentTimeMillis()
     val buyOrder = Order
       .buy(
         version = TxVersion.V2,

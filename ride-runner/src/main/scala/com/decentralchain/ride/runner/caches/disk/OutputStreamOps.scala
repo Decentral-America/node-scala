@@ -15,7 +15,7 @@ final class OutputStreamOps(private val self: OutputStream) extends AnyVal {
     case None     => writeBool(false)
   }
 
-  def writeWithIntLen(xs: Array[Byte]): OutputStream = writeInt(xs.length).tap(_.write(xs))
+  def writeWithIntLen(xs: Array[Byte]): OutputStream   = writeInt(xs.length).tap(_.write(xs))
   def writeWithShortLen(xs: Array[Byte]): OutputStream = {
     require(xs.length.isValidShort, s"Length of array ${xs.length} should be a valid short")
     writeShort(xs.length.toShort).tap(_.write(xs))

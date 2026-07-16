@@ -32,7 +32,7 @@ class AddressTest extends PropSpec {
     DirectiveDictionary[StdLibVersion].all.foreach { version =>
       val extractFunction = if (version >= V4) "value" else "extract"
       val address         = Address.fromPublicKey(account.publicKey, predef.chainId)
-      val script =
+      val script          =
         s"""
            | let addressString = "$address"
            | let maybeAddress = addressFromString(addressString)
@@ -49,7 +49,7 @@ class AddressTest extends PropSpec {
     DirectiveDictionary[StdLibVersion].all.foreach { version =>
       val extractFunction = if (version >= V4) "value" else "extract"
       val address         = Address.fromPublicKey(account.publicKey, predef.chainId)
-      val script =
+      val script          =
         s"""
            | let addressString = "$address"
            | let maybeAddress = addressFromString(addressString)

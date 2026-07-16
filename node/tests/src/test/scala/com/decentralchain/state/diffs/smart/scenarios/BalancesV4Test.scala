@@ -112,7 +112,7 @@ class BalancesV4Test extends PropSpec with WithState {
   }
 
   property("Asset balance change while processing script result") {
-    val a = 10000000000L
+    val a                                 = 10000000000L
     def assetScript(acc: ByteStr): Script = {
       val ctx = {
         val directives = DirectiveSet(V4, AssetType, Expression).explicitGet()
@@ -174,7 +174,7 @@ class BalancesV4Test extends PropSpec with WithState {
   }
 
   property("Dcc balance change while processing script result") {
-    val w = ENOUGH_AMT - SetScriptFee - SetAssetScriptFee
+    val w                                 = ENOUGH_AMT - SetScriptFee - SetAssetScriptFee
     def assetScript(acc: ByteStr): Script = {
       val ctx = {
         val directives = DirectiveSet(V4, AssetType, Expression).explicitGet()

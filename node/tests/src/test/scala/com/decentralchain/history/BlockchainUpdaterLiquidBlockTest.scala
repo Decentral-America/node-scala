@@ -61,7 +61,7 @@ class BlockchainUpdaterLiquidBlockTest extends PropSpec with DomainScenarioDrive
         withClue("All microblocks should not be processed") {
           r match {
             case Left(e: GenericError) => e.err should include("Limit of txs was reached")
-            case x =>
+            case x                     =>
               val txNumberByMicroBlock = microBlocks.map(_.transactionData.size)
               fail(
                 s"Unexpected result: $x. keyblock txs: ${keyBlock.transactionData.length}, " +

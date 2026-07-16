@@ -132,8 +132,8 @@ class ScriptCacheTest extends FreeSpec with WithNewDBForEachTest {
   }
 
   def withBlockchain(gen: Time => Gen[(Seq[KeyPair], Seq[Block])])(f: (Seq[KeyPair], Blockchain & BlockchainUpdater) => Unit): Unit = {
-    val settings0 = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
-    val settings  = settings0.copy(featuresSettings = settings0.featuresSettings.copy(autoShutdownOnUnsupportedFeature = false))
+    val settings0     = DCCSettings.fromRootConfig(loadConfig(ConfigFactory.load()))
+    val settings      = settings0.copy(featuresSettings = settings0.featuresSettings.copy(autoShutdownOnUnsupportedFeature = false))
     val defaultWriter = TestRocksDB.withFunctionalitySettings(
       db,
       TestFunctionalitySettings.Stub
