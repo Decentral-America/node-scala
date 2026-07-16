@@ -143,14 +143,16 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       database.detailedBlacklist shouldBe empty
     }
 
-    "should NOT blacklist a configured known-peer (trusted-peer exemption), but still blacklist untrusted peers" in {
+    "should NOT blacklist a blacklist-exempt address, but still blacklist untrusted peers" in {
       // RC#2 fix: blacklistAndClose fires on transient/honest conditions (reorg / fork-tip mismatch),
-      // so a trusted committee peer must be exempt from the black-list-residence-time IP ban — else a
-      // small finality committee can be knocked below 2/3. Untrusted peers are still banned.
+      // so a trusted committee peer listed in blacklist-exempt must be exempt from the
+      // black-list-residence-time IP ban — else a small finality committee can be knocked below 2/3.
+      // blacklist-exempt is decoupled from known-peers (a node exempts a peer it does not dial).
       val config = ConfigFactory
         .parseString(s"""dcc.network {
                         |  file = null
-                        |  known-peers = ["$host1:1"]
+                        |  known-peers = []
+                        |  blacklist-exempt = ["$host1"]
                         |  peers-data-residence-time = 100s
                         |  enable-blacklisting = yes
                         |}""".stripMargin)
@@ -159,7 +161,7 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
       val database = new PeerDatabaseImpl(settings)
 
-      // host1 is a configured known-peer -> exempt, must NOT be blacklisted
+      // host1 is in blacklist-exempt -> must NOT be blacklisted
       database.blacklist(address1.getAddress, "transient fork-validation failure during reorg")
       database.detailedBlacklist.keySet should not contain address1.getAddress
 
