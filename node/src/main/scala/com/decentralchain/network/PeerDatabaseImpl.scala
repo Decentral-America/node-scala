@@ -62,12 +62,34 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   override def touch(socketAddress: InetSocketAddress): Unit = doTouch(socketAddress, System.currentTimeMillis())
 
+  // Trusted peers from `known-peers` (seeds / sentries / committee generators), resolved once at
+  // startup. These are NEVER blacklisted: `blacklistAndClose` fires on transient/honest conditions
+  // too (a peer briefly on a different fork tip, a validation failure during a normal reorg), and a
+  // black-list-residence-time IP ban of an honest generator can drop a small finality committee below
+  // its 2/3 threshold (the RC#2 loop). Resolved once (not per-call) so this never does DNS on a netty
+  // handler thread; IP changes for a known-peer therefore require a restart, which is fine for stable
+  // seeds/sentries. See infra/MAINNET-LAUNCH.md §Phase 4.
+  private lazy val knownPeerAddresses: Set[InetAddress] =
+    settings.knownPeers.flatMap { p =>
+      try resolvePeerAddress(p).map(_.getAddress)
+      catch { case NonFatal(e) => log.debug(s"Could not resolve known-peer '$p' for blacklist exemption: $e"); Nil }
+    }.toSet
+
+  def isKnownPeer(inetAddress: InetAddress): Boolean = knownPeerAddresses.contains(inetAddress)
+
   override def blacklist(inetAddress: InetAddress, reason: String): Unit =
     if (settings.enableBlacklisting) {
-      unverifiedPeers.synchronized {
-        unverifiedPeers.removeIf(_.getAddress == inetAddress)
-        blacklist.put(inetAddress, ticker.read())
-        reasons.put(inetAddress, reason)
+      if (isKnownPeer(inetAddress)) {
+        // Exempt: drop from unverified + close happens at the call site, but do NOT ban the trusted
+        // peer. It may reconnect immediately (the brief suspend-on-close still applies).
+        unverifiedPeers.synchronized(unverifiedPeers.removeIf(_.getAddress == inetAddress))
+        log.debug(s"Not blacklisting known-peer $inetAddress ($reason) — trusted, exempt from blacklist")
+      } else {
+        unverifiedPeers.synchronized {
+          unverifiedPeers.removeIf(_.getAddress == inetAddress)
+          blacklist.put(inetAddress, ticker.read())
+          reasons.put(inetAddress, reason)
+        }
       }
     }
 
