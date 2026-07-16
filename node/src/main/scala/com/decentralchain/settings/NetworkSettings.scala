@@ -16,6 +16,11 @@ case class NetworkSettings(
     nodeName: Option[String],
     nonce: Option[Long],
     knownPeers: Seq[String],
+    // IPs (or hostnames) that are NEVER blacklisted even when enable-blacklisting=yes. Decoupled
+    // from known-peers on purpose: the main node keeps known-peers=[] + peers-exchange=no to avoid a
+    // handshake-collision loop, yet must still exempt the committee (e.g. the shared LKE egress IP)
+    // from a transient-validation IP ban that would knock it below 2/3 finality. Default empty.
+    blacklistExempt: Seq[String] = Nil,
     peersDataResidenceTime: FiniteDuration,
     blackListResidenceTime: FiniteDuration,
     breakIdleConnectionsTimeout: FiniteDuration,
