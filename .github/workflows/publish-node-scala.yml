@@ -57,6 +57,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+          fetch-depth: 0   # full history + tags so `git describe --tags --match 'v*'` resolves the version (else it falls back to v0.0.0)
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: Decentral-America/DecentralChain
