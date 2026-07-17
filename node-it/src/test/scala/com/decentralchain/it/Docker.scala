@@ -334,6 +334,21 @@ class Docker(
         throw e
     }
 
+  private def dumpContainerLogs(containerId: String): Unit =
+    try {
+      val sb = new StringBuilder
+      client
+        .logContainerCmd(containerId)
+        .withStdOut(true)
+        .withStdErr(true)
+        .withTail(200)
+        .exec(new com.github.dockerjava.api.async.ResultCallback.Adapter[Frame]() {
+          override def onNext(f: Frame): Unit = sb.append(new String(f.getPayload)).append('\n')
+        })
+        .awaitCompletion()
+      log.error(s"=== container $containerId logs (tail 200) ===\n$sb")
+    } catch { case NonFatal(e) => log.warn(s"Could not fetch logs for container $containerId", e) }
+
   private def getNodeInfo(containerId: String, settings: DCCSettings): NodeInfo = {
     val restApiPort = settings.restAPISettings.port
     // assume test nodes always have an open port
@@ -348,8 +363,18 @@ class Docker(
 
     @tailrec def awaitPortBindings(attempt: Int): com.github.dockerjava.api.command.InspectContainerResponse = {
       val info = inspectContainer(containerId)
-      if ((isBound(info, restApiPort) && isBound(info, networkPort)) || attempt >= 40) info
-      else {
+      if (isBound(info, restApiPort) && isBound(info, networkPort)) info
+      else if (attempt >= 40) {
+        // Ports never got host bindings. The usual cause is the container having EXITED (Docker clears
+        // NetworkSettings.Ports on exit) — so surface WHY, otherwise NodeInfo just NPEs with no context.
+        val st = info.getState
+        log.error(
+          s"Container $containerId REST/network ports never bound after $attempt attempts — " +
+            s"state: status=${st.getStatus} running=${st.getRunning} exitCode=${st.getExitCode} error=${Option(st.getError).getOrElse("")}. Container logs follow:"
+        )
+        dumpContainerLogs(containerId)
+        info
+      } else {
         log.debug(s"Container $containerId ports $restApiPort/$networkPort not fully bound yet, retry")
         Thread.sleep(500)
         awaitPortBindings(attempt + 1)
