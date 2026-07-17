@@ -29,5 +29,10 @@ object FinalityStatus {
   private def generationPeriodReads(activationHeight: Height): Reads[GenerationPeriod] =
     (
       (__ \ "start").read[Height] and (__ \ "end").read[Height]
-    )((start, end) => GenerationPeriod(activationHeight, start, end - start))
+    )((start, end) =>
+      // Invert GenerationPeriod.end: end = start + length + (if isZero 0 else -1), isZero == (start == activation).
+      // So length = end - start for the zero period, but end - start + 1 for any later period. Using end - start
+      // unconditionally under-counts non-zero periods by one, which throws off .next/.end/.prev on the client.
+      GenerationPeriod(activationHeight, start, if (start == activationHeight) end - start else end - start + 1)
+    )
 }
