@@ -32,7 +32,7 @@ class DataTransactionSuite extends BaseTransactionSuite with EitherValues {
     NotMiner
   ).map(
     _.preactivatedFeatures(BlockchainFeatures.BlockV5).overrides(
-      """waves.blockchain.custom.functionality {
+      """dcc.blockchain.custom.functionality {
         |  blocks-for-feature-activation = 1
         |  feature-check-blocks-period = 1
         |}""".stripMargin

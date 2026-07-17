@@ -31,7 +31,7 @@ class NNodesRotatingFinalizationTestSuite extends BaseFreeSpec, OptionValues, Sc
   override protected def nodeConfigs: Seq[Config] =
     Seq(Miners.head, Miners(1), Miners(2)).map(
       _.preactivatedFeatures(BlockchainFeatures.DeterministicFinality)
-        .overrides("waves.dcc.blockchain.custom.functionality.min-block-time = 10s")
+        .overrides("dcc.blockchain.custom.functionality.min-block-time = 10s")
         .quorum(1)
     )
 

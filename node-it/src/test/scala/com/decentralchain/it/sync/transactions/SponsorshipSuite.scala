@@ -23,7 +23,7 @@ class SponsorshipSuite extends BaseFreeSpec with IntegrationSuiteWithThreeAddres
   override protected def nodeConfigs: Seq[Config] =
     Seq(Miners.head.quorum(0), NotMiner).map(
       _.preactivatedFeatures(BlockchainFeatures.BlockReward -> Height(10000))
-        .overrides(s"""waves.blockchain.custom.functionality {
+        .overrides(s"""dcc.blockchain.custom.functionality {
                       |  blocks-for-feature-activation = 1
                       |  feature-check-blocks-period = 1
                       |}""".stripMargin)

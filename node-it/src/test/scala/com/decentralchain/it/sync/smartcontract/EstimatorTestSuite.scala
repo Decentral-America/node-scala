@@ -22,7 +22,7 @@ class EstimatorTestSuite extends BaseTransactionSuite with CancelAfterFailure {
       .quorum(0)
       .overrides(
         s"""
-           | waves.blockchain.custom.functionality {
+           | dcc.blockchain.custom.functionality {
            |   estimator-pre-check-height =  $featureHeight
            |   estimator-sum-overflow-fix-height = 999999
            |   pre-activated-features = {14 = 0, 15 = 999999}

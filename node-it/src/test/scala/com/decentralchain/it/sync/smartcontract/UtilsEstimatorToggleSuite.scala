@@ -18,7 +18,7 @@ class UtilsEstimatorToggleSuite extends BaseTransactionSuite with CancelAfterFai
   override protected def nodeConfigs: Seq[Config] = Seq(
     Miners(5)
       .quorum(0)
-      .overrides("waves.blockchain.custom.functionality.min-block-time = 2s")
+      .overrides("dcc.blockchain.custom.functionality.min-block-time = 2s")
       .preactivatedFeatures(
         (BlockchainFeatures.BlockReward, estimatorV2ActivationHeight),
         (BlockchainFeatures.BlockV5, estimatorV3ActivationHeight)

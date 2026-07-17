@@ -24,7 +24,7 @@ class AliasTransactionSuite extends BaseTransactionSuite with TableDrivenPropert
   import NodeConfigs.*
   override protected def nodeConfigs: Seq[Config] =
     Seq(BiggestMiner, Miners(3)).map(
-      _.preactivatedFeatures(RideV6).overrides("waves.blockchain.custom.functionality.allow-multiple-proofs-in-create-alias-until = 0")
+      _.preactivatedFeatures(RideV6).overrides("dcc.blockchain.custom.functionality.allow-multiple-proofs-in-create-alias-until = 0")
     )
 
   var version: Byte = 1

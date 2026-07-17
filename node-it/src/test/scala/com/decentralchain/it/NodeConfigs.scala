@@ -25,16 +25,16 @@ object NodeConfigs {
 
   extension (c: Config) {
     def overrides(s: String): Config = ConfigFactory.parseString(s).withFallback(c)
-    def quorum(n: Int): Config       = overrides(s"waves.miner.quorum = $n")
+    def quorum(n: Int): Config       = overrides(s"dcc.miner.quorum = $n")
     def preactivatedFeatures(fs: PreactivatedFeature*): Config = overrides(
-      s"""waves.blockchain.custom.functionality.pre-activated-features {
+      s"""dcc.blockchain.custom.functionality.pre-activated-features {
         ${fs.map(f => s"${f.feature.id} = ${f.activationHeight}").mkString("\n")}
       }"""
     )
     def minAssetInfoUpdateInterval(blocks: Int): Config =
-      overrides(s"waves.blockchain.custom.functionality.min-asset-info-update-interval = $blocks")
+      overrides(s"dcc.blockchain.custom.functionality.min-asset-info-update-interval = $blocks")
 
-    def notMiner: Config = overrides("waves.miner.enable = no")
+    def notMiner: Config = overrides("dcc.miner.enable = no")
   }
 
   def newBuilder: Builder = Builder(Default, Default.size, Seq.empty)
@@ -75,7 +75,7 @@ object NodeConfigs {
 
       val bc =
         if (totalEntities > 1) baseConfigs
-        else baseConfigs.map(ConfigFactory.parseString("waves.network.max-outbound-connections = 0").withFallback)
+        else baseConfigs.map(ConfigFactory.parseString("dcc.network.max-outbound-connections = 0").withFallback)
 
       val (defaultNodes: Seq[Config], specialNodes: Seq[Config]) = bc.zipWithIndex
         .collect { case (x, i) if NonConflictingNodes.contains(i + 1) => x }

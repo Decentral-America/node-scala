@@ -26,7 +26,7 @@ class VRFProtobufActivationSuite extends BaseTransactionSuite {
     Miners(5)
       .quorum(0)
       .preactivatedFeatures((BlockchainFeatures.BlockV5, activationHeight))
-      .overrides(s"waves.blockchain.custom.functionality.min-asset-info-update-interval = $updateInterval")
+      .overrides(s"dcc.blockchain.custom.functionality.min-asset-info-update-interval = $updateInterval")
   )
 
   private def senderAcc             = firstKeyPair

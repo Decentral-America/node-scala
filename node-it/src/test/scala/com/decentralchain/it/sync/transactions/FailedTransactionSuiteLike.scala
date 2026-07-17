@@ -330,5 +330,5 @@ object FailedTransactionSuiteLike {
                                                                        |""".stripMargin)
 
   import NodeConfigs.*
-  val Configs: Seq[Config] = Seq(BiggestMiner.quorum(0).overrides("waves.miner.max-transactions-in-micro-block = 50"), NotMiner)
+  val Configs: Seq[Config] = Seq(BiggestMiner.quorum(0).overrides("dcc.miner.max-transactions-in-micro-block = 50"), NotMiner)
 }
