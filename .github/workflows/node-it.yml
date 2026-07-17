@@ -1,0 +1,95 @@
+name: node-it (integration tests)
+# Runs the Docker-based multi-node integration suites (finality by default) on an ubuntu runner.
+# node-it is NOT part of ci.yml (it needs docker + is heavier); dispatch it for consensus changes.
+# Builds the IT image via `sbt node-it/docker` (which runs buildTarballsForDocker + docker build),
+# then `node-it/testOnly` the requested suites. The monorepo ref is pinned so the JVM deps
+# (protobuf-schemas etc.) match the node-scala ref being built.
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'testOnly filter (space-separated glob(s))'
+        required: false
+        default: 'com.decentralchain.it.sync.finalization.*'
+      monorepo-ref:
+        description: 'DecentralChain monorepo git ref for JVM deps (empty = default branch)'
+        required: false
+        default: '2c886b76999e658bf4fa058a290eacb40b83c1d3'
+permissions:
+  contents: read
+concurrency:
+  group: node-it-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  node-it:
+    name: node-it
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: Decentral-America/DecentralChain
+          ref: ${{ inputs.monorepo-ref }}
+          path: _dcc-monorepo
+          persist-credentials: false
+          sparse-checkout: |
+            packages/jvm/curve25519
+            packages/jvm/blst
+            packages/jvm/groth16
+            packages/sdk/protobuf-schemas
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-
+      - name: Install Rust stable (for groth16 JNI native lib)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6  # v2.7.8
+        with:
+          workspaces: _dcc-monorepo/packages/jvm/groth16
+      - name: Build groth16_jni native library (linux/amd64)
+        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Stage groth16 native lib into Maven resources
+        run: |
+          set -euo pipefail
+          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
+          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
+             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
+      - name: Install JVM dependencies from DecentralChain monorepo
+        run: |
+          set -euo pipefail
+          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
+          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
+          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
+      - name: Build node-it docker image (buildTarballsForDocker + docker build)
+        run: sbt --batch "node-it/docker"
+      - name: Run node-it suites
+        run: sbt --batch "node-it/testOnly ${{ inputs.suite }}"
+      - name: Upload node-it logs on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: node-it-logs
+          path: node-it/target/logs/**
+          retention-days: 3
+          if-no-files-found: ignore
