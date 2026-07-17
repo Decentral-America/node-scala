@@ -373,6 +373,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       }
     }(using endorseBlockSynchronizerScheduler)
 
+    // feature-25 finality under ROTATING aggregators: endorsements are sent once, so when multiple
+    // generators forge, a fire-once endorsement can miss whichever node is currently mining and finality
+    // stalls. Periodically re-emit this node's own current-height endorsement so the rotated aggregator
+    // still receives it within the live voting window. Idempotent (re-sends already-signed msgs; the
+    // aggregator's EndorsementStorage dedups) and self-terminating on height advance (see BlockEndorser).
+    endorseBlockSynchronizerScheduler.scheduleWithFixedDelay(3, 3, java.util.concurrent.TimeUnit.SECONDS, () => blockEndorser.rebroadcast())
+
     val (newBlocksWithSnapshot, extLoaderState, _) = RxExtensionLoader(
       settings.synchronizationSettings.synchronizationTimeout,
       settings.synchronizationSettings.processedBlocksCacheTimeout,
