@@ -271,6 +271,9 @@ class Docker(
 
       val envs = Seq(
         s"JAVA_OPTS=$configOverrides",
+        // Keep each node's heap modest: node-it runs several nodes on one CI runner (~7 GB), and the
+        // image default (DCC_HEAP_SIZE=2g) x N would OOM. node-it chains are tiny, so this is ample.
+        s"DCC_HEAP_SIZE=${Option(System.getenv("CONTAINER_HEAP_SIZE")).getOrElse("768m")}",
         profilerConfigEnv
       ).filter(_.nonEmpty)
 

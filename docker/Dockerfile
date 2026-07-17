@@ -13,11 +13,13 @@ ARG CORRETTO_ARM64_SHA256=e03899f5cc33de706b5059a62107b5a3262dd2816d4295d998f0fb
 # See https://github.com/facebook/rocksdb/issues/13893 before bumping ROCKSDB_VERSION.
 ARG ROCKSDB_LINUX64_SHA1=1fb1d6519cd2a7ff61478f766fa985baa890c7b9
 
-ENV WAVES_LOG_LEVEL=INFO
-ENV WAVES_LOG_JAVA_OPTS=true
+# NB: the entrypoint reads DCC_* (the Waves→DCC rename left these as WAVES_* before, so with
+# `set -u` the entrypoint exited 1 on unbound DCC_HEAP_SIZE/DCC_NETWORK unless the deployment set
+# them — which node-it does not, aborting every suite). Keep these names in sync with entrypoint.sh.
+ENV DCC_LOG_JAVA_OPTS=true
 
-ENV WAVES_HEAP_SIZE=2g
-ENV WAVES_NETWORK=mainnet
+ENV DCC_HEAP_SIZE=2g
+ENV DCC_NETWORK=mainnet
 
 SHELL ["/bin/bash", "-c"]
 
