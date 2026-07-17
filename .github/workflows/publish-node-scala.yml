@@ -10,6 +10,9 @@ on:
       base-image:
         description: 'Base image'
         required: false
+      monorepo-ref:
+        description: 'DecentralChain monorepo git ref for JVM native deps (pin to match this node-scala build; empty = default branch)'
+        required: false
   workflow_call:
     inputs:
       raw-docker-tags:
@@ -57,6 +60,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: Decentral-America/DecentralChain
+          ref: ${{ inputs.monorepo-ref }}
           path: _dcc-monorepo
           persist-credentials: false
           sparse-checkout: |
