@@ -256,6 +256,13 @@ class Docker(
       if (enableDebugger) {
         portBindings.bind(ExposedPort.tcp(internalDebuggerPort), Ports.Binding.bindPort(debuggerPort))
       }
+      // Explicitly request a host binding for every port the harness/tests read (REST, P2P network,
+      // gRPC) — each to a Docker-assigned random host port. `withPublishAllPorts` alone did NOT bind
+      // them on the CI docker daemon (getBindings stayed null even for the Dockerfile-EXPOSE'd REST
+      // port, because a non-empty explicit PortBindings suppresses publish-all), so bind them here.
+      portBindings.bind(ExposedPort.tcp(actualConfig.getInt("dcc.rest-api.port")), Ports.Binding.empty())
+      portBindings.bind(ExposedPort.tcp(networkPort.toInt), Ports.Binding.empty())
+      Try(actualConfig.getInt("dcc.grpc.port")).foreach(p => portBindings.bind(ExposedPort.tcp(p), Ports.Binding.empty()))
 
       val hostConfig = HostConfig.newHostConfig()
         .withPortBindings(portBindings)
