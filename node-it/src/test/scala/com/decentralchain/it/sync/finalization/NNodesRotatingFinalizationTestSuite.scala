@@ -40,17 +40,25 @@ class NNodesRotatingFinalizationTestSuite extends BaseFreeSpec, OptionValues, Sc
   private def addrs    = nodes.map(_.address)
 
   "finality stays tight while ALL generators forge (rotating aggregator)" in {
-    val period1 = node1.currentGenerationPeriod.value.next
+    // A commit is attributed to the period AFTER the one it is mined in ("a generator can commit only
+    // for a next period", Keys.committedGenerators). Committing 3 generators near a period boundary
+    // races: some commits land in the next period and get attributed one period too late. So first
+    // advance to a fresh period boundary, THEN commit — all commits mine within that full period and
+    // are attributed to the same following period.
+    step("Advance to a fresh generation-period boundary before committing")
+    node1.waitForGenerationPeriod(node1.currentGenerationPeriod.value.next)
+    val committedPeriod = node1.currentGenerationPeriod.value.next
 
     step("Commit all generators to generation")
     val commitTxns = nodes.map(n => n.signCommitToGenerationRequest(n.address))
     commitTxns.foreach(node1.broadcastRequest(_))
+    commitTxns.foreach(t => node1.waitForTransaction(t.id)) // ensure all commits are mined this period
 
-    node1.waitForGenerationPeriod(period1)
+    node1.waitForGenerationPeriod(committedPeriod)
 
     step("All 3 generators committed")
     isolated {
-      val generators = node1.generators(period1.start)
+      val generators = node1.generators(committedPeriod.start)
       generators.size shouldBe nodes.size
       generators.map(_.address) should contain theSameElementsAs addrs
     }
