@@ -7,7 +7,7 @@ import com.decentralchain.history.Domain
 import com.decentralchain.state.*
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.{NumericExt, produce}
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 
 class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
@@ -236,7 +236,7 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
         ),
         AddrWithBalance.enoughBalances(committedGenerator1) :+ AddrWithBalance(
           committedGenerator2Addr,
-          CommitToGenerationTransaction.DepositInWavelets + 1.dcc
+          CommitToGenerationTransaction.DepositInDcclets + 1.dcc
         )
       ) { d =>
         log.debug(s"Append block 2 with leasing")
@@ -351,7 +351,7 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
           TxHelpers.transfer(
             from = committedGenerator1,
             to = notCommittedGeneratorAddr,
-            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
             fee = 1.dcc
           )
         )
@@ -384,7 +384,7 @@ class BlockAppenderAfterFinalizationSpec extends BaseFinalizationSpec {
           TxHelpers.transfer(
             from = committedGenerator1,
             to = notCommittedGeneratorAddr,
-            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInWavelets - 1.dcc,
+            amount = d.blockchain.balance(committedGenerator1Addr) - CommitToGenerationTransaction.DepositInDcclets - 1.dcc,
             fee = 1.dcc
           )
         )

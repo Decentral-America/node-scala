@@ -1,7 +1,7 @@
 package com.decentralchain.transaction
 
 import com.google.common.primitives.Longs
-import com.decentralchain.account.{Alias, KeyPair, PublicKey}
+import com.decentralchain.account.{AddressScheme, Alias, KeyPair, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
@@ -70,8 +70,8 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
   property("JSON format validation for CreateAliasTransactionV1") {
     val js = Json.parse("""{
                          "type": 10,
-                         "id": "7acjQQWJAharrgzb4Z6jo3eeAKAGPmLkHTPtvBTKaiug",
-                         "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                         "id": "G3r9AjzpDJrpXpwhpfTpybGusUDrTFDmGAVL2aZ6ECCY",
+                         "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                          "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                          "fee": 100000,
                          "feeAssetId": null,
@@ -100,8 +100,8 @@ class CreateAliasTransactionSpecification extends PropSpec with WithDomain {
   property("JSON format validation for CreateAliasTransactionV2") {
     val js = Json.parse("""{
                        "type": 10,
-                       "id": "7acjQQWJAharrgzb4Z6jo3eeAKAGPmLkHTPtvBTKaiug",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "G3r9AjzpDJrpXpwhpfTpybGusUDrTFDmGAVL2aZ6ECCY",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 100000,
                        "feeAssetId": null,

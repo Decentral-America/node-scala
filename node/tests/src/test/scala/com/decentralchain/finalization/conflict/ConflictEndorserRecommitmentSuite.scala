@@ -7,7 +7,7 @@ import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{GeneratorIndex, Height, Portfolio}
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.TxHelpers
 
 class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
@@ -69,7 +69,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
       d.generatorsApi
         .generators(Height(d.blockchain.height))
         .collectFirst { case x if x.address == conflictGeneratorAddr => x.balance }
-        .value shouldBe Some(balanceAfter4 - DepositInWavelets)
+        .value shouldBe Some(balanceAfter4 - DepositInDcclets)
     }
 
     d.blockchain.balanceSnapshots(conflictGeneratorAddr, from = 2, to = None) should contain theSameElementsInOrderAs Seq(

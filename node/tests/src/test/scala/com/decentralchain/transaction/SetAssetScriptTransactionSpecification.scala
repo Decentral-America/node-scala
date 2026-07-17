@@ -91,8 +91,15 @@ class SetAssetScriptTransactionSpecification extends GenericTransactionSpecifica
   def transactionName: String = "SetAssetScriptTransaction"
 
   override def preserBytesJson: Option[(Array[Byte], JsValue)] = {
-    val asset = IssuedAsset(ByteStr(Array.fill(32)(3: Byte)))
-    val tx = TxHelpers.setAssetScript(TxHelpers.defaultSigner, asset, script = None, version = TxVersion.V1)
+    // An asset script can't be empty (SetAssetScriptTxValidator, and "can't be created with empty script" above),
+    // so this checks bytes/json round-trip for a well-formed transaction, not a None-script one.
+    val asset  = IssuedAsset(ByteStr(Array.fill(32)(3: Byte)))
+    val signer = TxHelpers.defaultSigner
+    val script = Script.fromBase64String("base64:AQkAAGcAAAACAHho/EXujJiPAJUhuPXZYac+rt2jYg==").explicitGet()
+    val tx = SetAssetScriptTransaction
+      .create(TxVersion.V1, signer.publicKey, asset, Some(script), 1000000L, TxHelpers.timestamp, Proofs.empty)
+      .map(_.signWith(signer.privateKey))
+      .explicitGet()
     Some(tx.bytes() -> tx.json())
   }
 }

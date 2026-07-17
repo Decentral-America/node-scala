@@ -33,10 +33,10 @@ class EthereumInvokePaymentTest extends PropSpec with WithDomain with EthHelpers
     val issueTx       = issue(script = Some(paymentScript))
     val asset         = IssuedAsset(issueTx.id())
     def invoke        = EthTxGenerator.generateEthInvoke(defaultEthSigner, secondAddress, "default", Nil, Seq(Payment(1, asset)))
-    withDomain(RideV6, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthWavesAddress)) { d =>
+    withDomain(RideV6, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthDccAddress)) { d =>
       d.appendBlock(
         issueTx,
-        transfer(defaultSigner, defaultEthSigner.toWavesAddress, 1, issueTx.asset)
+        transfer(defaultSigner, defaultEthSigner.toDccAddress, 1, issueTx.asset)
       )
 
       d.appendBlock(setScript(secondSigner, dApp(bigComplexity = false)))

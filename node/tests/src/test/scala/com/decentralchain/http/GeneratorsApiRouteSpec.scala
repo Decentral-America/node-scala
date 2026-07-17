@@ -48,7 +48,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with WithDomain {
   private val Seq(validGenerator, conflictingGenerator, miner)             = generators
   private val Seq(validGeneratorAddr, conflictingGeneratorAddr, minerAddr) = generators.map(_.toAddress.toString)
 
-  private val depositAndFee = CommitToGenerationTransaction.DepositInWavelets + commitToGenerationFee
+  private val depositAndFee = CommitToGenerationTransaction.DepositInDcclets + commitToGenerationFee
   private val initBalance   = diffs.ENOUGH_AMT + depositAndFee
 
   private val defaultInitBalances: Seq[WithState.AddrWithBalance] = generators.map(x => AddrWithBalance(x.toAddress, initBalance))

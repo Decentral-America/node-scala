@@ -318,7 +318,7 @@ class BlockChallengeTest
       d.accountsApi
         .balanceDetails(challengingMiner.toAddress)
         .explicitGet()
-        .generating shouldBe ENOUGH_AMT - CommitToGenerationTransaction.DepositInWavelets - TestValues.commitToGenerationFee
+        .generating shouldBe ENOUGH_AMT - CommitToGenerationTransaction.DepositInDcclets - TestValues.commitToGenerationFee
 
       (1 to 999).foreach(_ => d.appendBlock(d.createBlock(generator = challengedMiner)))
 

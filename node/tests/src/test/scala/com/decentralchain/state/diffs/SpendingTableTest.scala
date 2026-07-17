@@ -29,7 +29,7 @@ class SpendingTableTest extends FreeSpec with WithState {
             generationPeriodLength = 2
           )
 
-        val spendingAmount = CommitToGenerationTransaction.DepositInWavelets + // To fit both leasing and deposit cases
+        val spendingAmount = CommitToGenerationTransaction.DepositInDcclets + // To fit both leasing and deposit cases
           Numbers.when(hasDeposit || spending == Spending.Deposit)(GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2)
 
         val miner     = TxHelpers.signer(0)
@@ -40,7 +40,7 @@ class SpendingTableTest extends FreeSpec with WithState {
 
         val txFee       = 1.dcc
         val initLeasing = Numbers.when(hasLeasing)(11.dcc)
-        val initDeposit = Numbers.when(hasDeposit)(CommitToGenerationTransaction.DepositInWavelets)
+        val initDeposit = Numbers.when(hasDeposit)(CommitToGenerationTransaction.DepositInDcclets)
         val initBalance = (spendingAmount - 1) + txFee + // Less, than required
           Numbers.when(initLeasing > 0)(initLeasing + txFee) + Numbers.when(initDeposit > 0)(initDeposit + txFee)
 

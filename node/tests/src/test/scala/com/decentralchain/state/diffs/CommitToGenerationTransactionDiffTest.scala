@@ -35,31 +35,31 @@ class CommitToGenerationTransactionDiffTest extends FreeSpec with WithDomain {
     AddrWithBalance.enoughBalances(sender)
   ) { d =>
     log.info("No deposits")
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe 0L
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe 0L
 
     log.info("Deposit for one next period")
     val currPeriodTx = TxHelpers.commitToGeneration(Height(3), sender)
     d.appendBlock(currPeriodTx)
     d.blockchain.height shouldBe 2
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInDcclets
 
     log.info("Deposit for one current period")
     d.appendBlock()
     d.blockchain.height shouldBe 3
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInDcclets
 
     log.info("Deposit for two periods")
     val nextPeriodTx = TxHelpers.commitToGeneration(Height(5), sender)
     d.appendBlock(nextPeriodTx)
-    val wavesPortfolio = d.blockchain.wavesPortfolio(sender.toAddress)
-    wavesPortfolio.generationDeposit shouldBe 2 * CommitToGenerationTransaction.DepositInWavelets
-    wavesPortfolio.spendableBalance shouldBe (wavesPortfolio.balance - wavesPortfolio.generationDeposit)
+    val dccPortfolio = d.blockchain.dccPortfolio(sender.toAddress)
+    dccPortfolio.generationDeposit shouldBe 2 * CommitToGenerationTransaction.DepositInDcclets
+    dccPortfolio.spendableBalance shouldBe (dccPortfolio.balance - dccPortfolio.generationDeposit)
 
     d.appendBlock()
     d.blockchain.height shouldBe 5
 
     log.info("Deposit for one period if not committed for next")
-    d.blockchain.wavesPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInWavelets
+    d.blockchain.dccPortfolio(sender.toAddress).generationDeposit shouldBe CommitToGenerationTransaction.DepositInDcclets
   }
 
   "Can't commit" - {
@@ -134,7 +134,7 @@ class CommitToGenerationTransactionDiffTest extends FreeSpec with WithDomain {
           AddrWithBalance(sender.toAddress, 1000000.dcc),
           AddrWithBalance(
             newGenerator.toAddress,
-            GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInWavelets + txFee - 1
+            GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2 + CommitToGenerationTransaction.DepositInDcclets + txFee - 1
           )
         )
       ) { d =>

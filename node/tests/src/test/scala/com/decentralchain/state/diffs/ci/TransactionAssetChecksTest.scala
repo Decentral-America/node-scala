@@ -66,7 +66,7 @@ class TransactionAssetChecksTest extends PropSpec with WithDomain {
       )
       val invokeWithIssued = generateEthInvoke(secondSigner.toEthKeyPair, secondAddress, "default", Nil, payments = Seq(Payment(1, asset)))
       d.appendBlockE(invokeWithIssued) should produce("Attempt to transfer unavailable funds")
-      d.appendBlock(transfer(secondSigner, secondSigner.toEthWavesAddress, asset = asset))
+      d.appendBlock(transfer(secondSigner, secondSigner.toEthDccAddress, asset = asset))
       d.appendAndAssertSucceed(invokeWithIssued)
     }
   }
@@ -106,7 +106,7 @@ class TransactionAssetChecksTest extends PropSpec with WithDomain {
       )
       val transferIssued = generateEthTransfer(secondSigner.toEthKeyPair, secondAddress, 1, asset)
       d.appendBlockE(transferIssued) should produce(s"Attempt to transfer unavailable funds")
-      d.appendBlock(transfer(secondSigner, secondSigner.toEthWavesAddress, asset = asset))
+      d.appendBlock(transfer(secondSigner, secondSigner.toEthDccAddress, asset = asset))
       d.appendAndAssertSucceed(transferIssued)
     }
   }

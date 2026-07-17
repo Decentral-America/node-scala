@@ -9,7 +9,7 @@ import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.{BalanceSnapshot, GeneratorIndex, Height, Portfolio}
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.test.NumericExt
-import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInWavelets
+import com.decentralchain.transaction.CommitToGenerationTransaction.DepositInDcclets
 import com.decentralchain.transaction.TxHelpers
 import org.scalactic.source.Position
 import org.scalatest.Assertion

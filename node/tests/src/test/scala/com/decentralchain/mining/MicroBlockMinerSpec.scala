@@ -1,5 +1,6 @@
 package com.decentralchain.mining
 
+import scala.util.Random
 import com.decentralchain.TestValues
 import com.decentralchain.block.Block
 import com.decentralchain.block.Block.ProtoBlockVersion

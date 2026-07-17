@@ -351,10 +351,10 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
   }
 
   private def transactionV1(sender: KeyPair, ts: Long, feeAmount: Long): TransferTransaction =
-    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Dcc, fee = feeAmount, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 1.toByte)
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = 1.dcc, asset = Dcc, fee = feeAmount, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 1.toByte)
 
   private def transactionV2(sender: KeyPair, ts: Long, feeAmount: Long): TransferTransaction =
-    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = waves(1), asset = Dcc, fee = feeAmount, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
+    TxHelpers.transfer(from = sender, to = TxHelpers.address(2), amount = 1.dcc, asset = Dcc, fee = feeAmount, feeAsset = Dcc, attachment = ByteStr.empty, timestamp = ts, version = 2.toByte)
 
   private def utxTest(utxSettings: UtxSettings, txCount: Int = 10)(f: (Seq[TransferTransaction], UtxPool, TestTime) => Unit): Unit = {
     withState { case (sender, _, bcu) =>

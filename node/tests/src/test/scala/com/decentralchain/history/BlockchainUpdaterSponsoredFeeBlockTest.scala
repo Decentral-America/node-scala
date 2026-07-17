@@ -36,9 +36,9 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
     masterToAlice: TransferTransaction = TxHelpers.transfer(
       master,
       alice.toAddress,
-      feeAsset.fee.value + sponsorTx.fee.value + transferAssetWavesFee + wavesFee,
+      feeAsset.fee.value + sponsorTx.fee.value + transferAssetDccFee + dccFee,
       Dcc,
-      transferAssetWavesFee,
+      transferAssetDccFee,
       Dcc,
       ByteStr.empty,
       ts + 1,
@@ -49,7 +49,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
       bob.toAddress,
       feeAsset.quantity.value / 2,
       Asset.fromCompatId(Some(feeAsset.id())),
-      transferAssetWavesFee,
+      transferAssetDccFee,
       Dcc,
       ByteStr.empty,
       ts + 2,
@@ -104,7 +104,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
         d.appendMicroBlock(feeAsset)
         d.appendMicroBlock(sponsor)
         d.appendBlock(aliceToBob, bobToMaster)
-        d.appendBlockE(bobToMaster2) should produce("negative dcc balance" /*"unavailable funds"*/ )
+        d.appendBlockE(bobToMaster2) should produce("negative waves balance" /*"unavailable funds"*/ )
     }
   }
 
