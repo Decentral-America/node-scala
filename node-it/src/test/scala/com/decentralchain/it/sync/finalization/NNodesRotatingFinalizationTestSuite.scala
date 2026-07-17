@@ -27,11 +27,15 @@ import scala.concurrent.duration.DurationInt
 class NNodesRotatingFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLogging {
   import NodeConfigs.*
 
-  // Three forging generators (all mine). Same feature/quorum setup as TwoNodesFinalizationTestSuite.
+  // Three forging generators (all mine). Like TwoNodesFinalizationTestSuite but with a LONGER generation
+  // period: committing 3 generators takes a few blocks to all mine, and the default period length of 3 is
+  // too short — some commits land in the next period and get attributed one period late (flaky 0 generators).
+  // A length-20 period with 3s blocks leaves ample room for all 3 commits to mine within one period.
   override protected def nodeConfigs: Seq[Config] =
     Seq(Miners.head, Miners(1), Miners(2)).map(
       _.preactivatedFeatures(BlockchainFeatures.DeterministicFinality)
-        .overrides("dcc.blockchain.custom.functionality.min-block-time = 10s")
+        .overrides("dcc.blockchain.custom.functionality.min-block-time = 3s")
+        .overrides("dcc.blockchain.custom.functionality.generation-period-length = 20")
         .quorum(1)
     )
 
@@ -65,8 +69,10 @@ class NNodesRotatingFinalizationTestSuite extends BaseFreeSpec, OptionValues, Sc
 
     step("Finality must keep advancing while all 3 forge; lag stays bounded")
     // With 3 rotating aggregators, plain be2dcfc0 stalls here; the rebroadcast patch keeps it advancing.
-    val deadline           = 5.minutes.fromNow
-    val advancesRequired   = 5                 // finalizedHeight must rise this many times
+    // The committee is committed for one generation period (~60s), so a few advances within it is the signal;
+    // require modestly and fail fast if it stalls.
+    val deadline           = 3.minutes.fromNow
+    val advancesRequired   = 3                 // finalizedHeight must rise this many times
     val maxLagAllowed      = 250               // matches the FinalizationStalled alert threshold
     var lastFinalized      = node1.finalizedHeight
     val startFinalized     = lastFinalized
