@@ -358,12 +358,12 @@ class ExchangeTransactionSuite extends BaseTransactionSuite with NTPTime {
       TxHelpers.exchange(
         version = 3.toByte,
         matcher = matcher,
-        order1 = buyNftForWaves,
-        order2 = sellNftForWaves,
+        order1 = buyNftForDcc,
+        order2 = sellNftForDcc,
         amount = amount,
-        price = nftWavesPrice,
-        buyMatcherFee = (BigInt(matcherFee) * amount / sellNftForWaves.amount.value).toLong,
-        sellMatcherFee = (BigInt(matcherFee) * amount / sellNftForWaves.amount.value).toLong,
+        price = nftDccPrice,
+        buyMatcherFee = (BigInt(matcherFee) * amount / sellNftForDcc.amount.value).toLong,
+        sellMatcherFee = (BigInt(matcherFee) * amount / sellNftForDcc.amount.value).toLong,
         fee = matcherFee,
         timestamp = ntpTime.correctedTime()
       )

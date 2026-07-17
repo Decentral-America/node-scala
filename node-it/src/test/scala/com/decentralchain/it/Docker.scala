@@ -3,7 +3,7 @@ package com.decentralchain.it
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper
 import com.github.dockerjava.api.command.WaitContainerResultCallback
-import com.github.dockerjava.api.model.*
+import com.github.dockerjava.api.model.{Node as _, *} // exclude docker-java's swarm Node; it shadows com.decentralchain.it.Node
 import com.github.dockerjava.core.{DefaultDockerClientConfig, DockerClientImpl}
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.google.common.primitives.Ints.*
@@ -19,7 +19,7 @@ import com.decentralchain.settings.*
 import com.decentralchain.utils.ScorexLogging
 import monix.eval.Coeval
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveInputStream}
 import org.apache.commons.io.IOUtils
 import org.asynchttpclient.Dsl.*
 import pureconfig.ConfigSource
@@ -484,7 +484,7 @@ class Docker(
       val profilerDirStream = client.copyArchiveFromContainerCmd(node.containerId, ContainerRoot.resolve("profiler").toString).exec()
 
       try {
-        val archiveStream = new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.TAR, profilerDirStream)
+        val archiveStream = new ArchiveStreamFactory().createArchiveInputStream[TarArchiveInputStream](ArchiveStreamFactory.TAR, profilerDirStream)
         val snapshotFile = Iterator
           .continually(Option(archiveStream.getNextEntry))
           .takeWhile(_.nonEmpty)

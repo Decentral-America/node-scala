@@ -1,6 +1,7 @@
 package com.decentralchain.it.sync.transactions
 
 import com.google.common.primitives.Longs
+import java.util.concurrent.ThreadLocalRandom
 import com.typesafe.config.Config
 import com.decentralchain.account.{AddressScheme, KeyPair}
 import com.decentralchain.api.http.ApiError.WrongJson

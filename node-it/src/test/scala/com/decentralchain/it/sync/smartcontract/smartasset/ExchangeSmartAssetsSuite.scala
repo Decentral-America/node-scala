@@ -181,7 +181,7 @@ class ExchangeSmartAssetsSuite extends BaseTransactionSuite with CancelAfterFail
     val script1 = Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + cryptoContextScript(false), estimator).explicitGet()._1.bytes().base64)
     val script2 = Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + pureContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
     val script3 =
-      Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + wavesContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
+      Some(ScriptCompiler.compile("{-# SCRIPT_TYPE ASSET #-}" + dccContextScript(dtx, false), estimator).explicitGet()._1.bytes().base64)
 
     List(script1, script2, script3)
       .map { i =>

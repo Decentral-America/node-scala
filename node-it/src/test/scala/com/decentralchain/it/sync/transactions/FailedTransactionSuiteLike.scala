@@ -3,7 +3,7 @@ package com.decentralchain.it.sync.transactions
 import com.google.protobuf.ByteString
 import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.account.KeyPair
-import com.decentralchain.api.grpc.{ApplicationStatus, TransactionsByIdRequest, TransactionStatus as PBTransactionStatus}
+import io.decentralchain.api.grpc.{ApplicationStatus, TransactionsByIdRequest, TransactionStatus as PBTransactionStatus}
 import com.decentralchain.api.http.ApiError.TransactionDoesNotExist
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*

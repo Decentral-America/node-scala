@@ -1,6 +1,7 @@
 package com.decentralchain.it.sync
 
 import com.typesafe.config.{Config, ConfigFactory}
+import java.util.concurrent.ThreadLocalRandom
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*

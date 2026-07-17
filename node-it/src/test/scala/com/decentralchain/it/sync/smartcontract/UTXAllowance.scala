@@ -4,12 +4,12 @@ import com.typesafe.config.{Config, ConfigFactory}
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.sync.*
-import com.decentralchain.it.{BaseFreeSpec, WaitForHeight2}
+import com.decentralchain.it.BaseFreeSpec
 import com.decentralchain.lang.v1.estimator.v2.ScriptEstimatorV2
 import com.decentralchain.test.*
 import com.decentralchain.transaction.smart.script.ScriptCompiler
 
-class UTXAllowance extends BaseFreeSpec with WaitForHeight2 {
+class UTXAllowance extends BaseFreeSpec {
   import UTXAllowance.*
 
   override protected def nodeConfigs: Seq[Config] = Configs

@@ -1,7 +1,7 @@
 package com.decentralchain.it.asset
 
 import com.decentralchain.account.KeyPair
-import com.decentralchain.api.grpc.AssetInfoResponse
+import io.decentralchain.api.grpc.AssetInfoResponse
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*

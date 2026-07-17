@@ -109,7 +109,8 @@ object Dependencies {
   lazy val it = scalaTest +: Seq(
     logback,
     "com.github.jnr" % "jnr-unixsocket" % "0.38.25", // To support Apple ARM
-    "com.spotify"    % "docker-client"  % "8.16.0",
+    "com.github.docker-java" % "docker-java-core"                  % "3.7.1",
+    "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
     jacksonModule("dataformat", "dataformat-properties", "2.22.0"),
     asyncHttpClient
   ).map(_ % Test)

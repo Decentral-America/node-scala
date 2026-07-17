@@ -1,6 +1,7 @@
 package com.decentralchain.it.account.storage
 
 import com.typesafe.config.Config
+import java.util.concurrent.ThreadLocalRandom
 import com.decentralchain.account.KeyPair
 import com.decentralchain.api.http.ApiError.ScriptExecutionError
 import com.decentralchain.common.state.ByteStr

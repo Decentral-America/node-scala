@@ -2,7 +2,7 @@ package com.decentralchain.it.asset
 
 import com.google.protobuf.ByteString
 import com.typesafe.config.Config
-import com.decentralchain.api.grpc.LeaseResponse
+import io.decentralchain.api.grpc.LeaseResponse
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.features.BlockchainFeatures

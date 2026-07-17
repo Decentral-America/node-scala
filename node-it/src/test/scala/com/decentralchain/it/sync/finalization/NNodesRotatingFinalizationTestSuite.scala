@@ -35,7 +35,6 @@ class NNodesRotatingFinalizationTestSuite extends BaseFreeSpec, OptionValues, Sc
         .quorum(1)
     )
 
-  private def nodes    = dockerNodes()
   private def node1    = nodes.head
   private def accounts = nodes.map(_.keyPair)
   private def addrs    = nodes.map(_.address)

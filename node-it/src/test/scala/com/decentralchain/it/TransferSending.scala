@@ -66,7 +66,7 @@ trait TransferSending extends ScorexLogging {
     }
 
     val requests = sourceAndDest.foldLeft(List.empty[Req]) { case (rs, (srcConfig, destAddr)) =>
-      val a              = Random.nextDouble()
+      val a              = ThreadLocalRandom.current().nextDouble()
       val b              = balances(srcConfig)
       val transferAmount = (1e-8 + a * 1e-9 * b).toLong
       if (transferAmount < 0) log.warn(s"Negative amount: (1e-8 + $a * 1e-8 * $b) = $transferAmount")
