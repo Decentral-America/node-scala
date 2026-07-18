@@ -265,7 +265,7 @@ class TransactionSnapshotsRouteSpec
       val aliasJson = baseJson ++ Json
         .parse(s"""{
         "balances": [{
-          "address": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+          "address": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
           "asset": null,
           "balance": ${ENOUGH_AMT + 200_000_000 + setScriptTx.fee.value * 2 / 5 - (invokeTx.fee.value + issueTx.fee.value + aliasTx.fee.value) * 3 / 5}
         }],

@@ -549,8 +549,8 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
       response should matchJson(s"""{
                                    |  "id" : "${lease.id()}",
                                    |  "originTransactionId" : "${lease.id()}",
-                                   |  "sender" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
-                                   |  "recipient" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+                                   |  "sender" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
+                                   |  "recipient" : "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L",
                                    |  "amount" : 1000000000,
                                    |  "height" : $leaseHeight,
                                    |  "status" : "canceled",
@@ -562,8 +562,8 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
     val leasesListJson = Json.parse(s"""[{
                                        |  "id" : "${lease.id()}",
                                        |  "originTransactionId" : "${lease.id()}",
-                                       |  "sender" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
-                                       |  "recipient" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+                                       |  "sender" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
+                                       |  "recipient" : "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L",
                                        |  "amount" : 1000000000,
                                        |  "height" : $leaseHeight,
                                        |  "status" : "canceled",
@@ -573,8 +573,8 @@ class LeaseRouteSpec extends RouteSpec("/leasing") with OptionValues with RestAP
                                        {
                                        |  "id" : "${lease.id()}",
                                        |  "originTransactionId" : "${lease.id()}",
-                                       |  "sender" : "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
-                                       |  "recipient" : "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+                                       |  "sender" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
+                                       |  "recipient" : "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L",
                                        |  "amount" : 1000000000,
                                        |  "height" : $leaseHeight,
                                        |  "status" : "canceled",
