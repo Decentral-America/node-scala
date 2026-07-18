@@ -70,25 +70,17 @@ class PBOrdersSpecification extends FlatSpec {
   }
 
   it should "verify signature" in {
-    val signed = PBOrders
-      .vanilla(
-        protoOrder.copy(
-          proofs = Seq(ByteString.copyFrom(Base58.decode("5f5irpd67tknEkHr9GejWSC7poZGfdaZabV84GjxifxqdtMKfcU8QnhZYBQR9F54GjfTcA8a91DSAb79CTtFoxnd")))
-        )
-      )
-      .explicitGet()
-    Verifier.verifyAsEllipticCurveSignature(signed, true) shouldBe Symbol("right")
+    // Sign the order body in-code with the sender's key. Previously the proofs were hard-coded and became
+    // invalid once the order body changed (chain id / asset representation); signing here keeps the fixture
+    // valid regardless. Curve25519 signatures are non-deterministic, so this is not a fixed-answer vector.
+    def signed(protoWithoutProof: PBOrder): Order = {
+      val unsigned = PBOrders.vanilla(protoWithoutProof).explicitGet()
+      val proof    = com.decentralchain.crypto.sign(TestValues.keyPair.privateKey, unsigned.bodyBytes())
+      PBOrders.vanilla(protoWithoutProof.copy(proofs = Seq(ByteString.copyFrom(proof.arr)))).explicitGet()
+    }
 
-    val signedV4 = PBOrders
-      .vanilla(
-        protoOrder.copy(
-          version = Order.V4,
-          proofs = Seq(ByteString.copyFrom(Base58.decode("2kRQDV8TbSEVe9B2yy8XR8XijYrbxEXTvptxuCr42Vp6u1psZyEzaRj6eAb267zA2Tm5D8EGN8FTMQFGdQDcyNT8")))
-        )
-      )
-      .explicitGet()
-
-    Verifier.verifyAsEllipticCurveSignature(signedV4, true) shouldBe Symbol("right")
+    Verifier.verifyAsEllipticCurveSignature(signed(protoOrder), true) shouldBe Symbol("right")
+    Verifier.verifyAsEllipticCurveSignature(signed(protoOrder.copy(version = Order.V4)), true) shouldBe Symbol("right")
   }
 
   it should "handle roundtrip" in {

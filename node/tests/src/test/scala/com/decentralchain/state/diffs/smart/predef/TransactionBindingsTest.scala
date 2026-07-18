@@ -1,7 +1,7 @@
 package com.decentralchain.state.diffs.smart.predef
 
 import cats.syntax.either.*
-import com.decentralchain.account.{Address, Alias, KeyPair}
+import com.decentralchain.account.{Address, AddressScheme, Alias, KeyPair}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base58
 import com.decentralchain.common.utils.EitherExt2.*
@@ -42,7 +42,7 @@ import play.api.libs.json.Json
 import java.util.concurrent.ThreadLocalRandom
 
 class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
-  private val T = 'T'.toByte
+  private val T = AddressScheme.current.chainId
 
   property("TransferTransaction binding") {
     Seq(
@@ -737,7 +737,7 @@ class TransactionBindingsTest extends PropSpec, EitherValues, WithDomain {
        """.stripMargin
 
       runScript(src, ord, T) shouldBe an[Left[?, ?]]
-      runWithSmartTradingActivated(src, ord, 'T') shouldBe evaluated(true)
+      runWithSmartTradingActivated(src, ord, T) shouldBe evaluated(true)
     }
   }
 
