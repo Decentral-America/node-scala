@@ -43,7 +43,7 @@ class LeaseCancelTransactionSpecification extends PropSpec {
     val js = Json.parse("""{
                        "type": 9,
                        "id": "7hmabbFS8a2z79a29pzZH1s8LHxrsEAnnLjJxNdZ1gGw",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 1000000,
                        "feeAssetId": null,

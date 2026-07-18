@@ -32,13 +32,13 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
 
   "JSON parsing" in {
     val js = Json.parse(s"""{
-      "id": "FEjd4wn3HMmEvayqGVoBGHcf7uxn2GhR1zhKxL72935a",
+      "id": "DUWUmYm1CXte3a97W2Fu2Sxf1D7FA9bZFGARtw54Xbep",
       "type": 19,
       "version": 1,
       "fee": 100000000,
       "feeAssetId": null,
       "timestamp": 1526287561757,
-      "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+      "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
       "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
       "generationPeriodStart": 3000,
       "endorserPublicKey": "6CagLT3FjEcaNHPYCaG2dcfEfzDj6ynVeZbxbLHkHdfzvbfBmBMkkatTYcBXD9cHMU",
@@ -46,7 +46,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
       "proofs": [
         "28kE1uN1pX2bwhzr9UHw5UuB9meTFEDFgeunNgy6nZWpHX4pzkGYotu8DhQ88AdqUG6Yy5wcXgHseKPBUygSgRMJ"
       ],
-      "chainId": 84
+      "chainId": 63
     }""")
     origTx.json() shouldEqual js
   }

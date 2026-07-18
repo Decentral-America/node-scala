@@ -31,7 +31,7 @@ class ReissueTransactionV1Specification extends PropSpec {
                             |  "type" : 5,
                             |  "version" : 1,
                             |  "reissuable" : false,
-                            |  "sender" : "3MyU5WaaGs3zyyWyVG447Ra3GBY96ddVG6q",
+                            |  "sender" : "3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH",
                             |  "feeAssetId" : null,
                             |  "signature" : "2Qn9wyJdgCpTFGkXH7Y5jY9HDTQ3ixe7khzAmm7sp5CCUbax4gwjahHdHGrfFxSoWZNTMStvbfXjp9HHCjeFKWMR",
                             |  "proofs" : [ "2Qn9wyJdgCpTFGkXH7Y5jY9HDTQ3ixe7khzAmm7sp5CCUbax4gwjahHdHGrfFxSoWZNTMStvbfXjp9HHCjeFKWMR" ],
@@ -56,7 +56,7 @@ class ReissueTransactionV1Specification extends PropSpec {
     val js = Json.parse("""{
                     "type": 5,
                     "id": "2y8pNQteNQnY5JWtrZGLUv3tD6GFT6DDzBWttVTwBa2t",
-                    "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                    "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                     "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                     "fee": 100000000,
                     "feeAssetId": null,

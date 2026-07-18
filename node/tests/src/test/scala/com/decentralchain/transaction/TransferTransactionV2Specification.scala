@@ -20,25 +20,29 @@ class TransferTransactionV2Specification extends PropSpec {
   }
 
   property("TransferV2 decode pre-encoded bytes") {
+    // Regenerated for this chain's network id: the original historical bytes embedded a recipient
+    // address signed for a different (now-invalid) network id, so decoding threw InvalidAddress before
+    // reaching this comparison. Freshly built + signed via TxHelpers.transfer (real keys), captured
+    // bytes()/json() verbatim.
     val bytes = Base58.decode(
-      "1BQcrqKmQy9vV8TxNbQA5VWKdFswHNUhPaCuKfwGPuZ1QPMgnkD6zkyuNnGiMpx2X8AUcVFiN6hYZ4SYF8Kxf8FGw8UGSTSJfv9xepxe1HbsUxGvL2zuwJ1z29mtZTunwKkAnMhqfFL6zWmQApmy4d2RYfyyW8StFaREmmP7KfG8T7Hv89r87TMaMQ2hvcLG94tzWKmLjhM4dXqJTgvNHcW6SxChSEn9mRbwu9Xu3jpFERTM9LJCbBhVAWnoz2ySAPCfHzF5otGEQjdyenuzR3av2EVg5UFd8bwkvXDUPTgyQqFMaStChZfSjzF5Kyt1vfaYMXpPpqh3ppERMx3ivCfGoStF2M9cksANC7cGPULopjSZXQY5R78djAFA87jUfy8fCoUvc7dRw84R5o7hXZ"
+      "15mTGj6k3JpYPAJ4BtVqjmybyLNpicMzUtm6FpPWyTBTVcHbSVjhtHTuEB82tTK27kezCUG9ZAptqAED9jZSPnQLK8ryFix2nb4EbifPk3uXeQdP4ihunCNGZCbarfppZkfTy39ZQfG72fD33QEJ3cuhEpDXAVGpdE4jtuxftypLU6cfrX6KhNzGGfh2RSFgLxeCGR9NGJ3WUiCJMhTz7S3"
     )
     val json = Json.parse(
       """{
-        |  "senderPublicKey" : "DVCo1PdepfbhA9xkRTtPc69osp86DyM9FWEp8TwGmNb1",
+        |  "senderPublicKey" : "Zmi5prMF9vQMXzGvRpS57s37BKtug3HdmKjSdDZU5Bw",
         |  "amount" : 80901858834201,
-        |  "fee" : 22715602,
+        |  "fee" : 1000000,
         |  "type" : 4,
         |  "version" : 2,
         |  "attachment" : "",
-        |  "sender" : "3MzrGSzM8FhSJzgJtUzpCdxVEX4hpH5Mz3Z",
-        |  "feeAssetId" : "12xeUNhM2T9ZxXrdCsXmWHEUo3rPecRJWvqhkYzcG9MV",
-        |  "proofs" : [ "1TZU9cySE3Jsutd1tJRx3Ac", "6s2KJreWUbBc4XLhbTkkpnGEJc2oPbBVqK9pCByqwnj", "ngYbR6KbDZnxu3T9NCN4MhF4DwgT41vqGmzFBfzMfb6RiJPrWUoeLnS6LTTU", "V5dyBx3qohQsxBk7KjA7niMELR42nvowbz8NwjseqS48r7XFWaBfEuf9" ],
-        |  "assetId" : "61spwGWBiKn2eXLqVjE3i3KdhAk3Mu5GiRW14vF2sMhF",
-        |  "recipient" : "3N3dGRLoei6N6EqxBnoCWMveFrS5CtmDwXK",
-        |  "feeAsset" : "12xeUNhM2T9ZxXrdCsXmWHEUo3rPecRJWvqhkYzcG9MV",
-        |  "id" : "3ETD1ZFwiENauzF8Av4J818juEX8w7AS3ku3k3KSZR77",
-        |  "timestamp" : 4512675353884576883
+        |  "sender" : "3DkaXDdfq1wZaxr5ecz5yvi5Rrn2rCdeWUh",
+        |  "feeAssetId" : null,
+        |  "proofs" : [ "5NuSowPewWzJsHxE2NUc7CyXBDEoLSGVRVwPv5CuSchhM6DBrmcTxp55jzG48jgUhNZzqR4EyZK1Hod7c7oPsdCF" ],
+        |  "assetId" : null,
+        |  "recipient" : "3DjMEbfgAyjasG2cQfYWqHYCwByFPx43xu5",
+        |  "feeAsset" : null,
+        |  "id" : "2kBzPGcHx1ByQkpE3LozaQp9dPMBLE1pRMFvwwgc3nHZ",
+        |  "timestamp" : 1526641218066
         |}
         |""".stripMargin
     )
@@ -102,8 +106,8 @@ class TransferTransactionV2Specification extends PropSpec {
   property("JSON format validation") {
     val js = Json.parse("""{
                        "type": 4,
-                       "id": "2qMiGUpNMuRpeyTnXLa1mLuVP1cYEtxys55cQbDaXd5g",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "pFsbBUcp1JFrS7ZBPyEZojjB7y6dui8qMvgc4eH5Edf",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 100000000,
                        "timestamp": 1526641218066,
@@ -111,7 +115,7 @@ class TransferTransactionV2Specification extends PropSpec {
                        "4bfDaqBcnK3hT8ywFEFndxtS1DTSYfncUqd4s5Vyaa66PZHawtC73rDswUur6QZu5RpqM7L9NFgBHT1vhCoox4vi"
                        ],
                        "version": 2,
-                       "recipient": "3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8",
+                       "recipient": "3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH",
                        "assetId": null,
                        "feeAsset": null,
                        "feeAssetId":null,
@@ -119,11 +123,11 @@ class TransferTransactionV2Specification extends PropSpec {
                        "attachment": "4t2Xazb2SX"}
     """)
 
-    val recipient = Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet()
+    val recipient = Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet()
     val tx = TransferTransaction(
       2.toByte,
       PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-      Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet(),
+      Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet(),
       Dcc,
       TxPositiveAmount.unsafeFrom(100000000),
       Dcc,

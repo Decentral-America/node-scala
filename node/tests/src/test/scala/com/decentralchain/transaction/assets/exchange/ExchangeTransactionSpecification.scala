@@ -52,63 +52,67 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
   }
 
   property("ExchangeV1 decode pre-encoded bytes") {
+    // Regenerated for this chain's network id: the original historical bytes embedded sender/order
+    // addresses signed for a different (now-invalid) network id, so decoding them threw InvalidAddress
+    // before ever reaching this comparison. Freshly built + signed via Order.buy/sell + TxHelpers.exchange
+    // (real keys, real signatures) under the current AddressScheme, then captured bytes()/json() verbatim.
     val bytes = Base64.decode(
-      "BwAAAOsAAADr9IY3xy16mJnKoO7SBmSNwHaWV3+d1vdcScPApgVWuxw/7SjoOPJrjgTy5xdT8N3r7nLDWi3CccphnxST/KmeUQHxYAG8ADfqHbsA/38AAH+keW+2fw8DAP6A/wB//21bgAHx3r0A/y7FAH8BAFS23wGAAQEBL//yAfnlgP9y/79zAAAAABG5xwQSFQAAArPyBO9qQmFjJrw/+p8AAAFukBeODgAAEkKNAYSH9FYkAkJ2Q6J9qR5OrnYtaK/sCcM9DZQ3CodGM6JrI/QnfvYXZUb+20f7cDxjOiGauEtcQsv8J0AHA2tAB5kShDOChq6mDOBwWh43hScnayT6y/MZbsruL5u9cyOjzaQFP+0o6Djya44E8ucXU/Dd6+5yw1otwnHKYZ8Uk/ypnlEB8WABvAA36h27AP9/AAB/pHlvtn8PAwD+gP8Af/9tW4AB8d69AP8uxQB/AQBUtt8BgAEBAS//8gH55YD/cv+/cwABAAARuccEEhUAAA7fHo31SkJhYya8P/qfAAABbpAXjg4AABJCjQGEhwijiz5c7B6+H7DEoTcbco5lJ8qmEul84+Ajj7xYCgdTFOnn7vjdnBQxnD3D0O5JMo4M+62X+BFJOqv17/E5DwYAABG5xwQSFQAAAACD65xwAAAAA3s1q3kAAAAAofpKAgAAAAIOl/q9AAABbpAXjap5ZjtkLKpxCBjDxPna0J5VpVVycklUVJbBaeMSZo48HqkGqYHNxTlQAEywiUxZk/7Ba60mv9//myCl4QmucpWK"
+      "BwAAAMsAAADLUMdZr0J3pVTwzbQssUfNsFO94RF/WwQ7DX1JRLjQYGh5jL1k14xKD7oziypjSWNJQNxOW2AdsQKeAsQeD+BWeQABfx47/wBv/X+A/bGg9ACHZfr/LICA/wH/AX+Af///AQAAAAAAAWWgvAAAAAAAAAAAAgAAAWOH1fVxAAABZCJUvXEAAAAAAAAAATsihpndtB0Jt+MpOFDW1OSKUbsG8u1Uswt0KImfinPdInEKQ2Nipr99L7oDMGtTE+U13trDiz/5gh6iIMJSswwheL31d7bAsIGK0YS+V1oH+a9KdmKzjUQsmkByFiTzA3mMvWTXjEoPujOLKmNJY0lA3E5bYB2xAp4CxB4P4FZ5AAF/Hjv/AG/9f4D9saD0AIdl+v8sgID/Af8Bf4B///8BAAEAAAABKgXyAAAAAAAAAAADAAABY4fV9XEAAAFkIlS9cQAAAAAAAAACgWLS5dpwPdOxlbKJsJ79VhM6LfU3MQuMLRIHj/J1fokYgioq4bRcvr4nvk2hLxZVGdIsWgJfWJP6BqS5nBEVhgAAAAEqBfIAAAAAAAAAAAIAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAEAAAFjh9X1cXmZ5MrSQU+9v9j5zET9WmRwuIcyU2bywl7sfAyi/mUZeWYiYjHMCRFAtMVImW+O2bZbRYx68bLKOL7newxxLYc="
     )
     val json = Json.parse(
       """{
-        |  "senderPublicKey" : "5JYRxUHTuVkHvfdt9gkfWd3hn9qW3mmqUqCkCA3PqLSU",
-        |  "amount" : 2213256304,
-        |  "signature" : "3RmyNspCXA1WTxKCn34tPVVDoFXAZ5upiTJNfxDovDajMHUsZQ2YcHBq3wNzAXt7znWhb6AvcySt2vqVorKdfVqB",
-        |  "fee" : 8834775741,
+        |  "senderPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
+        |  "amount" : 2,
+        |  "signature" : "3S1YbYjP76vzqXucZPsVEZp1Nu2ZTNMJjNeFKJt3fnm6VM8mRX1bUf66oefvKfTu7p44WwvTnGCkYHnxWAMLV4ZC",
+        |  "fee" : 1,
         |  "type" : 7,
         |  "version" : 1,
-        |  "sellMatcherFee" : 2717534722,
-        |  "sender" : "3N9kr6BrKYCYs1tEF1c7rPXswKPyajqb86k",
+        |  "sellMatcherFee" : 1,
+        |  "sender" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
         |  "feeAssetId" : null,
-        |  "proofs" : [ "3RmyNspCXA1WTxKCn34tPVVDoFXAZ5upiTJNfxDovDajMHUsZQ2YcHBq3wNzAXt7znWhb6AvcySt2vqVorKdfVqB" ],
-        |  "price" : 19489605554709,
-        |  "id" : "5Z4B6S27X27edwWj8aYVLP2yXaeCcNPu57Q2KSje9FDY",
+        |  "proofs" : [ "3S1YbYjP76vzqXucZPsVEZp1Nu2ZTNMJjNeFKJt3fnm6VM8mRX1bUf66oefvKfTu7p44WwvTnGCkYHnxWAMLV4ZC" ],
+        |  "price" : 5000000000,
+        |  "id" : "Hc1N7YHyE3GwFz67AZNjP3YQBdjCBh2iGQeUndYP5Jka",
         |  "order2" : {
         |    "version" : 1,
-        |    "id" : "BMVA9vp4vDcjwHsgGCsN5FFTiMb7yFpkGkp5Jpug4o7H",
-        |    "sender" : "3MswDigq2LUsRTUpEkmjEDaQbhgmg9eTfeD",
-        |    "senderPublicKey" : "4U5ENWf58FPV32uVt2LmkbQMb7bJZnTR2ZHSFEmYokma",
-        |    "matcherPublicKey" : "5JYRxUHTuVkHvfdt9gkfWd3hn9qW3mmqUqCkCA3PqLSU",
+        |    "id" : "EmpPuuak9eFhnS9SdXQ3HbtmCXd6yB1XSvsZ7G4sHi34",
+        |    "sender" : "3DTuUdm2zW9oABg9dcLS6VaYVFSUmEkqgSA",
+        |    "senderPublicKey" : "3FfErcfPcSgV4CEeCTjcUo7bHxbt5tJuknLS1AVFDYAW",
+        |    "matcherPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
         |    "assetPair" : {
-        |      "amountAsset" : "HFEAWpxTBVhiZfyLn9LRnCRGmz8YT61Ah99he1y6MJd5",
-        |      "priceAsset" : "HHAFGgAJfFKeYyJJJNMgtmWbeLCycUunUq2wuRgsnSgX"
+        |      "amountAsset" : null,
+        |      "priceAsset" : "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"
         |    },
         |    "orderType" : "sell",
-        |    "amount" : 16351453115722,
-        |    "price" : 19489605554709,
-        |    "timestamp" : 4783213297262394015,
-        |    "expiration" : 1574375493134,
-        |    "matcherFee" : 20077042828423,
-        |    "signature" : "B22PFqHfHPxXesjvqQBmjd4BRd2KCNXveMutM5WEvrQ8P6WW7BcDGoC3jfEZ92Bj25dBgem9KbbDijXGrm8WXRf",
-        |    "proofs" : [ "B22PFqHfHPxXesjvqQBmjd4BRd2KCNXveMutM5WEvrQ8P6WW7BcDGoC3jfEZ92Bj25dBgem9KbbDijXGrm8WXRf" ]
+        |    "amount" : 3,
+        |    "price" : 5000000000,
+        |    "timestamp" : 1526992336241,
+        |    "expiration" : 1529584336241,
+        |    "matcherFee" : 2,
+        |    "signature" : "3b38kjiY6sByFEvcLMfipXtWWpsaFN9bnzu6RBdgW2nBh1nrjLLEuriozeSyz78Vf4B4RvHaMP6EX1XKNcnV4xKX",
+        |    "proofs" : [ "3b38kjiY6sByFEvcLMfipXtWWpsaFN9bnzu6RBdgW2nBh1nrjLLEuriozeSyz78Vf4B4RvHaMP6EX1XKNcnV4xKX" ]
         |  },
         |  "order1" : {
         |    "version" : 1,
-        |    "id" : "5bZMswwfyY2LMXhTE3s3Ng1wA7ckfkMYMJeqFz7bTXf3",
-        |    "sender" : "3NCyrQZdTZARUgXhia2rJzkJ1A73qMSefDA",
-        |    "senderPublicKey" : "HTXBWf7iBQgHm9fSpHwjLff3W9NQm7Mi822vGWJGtbPH",
-        |    "matcherPublicKey" : "5JYRxUHTuVkHvfdt9gkfWd3hn9qW3mmqUqCkCA3PqLSU",
+        |    "id" : "5H6Qv4pgYqMcHFGbPHNhykjFaQqPoxez2NXV2nRZoyHh",
+        |    "sender" : "3DWfFRmeEkSKFcjhMpUNx2yMkpXnDvyc9HB",
+        |    "senderPublicKey" : "6SKvVVjLaGNBEj98hpyWmZYYreYzGxxVBKwywBBtaEBy",
+        |    "matcherPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
         |    "assetPair" : {
-        |      "amountAsset" : "HFEAWpxTBVhiZfyLn9LRnCRGmz8YT61Ah99he1y6MJd5",
-        |      "priceAsset" : "HHAFGgAJfFKeYyJJJNMgtmWbeLCycUunUq2wuRgsnSgX"
+        |      "amountAsset" : null,
+        |      "priceAsset" : "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"
         |    },
         |    "orderType" : "buy",
-        |    "amount" : 2971882811242,
-        |    "price" : 19489605554709,
-        |    "timestamp" : 4783213297262394015,
-        |    "expiration" : 1574375493134,
-        |    "matcherFee" : 20077042828423,
-        |    "signature" : "5tLNaVttbCwLLSmSfZkVRxvE6HML3DPrFmXXJm7Y9TsfAgZ4cNRpxxkkVcAHNnJRJtQZHtALmetSAbLMmsivhmWK",
-        |    "proofs" : [ "5tLNaVttbCwLLSmSfZkVRxvE6HML3DPrFmXXJm7Y9TsfAgZ4cNRpxxkkVcAHNnJRJtQZHtALmetSAbLMmsivhmWK" ]
+        |    "amount" : 2,
+        |    "price" : 6000000000,
+        |    "timestamp" : 1526992336241,
+        |    "expiration" : 1529584336241,
+        |    "matcherFee" : 1,
+        |    "signature" : "2BaF1zZqAukzo6ieFYdqapUWQNFQmbMGBJBBj9bZcJaZjoZxqj5neegCCCoiCJ3DcDFKUfWQFGAQ86HNRjz4Ex5H",
+        |    "proofs" : [ "2BaF1zZqAukzo6ieFYdqapUWQNFQmbMGBJBBj9bZcJaZjoZxqj5neegCCCoiCJ3DcDFKUfWQFGAQ86HNRjz4Ex5H" ]
         |  },
-        |  "buyMatcherFee" : 14952016761,
-        |  "timestamp" : 1574375493034
+        |  "buyMatcherFee" : 1,
+        |  "timestamp" : 1526992336241
         |}
         |""".stripMargin
     )
@@ -121,63 +125,64 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
   }
 
   property("ExchangeV2 decode pre-encoded bytes") {
+    // Regenerated for this chain's network id (see ExchangeV1 above for why). Freshly built + signed
+    // via Order.buy/sell + TxHelpers.exchange, captured bytes()/json() verbatim.
     val bytes = Base64.decode(
-      "AAcCAAAA8QK+o7m/j7ZEi+lM2oE0cec3t4lb556CcDbjgPXmAQRxVSX9uNZTQxi/BAK0J0+qRUYyWeWwFJcFYNBaSxQ0GjcyAQAAgADf/wAAf4D/a7wG0f8BoGEBfwHff4D//+x/f94BAQCAcf8AgBz/AAH/X38B2lIjUxT//2///4D/gP9WABqAAAAAAUBccJzlAAAVkbhXuJVZ/bUwsm9ykgAAAW75rITfAAAZgUnEb3EBAAEAQFSX8+znQylR4qI1eWdKXT04bVgH/W+npUEH7pYV07i+/5AqmQMfqbSCzPKCHBMUx/bij/vlbn8RBTZsyHm7zQIAAADyAzSq2tCPs5dl4m4HlMSvIyWRyJHUFuxGjWJsqHImxZgXJf241lNDGL8EArQnT6pFRjJZ5bAUlwVg0FpLFDQaNzIBAACAAN//AAB/gP9rvAbR/wGgYQF/Ad9/gP//7H9/3gEBAIBx/wCAHP8AAf9ffwHaUiNTFP//b///gP+A/1YAGoABAAABQFxwnOUAABdqPljMsln9tTCyb3KSAAABbvmshN8AABmBScRvcQABAAEAQGDF9E4Yz7DdMiQMOX2kqIqHYig4J3DxRuQHNgZgkVQyuDEwSyTEFzfVv+SgaCTT9q3oZgO1IHDbskkcD0LyngcAAAFAXHCc5QAAAANnzytVAAAABAbkM9UAAAADtaBwygAAAAPeQlJPAAABbvmshHsBAAEAQPL1jLp5HAdsUrnxa3cdRRip8t1UGEqQbbEBXRT4/CrlgAlK+EO4Cw1Dz0xLEG1retjDt2LfIVwR10MEN1thqQs="
+      "AAcCAAAA0QJQx1mvQnelVPDNtCyxR82wU73hEX9bBDsNfUlEuNBgaHmMvWTXjEoPujOLKmNJY0lA3E5bYB2xAp4CxB4P4FZ5AAF/Hjv/AG/9f4D9saD0AIdl+v8sgID/Af8Bf4B///8BAAAAAAABZaC8AAAAAAAAAAACAAABY4fV9XEAAAFkIlS9cQAAAAAAAAABAQABAEASR3SrkhPDA/IkXSyjPujMUtVUDoElH2nmH87i6DAurUZ9cC9xAD/sniz2l32InOhJwk4eiL3tpgeIdmxpwS4PAAAA0QIheL31d7bAsIGK0YS+V1oH+a9KdmKzjUQsmkByFiTzA3mMvWTXjEoPujOLKmNJY0lA3E5bYB2xAp4CxB4P4FZ5AAF/Hjv/AG/9f4D9saD0AIdl+v8sgID/Af8Bf4B///8BAAEAAAABKgXyAAAAAAAAAAADAAABY4fV9XEAAAFkIlS9cQAAAAAAAAACAQABAECYeU5VhJKT1ZB17OXg8hzWYaJyGHpgXvHQMPcDBmYKrbVgHbWzO93hlVyafOUyO498GzYw41F71L8Mn9BveOqPAAAAASoF8gAAAAAAAAAAAgAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAWOH1fVxAQABAEB7Acia3VH2KAB0G9dORtwlUYBiWdzNS4HH9W72nQB/Cb6D/9mVBQFBeunQYNlFTiwsJh3BP5IcsDSCYy3jGhWA"
     )
     val json = Json.parse(
       """{
-        |  "senderPublicKey" : "3ZJUiWs5xiuZqYBHBthdgH4U6tYxLy5fHNKxMApEMJ6V",
-        |  "amount" : 14626532181,
-        |  "fee" : 16613790287,
+        |  "senderPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
+        |  "amount" : 2,
+        |  "fee" : 1,
         |  "type" : 7,
         |  "version" : 2,
-        |  "sellMatcherFee" : 15932092618,
-        |  "sender" : "3Mubc9sE9PSTUb2xNUrayMcQEbTQTFuwFvV",
+        |  "sellMatcherFee" : 1,
+        |  "sender" : "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
         |  "feeAssetId" : null,
-        |  "proofs" : [ "5rjjpMEqcv6Dpc6tUukWCPNLKWFbtALPwpfKTHYmNS2x1xSZyJ7UCHqEGHG2ANuyuYT831wTxdqTFyhanbD9bVSa" ],
-        |  "price" : 1375940418789,
-        |  "id" : "EwHU7KoCxXHadkLgooJNt7guvb4v7UWV6ZmSv5AZ2XPN",
+        |  "proofs" : [ "3Te6aX2Zqu4ZHYaZP5P3rwZdEPEfnxSduGdugoLC5DW6jK8mVAJY1w1tf3HUHcSu3jw7ApNL6VdShWWc7KR7hg4w" ],
+        |  "price" : 5000000000,
+        |  "id" : "5twq9s3Q6k3ANV8cw26TggvweGg4SJ4oesQv6sUdNBG9",
         |  "order2" : {
-        |    "senderPublicKey" : "4YbJhJxb6CbdjCx6T2Bp9J9zAy8tjr58BYpZkFCqqMuY",
+        |    "senderPublicKey" : "3FfErcfPcSgV4CEeCTjcUo7bHxbt5tJuknLS1AVFDYAW",
         |    "orderType" : "sell",
-        |    "amount" : 25745079979186,
-        |    "matcherFeeAssetId" : null,
-        |    "signature" : "2wDh9Jgf42R9ahTE4Sg2pVChPX9Yti5epKBFsrphEG96RQEJriptHUyofgxy6Hz8CuTrGAKyPMjPQmUEQwd41k6i",
+        |    "amount" : 3,
+        |    "signature" : "43oxMXdRxZ2K9eoB58H7EPvU4WY5Vqo3N2GD2oiv8cwCGkToJ7bbJvesRnECdg3pfetWrgyZCa5Uw1U2De8V4jpi",
         |    "assetPair" : {
-        |      "amountAsset" : "11SecKqegK2kMMorte6oN1qsp19B85CxGMGqYys9cJU",
-        |      "priceAsset" : "12xbfZzJThEirK9zGRyvmhqNSHmvzkroiU3GkVfCUDtT"
-        |    },
-        |    "version" : 3,
-        |    "matcherFee" : 28043079085937,
-        |    "sender" : "3Mqo7jsWkw6ncJm1Q1BkpUQRmtsJiWz72dC",
-        |    "price" : 1375940418789,
-        |    "proofs" : [ "2wDh9Jgf42R9ahTE4Sg2pVChPX9Yti5epKBFsrphEG96RQEJriptHUyofgxy6Hz8CuTrGAKyPMjPQmUEQwd41k6i" ],
-        |    "matcherPublicKey" : "3ZJUiWs5xiuZqYBHBthdgH4U6tYxLy5fHNKxMApEMJ6V",
-        |    "expiration" : 1576146863327,
-        |    "id" : "ARayJvx7uq9gLnXoMYAbUqE13LD7a367hsR58ALUMu86",
-        |    "timestamp" : 6484538259240088210
-        |  },
-        |  "order1" : {
-        |    "senderPublicKey" : "DqBGDQE5XafzqV2ZpL4FxnTR8ECbqT5pekhHU5TrTAdA",
-        |    "orderType" : "buy",
-        |    "amount" : 23715607197845,
-        |    "signature" : "2h6XD9GHUh1Cmy65pdFrVvJkqRD3hQehnR7ysGQwH3kUoh7oD7eQaJWNL9fENfrSXgqjV7uESrPDeYwFi5aD2A49",
-        |    "assetPair" : {
-        |      "amountAsset" : "11SecKqegK2kMMorte6oN1qsp19B85CxGMGqYys9cJU",
-        |      "priceAsset" : "12xbfZzJThEirK9zGRyvmhqNSHmvzkroiU3GkVfCUDtT"
+        |      "amountAsset" : null,
+        |      "priceAsset" : "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"
         |    },
         |    "version" : 2,
-        |    "matcherFee" : 28043079085937,
-        |    "sender" : "3MrqxMUe7mCKnJNgJjmWWbuzJQgQuLVKhkp",
-        |    "price" : 1375940418789,
-        |    "proofs" : [ "2h6XD9GHUh1Cmy65pdFrVvJkqRD3hQehnR7ysGQwH3kUoh7oD7eQaJWNL9fENfrSXgqjV7uESrPDeYwFi5aD2A49" ],
-        |    "matcherPublicKey" : "3ZJUiWs5xiuZqYBHBthdgH4U6tYxLy5fHNKxMApEMJ6V",
-        |    "expiration" : 1576146863327,
-        |    "id" : "7zS6RWD9BAogytjd3mMtVxDubFbR97gnFzKT7TifRU4y",
-        |    "timestamp" : 6484538259240088210
+        |    "matcherFee" : 2,
+        |    "sender" : "3DTuUdm2zW9oABg9dcLS6VaYVFSUmEkqgSA",
+        |    "price" : 5000000000,
+        |    "proofs" : [ "43oxMXdRxZ2K9eoB58H7EPvU4WY5Vqo3N2GD2oiv8cwCGkToJ7bbJvesRnECdg3pfetWrgyZCa5Uw1U2De8V4jpi" ],
+        |    "matcherPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
+        |    "expiration" : 1529584336241,
+        |    "id" : "DgViGJqyP7s4dKEZuZ5JV3Pgm6bjKFpNa3YqaHFYiPRG",
+        |    "timestamp" : 1526992336241
         |  },
-        |  "buyMatcherFee" : 17295487957,
-        |  "timestamp" : 1576146863227
+        |  "order1" : {
+        |    "senderPublicKey" : "6SKvVVjLaGNBEj98hpyWmZYYreYzGxxVBKwywBBtaEBy",
+        |    "orderType" : "buy",
+        |    "amount" : 2,
+        |    "signature" : "NCQHfaPCRa3mUT3Z1pnL9cA3YuTGpNthyPTej3n8tDpdqiQZ1mHyv8KSQxLWyp3txUDFrVpVRgw8dPQATcgJidk",
+        |    "assetPair" : {
+        |      "amountAsset" : null,
+        |      "priceAsset" : "9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"
+        |    },
+        |    "version" : 2,
+        |    "matcherFee" : 1,
+        |    "sender" : "3DWfFRmeEkSKFcjhMpUNx2yMkpXnDvyc9HB",
+        |    "price" : 6000000000,
+        |    "proofs" : [ "NCQHfaPCRa3mUT3Z1pnL9cA3YuTGpNthyPTej3n8tDpdqiQZ1mHyv8KSQxLWyp3txUDFrVpVRgw8dPQATcgJidk" ],
+        |    "matcherPublicKey" : "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
+        |    "expiration" : 1529584336241,
+        |    "id" : "ztkXA9DGLr3wACqZY4Be46o51J2aqf1g9e6hMb2p3Nx",
+        |    "timestamp" : 1526992336241
+        |  },
+        |  "buyMatcherFee" : 1,
+        |  "timestamp" : 1526992336241
         |}
         |
         |""".stripMargin
@@ -372,7 +377,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "version": 1,
          "type":7,
          "id":"FaDrdKax2KBZY6Mh7K3tWmanEdzZx6MhYUmpjV3LBJRp",
-         "sender":"3N22UCTvst8N1i1XDvGHzyqdgmZgwDKbp44",
+         "sender":"3DZvoXBfpyLdcXubQQTJJoCvAYyH8CuYtCF",
          "senderPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
          "fee":1,
          "feeAssetId": null,
@@ -382,7 +387,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "order1":{
             "version": 1,
             "id":"EdUTcUZNK3NYKuPrsPCkZGzVUwpjx6qVjd4TgBwna7po",
-            "sender":"3MthkhReCHXeaPZcWXcT3fa6ey1XWptLtwj",
+            "sender":"3DSc629P9NjvBDTgh1oTMUwP8kR7hrmgxqr",
             "senderPublicKey":"BqeJY8CP3PeUDaByz57iRekVUGtLxoow4XxPvXfHynaZ",
             "matcherPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
             "assetPair":{"amountAsset":null,"priceAsset":"9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"},
@@ -398,7 +403,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "order2":{
             "version": 1,
             "id":"DS9HPBGRMJcquTb3sAGAJzi73jjMnFFSWWHfzzKK32Q7",
-            "sender":"3MswjKzUBKCD6i1w4vCosQSbC8XzzdBx1mG",
+            "sender":"3DRr4eiD8QQUhXv1FQPpBDosfuwbBfSfHB7",
             "senderPublicKey":"7E9Za8v8aT6EyU1sX91CVK7tWUeAetnNYDxzKZsyjyKV",
             "matcherPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
             "assetPair":{"amountAsset":null,"priceAsset":"9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"},
@@ -473,7 +478,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "version": 2,
          "type":7,
          "id":"5KUDbPKjAoNHTMyae9zJZpFjYFAbeSQMQ9rzgkDEEUx6",
-         "sender":"3N22UCTvst8N1i1XDvGHzyqdgmZgwDKbp44",
+         "sender":"3DZvoXBfpyLdcXubQQTJJoCvAYyH8CuYtCF",
          "senderPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
          "fee":1,
          "feeAssetId": null,
@@ -482,7 +487,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "order1":{
             "version": 2,
             "id":"EcndU4vU3SJ58KZAXJPKACvMhijTzgRjLTsuWxSWaQUK",
-            "sender":"3MthkhReCHXeaPZcWXcT3fa6ey1XWptLtwj",
+            "sender":"3DSc629P9NjvBDTgh1oTMUwP8kR7hrmgxqr",
             "senderPublicKey":"BqeJY8CP3PeUDaByz57iRekVUGtLxoow4XxPvXfHynaZ",
             "matcherPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
             "assetPair":{"amountAsset":null,"priceAsset":"9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"},
@@ -498,7 +503,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "order2":{
             "version": 1,
             "id":"DS9HPBGRMJcquTb3sAGAJzi73jjMnFFSWWHfzzKK32Q7",
-            "sender":"3MswjKzUBKCD6i1w4vCosQSbC8XzzdBx1mG",
+            "sender":"3DRr4eiD8QQUhXv1FQPpBDosfuwbBfSfHB7",
             "senderPublicKey":"7E9Za8v8aT6EyU1sX91CVK7tWUeAetnNYDxzKZsyjyKV",
             "matcherPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
             "assetPair":{"amountAsset":null,"priceAsset":"9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"},
@@ -573,7 +578,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "version": 2,
          "type":7,
          "id":"3G1U1UX2mtWXVdZTZNjEYvPeNn6cyYmmjHYUePrg4zM5",
-         "sender":"3N22UCTvst8N1i1XDvGHzyqdgmZgwDKbp44",
+         "sender":"3DZvoXBfpyLdcXubQQTJJoCvAYyH8CuYtCF",
          "senderPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
          "fee":1,
          "feeAssetId": null,
@@ -582,7 +587,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "order1":{
             "version": 3,
             "id":"8KZby2jXfFCaFtEKejqBbutQvyimgeQykwPKGi3ufNiA",
-            "sender":"3MthkhReCHXeaPZcWXcT3fa6ey1XWptLtwj",
+            "sender":"3DSc629P9NjvBDTgh1oTMUwP8kR7hrmgxqr",
             "senderPublicKey":"BqeJY8CP3PeUDaByz57iRekVUGtLxoow4XxPvXfHynaZ",
             "matcherPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
             "assetPair":{"amountAsset":null,"priceAsset":"9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"},
@@ -599,7 +604,7 @@ class ExchangeTransactionSpecification extends PropSpec with NTPTime with JsonMa
          "order2":{
             "version": 1,
             "id":"DS9HPBGRMJcquTb3sAGAJzi73jjMnFFSWWHfzzKK32Q7",
-            "sender":"3MswjKzUBKCD6i1w4vCosQSbC8XzzdBx1mG",
+            "sender":"3DRr4eiD8QQUhXv1FQPpBDosfuwbBfSfHB7",
             "senderPublicKey":"7E9Za8v8aT6EyU1sX91CVK7tWUeAetnNYDxzKZsyjyKV",
             "matcherPublicKey":"Fvk5DXmfyWVZqQVBowUBMwYtRAHDtdyZNNeRrwSjt6KP",
             "assetPair":{"amountAsset":null,"priceAsset":"9ZDWzK53XT5bixkmMwTJi2YzgxCqn5dUajXFcT2HcFDy"},

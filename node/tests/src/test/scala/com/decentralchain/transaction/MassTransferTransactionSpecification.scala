@@ -111,6 +111,8 @@ class MassTransferTransactionSpecification extends PropSpec {
     import MassTransferTransaction.create
 
     val timestamp = 1L
+    // Must differ from AddressScheme.current.chainId, or these addresses won't actually mismatch.
+    val otherChainId: Byte = if (AddressScheme.current.chainId == '?'.toByte) 'T'.toByte else '?'.toByte
 
     val (_, _, assetId, _, fee, transfers, attachment, proofs) = massTransfers.head
 
@@ -143,14 +145,14 @@ class MassTransferTransactionSpecification extends PropSpec {
 
     val differentChainIds = Seq(
       ParsedTransfer(sender.toAddress, TxNonNegativeAmount.unsafeFrom(100)),
-      ParsedTransfer(sender.toAddress('?'.toByte), TxNonNegativeAmount.unsafeFrom(100))
+      ParsedTransfer(sender.toAddress(otherChainId), TxNonNegativeAmount.unsafeFrom(100))
     )
     val invalidChainIdEi = create(1.toByte, sender.publicKey, assetId, differentChainIds, 100, timestamp, attachment, proofs)
     invalidChainIdEi should produce("One of chain ids not match")
 
     val otherChainIds = Seq(
-      ParsedTransfer(sender.toAddress('?'.toByte), TxNonNegativeAmount.unsafeFrom(100)),
-      ParsedTransfer(sender.toAddress('?'.toByte), TxNonNegativeAmount.unsafeFrom(100))
+      ParsedTransfer(sender.toAddress(otherChainId), TxNonNegativeAmount.unsafeFrom(100)),
+      ParsedTransfer(sender.toAddress(otherChainId), TxNonNegativeAmount.unsafeFrom(100))
     )
     val invalidOtherChainIdEi = create(1.toByte, sender.publicKey, assetId, otherChainIds, 100, timestamp, attachment, proofs)
     invalidOtherChainIdEi should produce("One of chain ids not match")
@@ -159,8 +161,8 @@ class MassTransferTransactionSpecification extends PropSpec {
   property("JSON format validation") {
     val js = Json.parse("""{
                        "type": 11,
-                       "id": "H36CTJc7ztGRZPCrvpNYeagCN1HV1gXqUthsXKdBT3UD",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "GiEi3n18j2SryPKNfyFsadePLretVV8bujCfHdKJKj79",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 200000,
                        "feeAssetId": null,
@@ -174,11 +176,11 @@ class MassTransferTransactionSpecification extends PropSpec {
                        "totalAmount": 300000000,
                        "transfers": [
                        {
-                       "recipient": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "recipient": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "amount": 100000000
                        },
                        {
-                       "recipient": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "recipient": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "amount": 200000000
                        }
                        ]
@@ -187,7 +189,7 @@ class MassTransferTransactionSpecification extends PropSpec {
 
     val transfers = MassTransferTransaction
       .parseTransfersList(
-        List(Transfer("3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh", 100000000L), Transfer("3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh", 200000000L))
+        List(Transfer("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab", 100000000L), Transfer("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab", 200000000L))
       )
       .explicitGet()
 

@@ -43,8 +43,8 @@ class LeaseTransactionSpecification extends PropSpec {
   property("JSON format validation for LeaseTransactionV1") {
     val js = Json.parse("""{
                        "type": 8,
-                       "id": "EXhjYjy8a1dURbttrGzfcft7cddDnPnoa3vqaBLCTFVY",
-                       "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                       "id": "AQ3j5JKAPmQx8gZ4XwGGwcmyK3gBDhQi3c4caZFAg8hy",
+                       "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                        "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                        "fee": 1000000,
                        "feeAssetId": null,
@@ -53,7 +53,7 @@ class LeaseTransactionSpecification extends PropSpec {
                        "proofs": ["iy3TmfbFds7pc9cDDqfjEJhfhVyNtm3GcxoVz8L3kJFvgRPUmiqqKLMeJGYyN12AhaQ6HvE7aF1tFgaAoCCgNJJ"],
                        "version": 1,
                        "amount": 10000000,
-                       "recipient": "3NCBMxgdghg4tUhEEffSXy11L6hUi6fcBpd"
+                       "recipient": "3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH"
                        }
     """)
 
@@ -61,7 +61,7 @@ class LeaseTransactionSpecification extends PropSpec {
       .create(
         1.toByte,
         PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-        Address.fromString("3NCBMxgdghg4tUhEEffSXy11L6hUi6fcBpd").explicitGet(),
+        Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet(),
         10000000,
         1000000,
         1526646300260L,
@@ -75,8 +75,8 @@ class LeaseTransactionSpecification extends PropSpec {
   property("JSON format validation for LeaseTransactionV2") {
     val js = Json.parse("""{
                         "type": 8,
-                        "id": "UL85wuJDXXe6BtQUob4KNb72kTaf8RN9Gp1NajvGMeU",
-                        "sender": "3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh",
+                        "id": "8CxaX9rkG1HdDm1QnzcB23oqnVSNMd6YbzUXZMgrwoY7",
+                        "sender": "3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab",
                         "senderPublicKey": "FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z",
                         "fee": 1000000,
                         "feeAssetId": null,
@@ -86,7 +86,7 @@ class LeaseTransactionSpecification extends PropSpec {
                         ],
                         "version": 2,
                         "amount": 10000000,
-                        "recipient": "3NCBMxgdghg4tUhEEffSXy11L6hUi6fcBpd"
+                        "recipient": "3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH"
                        }
     """)
 
@@ -94,7 +94,7 @@ class LeaseTransactionSpecification extends PropSpec {
       .create(
         2.toByte,
         PublicKey.fromBase58String("FM5ojNqW7e9cZ9zhPYGkpSP1Pcd8Z3e3MNKYVS5pGJ8Z").explicitGet(),
-        Address.fromString("3NCBMxgdghg4tUhEEffSXy11L6hUi6fcBpd").explicitGet(),
+        Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet(),
         10000000,
         1000000,
         1526646497465L,
