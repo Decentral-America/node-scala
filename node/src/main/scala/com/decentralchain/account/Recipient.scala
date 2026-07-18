@@ -72,7 +72,11 @@ object Address {
     .maximumSize(200000)
     .build()
 
-  private val bytesCache: Cache[ByteStr, Either[InvalidAddress, Address]] = CacheBuilder
+  // Keyed by (bytes, expectedChainId): the validation result depends on expectedChainId (an address that
+  // is rejected as "another network" under Some(chainId) is accepted under None), so caching by bytes
+  // alone let one caller's result poison another's — e.g. a foreign address validated with None (accepted)
+  // would then be wrongly accepted by a later Some(current) check that must reject it.
+  private val bytesCache: Cache[(ByteStr, Option[Byte]), Either[InvalidAddress, Address]] = CacheBuilder
     .newBuilder()
     .softValues()
     .maximumSize(200000)
@@ -112,7 +116,7 @@ object Address {
 
   def fromBytes(addressBytes: Array[Byte], expectedChainId: Option[Byte] = Some(AddressScheme.current.chainId)): Either[InvalidAddress, Address] = {
     bytesCache.get(
-      ByteStr(addressBytes),
+      (ByteStr(addressBytes), expectedChainId),
       { () =>
         Either
           .cond(
