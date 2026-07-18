@@ -63,8 +63,11 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
       )
         .explicitGet()
 
-    val seed     = Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet()
-    val master   = Address.fromString("3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu").explicitGet()
+    val seed = Address.fromString("3DXYChnDbVqYY1jC9hnNEUWeUSad28S96iD").explicitGet()
+    // master must be the issuer's address (KeyPair(seed.bytes)) so genesis1 below funds the account that
+    // issues the asset and sends the precondition transactions; the original fixture relied on this
+    // seed/master coincidence, which breaks if master is an unrelated hardcoded address.
+    val master   = KeyPair(seed.bytes).toAddress
     val genesis1 = TxHelpers.genesis(master, 1000000000, timestamp = 0)
     val genesis2 = TxHelpers.genesis(KeyPair(master.bytes).toAddress, 1000000000, timestamp = 0)
 
@@ -105,204 +108,204 @@ class TransactionValidationErrorPrintTest extends PropSpec with Inside with With
     ) { error =>
       inside(error) { case Left(TransactionValidationError(see: ScriptExecutionError, _)) =>
         val expected =
-          f"""
-             |	$$match0 = TransferTransaction(
-             |		recipient = Address(
-             |			bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |		)
-             |		timestamp = 0
-             |		bodyBytes = base58'ZFDBCm7WGpX1zYwdAbbbk2XHyDz2urZGfPHjeiPWuGuemeYsL5YvfH7Nf87ebWwX4AhbnuXaNDARaLnSTc42SZbKPXkcbs3ZHNsoF9bRQK5Aw7KjHg7P7Sinbq4wfQWhjbnQNJTQjkfZjX7BNZQ4LnquL9LVyPmXJBh'
-             |		assetId = base58'BG6TEE8VmtvkiVLwc4XmmW7yjiFWezGChTM2tFCNa69B'
-             |		feeAssetId = Unit
-             |		amount = 1
-             |		version = 2
-             |		id = base58'H7eZ7bbbga3rhD6LaUiAiaDZrHGU9ibggsqC1HpZCQjj'
-             |		senderPublicKey = base58'EbxDdqXBhj3TEd1UFoi1UE1vm1k7gM9EMYAuLr62iaZF'
-             |		attachment = base58''
-             |		sender = Address(
-             |			bytes = base58'3Mrt6Y1QweDrKRRNuhhHGdHpu2kXLXq2QK5'
-             |		)
-             |		fee = 10000000
-             |	)
-             |	$$isInstanceOf.@args = [
-             |		TransferTransaction(
-             |			recipient = Address(
-             |				bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |			)
-             |			timestamp = 0
-             |			bodyBytes = base58'ZFDBCm7WGpX1zYwdAbbbk2XHyDz2urZGfPHjeiPWuGuemeYsL5YvfH7Nf87ebWwX4AhbnuXaNDARaLnSTc42SZbKPXkcbs3ZHNsoF9bRQK5Aw7KjHg7P7Sinbq4wfQWhjbnQNJTQjkfZjX7BNZQ4LnquL9LVyPmXJBh'
-             |			assetId = base58'BG6TEE8VmtvkiVLwc4XmmW7yjiFWezGChTM2tFCNa69B'
-             |			feeAssetId = Unit
-             |			amount = 1
-             |			version = 2
-             |			id = base58'H7eZ7bbbga3rhD6LaUiAiaDZrHGU9ibggsqC1HpZCQjj'
-             |			senderPublicKey = base58'EbxDdqXBhj3TEd1UFoi1UE1vm1k7gM9EMYAuLr62iaZF'
-             |			attachment = base58''
-             |			sender = Address(
-             |				bytes = base58'3Mrt6Y1QweDrKRRNuhhHGdHpu2kXLXq2QK5'
-             |			)
-             |			fee = 10000000
-             |		),
-             |		"TransferTransaction"
-             |	]
-             |	$$isInstanceOf.@complexity = 1
-             |	@complexityLimit = 2147483646
-             |	big = base64'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-             |	==.@args = [
-             |		base64'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-             |		base64'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-             |	]
-             |	==.@complexity = 1
-             |	@complexityLimit = 2147483645
-             |	toBytes.@args = [
-             |		1
-             |	]
-             |	toBytes.@complexity = 1
-             |	@complexityLimit = 2147483644
-             |	takeRight.@args = [
-             |		base58'11111112',
-             |		1
-             |	]
-             |	takeRight.@complexity = 6
-             |	@complexityLimit = 2147483638
-             |	toBytes.@args = [
-             |		87
-             |	]
-             |	toBytes.@complexity = 1
-             |	@complexityLimit = 2147483637
-             |	takeRight.@args = [
-             |		base58'11111112W',
-             |		1
-             |	]
-             |	takeRight.@complexity = 6
-             |	@complexityLimit = 2147483631
-             |	NETWORKBYTE = base58'2W'
-             |	+.@args = [
-             |		base58'2',
-             |		base58'2W'
-             |	]
-             |	+.@complexity = 2
-             |	@complexityLimit = 2147483629
-             |	t = TransferTransaction(
-             |		recipient = Address(
-             |			bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |		)
-             |		timestamp = 0
-             |		bodyBytes = base58'ZFDBCm7WGpX1zYwdAbbbk2XHyDz2urZGfPHjeiPWuGuemeYsL5YvfH7Nf87ebWwX4AhbnuXaNDARaLnSTc42SZbKPXkcbs3ZHNsoF9bRQK5Aw7KjHg7P7Sinbq4wfQWhjbnQNJTQjkfZjX7BNZQ4LnquL9LVyPmXJBh'
-             |		assetId = base58'BG6TEE8VmtvkiVLwc4XmmW7yjiFWezGChTM2tFCNa69B'
-             |		feeAssetId = Unit
-             |		amount = 1
-             |		version = 2
-             |		id = base58'H7eZ7bbbga3rhD6LaUiAiaDZrHGU9ibggsqC1HpZCQjj'
-             |		senderPublicKey = base58'EbxDdqXBhj3TEd1UFoi1UE1vm1k7gM9EMYAuLr62iaZF'
-             |		attachment = base58''
-             |		sender = Address(
-             |			bytes = base58'3Mrt6Y1QweDrKRRNuhhHGdHpu2kXLXq2QK5'
-             |		)
-             |		fee = 10000000
-             |	)
-             |	recipientPublicKeyAndSignature = base58''
-             |	take.@args = [
-             |		base58'',
-             |		32
-             |	]
-             |	take.@complexity = 6
-             |	@complexityLimit = 2147483623
-             |	recipientPublicKey = base58''
-             |	blake2b256.@args = [
-             |		base58''
-             |	]
-             |	blake2b256.@complexity = 136
-             |	@complexityLimit = 2147483487
-             |	keccak256.@args = [
-             |		base58'xyw95Bsby3s4mt6f4FmFDnFVpQBAeJxBFNGzu2cX4dM'
-             |	]
-             |	keccak256.@complexity = 195
-             |	@complexityLimit = 2147483292
-             |	take.@args = [
-             |		base58'DRtdYbxMg7YHw4acvDP6xQrvmsRAz3K7gSkH3xBJ5CTL',
-             |		20
-             |	]
-             |	take.@complexity = 6
-             |	@complexityLimit = 2147483286
-             |	recipientPublicKeyHash = base58'3aDy5kHaDeXWfQwMrBCRvd6r7gzg'
-             |	+.@args = [
-             |		base58'6v',
-             |		base58'3aDy5kHaDeXWfQwMrBCRvd6r7gzg'
-             |	]
-             |	+.@complexity = 2
-             |	@complexityLimit = 2147483284
-             |	rpkWithVersionAndByte = base58'N8tNz9vAHAwFpa4A8Rgk45q8tNjeC'
-             |	blake2b256.@args = [
-             |		base58'N8tNz9vAHAwFpa4A8Rgk45q8tNjeC'
-             |	]
-             |	blake2b256.@complexity = 136
-             |	@complexityLimit = 2147483148
-             |	keccak256.@args = [
-             |		base58'CSJhGcnZPNCcHG5gCZuHKArEg8MUy9ridbKZsryV8FEw'
-             |	]
-             |	keccak256.@complexity = 195
-             |	@complexityLimit = 2147482953
-             |	take.@args = [
-             |		base58'4sAbTTxFgWFkHC5EutjwtRYgM3Q8V6aBD9EjDKVJ7byk',
-             |		4
-             |	]
-             |	take.@complexity = 6
-             |	@complexityLimit = 2147482947
-             |	checksum = base58'2U8tZq'
-             |	+.@args = [
-             |		base58'N8tNz9vAHAwFpa4A8Rgk45q8tNjeC',
-             |		base58'2U8tZq'
-             |	]
-             |	+.@complexity = 2
-             |	@complexityLimit = 2147482945
-             |	recipientAddressFromPublicKey = base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
-             |	addressFromRecipient.@args = [
-             |		Address(
-             |			bytes = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |		)
-             |	]
-             |	addressFromRecipient.@complexity = 5
-             |	@complexityLimit = 2147482940
-             |	recipientAddressFromTx = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |	!=.@args = [
-             |		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs',
-             |		base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |	]
-             |	!=.@complexity = 1
-             |	@complexityLimit = 2147482939
-             |	@a = base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
-             |	@b = base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |	==.@args = [
-             |		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs',
-             |		base58'3N1w8y9Udv3k9NCSv9EE3QvMTRnGFTDQSzu'
-             |	]
-             |	==.@complexity = 1
-             |	@complexityLimit = 2147482938
-             |	!.@args = [
-             |		false
-             |	]
-             |	!.@complexity = 1
-             |	@complexityLimit = 2147482937
-             |	@p = false
-             |	toBase58String.@args = [
-             |		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
-             |	]
-             |	toBase58String.@complexity = 3
-             |	@complexityLimit = 2147482936
-             |	recipientAddressStr = "3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs"
-             |	+.@args = [
-             |		"Recipient address error:",
-             |		"3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs"
-             |	]
-             |	+.@complexity = 1
-             |	@complexityLimit = 2147482935
-             |	throw.@args = [
-             |		"Recipient address error:3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs"
-             |	]
-             |	throw.@complexity = 1
-             |	@complexityLimit = 2147482934
-             |""".stripMargin
+          """
+	$match0 = TransferTransaction(
+		recipient = Address(
+			bytes = base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+		)
+		timestamp = 0
+		bodyBytes = base58'ZEAJNoQf7pkvyRupaj7WV8pqQgn3c8iCgMwWi6qeKVDnaa5K6HhycRgW7WMJmDzQeprkw1AMQ3XATKgLgmmHsYUeoHRKcKK4TZg1c4jbGk3qbeiabnKhx8AjsZjweLrA3w5mxZAQxBuaGL6StMPfUaSrHxpPYxaagUF'
+		assetId = base58'HTmXyXzppNFDHEP9jv4M7QTxEgTWVCz8EW8rrqoGgt4s'
+		feeAssetId = Unit
+		amount = 1
+		version = 2
+		id = base58'4MbZ9nsWWaziEGQ5ASMSKKf4kFtY3ZXP6hv9SDj96Y1y'
+		senderPublicKey = base58'4g6Wf74fjeGq56oW4V29ZfUYjm7uqiZS3PKorGpEjo9o'
+		attachment = base58''
+		sender = Address(
+			bytes = base58'3DZbkkTYfQ1DhznP7YDv8WCvqz1vpzghVMS'
+		)
+		fee = 10000000
+	)
+	$isInstanceOf.@args = [
+		TransferTransaction(
+			recipient = Address(
+				bytes = base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+			)
+			timestamp = 0
+			bodyBytes = base58'ZEAJNoQf7pkvyRupaj7WV8pqQgn3c8iCgMwWi6qeKVDnaa5K6HhycRgW7WMJmDzQeprkw1AMQ3XATKgLgmmHsYUeoHRKcKK4TZg1c4jbGk3qbeiabnKhx8AjsZjweLrA3w5mxZAQxBuaGL6StMPfUaSrHxpPYxaagUF'
+			assetId = base58'HTmXyXzppNFDHEP9jv4M7QTxEgTWVCz8EW8rrqoGgt4s'
+			feeAssetId = Unit
+			amount = 1
+			version = 2
+			id = base58'4MbZ9nsWWaziEGQ5ASMSKKf4kFtY3ZXP6hv9SDj96Y1y'
+			senderPublicKey = base58'4g6Wf74fjeGq56oW4V29ZfUYjm7uqiZS3PKorGpEjo9o'
+			attachment = base58''
+			sender = Address(
+				bytes = base58'3DZbkkTYfQ1DhznP7YDv8WCvqz1vpzghVMS'
+			)
+			fee = 10000000
+		),
+		"TransferTransaction"
+	]
+	$isInstanceOf.@complexity = 1
+	@complexityLimit = 2147483646
+	big = base64'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+	==.@args = [
+		base64'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+		base64'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+	]
+	==.@complexity = 1
+	@complexityLimit = 2147483645
+	toBytes.@args = [
+		1
+	]
+	toBytes.@complexity = 1
+	@complexityLimit = 2147483644
+	takeRight.@args = [
+		base58'11111112',
+		1
+	]
+	takeRight.@complexity = 6
+	@complexityLimit = 2147483638
+	toBytes.@args = [
+		87
+	]
+	toBytes.@complexity = 1
+	@complexityLimit = 2147483637
+	takeRight.@args = [
+		base58'11111112W',
+		1
+	]
+	takeRight.@complexity = 6
+	@complexityLimit = 2147483631
+	NETWORKBYTE = base58'2W'
+	+.@args = [
+		base58'2',
+		base58'2W'
+	]
+	+.@complexity = 2
+	@complexityLimit = 2147483629
+	t = TransferTransaction(
+		recipient = Address(
+			bytes = base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+		)
+		timestamp = 0
+		bodyBytes = base58'ZEAJNoQf7pkvyRupaj7WV8pqQgn3c8iCgMwWi6qeKVDnaa5K6HhycRgW7WMJmDzQeprkw1AMQ3XATKgLgmmHsYUeoHRKcKK4TZg1c4jbGk3qbeiabnKhx8AjsZjweLrA3w5mxZAQxBuaGL6StMPfUaSrHxpPYxaagUF'
+		assetId = base58'HTmXyXzppNFDHEP9jv4M7QTxEgTWVCz8EW8rrqoGgt4s'
+		feeAssetId = Unit
+		amount = 1
+		version = 2
+		id = base58'4MbZ9nsWWaziEGQ5ASMSKKf4kFtY3ZXP6hv9SDj96Y1y'
+		senderPublicKey = base58'4g6Wf74fjeGq56oW4V29ZfUYjm7uqiZS3PKorGpEjo9o'
+		attachment = base58''
+		sender = Address(
+			bytes = base58'3DZbkkTYfQ1DhznP7YDv8WCvqz1vpzghVMS'
+		)
+		fee = 10000000
+	)
+	recipientPublicKeyAndSignature = base58''
+	take.@args = [
+		base58'',
+		32
+	]
+	take.@complexity = 6
+	@complexityLimit = 2147483623
+	recipientPublicKey = base58''
+	blake2b256.@args = [
+		base58''
+	]
+	blake2b256.@complexity = 136
+	@complexityLimit = 2147483487
+	keccak256.@args = [
+		base58'xyw95Bsby3s4mt6f4FmFDnFVpQBAeJxBFNGzu2cX4dM'
+	]
+	keccak256.@complexity = 195
+	@complexityLimit = 2147483292
+	take.@args = [
+		base58'DRtdYbxMg7YHw4acvDP6xQrvmsRAz3K7gSkH3xBJ5CTL',
+		20
+	]
+	take.@complexity = 6
+	@complexityLimit = 2147483286
+	recipientPublicKeyHash = base58'3aDy5kHaDeXWfQwMrBCRvd6r7gzg'
+	+.@args = [
+		base58'6v',
+		base58'3aDy5kHaDeXWfQwMrBCRvd6r7gzg'
+	]
+	+.@complexity = 2
+	@complexityLimit = 2147483284
+	rpkWithVersionAndByte = base58'N8tNz9vAHAwFpa4A8Rgk45q8tNjeC'
+	blake2b256.@args = [
+		base58'N8tNz9vAHAwFpa4A8Rgk45q8tNjeC'
+	]
+	blake2b256.@complexity = 136
+	@complexityLimit = 2147483148
+	keccak256.@args = [
+		base58'CSJhGcnZPNCcHG5gCZuHKArEg8MUy9ridbKZsryV8FEw'
+	]
+	keccak256.@complexity = 195
+	@complexityLimit = 2147482953
+	take.@args = [
+		base58'4sAbTTxFgWFkHC5EutjwtRYgM3Q8V6aBD9EjDKVJ7byk',
+		4
+	]
+	take.@complexity = 6
+	@complexityLimit = 2147482947
+	checksum = base58'2U8tZq'
+	+.@args = [
+		base58'N8tNz9vAHAwFpa4A8Rgk45q8tNjeC',
+		base58'2U8tZq'
+	]
+	+.@complexity = 2
+	@complexityLimit = 2147482945
+	recipientAddressFromPublicKey = base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
+	addressFromRecipient.@args = [
+		Address(
+			bytes = base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+		)
+	]
+	addressFromRecipient.@complexity = 5
+	@complexityLimit = 2147482940
+	recipientAddressFromTx = base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+	!=.@args = [
+		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs',
+		base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+	]
+	!=.@complexity = 1
+	@complexityLimit = 2147482939
+	@a = base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
+	@b = base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+	==.@args = [
+		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs',
+		base58'3DjjPfSQFeL1r6JUXPF8xCkgcPLip3f1fhU'
+	]
+	==.@complexity = 1
+	@complexityLimit = 2147482938
+	!.@args = [
+		false
+	]
+	!.@complexity = 1
+	@complexityLimit = 2147482937
+	@p = false
+	toBase58String.@args = [
+		base58'3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs'
+	]
+	toBase58String.@complexity = 3
+	@complexityLimit = 2147482936
+	recipientAddressStr = "3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs"
+	+.@args = [
+		"Recipient address error:",
+		"3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs"
+	]
+	+.@complexity = 1
+	@complexityLimit = 2147482935
+	throw.@args = [
+		"Recipient address error:3PJmMnHHVTTkzvF67HYFjrm5Vj96mM3UtLs"
+	]
+	throw.@complexity = 1
+	@complexityLimit = 2147482934
+"""
         ErrorWithLogPrinter.logToString(see.log, Int.MaxValue) shouldBe expected
       }
     }
