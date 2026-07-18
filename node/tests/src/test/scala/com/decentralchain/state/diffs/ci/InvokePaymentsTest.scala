@@ -91,7 +91,7 @@ class InvokePaymentsTest extends PropSpec with WithDomain {
       )
       d.appendAndAssertFailed(
         invoke(invoker = invoker, func = Some("complex"), payments = Seq(Payment(1, Dcc))),
-        "negative waves balance"
+        "negative dcc balance"
       )
       d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Dcc)))) should produce(s"negative dcc balance")
     }
@@ -109,7 +109,7 @@ class InvokePaymentsTest extends PropSpec with WithDomain {
       d.appendBlock(setScript(secondSigner, dApp))
       d.appendBlock(lease(recipient = invoker.toAddress, amount = 1))
       d.blockchain.leaseBalance(invoker.toAddress) shouldBe LeaseBalance(1, 0)
-      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Dcc)))) should produce(s"negative waves balance")
+      d.appendBlockE(invoke(invoker = invoker, payments = Seq(Payment(1, Dcc)))) should produce(s"negative dcc balance")
     }
   }
 

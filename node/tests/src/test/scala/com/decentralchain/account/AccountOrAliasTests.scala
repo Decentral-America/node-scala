@@ -12,14 +12,14 @@ class AccountOrAliasTests extends PropSpec with Inside {
   }
 
   property("Alias should get parsed correctly") {
-    inside(AddressOrAlias.fromString("alias:T:sasha").explicitGet()) { case alias: Alias =>
+    inside(AddressOrAlias.fromString("alias:?:sasha").explicitGet()) { case alias: Alias =>
       alias.name shouldBe "sasha"
-      alias.chainId shouldBe 'T'
+      alias.chainId shouldBe '?'
     }
 
-    val alias2 = Alias.fromString("alias:T:sasha").explicitGet()
+    val alias2 = Alias.fromString("alias:?:sasha").explicitGet()
     alias2.name shouldBe "sasha"
-    alias2.chainId shouldBe 'T'
+    alias2.chainId shouldBe '?'
   }
 
   property("Alias can be from other network") {

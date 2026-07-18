@@ -18,7 +18,7 @@ class TransactionsOrderingSpecification extends PropSpec {
     val correctSeq = Seq(
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           125L,
@@ -28,7 +28,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -38,7 +38,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -48,7 +48,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -58,7 +58,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -77,7 +77,7 @@ class TransactionsOrderingSpecification extends PropSpec {
     val correctSeq = Seq(
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -87,7 +87,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           123L,
@@ -97,7 +97,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           123L,
@@ -107,7 +107,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -117,7 +117,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           124L,
@@ -136,7 +136,7 @@ class TransactionsOrderingSpecification extends PropSpec {
     val correctSeq = Seq(
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           1,
@@ -146,7 +146,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           kp,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           1,
@@ -164,7 +164,7 @@ class TransactionsOrderingSpecification extends PropSpec {
     val correctSeq = Seq(
       TxHelpers.transfer(
           whitelisted,
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           2,
@@ -174,7 +174,7 @@ class TransactionsOrderingSpecification extends PropSpec {
         ),
       TxHelpers.transfer(
           KeyPair(Array.fill(32)(0: Byte)),
-          Address.fromString("3MydsP4UeQdGwBq7yDbMvf9MzfB2pxFoUKU").explicitGet(),
+          Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet(),
           100000,
           Dcc,
           2,

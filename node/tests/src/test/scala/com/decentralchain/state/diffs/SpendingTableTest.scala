@@ -75,7 +75,7 @@ class SpendingTableTest extends FreeSpec with WithState {
       // CommitToGenerationTransactionDiff
       (false, false, Spending.Deposit, "Generating balance 99999999999 is less than 100000000000 required for block generation"),
       // CommonValidation
-      (false, false, Spending.Transfer, "Transaction application leads to negative waves balance to (at least) temporary negative state"),
+      (false, false, Spending.Transfer, "Transaction application leads to negative dcc balance to (at least) temporary negative state"),
       (false, true, Spending.Leasing, "trying to spend either a deposit or leased money"), // BalanceDiffValidation
       // CommitToGenerationTransactionDiff
       (false, true, Spending.Deposit, "Generating balance 99999999999 is less than 100000000000 required"),
@@ -96,7 +96,7 @@ class SpendingTableTest extends FreeSpec with WithState {
       // CommitToGenerationTransactionDiff
       (false, false, Spending.Deposit, "Generating balance 99999999999 is less than 100000000000 required for block generation"),
       // CommonValidation
-      (false, false, Spending.Transfer, "Transaction application leads to negative waves balance to (at least) temporary negative state"),
+      (false, false, Spending.Transfer, "Transaction application leads to negative dcc balance to (at least) temporary negative state"),
       (false, true, Spending.Leasing, "negative effective balance"), // BalanceDiffValidation
       // CommitToGenerationTransactionDiff
       (false, true, Spending.Deposit, "Generating balance 99999999999 is less than 100000000000 required"),

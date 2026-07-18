@@ -104,7 +104,7 @@ class BlockchainUpdaterSponsoredFeeBlockTest extends PropSpec with DomainScenari
         d.appendMicroBlock(feeAsset)
         d.appendMicroBlock(sponsor)
         d.appendBlock(aliceToBob, bobToMaster)
-        d.appendBlockE(bobToMaster2) should produce("negative waves balance" /*"unavailable funds"*/ )
+        d.appendBlockE(bobToMaster2) should produce("negative dcc balance" /*"unavailable funds"*/ )
     }
   }
 

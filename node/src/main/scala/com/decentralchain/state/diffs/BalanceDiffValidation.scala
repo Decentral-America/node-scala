@@ -19,36 +19,36 @@ object BalanceDiffValidation {
   def apply(b: Blockchain)(snapshot: StateSnapshot): Either[AccountBalanceError, StateSnapshot] = {
     def checkDcc(
         acc: Address,
-        wavesAfter: Long,
+        dccAfter: Long,
         leaseAfter: LeaseBalance,
         additionalDeposit: Long
     ): Either[(Address, String), Unit] = {
-      val wavesBefore   = b.balance(acc)
+      val dccBefore     = b.balance(acc)
       val depositBefore = b.generationDeposit(acc)
       val leaseBefore   = b.leaseBalance(acc)
 
-      val depositAfter             = depositBefore + additionalDeposit
-      val wavesWithoutDepositAfter = wavesAfter - depositAfter
+      val depositAfter           = depositBefore + additionalDeposit
+      val dccWithoutDepositAfter = dccAfter - depositAfter
 
       val leaseOutDiff = leaseAfter.out - leaseBefore.out
 
       @inline def ifNotZero(label: String, value: Long): String = if (value == 0) "" else s", $label=$value"
-      @inline def balancesStr(waves: Long, lease: LeaseBalance, deposit: Long): String =
-        s"spendable=${waves - lease.out - deposit}" + ifNotZero("waves", waves) + ifNotZero("lease", lease.out) + ifNotZero("deposit", deposit)
+      @inline def balancesStr(dcc: Long, lease: LeaseBalance, deposit: Long): String =
+        s"spendable=${dcc - lease.out - deposit}" + ifNotZero("dcc", dcc) + ifNotZero("lease", lease.out) + ifNotZero("deposit", deposit)
 
       lazy val stateChanges =
-        s"before: ${balancesStr(wavesBefore, leaseBefore, depositBefore)}, after: ${balancesStr(wavesAfter, leaseAfter, depositAfter)}"
+        s"before: ${balancesStr(dccBefore, leaseBefore, depositBefore)}, after: ${balancesStr(dccAfter, leaseAfter, depositAfter)}"
 
       val errorMessage =
-        if (wavesAfter < 0) s"negative waves balance: before=$wavesBefore, after=$wavesAfter".asLeft
-        else if (wavesWithoutDepositAfter < 0) {
+        if (dccAfter < 0) s"negative dcc balance: before=$dccBefore, after=$dccAfter".asLeft
+        else if (dccWithoutDepositAfter < 0) {
           if (depositAfter > depositBefore) s"not enough funds for deposit, $stateChanges".asLeft
           else s"trying to spend a deposit, $stateChanges".asLeft
-        } else if (wavesWithoutDepositAfter < leaseAfter.out && b.height > b.settings.functionalitySettings.allowLeasedBalanceTransferUntilHeight) {
-          if (wavesWithoutDepositAfter + leaseAfter.in - leaseAfter.out < 0) s"negative effective balance, $stateChanges".asLeft
+        } else if (dccWithoutDepositAfter < leaseAfter.out && b.height > b.settings.functionalitySettings.allowLeasedBalanceTransferUntilHeight) {
+          if (dccWithoutDepositAfter + leaseAfter.in - leaseAfter.out < 0) s"negative effective balance, $stateChanges".asLeft
           else if (leaseOutDiff == 0) s"trying to spend leased money, $stateChanges".asLeft
           else s"leased being more than own, $stateChanges".asLeft
-        } else if (wavesWithoutDepositAfter - leaseAfter.out < 0 && depositBefore > 0)
+        } else if (dccWithoutDepositAfter - leaseAfter.out < 0 && depositBefore > 0)
           s"trying to spend either a deposit or leased money, $stateChanges".asLeft
         else Either.unit
 

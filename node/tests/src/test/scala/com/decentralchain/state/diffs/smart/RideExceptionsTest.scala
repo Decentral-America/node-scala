@@ -58,7 +58,7 @@ class RideExceptionsTest extends PropSpec with WithDomain {
         Native(CALLDAPP),
         List(FUNCTION_CALL(User("Alias"), List(CONST_STRING("alias").explicitGet())), CONST_LONG(1), CONST_LONG(1), CONST_LONG(1))
       ),
-      "Alias 'alias:T:alias' does not exist",
+      "Alias 'alias:?:alias' does not exist",
       rejectBefore = true,
       checkVerifier = false
     )
