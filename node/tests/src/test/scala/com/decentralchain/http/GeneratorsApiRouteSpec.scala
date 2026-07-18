@@ -43,7 +43,11 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with WithDomain {
     )
   }
 
-  private val generators = Seq(TxHelpers.signer(1000), TxHelpers.signer(1001), TxHelpers.defaultSigner)
+  // NB: avoid nonces 1001/1002 — DomainPresets wires testDaoAddress = address(1001) and
+  // testXtnBuybackAddress = address(1002), and the DeterministicFinality preset enables
+  // BlockRewardDistribution. A generator on those nonces would collect the DAO/XTN reward share each
+  // block and its reported generating balance would drift from initBalance - depositAndFee.
+  private val generators = Seq(TxHelpers.signer(3000), TxHelpers.signer(3001), TxHelpers.defaultSigner)
 
   private val Seq(validGenerator, conflictingGenerator, miner)             = generators
   private val Seq(validGeneratorAddr, conflictingGeneratorAddr, minerAddr) = generators.map(_.toAddress.toString)
