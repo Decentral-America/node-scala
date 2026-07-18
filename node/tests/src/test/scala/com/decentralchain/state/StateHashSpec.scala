@@ -15,8 +15,10 @@ import com.decentralchain.transaction.smart.script.ScriptCompiler
 class StateHashSpec extends FreeSpec {
   "state hash" - {
     val stateHash = new StateHashBuilder
-    val address   = Address.fromString("3My3KZgFQ3CrVHgz6vGRt8687sH4oAA1qp8").explicitGet()
-    val address1  = Address.fromString("3N5GRqzDBhjVXnCn44baHcz2GoZy5qLxtTh").explicitGet()
+    // address must sort before address1 by raw address bytes (the StateHashBuilder emits
+    // multi-account sections in ascending address order, matching the reconstruction below).
+    val address   = Address.fromString("3DXNQqJKDxGGaoR3fkF4REwKjxwjHj2b3dH").explicitGet()
+    val address1  = Address.fromString("3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUab").explicitGet()
     val assetId   = IssuedAsset(ByteStr.decodeBase58("9ekQuYn92natMnMq8KqeGK3Nn7cpKd3BvPEGgD6fFyyz").get)
     val testScript = ScriptCompiler
       .compile(

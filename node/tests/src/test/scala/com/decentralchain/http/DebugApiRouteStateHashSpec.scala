@@ -93,8 +93,8 @@ class DebugApiRouteStateHashSpec
         val beforeFinalityHeight = domain.blockchain.height - 1
         val beforeFinalityHeader = domain.blockchain.blockHeader(beforeFinalityHeight).value
         val expectedResponseBefore = Json.obj(
-          "stateHash"         -> "9a4cde77f9ae2207e23e94457dceb4fa8826a0c8a56466c1e28d83d35e087588",
-          "dccBalanceHash"  -> "6bb9f756054493145441eb34bb09d0c26ae78ab09e25c9061b11dbac756b9b65",
+          "stateHash"         -> "8655f9cfbfd3fca3df1f05392d419aeee2aded1998f6f15f572e27e7ee50bb39",
+          "dccBalanceHash"  -> "5dc9606d7c9c26b124dd7e70e1b633a84fa08cf9c5bc2b040f55fd31a898900e",
           "assetBalanceHash"  -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "dataEntryHash"     -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "accountScriptHash" -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
@@ -104,7 +104,7 @@ class DebugApiRouteStateHashSpec
           "sponsorshipHash"   -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           "aliasHash"         -> "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           // Note: "nextCommittedGeneratorsHash" and "committedGeneratorBalancesHash" fields are not present
-          "snapshotHash" -> "GfGLptLRk1pw9fcYL3qyCzN7XWsnqftkGmX4zsWnHvoD",
+          "snapshotHash" -> "HPpCdizo6ZjPbWx3hYM1jSh5b42TWUmvPykJM6faYGy8",
           "blockId"      -> beforeFinalityHeader.id().toString,
           "baseTarget"   -> beforeFinalityHeader.header.baseTarget,
           "height"       -> beforeFinalityHeight,
