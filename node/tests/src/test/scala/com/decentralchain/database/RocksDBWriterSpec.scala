@@ -327,9 +327,12 @@ class RocksDBWriterSpec extends FreeSpec with WithDomain {
     }
 
     "balanceAtHeight returns correct values" in {
-      val richAccount = TxHelpers.signer(1001)
-      val account1    = TxHelpers.signer(1002)
-      val account2    = TxHelpers.signer(1003)
+      // NB: avoid nonces 1001/1002 — DomainPresets wires testDaoAddress = address(1001) and
+      // testXtnBuybackAddress = address(1002), so accounts on those nonces would silently collect the
+      // block-reward DAO/XTN shares each block and throw off these balance-history assertions.
+      val richAccount = TxHelpers.signer(2001)
+      val account1    = TxHelpers.signer(2002)
+      val account2    = TxHelpers.signer(2003)
       withDomain(DomainPresets.TransactionStateSnapshot, Seq(AddrWithBalance(richAccount.toAddress, 10_000.dcc))) { d =>
         val issueTx = TxHelpers.issue(richAccount, amount = 10000, decimals = 2.toByte, name = "IA01")
         d.appendBlock(issueTx)
