@@ -2609,7 +2609,7 @@ class DebugApiRouteSpec
              |    "feeAssetId": null,
              |    "timestamp": ${invoke.timestamp},
              |    "version": 2,
-             |    "chainId": 84,
+             |    "chainId": 63,
              |    "sender": "${invoke.senderAddress}",
              |    "senderPublicKey": "${invoke.sender}",
              |    "proofs": [ "${(json \ "transaction" \ "proofs" \ 0).as[String]}" ],
