@@ -44,7 +44,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
       genesis: GenesisTransaction  = GenesisTransaction.create(master.toAddress, ENOUGH_AMT, ts).explicitGet()
       payment: TransferTransaction = createDccTransfer(master, master.toAddress, amt, fee, ts).explicitGet()
     } yield (miner, genesis, payment, ts)
-    scenario(preconditionsAndPayments, MicroblocksActivatedAt0DCCSettings) { case (domain, (miner, genesis, payment, ts)) =>
+    scenario(preconditionsAndPayments, MicroblocksAndSponsorshipActivatedAt0DCCSettings) { case (domain, (miner, genesis, payment, ts)) =>
       val genBlock       = buildBlockOfTxs(randomSig, Seq(genesis))
       val (base, micros) = chainBaseAndMicro(genBlock.id(), Seq.empty, Seq(Seq(payment)), miner, 3, ts)
       val emptyBlock     = customBuildBlockOfTxs(micros.last.totalResBlockSig, Seq.empty, miner, 3, ts)
@@ -74,7 +74,7 @@ class BlockchainUpdaterBlockMicroblockSequencesSameTransactionsTest extends Prop
           .grouped(microBlockCount)
           .toSeq
       } yield (miner, genesis, microBlockTxs, ts)
-    scenario(preconditionsAndPayments, MicroblocksActivatedAt0DCCSettings) { case (domain, (miner, genesis, microBlockTxs, ts)) =>
+    scenario(preconditionsAndPayments, MicroblocksAndSponsorshipActivatedAt0DCCSettings) { case (domain, (miner, genesis, microBlockTxs, ts)) =>
       val genBlock       = buildBlockOfTxs(randomSig, Seq(genesis))
       val (base, micros) = chainBaseAndMicro(genBlock.id(), Seq.empty, microBlockTxs, miner, 3, ts)
       val emptyBlock     = customBuildBlockOfTxs(micros.last.totalResBlockSig, Seq.empty, miner, 3, ts)

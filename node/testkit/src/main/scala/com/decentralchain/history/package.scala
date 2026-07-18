@@ -25,6 +25,21 @@ package object history {
   val settings = DCCSettings.fromRootConfig(config)
 
   val MicroblocksActivatedAt0DCCSettings: DCCSettings        = settingsWithFeatures(BlockchainFeatures.NG)
+
+  // NG plus FeeSponsorship switched on from height 0. The NG carry-fee (60% of a block's fees paid to the
+  // next block's miner) is only produced when both NG and sponsorship are active (BlockDiffer), so tests
+  // that expect a miner to collect the full fee across a key-block boundary need this. sponsoredFeesSwitchHeight
+  // adds one activation window after the feature height, so FeeSponsorship is preactivated at a negative
+  // height (-window) to make the switch land at height 0.
+  val MicroblocksAndSponsorshipActivatedAt0DCCSettings: DCCSettings = {
+    val base = settingsWithFeatures(BlockchainFeatures.NG)
+    val fs   = base.blockchainSettings.functionalitySettings
+    base.copy(blockchainSettings =
+      base.blockchainSettings.copy(functionalitySettings =
+        fs.copy(preActivatedFeatures = fs.preActivatedFeatures + (BlockchainFeatures.FeeSponsorship.id -> -fs.activationWindowSize(1)))
+      )
+    )
+  }
   val DataAndMicroblocksActivatedAt0DCCSettings: DCCSettings = settingsWithFeatures(BlockchainFeatures.DataTransaction, BlockchainFeatures.NG)
   val TransfersV2ActivatedAt0DCCSettings: DCCSettings        = settingsWithFeatures(BlockchainFeatures.SmartAccounts)
 
