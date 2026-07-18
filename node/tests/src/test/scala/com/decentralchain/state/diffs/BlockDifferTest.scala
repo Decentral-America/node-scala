@@ -21,7 +21,11 @@ import com.decentralchain.transaction.TxValidationError.InvalidStateHash
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
 
 class BlockDifferTest extends FreeSpec with WithDomain {
-  private val TransactionFee = 10
+  // The NG carry-fee (the 60% of a block's fees carried to the next block's miner) is only computed when
+  // both NG and FeeSponsorship are active (BlockDiffer.computeTxFeeInfo: `hasNg && hasSponsorship`).
+  // FeeSponsorship also enables minimum-fee validation, so the per-transfer fee must be >= the minimum
+  // (100000). The balances below are therefore in units of TransactionFee rather than the old "10".
+  private val TransactionFee = 100000
 
   private val signerA, signerB = randomKeyPair()
 
@@ -48,11 +52,11 @@ class BlockDifferTest extends FreeSpec with WithDomain {
        */
       "height < enableMicroblocksAfterHeight - a miner should receive 100% of the current block's fee" in {
         assertDiff(testChain.init, 1000) { case (_, s) =>
-          s.balance(signerA.toAddress) shouldBe 40
+          s.balance(signerA.toAddress) shouldBe 400000
         }
 
         assertDiff(testChain, 1000) { case (_, s) =>
-          s.balance(signerB.toAddress) shouldBe 50
+          s.balance(signerB.toAddress) shouldBe 500000
         }
       }
 
@@ -73,7 +77,7 @@ class BlockDifferTest extends FreeSpec with WithDomain {
        */
       "height = enableMicroblocksAfterHeight - a miner should receive 40% of the current block's fee only" in {
         assertDiff(testChain, 9) { case (_, s) =>
-          s.balance(signerB.toAddress) shouldBe 44
+          s.balance(signerB.toAddress) shouldBe 440000
         }
       }
 
@@ -94,11 +98,11 @@ class BlockDifferTest extends FreeSpec with WithDomain {
        */
       "height > enableMicroblocksAfterHeight - a miner should receive 60% of previous block's fee and 40% of the current one" in {
         assertDiff(testChain.init, 4) { case (_, s) =>
-          s.balance(signerA.toAddress) shouldBe 34
+          s.balance(signerA.toAddress) shouldBe 340000
         }
 
         assertDiff(testChain, 4) { case (_, s) =>
-          s.balance(signerB.toAddress) shouldBe 50
+          s.balance(signerB.toAddress) shouldBe 500000
         }
       }
     }
@@ -289,7 +293,11 @@ class BlockDifferTest extends FreeSpec with WithDomain {
     val fs = FunctionalitySettings(
       featureCheckBlocksPeriod = ngAtHeight / 2,
       blocksForFeatureActivation = 1,
-      preActivatedFeatures = Map[Short, Int]((2, ngAtHeight)),
+      // NG at ngAtHeight; FeeSponsorship (feature 7) preactivated early so the NG carry-fee is computed
+      // (BlockDiffer requires both NG and sponsorship active). sponsoredFeesSwitchHeight adds one
+      // activation window after the feature height, so activating it at height 1 switches sponsorship on
+      // before the carry checks.
+      preActivatedFeatures = Map[Short, Int]((2, ngAtHeight), (7, 1)),
       doubleFeaturesPeriodsAfterHeight = Int.MaxValue
     )
     assertNgDiffState(blocks.init, blocks.last, fs)(assertion)
