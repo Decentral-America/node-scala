@@ -34,7 +34,10 @@ class BlockchainUpdaterImplSpec extends FreeSpec with EitherMatchers with WithDo
 
   def baseTest(setup: Time => (KeyPair, Seq[Block]), enableNg: Boolean = false, triggers: BlockchainUpdateTriggers = BlockchainUpdateTriggers.noop)(
       f: (CompleteBlockchainUpdater, KeyPair) => Unit
-  ): Unit = withDomain(if (enableNg) NG else SettingsFromDefaultConfig) { d =>
+    // ScriptsAndSponsorship rather than plain NG: the NG carry-fee (the "all fee from previous block"
+    // the miner receives one block later) is only produced when FeeSponsorship is active too
+    // (BlockDiffer: `hasNg && hasSponsorship`).
+  ): Unit = withDomain(if (enableNg) ScriptsAndSponsorship else SettingsFromDefaultConfig) { d =>
     d.triggers = d.triggers :+ triggers
 
     val (account, blocks) = setup(ntpTime)
