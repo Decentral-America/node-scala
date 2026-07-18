@@ -7,7 +7,7 @@ import com.decentralchain.state.{Blockchain, StateSnapshot}
 
 case object CancelLeaseOverflow extends PatchAtHeight() {
   def apply(blockchain: Blockchain): StateSnapshot = {
-    val patch = readPatchData[CancelledLeases]()
+    val patch = readPatchData[CancelledLeases](blockchain.settings.addressSchemeCharacter)
     StateSnapshot.ofLeaseBalances(patch.balances, blockchain).explicitGet() |+| StateSnapshot(cancelledLeases = patch.leaseStates)
   }
 }

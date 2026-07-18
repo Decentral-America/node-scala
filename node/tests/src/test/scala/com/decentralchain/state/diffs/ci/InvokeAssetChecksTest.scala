@@ -18,9 +18,9 @@ class InvokeAssetChecksTest extends PropSpec with Inside with WithState with DBC
   import DomainPresets.*
 
   private val invalidLengthAsset = IssuedAsset(ByteStr.decodeBase58("DCC").get)
-  private val nonExistentAsset   = IssuedAsset(ByteStr.decodeBase58("DCCdccDCCdccDCCdccDCCdcc123").get)
+  private val nonExistentAsset   = IssuedAsset(ByteStr.decodeBase58("WAVESwavesWAVESwavesWAVESwavesWAVESwaves123").get)
 
-  private val lengthError      = s"Transfer error: invalid asset ID '$invalidLengthAsset' length = 4 bytes, must be 32"
+  private val lengthError      = s"Transfer error: invalid asset ID '$invalidLengthAsset' length = 2 bytes, must be 32"
   private val nonExistentError = s"Transfer error: asset '$nonExistentAsset' is not found on the blockchain"
 
   property("invoke transfer checks") {

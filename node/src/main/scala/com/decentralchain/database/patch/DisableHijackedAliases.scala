@@ -10,7 +10,7 @@ case object DisableHijackedAliases extends PatchDataLoader {
   val height: Height = Height(0)
 
   def apply(rw: RW): Set[Alias] = {
-    val aliases = readPatchData[Set[String]]().map(Alias.create(_).explicitGet())
+    val aliases = readPatchData[Set[String]](AddressScheme.current.chainId.toChar).map(Alias.create(_).explicitGet())
     rw.put(Keys.disabledAliases, aliases)
     aliases
   }

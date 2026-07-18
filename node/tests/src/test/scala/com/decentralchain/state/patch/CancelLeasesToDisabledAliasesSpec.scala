@@ -55,7 +55,9 @@ class CancelLeasesToDisabledAliasesSpec extends FlatSpec with WithDomain with Be
       testLeaseBalance(d).out shouldBe -2562590821L
     }
 
+  // The patch fixture data (patches/CancelLeasesToDisabledAliases-W.json) is keyed to real historical
+  // Waves mainnet ('W') addresses, independent of the process-global AddressScheme.current default ('?').
   private def testLeaseBalance(d: Domain) = {
-    d.blockchain.leaseBalance(PublicKey(ByteStr(Base58.decode("6NxhjzayDTd52MJL2r6XupGDb7E1xQW7QppSPqo63gsx"))).toAddress)
+    d.blockchain.leaseBalance(PublicKey(ByteStr(Base58.decode("6NxhjzayDTd52MJL2r6XupGDb7E1xQW7QppSPqo63gsx"))).toAddress('W'.toByte))
   }
 }

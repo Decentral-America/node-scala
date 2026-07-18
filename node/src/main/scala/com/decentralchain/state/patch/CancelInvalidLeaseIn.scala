@@ -6,5 +6,5 @@ import com.decentralchain.state.*
 
 case object CancelInvalidLeaseIn extends PatchAtHeight() {
   def apply(blockchain: Blockchain): StateSnapshot =
-    StateSnapshot.ofLeaseBalances(readPatchData[Map[Address, LeaseBalance]](), blockchain).explicitGet()
+    StateSnapshot.ofLeaseBalances(readPatchData[Map[Address, LeaseBalance]](blockchain.settings.addressSchemeCharacter), blockchain).explicitGet()
 }

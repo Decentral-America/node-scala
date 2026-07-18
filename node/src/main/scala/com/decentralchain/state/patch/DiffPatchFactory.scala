@@ -8,11 +8,11 @@ import play.api.libs.json.{Json, Reads}
 import scala.io.Source
 
 trait PatchDataLoader {
-  protected def readPatchData[T: Reads](): T =
+  protected def readPatchData[T: Reads](chainId: Char): T =
     Json
       .parse(
         Source
-          .fromResource(s"patches/${getClass.getSimpleName.replace("$", "")}-${AddressScheme.current.chainId.toChar}.json")
+          .fromResource(s"patches/${getClass.getSimpleName.replace("$", "")}-$chainId.json")
           .mkString
       )
       .as[T]

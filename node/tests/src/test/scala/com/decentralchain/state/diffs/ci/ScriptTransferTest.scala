@@ -45,7 +45,7 @@ class ScriptTransferTest extends PropSpec with WithDomain {
           | @Callable(i)
           | func default() =
           |   [
-          |     ScriptTransfer(Address(base58'3N2pTpQhGbZrJXATKr75A1uZjeTrb4PHMYx'), 1, unit)
+          |     ScriptTransfer(Address(base58'3DdAmAhx8nwm8c6rEYnabSMJkayZGv4TUaJ'), 1, unit)
           |   ]
         """.stripMargin
       )

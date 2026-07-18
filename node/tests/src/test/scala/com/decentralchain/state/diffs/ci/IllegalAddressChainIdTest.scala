@@ -34,7 +34,7 @@ class IllegalAddressChainIdTest extends PropSpec with WithDomain {
     (Seq(gTx1, gTx2, ssTx), invokeTx)
   }
 
-  private val error = "Address belongs to another network: expected: 84(T), actual: 87(W)"
+  private val error = "Address belongs to another network: expected: 63(?), actual: 87(W)"
 
   property("no fail before fix") {
     withDomain(RideV5) { d =>
