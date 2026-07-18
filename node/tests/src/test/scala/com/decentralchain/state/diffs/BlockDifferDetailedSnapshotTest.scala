@@ -10,7 +10,7 @@ import com.decentralchain.mining.MiningConstraint
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.StateSnapshot
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.{NG, RideV6, SettingsFromDefaultConfig}
+import com.decentralchain.test.DomainPresets.{NG, RideV6, ScriptsAndSponsorship, SettingsFromDefaultConfig}
 import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
@@ -87,6 +87,10 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
             }
           }
 
+          // The miner ends up with all of the previous block's fee: 40% immediately (as that block's miner)
+          // plus the 60% NG carry credited in this block's key-block snapshot. The carry is only produced
+          // when FeeSponsorship is active as well as NG (BlockDiffer: `hasNg && hasSponsorship`), so this
+          // uses ScriptsAndSponsorship (NG + sponsorship, as on the live chain) rather than NG alone.
           "with history — all fee from last" in {
             val a1 = TxHelpers.signer(1)
             val a2 = TxHelpers.signer(2)
@@ -98,7 +102,7 @@ class BlockDifferDetailedSnapshotTest extends FreeSpec with WithState with WithD
             val transfer1 = TxHelpers.transfer(a1, a2.toAddress, amount1, fee = fee1, version = TxVersion.V1)
             val transfer2 = TxHelpers.transfer(a2, a1.toAddress, amount2, fee = fee2, version = TxVersion.V1)
 
-            withDomain(NG) { d =>
+            withDomain(ScriptsAndSponsorship) { d =>
               d.appendBlock(genesis)
               d.appendBlock(transfer1)
               val block = TestBlock.create(defaultSigner, Seq(transfer2)).block
