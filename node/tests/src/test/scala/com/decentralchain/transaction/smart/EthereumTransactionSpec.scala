@@ -267,7 +267,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       val expectedScriptResults = """{
                                     |  "data" : [ ],
                                     |  "transfers" : [ {
-                                    |    "address" : "3MzPAf9BvP5kpV9A6yas2svwzLxBb3pHBHs",
+                                    |    "address" : "3DYHVyrvsUJ2RK3EHTmsLhJEU8Mmn8fSpkm",
                                     |    "asset" : null,
                                     |    "amount" : 123
                                     |  } ],
@@ -369,7 +369,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       val expectedScriptResults = """{
                                     |  "data" : [ ],
                                     |  "transfers" : [ {
-                                    |    "address" : "3MzPAf9BvP5kpV9A6yas2svwzLxBb3pHBHs",
+                                    |    "address" : "3DYHVyrvsUJ2RK3EHTmsLhJEU8Mmn8fSpkm",
                                     |    "asset" : null,
                                     |    "amount" : 123
                                     |  } ],
@@ -431,7 +431,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       val expectedScriptResults = """{
                                     |  "data" : [ ],
                                     |  "transfers" : [ {
-                                    |    "address" : "3MzPAf9BvP5kpV9A6yas2svwzLxBb3pHBHs",
+                                    |    "address" : "3DYHVyrvsUJ2RK3EHTmsLhJEU8Mmn8fSpkm",
                                     |    "asset" : null,
                                     |    "amount" : 123
                                     |  } ],
@@ -526,7 +526,7 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       val expectedScriptResults = """{
                                     |  "data" : [ ],
                                     |  "transfers" : [ {
-                                    |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                    |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                     |    "asset" : null,
                                     |    "amount" : 123
                                     |  } ],
@@ -587,12 +587,12 @@ class EthereumTransactionSpec extends FlatSpec with EthHelpers with JsonMatchers
       val expectedScriptResults = s"""{
                                      |  "data" : [ ],
                                      |  "transfers" : [ {
-                                     |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                     |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                      |    "asset" : null,
                                      |    "amount" : 123
                                      |  },
                                      |   {
-                                     |    "address" : "3NByUD1YE9SQPzmf2KqVqrjGMutNSfc4oBC",
+                                     |    "address" : "3DjsoXjHBEefzpfjCp2W9g6YqhHxdksSBp9",
                                      |    "asset" : "$testAsset",
                                      |    "amount" : 123
                                      |  }],

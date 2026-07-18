@@ -1,7 +1,7 @@
 package com.decentralchain.utils
 
 import java.math.BigInteger
-import com.decentralchain.account.{Address, PublicKey}
+import com.decentralchain.account.{Address, AddressScheme, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.transaction.EthereumTransaction.AssetDataLength
 import com.decentralchain.transaction.{EthTxGenerator, EthereumTransaction, TxHelpers}
@@ -30,7 +30,7 @@ trait EthHelpers {
     )
 
   val TestEthSignature: SignatureData =
-    EthTxGenerator.signRawTransaction(TxHelpers.defaultEthSigner, 'T'.toByte)(TestEthRawTransaction).signatureData
+    EthTxGenerator.signRawTransaction(TxHelpers.defaultEthSigner, AddressScheme.current.chainId)(TestEthRawTransaction).signatureData
 
   object EthChainId {
     val byte: Byte = 'E'.toByte

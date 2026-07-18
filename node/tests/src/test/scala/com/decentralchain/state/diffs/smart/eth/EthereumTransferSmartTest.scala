@@ -1,6 +1,6 @@
 package com.decentralchain.state.diffs.smart.eth
 
-import com.decentralchain.account.Address
+import com.decentralchain.account.{Address, AddressScheme}
 import com.decentralchain.block.Block.ProtoBlockVersion
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.db.WithDomain
@@ -139,7 +139,7 @@ class EthereumTransferSmartTest extends PropSpec with WithDomain with EthHelpers
     val recipient = RandomKeyPair()
 
     val dummyTransfer    = EthereumTransaction.Transfer(None, transferAmount, recipient.toAddress)
-    val dummyEthTransfer = EthereumTransaction(dummyTransfer, TestEthRawTransaction, TestEthSignature, 'T'.toByte) // needed to pass into asset script
+    val dummyEthTransfer = EthereumTransaction(dummyTransfer, TestEthRawTransaction, TestEthSignature, AddressScheme.current.chainId) // needed to pass into asset script
     val ethSender        = dummyEthTransfer.senderAddress()
 
     DirectiveDictionary[StdLibVersion].all

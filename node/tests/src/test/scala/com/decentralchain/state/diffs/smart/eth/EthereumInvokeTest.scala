@@ -2,7 +2,7 @@ package com.decentralchain.state.diffs.smart.eth
 
 import com.esaulpaugh.headlong.abi.{Function, Tuple}
 import com.esaulpaugh.headlong.util.FastHex
-import com.decentralchain.account.{Address, KeyPair, PublicKey}
+import com.decentralchain.account.{Address, AddressScheme, KeyPair, PublicKey}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
@@ -109,7 +109,7 @@ class EthereumInvokeTest extends PropSpec with WithDomain with EthHelpers with I
     val dApp2 = RandomKeyPair()
 
     val dummyInvoke    = EthereumTransaction.Invocation(dApp.toAddress, "")
-    val dummyEthInvoke = EthereumTransaction(dummyInvoke, TestEthRawTransaction, TestEthSignature, 'T'.toByte) // needed to pass into asset script
+    val dummyEthInvoke = EthereumTransaction(dummyInvoke, TestEthRawTransaction, TestEthSignature, AddressScheme.current.chainId) // needed to pass into asset script
     val invoker        = dummyEthInvoke.senderAddress()
     val invokerPk      = dummyEthInvoke.signerPublicKey()
 

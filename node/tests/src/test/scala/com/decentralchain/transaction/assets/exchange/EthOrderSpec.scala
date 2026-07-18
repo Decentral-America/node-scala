@@ -21,7 +21,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
   import EthOrderSpec.{ethBuyOrderSigned, ethSellOrderSigned}
 
   "ETH signed order" should "recover signer public key correctly" in {
-    val testOrder = Order(
+    val baseOrder = Order(
       Order.V4,
       EthSignature(
         "0xfe56e1cbd6945f1e17ce9f9eb21172dd7810bcc74651dd7d3eaeca5d9ae0409113e5236075841af8195cb4dba3947ae9b99dbd560fd0c43afe89cc0b648690321c"
@@ -35,6 +35,11 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
       321,
       TxMatcherFee.unsafeFrom(1),
       IssuedAsset(ByteStr(EthStubBytes32))
+    )
+    // Sign in-code with the test's own eth key so the fixture stays valid under whatever chain id the
+    // EIP-712 domain uses (AddressScheme.current.chainId); recovery must return that signer's key.
+    val testOrder = baseOrder.copy(
+      orderAuthentication = OrderAuthentication.Eip712Signature(ByteStr(EthOrders.signOrder(baseOrder, TxHelpers.defaultEthSigner)))
     )
 
     val result = EthOrders.recoverEthSignerKey(testOrder, testOrder.eip712Signature.get.arr)
@@ -62,9 +67,12 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     )
 
     val resultFixed = EthOrders.recoverEthSignerKey(testOrder, testOrder.eip712Signature.get.arr)
+    // External MetaMask-style signature fixture: recovery depends on the EIP-712 domain chainId
+    // (AddressScheme.current.chainId), so the recovered key is the value produced under the current
+    // DCC chain id. Still exercises the leading-zeros edge case of the (unchanged) signature.
     EthEncoding.toHexString(
       resultFixed.arr
-    ) shouldBe "0x00d7cf9ff594b07273228e7dd591707d38a1dba0a39492fd64445ba9cbb3bf66c862b9752f02bf8d1a0f00ccb11ae550a7616bd965c10f0101202d75580786ee"
+    ) shouldBe "0x0584ee3df86cd860796f12ba4574e851935ccc02b2762e0e5e2f1af2b9732fa10e7eade2f9b49beb4616c0e8e9bc2e2548f12056152e996794423c7efade16af"
   }
 
   it should "recover signer public key when v < 27 in signature data" in {
@@ -86,7 +94,9 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
     )
 
     val result = EthOrders.recoverEthSignerKey(testOrder, testOrder.eip712Signature.get.arr)
-    result.toAddress.toString shouldBe "3N8HNri7zQXVw8Bn9BZKGRpsznNUFXM24zL"
+    // External signature fixture (v < 27 edge case). Recovery depends on the EIP-712 domain chainId,
+    // so the recovered address is the value produced under the current DCC chain id.
+    result.toAddress.toString shouldBe "3DWknCAFKfbv6K14nY3v1cZie85iT1TpFLF"
   }
 
   it should "recover public key at json parse stage" in {
@@ -264,14 +274,14 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
            |  "feeAssetId": null,
            |  "timestamp": ${transaction.timestamp},
            |  "version": 3,
-           |  "chainId": 84,
-           |  "sender": "3MtGzgmNa5fMjGCcPi5nqMTdtZkfojyWHL9",
+           |  "chainId": 63,
+           |  "sender": "3DSBL1V7XAsdL66gaCGo9ApvNMAFzqmVPZY",
            |  "senderPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |  "proofs": [ "${transaction.proofs.base58.value().head}" ],
            |  "order1": {
            |    "version": 3,
            |    "id": "${buyOrder.id().toString}",
-           |    "sender": "3MuVqVJGmFsHeuFni5RbjRmALuGCkEwzZtC",
+           |    "sender": "3DTQAp21iM5ZFj9rtZcc3F8SpgfnwH2R84L",
            |    "senderPublicKey": "8h47fXqSctZ6sb3q6Sst9qH1UNzR5fjez2eEP6BvEfcr",
            |    "matcherPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |    "assetPair": {
@@ -291,7 +301,7 @@ class EthOrderSpec extends FlatSpec with EthHelpers with WithDomain with Paralle
            |  "order2": {
            |    "version": 4,
            |    "id": "${ethSellOrder.id().toString}",
-           |    "sender": "3N6Kr345mXL1NJGm7g4fd83BwLCb5wcfqiG",
+           |    "sender": "3DeEBMmpicYGy8AqJAFfvwQUR7cBH3BazXJ",
            |    "senderPublicKey": "3bw8NgoV6fE6JnX1mBhggFZH12SyEw4rCfLG9ZVyLNRahwhC2qPW4xJwBawBB1n9gfDkg2bwr3wTtZ4vTjfiXgEv",
            |    "matcherPublicKey": "9BUoYQYq7K38mkk61q8aMH9kD9fKSVL1Fib7FbH6nUkQ",
            |    "assetPair": {
