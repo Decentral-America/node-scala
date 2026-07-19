@@ -234,7 +234,16 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       )
 
     val processFork =
-      ExtensionAppender(blockchainUpdater, utxStorage, pos, time, knownInvalidBlocks, peerDatabase, appenderScheduler)
+      ExtensionAppender(
+        blockchainUpdater,
+        utxStorage,
+        pos,
+        time,
+        knownInvalidBlocks,
+        peerDatabase,
+        settings.synchronizationSettings.maxRollback,
+        appenderScheduler
+      )
     val processMicroBlock =
       MicroblockAppender(blockchainUpdater, utxStorage, allChannels, peerDatabase, blockChallenger, appenderScheduler)
 

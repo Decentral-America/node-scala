@@ -1271,7 +1271,7 @@ class BlockChallengeTest
       val challengingBlock = d.createChallengingBlock(challengingMiner, originalBlock, strictTime = true)
 
       val extensionAppender =
-        ExtensionAppender(d.blockchain, d.utxPool, d.posSelector, testTime, InvalidBlockStorage.NoOp, PeerDatabase.NoOp, appenderScheduler)(null, _)
+        ExtensionAppender(d.blockchain, d.utxPool, d.posSelector, testTime, InvalidBlockStorage.NoOp, PeerDatabase.NoOp, Int.MaxValue, appenderScheduler)(null, _)
 
       testTime.setTime(challengingBlock.header.timestamp)
       extensionAppender(ExtensionBlocks(d.blockchain.score + challengingBlock.blockScore(), Seq(challengingBlock), Map.empty, new EmbeddedChannel()))

@@ -28,6 +28,7 @@ object ExtensionAppender extends ScorexLogging {
       time: Time,
       invalidBlocks: InvalidBlockStorage,
       peerDatabase: PeerDatabase,
+      maxSyncRollbackLength: Int,
       scheduler: Scheduler
   )(ch: Channel, extensionBlocks: ExtensionBlocks): Task[Either[ValidationError, Option[BigInt]]] = {
     def appendExtension(extension: ExtensionBlocks): Either[ValidationError, Option[BigInt]] =
@@ -47,6 +48,19 @@ object ExtensionAppender extends ScorexLogging {
 
                 val droppedBlocksEi = for {
                   commonBlockHeight <- blockchainUpdater.heightOf(lastCommonBlockId).toRight(GenericError("Fork contains no common parent"))
+                  // Finality barrier: never adopt a fork that would revert finalized history. finalizedHeight is
+                  // only ADVERTISED in lastBlockIds (a request hint honest peers respect); enforce it here so a
+                  // malicious/eclipsing peer offering a higher-score fork branching below the finality floor
+                  // cannot un-finalize blocks (removeAfter alone only bounds depth at maxRollbackDepth=2000).
+                  // Floor = max(finalizedHeight, height - maxRollback), matching what lastBlockIds advertises.
+                  finalityFloor = blockchainUpdater.finalizedHeightOrFallback(maxSyncRollbackLength).toInt
+                  _ <- Either.cond(
+                    commonBlockHeight >= finalityFloor,
+                    (),
+                    GenericError(
+                      s"Fork would revert finalized history: common block at height $commonBlockHeight is below the finality floor $finalityFloor"
+                    )
+                  )
                   droppedBlocks <- {
                     if (commonBlockHeight < initialHeight)
                       blockchainUpdater.removeAfter(lastCommonBlockId)

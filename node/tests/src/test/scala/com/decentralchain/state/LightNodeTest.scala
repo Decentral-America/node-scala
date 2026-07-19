@@ -150,6 +150,7 @@ class LightNodeTest extends PropSpec with WithDomain {
             TestTime(extensionBlocks.blocks.last.header.timestamp),
             InvalidBlockStorage.NoOp,
             PeerDatabase.NoOp,
+            Int.MaxValue, // no finality floor in this test
             Scheduler.global
           )(
             new EmbeddedChannel(),
