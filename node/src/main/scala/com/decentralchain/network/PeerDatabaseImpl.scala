@@ -95,8 +95,10 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   override def touch(socketAddress: InetSocketAddress): Unit = doTouch(socketAddress, System.currentTimeMillis())
 
-  override def blacklist(inetAddress: InetAddress, reason: String): Unit =
-    if (settings.enableBlacklisting && !isKnownPeerAddress(inetAddress)) {
+  override def blacklist(inetAddress: InetAddress, reason: String, force: Boolean): Unit =
+    // Automatic (force=false) blacklisting never penalizes a configured known-peer/validator (the RC#2 fix);
+    // a deliberate operator action (force=true, from the Debug API) may blacklist anyone.
+    if (settings.enableBlacklisting && (force || !isKnownPeerAddress(inetAddress))) {
       unverifiedPeers.synchronized {
         unverifiedPeers.removeIf(_.getAddress == inetAddress)
         blacklist.put(inetAddress, ticker.read())
@@ -205,9 +207,9 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     JsonFileStorage.save[PeersPersistenceType](rawPeers, f.getCanonicalPath)
   }
 
-  override def blacklistAndClose(channel: Channel, reason: String): Unit = getRemoteAddress(channel).foreach { x =>
+  override def blacklistAndClose(channel: Channel, reason: String, force: Boolean): Unit = getRemoteAddress(channel).foreach { x =>
     log.debug(s"Blacklisting ${id(channel)}: $reason")
-    blacklist(x.getAddress, reason)
+    blacklist(x.getAddress, reason, force)
     channel.close()
   }
 

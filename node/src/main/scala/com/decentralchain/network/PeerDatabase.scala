@@ -10,8 +10,10 @@ trait PeerDatabase {
 
   def nextCandidate(excluded: Set[InetSocketAddress]): Option[InetSocketAddress]
 
-  def blacklist(host: InetAddress, reason: String): Unit
-  def blacklistAndClose(channel: Channel, reason: String): Unit
+  // force=true bypasses the known-peer exemption — a deliberate operator action (Debug API) may blacklist
+  // anyone, whereas automatic protocol-violation blacklisting (force=false) never penalizes our own mesh.
+  def blacklist(host: InetAddress, reason: String, force: Boolean = false): Unit
+  def blacklistAndClose(channel: Channel, reason: String, force: Boolean = false): Unit
   def isBlacklisted(address: InetAddress): Boolean
   def clearBlacklist(): Unit
 
@@ -30,7 +32,7 @@ object PeerDatabase {
 
     override def touch(socketAddress: InetSocketAddress): Unit = {}
 
-    override def blacklist(host: InetAddress, reason: String): Unit = {}
+    override def blacklist(host: InetAddress, reason: String, force: Boolean): Unit = {}
 
     override def knownPeers: Map[InetSocketAddress, Long] = Map.empty
 
@@ -46,6 +48,6 @@ object PeerDatabase {
 
     override val detailedSuspended: Map[InetAddress, Long] = Map.empty
 
-    override def blacklistAndClose(channel: Channel, reason: String): Unit = channel.close()
+    override def blacklistAndClose(channel: Channel, reason: String, force: Boolean): Unit = channel.close()
   }
 }

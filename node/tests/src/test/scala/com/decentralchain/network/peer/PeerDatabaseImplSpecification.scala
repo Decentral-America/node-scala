@@ -155,12 +155,16 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
       val database = new PeerDatabaseImpl(settings)
 
-      // host1 is a known-peer -> blacklist and suspend are no-ops (prevents the RC#2 mutual-blacklist stall)
+      // host1 is a known-peer -> AUTOMATIC blacklist/suspend are no-ops (prevents the RC#2 mutual-blacklist stall)
       database.blacklist(address1.getAddress, "should be ignored for a known-peer")
       database.suspend(address1)
       database.isBlacklisted(address1.getAddress) shouldBe false
       database.isSuspended(address1.getAddress) shouldBe false
       database.detailedBlacklist shouldBe empty
+
+      // but a deliberate operator action (force=true, the Debug API path) overrides the exemption
+      database.blacklist(address1.getAddress, "operator override", force = true)
+      database.isBlacklisted(address1.getAddress) shouldBe true
 
       // a non-known peer is still penalized normally
       database.blacklist(address2.getAddress, "hostile")

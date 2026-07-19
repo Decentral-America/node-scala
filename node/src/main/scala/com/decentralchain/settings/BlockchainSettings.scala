@@ -88,7 +88,12 @@ case class FunctionalitySettings(
     // control the state-hash exclusion relies on). 0 = disabled (backward-compatible: absent hashes are
     // accepted). Set to the first post-genesis boundary for a fresh mainnet, or a future height on an existing
     // chain once every producer emits it — never retroactively (it would reject legacy boundary blocks).
-    enforceCommittedGeneratorsHashFromHeight: Int = 0
+    enforceCommittedGeneratorsHashFromHeight: Int = 0,
+    // Max size of the committed-generator set per period (distinct from maxValidEndorsers, the per-block
+    // endorsement count — the committee may legitimately exceed it). Bounds the O(committee) per-block scan
+    // against a well-capitalized spam attacker. Int.MaxValue = unbounded (default; no behavior change); mainnet
+    // sets a generous finite cap far above any real committee.
+    maxCommittedGenerators: Int = Int.MaxValue
 ) {
   val allowLeasedBalanceTransferUntilHeight: Int              = blockVersion3AfterHeight
   val allowTemporaryNegativeUntil: Long                       = lastTimeBasedForkParameter
@@ -156,7 +161,8 @@ object FunctionalitySettings {
     unitsRegistryAddress = None,
     maxValidEndorsers = 128, // BLS has much worse performance from 129
     generationPeriodLength = 10_000,
-    enforceEthTxValidationAfter = 5234000
+    enforceEthTxValidationAfter = 5234000,
+    maxCommittedGenerators = 1000 // bounds committee-spam DoS; far above any realistic validator count
   )
 
   val TESTNET: FunctionalitySettings = apply(
