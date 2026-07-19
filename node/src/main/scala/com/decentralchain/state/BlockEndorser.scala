@@ -7,6 +7,8 @@ import com.decentralchain.network.{ChannelGroupExt, EndorseBlock}
 import com.decentralchain.wallet.Wallet
 import io.netty.channel.group.ChannelGroup
 
+import java.util.concurrent.atomic.AtomicReference
+
 trait BlockEndorser {
 
   /** Voting happens
@@ -46,7 +48,10 @@ object BlockEndorser {
 
     // This node's own endorsements for the current voting, captured at `vote` time so `rebroadcast`
     // can re-deliver them to a rotated aggregator without re-signing: (votingHeight, endorsedHeight, msgs).
-    @volatile private var pending: Option[(Int, Int, Seq[EndorseBlock])] = None
+    // AtomicReference (not @volatile var): `vote` runs on the block-appender thread while `rebroadcast` runs
+    // on a 3s scheduler; rebroadcast's clear must be a compare-and-set so it can never clobber a fresh vote
+    // written in between (a lost update would drop this node's just-cast endorsements for a height).
+    private val pending: AtomicReference[Option[(Int, Int, Seq[EndorseBlock])]] = new AtomicReference(None)
 
     override def vote(generatorSet: GeneratorSet): Unit = {
       val votingHeight   = Height(blockchain.height)
@@ -116,16 +121,16 @@ object BlockEndorser {
 
       msgs.foreach(m => allChannels.broadcast(m))
       // Record for rebroadcast() so a rotated aggregator can still receive these votes this height.
-      pending = if (msgs.nonEmpty) Some((votingHeight.toInt, endorsedHeight.toInt, msgs)) else None
+      pending.set(if (msgs.nonEmpty) Some((votingHeight.toInt, endorsedHeight.toInt, msgs)) else None)
     }
 
-    override def rebroadcast(): Unit = pending match {
-      case Some((votingHeight, endorsedHeight, msgs)) =>
+    override def rebroadcast(): Unit = pending.get() match {
+      case current @ Some((votingHeight, endorsedHeight, msgs)) =>
         val stillLiveVoting =
           blockchain.height == votingHeight &&
             blockchain.finalizedHeightOrFallback(maxSyncRollbackLength).toInt < endorsedHeight
         if (stillLiveVoting) msgs.foreach(m => allChannels.broadcast(m))
-        else pending = None // height advanced or already finalized -> stop (matches startVoting clear)
+        else pending.compareAndSet(current, None) // clear only if vote() hasn't written a fresher value meanwhile
       case None => ()
     }
   }

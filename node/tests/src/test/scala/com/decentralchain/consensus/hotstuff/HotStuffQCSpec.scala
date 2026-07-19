@@ -114,6 +114,32 @@ class HotStuffQCSpec extends FreeSpec {
       val qc3 = HotStuffQC(blockId, Height(1), HotStuffRound.Prepare, Seq(0, 1, 2), dummySig)
       qc3.meetsThreshold(gs) shouldBe true
     }
+
+    "verify rejects duplicate signer indices" in {
+      val kp      = TxHelpers.signer(0)
+      val blsKP   = BlsKeyPair(kp.privateKey)
+      val blockId = TxHelpers.randomBlockId
+      val height  = Height(7)
+      val round   = HotStuffRound.Commit
+
+      val vote = HotStuffVote.sign(0, blockId, height, round, blsKP)
+      val qc   = HotStuffQC(blockId, height, round, Seq(0, 0), vote.signature)
+      val gs   = mkGeneratorSet(Seq((0, kp.toAddress, blsKP.publicKey, 1_000_000_000L)))
+
+      qc.verify(gs).isLeft shouldBe true
+    }
+
+    "meetsThreshold does not let duplicate signer indices inflate stake" in {
+      val kps = (0 until 3).map(i => (i, TxHelpers.signer(i))).map { case (i, kp) =>
+        (i, kp.toAddress, BlsKeyPair(kp.privateKey).publicKey, 1_000L)
+      }
+      val gs      = mkGeneratorSet(kps)
+      val blockId = TxHelpers.randomBlockId
+
+      // index 0 repeated is still just 1/3 of stake -> below the 2/3 threshold
+      val qc = HotStuffQC(blockId, Height(1), HotStuffRound.Prepare, Seq(0, 0, 0, 0), dummySig)
+      qc.meetsThreshold(gs) shouldBe false
+    }
   }
 
   "HotStuffRound" - {

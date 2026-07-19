@@ -24,12 +24,18 @@ case class FinalityApiRoute(
   private def finalityInfo: JsObject = {
     val currentHeight   = Height(blockchain.height)
     val currentPeriod   = blockchain.generationPeriodOf(currentHeight)
-    val hotStuffLatest  = hotStuffTracker.latestFinalizedBlock
+    // `finalizedHeight` (feature-25 DeterministicFinality) is AUTHORITATIVE — it gates reversion.
+    // `hotStuffFinalizedHeight`/Block is an ADVISORY overlay signal: it does not gate block application,
+    // fork-choice, or rollback, and the overlay lacks a full BFT lock rule (pending external audit). Only
+    // report the HotStuff block if it is still on THIS node's canonical chain — after a reorg the recorded
+    // advisory block can be orphaned; never serve an orphaned block as "finalized".
+    val hotStuffLatest = hotStuffTracker.latestFinalizedBlock.filter(fb => blockchain.heightOf(fb.blockId).map(Height(_)).contains(fb.height))
     Json.obj(
       "height"                  -> currentHeight,
       "finalizedHeight"         -> blocksApi.currentFinalizedHeight,
       "hotStuffFinalizedHeight" -> hotStuffLatest.map(_.height),
       "hotStuffFinalizedBlock"  -> hotStuffLatest.map(_.blockId.toString),
+      "hotStuffFinalityIsAdvisory" -> true,
       "currentGenerationPeriod" -> currentPeriod,
       "currentGenerators"       -> generatorsApi.generators(currentHeight),
       "nextGenerationPeriod"    -> currentPeriod.map(_.next),
