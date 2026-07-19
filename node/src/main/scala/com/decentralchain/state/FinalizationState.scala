@@ -123,7 +123,9 @@ object FinalizationState extends ScorexLogging {
       x = generatorSet(idx)
     } log.debug(s"New conflict endorser ${x.address} with index $idx and balance ${x.balance}")
 
-    val r         = FinalizationVoting.isFinalized(endorsedBalance, totalBalance)
+    // totalBalance > 0 guard: if the entire committee is excluded (all in conflict), endorsed==total==0 and
+    // isFinalized(0,0) would be vacuously true — never finalize a block backed by zero effective stake.
+    val r         = totalBalance > 0 && FinalizationVoting.isFinalized(endorsedBalance, totalBalance)
     val statusStr = if (finalizedPreviously && !r) "Lost" else if (r) "Reached" else "Not reached"
     log.debug(
       s"$statusStr after ${after.trim} for $parentHeight, endorsed=$endorsedBalance, total=$totalBalance, " +

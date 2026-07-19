@@ -18,7 +18,7 @@ final class HotStuffVoteCollector(
   private val votes: scala.collection.mutable.Map[Int, BlsSignature] =
     scala.collection.mutable.Map.empty
 
-  private val totalBalance: Long = generatorSet.map(_.balance).sum
+  private val totalBalance: BigInt = generatorSet.foldLeft(BigInt(0))((acc, g) => acc + BigInt(g.balance))
 
   /** Validates and records a vote. Returns the formed QC if ≥2/3 threshold is now met. */
   def add(vote: HotStuffVote): Either[GenericError, Option[HotStuffQC]] = {
@@ -47,11 +47,12 @@ final class HotStuffVoteCollector(
 
   def voteCount: Int = votes.size
 
-  private def endorsedBalance: Long =
-    generatorSet.filter(g => votes.contains(g.index.toInt)).map(_.balance).sum
+  private def endorsedBalance: BigInt =
+    generatorSet.foldLeft(BigInt(0))((acc, g) => if (votes.contains(g.index.toInt)) acc + BigInt(g.balance) else acc)
 
   private def tryFormQC(): Either[GenericError, Option[HotStuffQC]] =
-    if (endorsedBalance * 3L < totalBalance * 2L)
+    // BigInt to match HotStuffQC.meetsThreshold / the authoritative T0 path (no *3/*2 Long overflow).
+    if (endorsedBalance * 3 < totalBalance * 2)
       Right(None)
     else
       BlsSignature

@@ -23,8 +23,8 @@ object CommitToGenerationTransactionDiff {
         .leftMap(e => GenericError(s"Invalid commitment signature: $e"))
       // Bound the committed-generator set size so a well-capitalized attacker can't inflate the O(committee)
       // per-block generator scan. NOTE: this is the COMMITTEE size, which is distinct from (and may exceed)
-      // maxValidEndorsers — the per-block endorsement count. Its own knob, Int.MaxValue by default (= no bound,
-      // preserving current behavior and consensus tests); mainnet sets a generous finite cap.
+      // maxValidEndorsers — the per-block endorsement count. Its own knob, on by default at 1000 (far above any
+      // real committee); see FunctionalitySettings.maxCommittedGenerators.
       maxCommittee = blockchain.settings.functionalitySettings.maxCommittedGenerators
       _ <- Either.raiseWhen(blockchain.committedGenerators(next).size >= maxCommittee) {
         GenericError(s"Committed-generator set for period ${next.start} is full ($maxCommittee generators); cannot commit more")
