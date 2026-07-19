@@ -31,7 +31,11 @@ case class NetworkSettings(
     handshakeTimeout: FiniteDuration,
     suspensionResidenceTime: FiniteDuration,
     receivedTxsCacheTimeout: FiniteDuration,
-    trafficLogger: TrafficLogger.Settings
+    trafficLogger: TrafficLogger.Settings,
+    // Minimum accepted peer application major version. 0 = accept any (default; the historical behavior for a
+    // single-operator network). Operators can raise it to refuse downgraded/incompatible peers on mainnet —
+    // set it conservatively (below the version deployed everywhere) so a rolling upgrade never partitions.
+    minSupportedAppVersion: Int = 0
 ) derives ConfigReader {
 
   val derivedDeclaredAddress: Option[InetSocketAddress] = declaredAddress.map { address =>

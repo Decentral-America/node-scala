@@ -80,7 +80,8 @@ object NetworkServer extends ScorexLogging {
 
     val (channelClosedHandler, closedChannelsSubject) = ChannelClosedHandler()
     val peerConnectionsMap                            = new ConcurrentHashMap[PeerKey, Channel](10, 0.9f, 10)
-    val serverHandshakeHandler = new HandshakeHandler.Server(handshake, peerInfo, peerConnectionsMap, peerDatabase, allChannels)
+    val serverHandshakeHandler =
+      new HandshakeHandler.Server(handshake, peerInfo, peerConnectionsMap, peerDatabase, allChannels, networkSettings.minSupportedAppVersion)
 
     def pipelineTail: Seq[ChannelHandlerAdapter] =
       Seq(
@@ -110,7 +111,8 @@ object NetworkServer extends ScorexLogging {
 
     val outgoingChannels = new ConcurrentHashMap[InetSocketAddress, Channel]
 
-    val clientHandshakeHandler = new HandshakeHandler.Client(handshake, peerInfo, peerConnectionsMap, peerDatabase, allChannels)
+    val clientHandshakeHandler =
+      new HandshakeHandler.Client(handshake, peerInfo, peerConnectionsMap, peerDatabase, allChannels, networkSettings.minSupportedAppVersion)
 
     val bootstrap = new Bootstrap()
       .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, networkSettings.connectionTimeout.toMillis.toInt: Integer)

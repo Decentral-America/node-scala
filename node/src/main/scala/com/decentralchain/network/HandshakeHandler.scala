@@ -74,7 +74,8 @@ abstract class HandshakeHandler(
     establishedConnections: ConcurrentMap[Channel, PeerInfo],
     peerConnections: ConcurrentMap[PeerKey, Channel],
     peerDatabase: PeerDatabase,
-    allChannels: ChannelGroup
+    allChannels: ChannelGroup,
+    minSupportedAppVersion: Int = 0
 ) extends ChannelInboundHandlerAdapter
     with ScorexLogging {
 
@@ -103,8 +104,12 @@ abstract class HandshakeHandler(
           verifiedDeclaredAddress,
           ctx
         )
-      else if (!versionIsSupported(remoteHandshake.applicationVersion))
-        suspendAndClose(s"Remote application version ${remoteHandshake.applicationVersion} is not supported", verifiedDeclaredAddress, ctx)
+      else if (!versionIsSupported(remoteHandshake.applicationVersion) || remoteHandshake.applicationVersion._1 < minSupportedAppVersion)
+        suspendAndClose(
+          s"Remote application version ${remoteHandshake.applicationVersion} is not supported (min major $minSupportedAppVersion)",
+          verifiedDeclaredAddress,
+          ctx
+        )
       else {
         verifiedDeclaredAddress.foreach { vda =>
           ctx.channel().attr(NodeDeclaredAddressAttributeKey).set(vda)
@@ -191,8 +196,9 @@ object HandshakeHandler {
       establishedConnections: ConcurrentMap[Channel, PeerInfo],
       peerConnections: ConcurrentMap[PeerKey, Channel],
       peerDatabase: PeerDatabase,
-      allChannels: ChannelGroup
-  ) extends HandshakeHandler(handshake, establishedConnections, peerConnections, peerDatabase, allChannels) {
+      allChannels: ChannelGroup,
+      minSupportedAppVersion: Int = 0
+  ) extends HandshakeHandler(handshake, establishedConnections, peerConnections, peerDatabase, allChannels, minSupportedAppVersion) {
     override protected def connectionNegotiated(ctx: ChannelHandlerContext): Unit = {
       sendLocalHandshake(ctx)
       super.connectionNegotiated(ctx)
@@ -205,8 +211,9 @@ object HandshakeHandler {
       establishedConnections: ConcurrentMap[Channel, PeerInfo],
       peerConnections: ConcurrentMap[PeerKey, Channel],
       peerDatabase: PeerDatabase,
-      allChannels: ChannelGroup
-  ) extends HandshakeHandler(handshake, establishedConnections, peerConnections, peerDatabase, allChannels) {
+      allChannels: ChannelGroup,
+      minSupportedAppVersion: Int = 0
+  ) extends HandshakeHandler(handshake, establishedConnections, peerConnections, peerDatabase, allChannels, minSupportedAppVersion) {
     override def channelActive(ctx: ChannelHandlerContext): Unit = {
       sendLocalHandshake(ctx)
       ctx.channel().attr(ConnectionStartAttributeKey).set(System.nanoTime() / 1000)
