@@ -83,7 +83,12 @@ case class FunctionalitySettings(
     unitsRegistryAddress: Option[String] = None,
     maxValidEndorsers: Int = 5,
     generationPeriodLength: Int = 1000,
-    enforceEthTxValidationAfter: Int = 0
+    enforceEthTxValidationAfter: Int = 0,
+    // From this height on, a period-boundary block MUST carry a committedGeneratorsHash (the compensating
+    // control the state-hash exclusion relies on). 0 = disabled (backward-compatible: absent hashes are
+    // accepted). Set to the first post-genesis boundary for a fresh mainnet, or a future height on an existing
+    // chain once every producer emits it — never retroactively (it would reject legacy boundary blocks).
+    enforceCommittedGeneratorsHashFromHeight: Int = 0
 ) {
   val allowLeasedBalanceTransferUntilHeight: Int              = blockVersion3AfterHeight
   val allowTemporaryNegativeUntil: Long                       = lastTimeBasedForkParameter

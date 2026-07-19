@@ -232,11 +232,23 @@ object BlockDiffer {
       height: Height,
       actual: Option[ByteStr]
   ): TracedResult[ValidationError, Unit] =
-    // If absent: always accept — backward-compatible with blocks mined before this feature.
+    // If absent: accept unless enforcement is switched on for this height (see
+    // enforceCommittedGeneratorsHashFromHeight) — a period-boundary block past that height MUST carry the hash.
     // If present: strictly validate correctness (boundary blocks must have the right hash;
     // non-boundary blocks must not have a hash at all).
     actual match {
-      case None => TracedResult(Right(()))
+      case None =>
+        val fs           = blockchain.settings.functionalitySettings
+        val enforceFrom  = fs.enforceCommittedGeneratorsHashFromHeight
+        val isBoundary   = height.toInt % fs.generationPeriodLength == 0 && blockchain.generationPeriodOf(height).isDefined
+        val mustHaveHash = enforceFrom > 0 && height.toInt >= enforceFrom && isBoundary
+        TracedResult(
+          Either.cond(
+            !mustHaveHash,
+            (),
+            GenericError(s"Missing committedGeneratorsHash at period-boundary height $height (enforced from $enforceFrom)")
+          )
+        )
       case Some(actualHash) =>
         val periodLength = blockchain.settings.functionalitySettings.generationPeriodLength
         val expected =
