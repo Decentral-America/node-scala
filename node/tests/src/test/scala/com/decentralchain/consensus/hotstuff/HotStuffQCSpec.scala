@@ -142,6 +142,23 @@ class HotStuffQCSpec extends FreeSpec {
     }
   }
 
+  "HotStuffFinalityTracker" - {
+    "rollbackTo drops a record orphaned by a reorg but keeps a still-valid one" in {
+      val tracker = new HotStuffFinalityTracker()
+      val blockId = TxHelpers.randomBlockId
+      val qc      = HotStuffQC(blockId, Height(10), HotStuffRound.Commit, Seq(0), dummySig)
+
+      tracker.updateWith(qc) shouldBe true
+      tracker.finalizedHeight shouldBe Some(Height(10))
+
+      tracker.rollbackTo(Height(10)) // rollback not below the finalized height -> keep
+      tracker.finalizedHeight shouldBe Some(Height(10))
+
+      tracker.rollbackTo(Height(5)) // reorg below the finalized height -> drop the orphaned record
+      tracker.finalizedHeight shouldBe None
+    }
+  }
+
   "HotStuffRound" - {
     "round sequence is Prepare → PreCommit → Commit → None" in {
       HotStuffRound.Prepare.next   shouldBe Some(HotStuffRound.PreCommit)

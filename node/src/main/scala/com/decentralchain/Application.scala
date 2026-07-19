@@ -23,7 +23,7 @@ import com.decentralchain.extensions.{Context, Extension}
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.features.api.ActivationApiRoute
 import com.decentralchain.history.{History, StorageFactory}
-import com.decentralchain.consensus.hotstuff.{HotStuffEngine, HotStuffFinalityTracker}
+import com.decentralchain.consensus.hotstuff.{HotStuffEngine, HotStuffFinalityTracker, HotStuffRollbackTrigger}
 import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.Metrics
@@ -188,6 +188,10 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     // HotStuff T2 fast-finality engine — disabled by default, gated on hotStuffSettings.enabled.
     // Enable only after T0 (DeterministicFinality) has been proven stable on mainnet for ≥60 days.
     val hotStuffFinalityTracker = new HotStuffFinalityTracker()
+    // Reset the advisory HotStuff finality record on rollback so a reorg can't leave a stale/orphaned
+    // "finalized" block (complements the canonical-only filter in FinalityApiRoute). combined(triggers) reads
+    // this Seq by-name, so appending here (before any rollback can fire) takes effect.
+    triggers = triggers :+ new HotStuffRollbackTrigger(hotStuffFinalityTracker)
     val hotStuffEngine: Option[ActorRef] =
       if (settings.hotStuffSettings.enabled) {
         wallet.privateKeyAccounts.headOption.map { kp =>

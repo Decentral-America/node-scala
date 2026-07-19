@@ -18,6 +18,7 @@ import io.decentralchain.protobuf.block.{PBBlock, PBBlocks, PBMicroBlocks, Signe
 import io.decentralchain.protobuf.snapshot.{BlockSnapshot as PBBlockSnapshot, MicroBlockSnapshot as PBMicroBlockSnapshot}
 import io.decentralchain.protobuf.transaction.{PBSignedTransaction, PBTransactions}
 import com.decentralchain.state.Height
+import kamon.Kamon
 import com.decentralchain.transaction.{DataTransaction, EthereumTransaction, Transaction, TransactionParsers}
 import io.netty.channel.ChannelHandler.Sharable
 
@@ -352,13 +353,29 @@ object MicroSnapshotRequestSpec extends MessageSpec[MicroSnapshotRequest] {
   override val maxLength: Int = SignatureLength
 }
 
+/** Observed on-wire sizes of snapshot responses. These messages are the ONLY ones that legitimately need the
+  * full 100 MB frame (normal blocks cap at 1 MB), so the P2P `MaxFrameLength` cannot be lowered safely until we
+  * know the real distribution. Scrape `dcc_snapshot_*_response_bytes` for a few days, then set the frame cap to
+  * observed-max × margin (audit item P3). Recorded on both serialize (what we produce) and deserialize (what
+  * peers send us — the value that actually fills the frame buffer). */
+private object SnapshotSizeMetrics {
+  val blockResponseBytes      = Kamon.histogram("dcc.snapshot.block-response.bytes").withoutTags()
+  val microBlockResponseBytes = Kamon.histogram("dcc.snapshot.microblock-response.bytes").withoutTags()
+}
+
 object BlockSnapshotResponseSpec extends MessageSpec[BlockSnapshotResponse] {
   override val messageCode: MessageCode = 36: Byte
 
-  override def deserializeData(bytes: Array[Byte]): Try[BlockSnapshotResponse] =
+  override def deserializeData(bytes: Array[Byte]): Try[BlockSnapshotResponse] = {
+    SnapshotSizeMetrics.blockResponseBytes.record(bytes.length.toLong)
     Try(BlockSnapshotResponse.fromProtobuf(PBBlockSnapshot.parseFrom(bytes)))
+  }
 
-  override def serializeData(data: BlockSnapshotResponse): Array[Byte] = data.toProtobuf.toByteArray
+  override def serializeData(data: BlockSnapshotResponse): Array[Byte] = {
+    val bytes = data.toProtobuf.toByteArray
+    SnapshotSizeMetrics.blockResponseBytes.record(bytes.length.toLong)
+    bytes
+  }
 
   override val maxLength: Int = NetworkServer.MaxFrameLength
 }
@@ -366,10 +383,16 @@ object BlockSnapshotResponseSpec extends MessageSpec[BlockSnapshotResponse] {
 object MicroBlockSnapshotResponseSpec extends MessageSpec[MicroBlockSnapshotResponse] {
   override val messageCode: MessageCode = 37: Byte
 
-  override def deserializeData(bytes: Array[Byte]): Try[MicroBlockSnapshotResponse] =
+  override def deserializeData(bytes: Array[Byte]): Try[MicroBlockSnapshotResponse] = {
+    SnapshotSizeMetrics.microBlockResponseBytes.record(bytes.length.toLong)
     Try(MicroBlockSnapshotResponse.fromProtobuf(PBMicroBlockSnapshot.parseFrom(bytes)))
+  }
 
-  override def serializeData(data: MicroBlockSnapshotResponse): Array[Byte] = data.toProtobuf.toByteArray
+  override def serializeData(data: MicroBlockSnapshotResponse): Array[Byte] = {
+    val bytes = data.toProtobuf.toByteArray
+    SnapshotSizeMetrics.microBlockResponseBytes.record(bytes.length.toLong)
+    bytes
+  }
 
   override val maxLength: Int = NetworkServer.MaxFrameLength
 }

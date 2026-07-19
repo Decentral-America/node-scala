@@ -25,6 +25,19 @@ final class HotStuffFinalityTracker extends ScorexLogging {
     recorded
   }
 
+  /** Drop the recorded finalized block if a rollback put it above the new chain tip — otherwise the tracker
+    * would keep reporting a block orphaned by the reorg. `updateWith` only ever moves the height up, so without
+    * this a same-height reorg leaves a stale advisory record. Called from a BlockchainUpdateTriggers.onRollback.
+    */
+  def rollbackTo(toHeight: Height): Unit = {
+    val prev = latest.getAndUpdate {
+      case Some(fb) if fb.height > toHeight => None
+      case other                            => other
+    }
+    if (prev.exists(_.height > toHeight))
+      log.info(s"HotStuff finality record reset on rollback to $toHeight (was ${prev.map(_.height)})")
+  }
+
   def latestFinalizedBlock: Option[HotStuffFinalizedBlock] = latest.get()
 
   def finalizedHeight: Option[Height] = latest.get().map(_.height)
