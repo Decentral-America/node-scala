@@ -17,7 +17,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters.*
 import scala.jdk.DurationConverters.*
-import scala.util.Random
 import scala.util.control.NonFatal
 
 class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.systemTicker()) extends PeerDatabase with AutoCloseable with ScorexLogging {

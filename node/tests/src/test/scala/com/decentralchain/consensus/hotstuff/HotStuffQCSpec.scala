@@ -1,7 +1,6 @@
 package com.decentralchain.consensus.hotstuff
 
 import com.decentralchain.account.Address
-import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey, BlsSignature}
 import com.decentralchain.state.{GeneratorIndex, GeneratorSet, Height}
 import com.decentralchain.test.FreeSpec
