@@ -120,7 +120,7 @@ Worked the punch-list to completion where it could be implemented and verified n
 | **C3** | Atomic (`AtomicReference` + CAS) rebroadcast `pending` check-and-clear — no lost-update dropping this node's votes | `BlockEndorser` |
 | **C4** | Reject duplicate QC signer indices; BigInt 2/3 threshold math | `HotStuffQC` |
 | **C2** | API reports HotStuff finality only if the block is still canonical (no orphaned "finalized"); `hotStuffFinalityIsAdvisory=true` | `FinalityApiRoute` |
-| **E2** | Cap committed-generator set at `maxValidEndorsers` (bounds the per-block scan attack) | `CommitToGenerationTransactionDiff` |
+| **E2** | Cap committed-generator set via its own `maxCommittedGenerators` setting — **on by default (1000)**, decoupled from `maxValidEndorsers`; bounds the per-block scan attack | `CommitToGenerationTransactionDiff`, `BlockchainSettings` |
 | **R1** | Edge hard-404 denylist for `/debug/*`, `/wallet/*`, `/node/stop`, `/addresses/seed/*`, `POST /transactions/sign*`, mutating `/peers` & `/addresses` (defense-in-depth) | `infra update-caddy.yml` |
 | **R4** | Dedicated tight rate-limit (30/min) for unauthenticated `/utils/script/*` CPU endpoints | `infra update-caddy.yml` |
 | **E1** | Gated mandatory `committedGeneratorsHash` at period boundaries — new setting `enforceCommittedGeneratorsHashFromHeight` (default 0 = off; enforcement condition matches the miner's emit condition so no conforming producer is rejected). Code-complete & safe-by-default; mainnet sets it at genesis | `BlockchainSettings`, `BlockDiffer` |

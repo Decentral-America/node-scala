@@ -91,9 +91,10 @@ case class FunctionalitySettings(
     enforceCommittedGeneratorsHashFromHeight: Int = 0,
     // Max size of the committed-generator set per period (distinct from maxValidEndorsers, the per-block
     // endorsement count — the committee may legitimately exceed it). Bounds the O(committee) per-block scan
-    // against a well-capitalized spam attacker. Int.MaxValue = unbounded (default; no behavior change); mainnet
-    // sets a generous finite cap far above any real committee.
-    maxCommittedGenerators: Int = Int.MaxValue
+    // against a well-capitalized spam attacker. On by default at a generous cap far above any real committee
+    // (maxValidEndorsers is ≤128, so a larger committee is already pointless) — not consensus-activation
+    // sensitive, so no reason to leave it unbounded.
+    maxCommittedGenerators: Int = 1000
 ) {
   val allowLeasedBalanceTransferUntilHeight: Int              = blockVersion3AfterHeight
   val allowTemporaryNegativeUntil: Long                       = lastTimeBasedForkParameter
@@ -161,8 +162,8 @@ object FunctionalitySettings {
     unitsRegistryAddress = None,
     maxValidEndorsers = 128, // BLS has much worse performance from 129
     generationPeriodLength = 10_000,
-    enforceEthTxValidationAfter = 5234000,
-    maxCommittedGenerators = 1000 // bounds committee-spam DoS; far above any realistic validator count
+    enforceEthTxValidationAfter = 5234000
+    // maxCommittedGenerators inherits the on-by-default cap (1000)
   )
 
   val TESTNET: FunctionalitySettings = apply(
