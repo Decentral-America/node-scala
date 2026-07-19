@@ -174,15 +174,17 @@ object AsyncHttpApi extends Assertions {
 
     def printDebugMessage(db: DebugMessage): Future[Response] = postJsonWithApiKey("/debug/print", db)
 
-    def connectedPeers: Future[Seq[Peer]] = get("/peers/connected").map { r =>
+    // /peers/* GETs are behind the node's api-key auth (withAuth on PeersApiRoute; the production edge injects
+    // the key for exactly these read-only endpoints), so the harness must send the key too — else 403.
+    def connectedPeers: Future[Seq[Peer]] = get("/peers/connected", withApiKey = true).map { r =>
       (Json.parse(r.getResponseBody) \ "peers").as[Seq[Peer]]
     }
 
-    def blacklistedPeers: Future[Seq[BlacklistedPeer]] = get("/peers/blacklisted").map { r =>
+    def blacklistedPeers: Future[Seq[BlacklistedPeer]] = get("/peers/blacklisted", withApiKey = true).map { r =>
       Json.parse(r.getResponseBody).as[Seq[BlacklistedPeer]]
     }
 
-    def allPeers: Future[Seq[KnownPeer]] = get("/peers/all").map { r =>
+    def allPeers: Future[Seq[KnownPeer]] = get("/peers/all", withApiKey = true).map { r =>
       (Json.parse(r.getResponseBody) \ "peers").as[Seq[KnownPeer]]
     }
 
