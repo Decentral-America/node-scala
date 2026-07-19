@@ -142,6 +142,41 @@ class PeerDatabaseImplSpecification extends FreeSpec {
 
       database.detailedBlacklist shouldBe empty
     }
+
+    "must never blacklist or suspend a configured known-peer (validator/seed), but still penalizes others" in {
+      val config = ConfigFactory
+        .parseString(s"""dcc.network {
+                        |  file = null
+                        |  known-peers = ["$host1:1"]
+                        |  peers-data-residence-time = 100s
+                        |}""".stripMargin)
+        .withFallback(ConfigFactory.load())
+        .resolve()
+      val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
+      val database = new PeerDatabaseImpl(settings)
+
+      // host1 is a known-peer -> blacklist and suspend are no-ops (prevents the RC#2 mutual-blacklist stall)
+      database.blacklist(address1.getAddress, "should be ignored for a known-peer")
+      database.suspend(address1)
+      database.isBlacklisted(address1.getAddress) shouldBe false
+      database.isSuspended(address1.getAddress) shouldBe false
+      database.detailedBlacklist shouldBe empty
+
+      // a non-known peer is still penalized normally
+      database.blacklist(address2.getAddress, "hostile")
+      database.isBlacklisted(address2.getAddress) shouldBe true
+    }
+
+    "prefers an outbound candidate in a subnet we are not already connected to (anti-eclipse)" in withDatabase(settings1) { database =>
+      val sameSubnetVerified = new InetSocketAddress("9.9.2.2", 2) // same /16 as an already-connected peer
+      val diverseVerified    = new InetSocketAddress("8.8.8.8", 3) // different /16
+      database.touch(sameSubnetVerified)
+      database.touch(diverseVerified)
+
+      // already connected to 9.9.x.x; selection should avoid that /16 and pick the diverse subnet
+      val excluded = Set(new InetSocketAddress("9.9.5.5", 5))
+      database.nextCandidate(excluded) should contain(diverseVerified)
+    }
   }
 
 }

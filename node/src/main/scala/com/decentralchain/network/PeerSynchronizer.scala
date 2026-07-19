@@ -5,9 +5,11 @@ import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
 
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Random
 
 class PeerSynchronizer(peerDatabase: PeerDatabase, peerRequestInterval: FiniteDuration) extends ChannelInboundHandlerAdapter with ScorexLogging {
-  private var peersRequested = false
+  private var peersRequested     = false
+  private var lastPeersServedAt  = 0L
 
   private def requestPeers(ctx: ChannelHandlerContext): Unit = if (ctx.channel().isActive) {
     peersRequested = true
@@ -25,7 +27,15 @@ class PeerSynchronizer(peerDatabase: PeerDatabase, peerRequestInterval: FiniteDu
         requestPeers(ctx)
         super.channelRead(ctx, msg)
       case GetPeers =>
-        ctx.writeAndFlush(KnownPeers(peerDatabase.knownPeers.keys.toSeq))
+        // Rate-limit responses (a peer can spam GetPeers as a cheap amplification vector) and truncate the
+        // reply to the wire cap, else an oversized frame would be rejected by the receiver.
+        val now = System.currentTimeMillis()
+        if (now - lastPeersServedAt >= peerRequestInterval.toMillis) {
+          lastPeersServedAt = now
+          val peers  = peerDatabase.knownPeers.keys.toSeq
+          val capped = if (peers.size > PeersSpec.MaxAddresses) Random.shuffle(peers).take(PeersSpec.MaxAddresses) else peers
+          ctx.writeAndFlush(KnownPeers(capped))
+        }
       case KnownPeers(peers) if peersRequested =>
         peersRequested = false
         val (added, notAdded) = peers.partition(peerDatabase.addCandidate)

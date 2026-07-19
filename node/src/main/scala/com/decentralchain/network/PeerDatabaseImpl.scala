@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioSocketChannel
 
 import java.net.{InetAddress, InetSocketAddress, URI}
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import scala.collection.*
 import scala.collection.immutable.Seq
@@ -20,21 +21,51 @@ import scala.util.Random
 import scala.util.control.NonFatal
 
 class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.systemTicker()) extends PeerDatabase with AutoCloseable with ScorexLogging {
-  private def cache[T <: AnyRef](timeout: FiniteDuration) =
-    CacheBuilder
+  private def cache[T <: AnyRef](timeout: FiniteDuration, maxSize: Option[Long] = None) = {
+    val builder = CacheBuilder
       .newBuilder()
       .ticker(ticker)
       .expireAfterWrite(timeout.toJava)
-      .build[T, java.lang.Long]()
+    maxSize.foreach(s => builder.maximumSize(s))
+    builder.build[T, java.lang.Long]()
+  }
+
+  // Bound the verified-peer pool so an attacker who completes handshakes from many sybil IPs cannot grow it
+  // without limit (eclipse / memory pressure). Sized generously relative to our connection budget.
+  private val MaxVerifiedPeers: Long = math.max(1000L, (settings.maxInboundConnections + settings.maxOutboundConnections) * 4L)
 
   private type PeersPersistenceType = Set[String]
-  private val peersPersistence = cache[InetSocketAddress](settings.peersDataResidenceTime)
+  private val peersPersistence = cache[InetSocketAddress](settings.peersDataResidenceTime, Some(MaxVerifiedPeers))
   private val blacklist        = cache[InetAddress](settings.blackListResidenceTime)
   private val suspension       = cache[InetAddress](settings.suspensionResidenceTime)
   private val reasons          = mutable.Map.empty[InetAddress, String]
   private val unverifiedPeers  = EvictingQueue.create[InetSocketAddress](settings.maxUnverifiedPeers)
 
   private val IPAndPort = """(\d+)\.(\d+)\.(\d+)\.(\d+):(\d+)""".r
+
+  // Configured known-peers (seed nodes + our own validators/generators) are trusted infrastructure and must
+  // NEVER be blacklisted or suspended: transient churn between our own forging nodes used to mutually
+  // blacklist them and stall finality (the RC#2 peer-cycling incident), which forced the unsafe global
+  // `enable-blacklisting = no` workaround. Exempting known-peers lets mainnet run with blacklisting ON (the
+  // safe default that penalizes genuinely hostile peers) without ever penalizing our own mesh. Resolution is
+  // cached and refreshed periodically so DNS is not touched on the hot path.
+  private val KnownPeerRefreshMillis                             = 5 * 60 * 1000L
+  private val knownPeerAddresses: AtomicReference[(Long, Set[InetAddress])] = new AtomicReference((0L, Set.empty))
+
+  private def isKnownPeerAddress(address: InetAddress): Boolean = {
+    val now          = System.currentTimeMillis()
+    val (ts, cached) = knownPeerAddresses.get()
+    val set =
+      if (now - ts > KnownPeerRefreshMillis) {
+        val resolved = settings.knownPeers.flatMap { p =>
+          try resolvePeerAddress(p).map(_.getAddress)
+          catch { case NonFatal(_) => Nil }
+        }.toSet
+        knownPeerAddresses.set((now, resolved))
+        resolved
+      } else cached
+    set.contains(address)
+  }
 
   for (f <- settings.file if f.exists && f.isFile && f.length > 0) try {
     JsonFileStorage.load[PeersPersistenceType](f.getCanonicalPath).map {
@@ -65,7 +96,7 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
   override def touch(socketAddress: InetSocketAddress): Unit = doTouch(socketAddress, System.currentTimeMillis())
 
   override def blacklist(inetAddress: InetAddress, reason: String): Unit =
-    if (settings.enableBlacklisting) {
+    if (settings.enableBlacklisting && !isKnownPeerAddress(inetAddress)) {
       unverifiedPeers.synchronized {
         unverifiedPeers.removeIf(_.getAddress == inetAddress)
         blacklist.put(inetAddress, ticker.read())
@@ -74,10 +105,13 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     }
 
   override def suspend(socketAddress: InetSocketAddress): Unit = getAddress(socketAddress).foreach { address =>
-    unverifiedPeers.synchronized {
-      log.trace(s"Suspending $socketAddress")
-      unverifiedPeers.removeIf(_ == socketAddress)
-      suspension.put(address, System.currentTimeMillis())
+    // Never suspend our own known-peers/validators — we want to keep retrying those links, not cool them down.
+    if (!isKnownPeerAddress(address)) {
+      unverifiedPeers.synchronized {
+        log.trace(s"Suspending $socketAddress")
+        unverifiedPeers.removeIf(_ == socketAddress)
+        suspension.put(address, System.currentTimeMillis())
+      }
     }
   }
 
@@ -124,14 +158,24 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
           if (!excludeAddress(nonNull)) Some(nonNull) else nextUnverified()
       }
 
+    // Anti-eclipse: prefer candidates in a /16 we are not already connected to, so a sybil cluster in a single
+    // subnet cannot monopolize our outbound slots. Falls back to the full pool if no diverse peer is available.
+    val excludedSubnets: Set[Int] = excluded.flatMap(isa => subnetKey(isa.getAddress))
+    def isDiverse(isa: InetSocketAddress): Boolean = !subnetKey(isa.getAddress).exists(excludedSubnets.contains)
+
     val resolvedPeersFromConfig = settings.knownPeers
       .flatMap(p => resolvePeerAddress(p))
 
     val selectedNextUnverified = nextUnverified()
 
     val filteredKnownPeers = knownPeers.keySet.filterNot(excludeAddress)
+    // Prefer verified peers in an unrepresented subnet; only fall back to same-subnet peers if none are diverse.
+    val knownPeerPool      = filteredKnownPeers.filter(isDiverse) match {
+      case diverse if diverse.nonEmpty => diverse
+      case _                           => filteredKnownPeers
+    }
     val randomKnownPeer =
-      (if (filteredKnownPeers.size > 1) filteredKnownPeers.view.drop(ThreadLocalRandom.current().nextInt(filteredKnownPeers.size)) else filteredKnownPeers).headOption
+      (if (knownPeerPool.size > 1) knownPeerPool.view.drop(ThreadLocalRandom.current().nextInt(knownPeerPool.size)) else knownPeerPool).headOption
 
     val selectedCandidate = resolvedPeersFromConfig
       .filterNot(excludeAddress)
@@ -165,6 +209,13 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     log.debug(s"Blacklisting ${id(channel)}: $reason")
     blacklist(x.getAddress, reason)
     channel.close()
+  }
+
+  // /16 subnet key for IPv4 (top two octets); None for IPv6/unknown (treated as always-diverse — IPv6 space
+  // is too large to bucket meaningfully here). Used to spread outbound connections across subnets.
+  private def subnetKey(address: InetAddress): Option[Int] = {
+    val b = address.getAddress
+    if (b != null && b.length == 4) Some(((b(0) & 0xff) << 8) | (b(1) & 0xff)) else None
   }
 
   private def getAddress(socketAddress: InetSocketAddress): Option[InetAddress] = {

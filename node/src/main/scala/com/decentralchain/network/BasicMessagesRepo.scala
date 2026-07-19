@@ -49,7 +49,12 @@ abstract class InetSocketAddressSeqSpec[A <: AnyRef: ClassTag] extends MessageSp
 
   override val messageCode: Message.MessageCode = 2: Byte
 
-  override val maxLength: Int = DataLength + 1000 * (AddressLength + PortLength)
+  /** Wire cap on peers per message. A sender MUST truncate to this before broadcasting, otherwise the frame
+    * exceeds maxLength and every receiver rejects it (and, with blacklisting on, penalizes the honest sender).
+    */
+  val MaxAddresses: Int = 1000
+
+  override val maxLength: Int = DataLength + MaxAddresses * (AddressLength + PortLength)
 
   protected def unwrap(v: A): Seq[InetSocketAddress]
   protected def wrap(addresses: Seq[InetSocketAddress]): A
