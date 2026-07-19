@@ -95,10 +95,11 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
 
   override def touch(socketAddress: InetSocketAddress): Unit = doTouch(socketAddress, System.currentTimeMillis())
 
-  override def blacklist(inetAddress: InetAddress, reason: String, force: Boolean): Unit =
-    // Automatic (force=false) blacklisting never penalizes a configured known-peer/validator (the RC#2 fix);
-    // a deliberate operator action (force=true, from the Debug API) may blacklist anyone.
-    if (settings.enableBlacklisting && (force || !isKnownPeerAddress(inetAddress))) {
+  // Low-level, unconditional blacklist (respects only the global enable-blacklisting switch). The known-peer
+  // leniency lives in blacklistAndClose (the automatic protocol-trigger path), not here — so the operator
+  // Debug API and any deliberate call blacklist exactly what they ask for.
+  override def blacklist(inetAddress: InetAddress, reason: String): Unit =
+    if (settings.enableBlacklisting) {
       unverifiedPeers.synchronized {
         unverifiedPeers.removeIf(_.getAddress == inetAddress)
         blacklist.put(inetAddress, ticker.read())
@@ -107,13 +108,10 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     }
 
   override def suspend(socketAddress: InetSocketAddress): Unit = getAddress(socketAddress).foreach { address =>
-    // Never suspend our own known-peers/validators — we want to keep retrying those links, not cool them down.
-    if (!isKnownPeerAddress(address)) {
-      unverifiedPeers.synchronized {
-        log.trace(s"Suspending $socketAddress")
-        unverifiedPeers.removeIf(_ == socketAddress)
-        suspension.put(address, System.currentTimeMillis())
-      }
+    unverifiedPeers.synchronized {
+      log.trace(s"Suspending $socketAddress")
+      unverifiedPeers.removeIf(_ == socketAddress)
+      suspension.put(address, System.currentTimeMillis())
     }
   }
 
@@ -207,9 +205,22 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     JsonFileStorage.save[PeersPersistenceType](rawPeers, f.getCanonicalPath)
   }
 
-  override def blacklistAndClose(channel: Channel, reason: String, force: Boolean): Unit = getRemoteAddress(channel).foreach { x =>
-    log.debug(s"Blacklisting ${id(channel)}: $reason")
-    blacklist(x.getAddress, reason, force)
+  // Policy for the automatic protocol-trigger path (malformed/invalid messages, handshake failures, fork
+  // suspicion, ...). A trusted known-peer/validator trips these on transient, honest conditions too (reorg
+  // competition), and a full blacklist (15m IP ban) can knock it out of the finality committee — the RC#2
+  // stall. So suspend a known-peer briefly instead of banning it; only untrusted peers get the full blacklist.
+  // package-private so it is unit-testable without a live Netty channel.
+  private[network] def blacklistOrSuspend(socketAddress: InetSocketAddress, reason: String): Unit =
+    if (isKnownPeerAddress(socketAddress.getAddress)) {
+      log.debug(s"Suspending (not blacklisting) known-peer $socketAddress: $reason")
+      suspend(socketAddress)
+    } else {
+      log.debug(s"Blacklisting $socketAddress: $reason")
+      blacklist(socketAddress.getAddress, reason)
+    }
+
+  override def blacklistAndClose(channel: Channel, reason: String): Unit = getRemoteAddress(channel).foreach { x =>
+    blacklistOrSuspend(x, reason)
     channel.close()
   }
 

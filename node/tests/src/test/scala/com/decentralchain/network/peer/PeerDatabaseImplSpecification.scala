@@ -143,7 +143,7 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       database.detailedBlacklist shouldBe empty
     }
 
-    "must never blacklist or suspend a configured known-peer (validator/seed), but still penalizes others" in {
+    "automatic triggers suspend a known-peer instead of blacklisting it, but blacklist untrusted peers" in {
       val config = ConfigFactory
         .parseString(s"""dcc.network {
                         |  file = null
@@ -155,20 +155,31 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
       val database = new PeerDatabaseImpl(settings)
 
-      // host1 is a known-peer -> AUTOMATIC blacklist/suspend are no-ops (prevents the RC#2 mutual-blacklist stall)
-      database.blacklist(address1.getAddress, "should be ignored for a known-peer")
-      database.suspend(address1)
+      // Automatic protocol-trigger path: host1 is a known-peer -> suspended briefly, NOT 15m-banned (RC#2 fix)
+      database.blacklistOrSuspend(address1, "transient fork suspicion")
       database.isBlacklisted(address1.getAddress) shouldBe false
-      database.isSuspended(address1.getAddress) shouldBe false
-      database.detailedBlacklist shouldBe empty
+      database.isSuspended(address1.getAddress) shouldBe true
 
-      // but a deliberate operator action (force=true, the Debug API path) overrides the exemption
-      database.blacklist(address1.getAddress, "operator override", force = true)
-      database.isBlacklisted(address1.getAddress) shouldBe true
-
-      // a non-known peer is still penalized normally
-      database.blacklist(address2.getAddress, "hostile")
+      // ...while an untrusted peer trips the same trigger and IS blacklisted
+      database.blacklistOrSuspend(address2, "malformed message")
       database.isBlacklisted(address2.getAddress) shouldBe true
+    }
+
+    "a deliberate (operator) blacklist is unconditional — even for a known-peer" in {
+      val config = ConfigFactory
+        .parseString(s"""dcc.network {
+                        |  file = null
+                        |  known-peers = ["$host1:1"]
+                        |  peers-data-residence-time = 100s
+                        |}""".stripMargin)
+        .withFallback(ConfigFactory.load())
+        .resolve()
+      val settings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
+      val database = new PeerDatabaseImpl(settings)
+
+      // The low-level blacklist (what the Debug API calls) has no known-peer leniency — it does exactly as asked
+      database.blacklist(address1.getAddress, "operator action")
+      database.isBlacklisted(address1.getAddress) shouldBe true
     }
 
     "prefers an outbound candidate in a subnet we are not already connected to (anti-eclipse)" in withDatabase(settings1) { database =>

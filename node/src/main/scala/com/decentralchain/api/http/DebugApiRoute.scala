@@ -192,11 +192,11 @@ case class DebugApiRoute(
         establishedConnections.entrySet().stream().forEach { entry =>
           entry.getValue.remoteAddress match {
             case x: InetSocketAddress if x.getAddress == address =>
-              peerDatabase.blacklistAndClose(entry.getKey, "Debug API request", force = true)
+              entry.getKey.close() // close the live connection; the unconditional blacklist below covers the address
             case _ =>
           }
         }
-        peerDatabase.blacklist(address, "Debug API request", force = true)
+        peerDatabase.blacklist(address, "Debug API request") // deliberate operator action: unconditional
         complete(StatusCodes.OK)
       } catch {
         case NonFatal(_) => complete(StatusCodes.BadRequest)
