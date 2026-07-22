@@ -264,10 +264,18 @@ class MinerImpl(
             challengedHeader = None,
             // A key block is minted whenever there's no microblock actively extending the previous
             // block (e.g. low tx volume), so this is the ONLY place that round's finality collection
-            // happens for that reference — MicroBlockMinerImpl.forgeBlocks does the equivalent for
-            // liquid-chain continuations. Without this, endorsements keep getting exchanged over P2P
-            // but never get embedded/persisted whenever a chain goes a round without a microblock.
-            finalizationVoting = FinalizationVoting.combine(refBlockHeader.header.finalizationVoting, endorsementStorage.tryCollectAndClear(reference)),
+            // happens — MicroBlockMinerImpl.forgeBlocks does the equivalent for liquid-chain
+            // continuations. Without this, endorsements keep getting exchanged over P2P but never get
+            // embedded/persisted whenever a chain goes a round without a microblock.
+            // Use refBlockHeader.header.reference (NOT `reference`/refBlockHeader's own id): vote()
+            // is triggered by a block append and always targets that block's OWN parent as endorsedId,
+            // so by the time this key block is being forged, the latest completed voting round targets
+            // refBlockHeader's parent, not refBlockHeader itself — matching MicroBlockMinerImpl's use
+            // of accumulatedBlock.header.reference rather than accumulatedBlock.id().
+            finalizationVoting = FinalizationVoting.combine(
+              refBlockHeader.header.finalizationVoting,
+              endorsementStorage.tryCollectAndClear(refBlockHeader.header.reference)
+            ),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
