@@ -99,6 +99,7 @@ class MinerImpl(
     blockchainUpdater,
     utx,
     endorsementStorage,
+    blockEndorser,
     settings.minerSettings,
     minerScheduler,
     appenderScheduler,
@@ -262,19 +263,18 @@ class MinerImpl(
             blockRewardVote(version),
             if (blockchain.supportsLightNodeBlockFields(newBlockHeight.toInt)) stateHash else None,
             challengedHeader = None,
-            // A key block is minted whenever there's no microblock actively extending the previous
-            // block (e.g. low tx volume), so this is the ONLY place that round's finality collection
-            // happens — MicroBlockMinerImpl.forgeBlocks does the equivalent for liquid-chain
-            // continuations. Without this, endorsements keep getting exchanged over P2P but never get
-            // embedded/persisted whenever a chain goes a round without a microblock.
-            // Use refBlockHeader.header.reference (NOT `reference`/refBlockHeader's own id): vote()
-            // is triggered by a block append and always targets that block's OWN parent as endorsedId,
-            // so by the time this key block is being forged, the latest completed voting round targets
-            // refBlockHeader's parent, not refBlockHeader itself — matching MicroBlockMinerImpl's use
-            // of accumulatedBlock.header.reference rather than accumulatedBlock.id().
+            // A key block seals the current tip (refBlockHeader) and extends it directly, so THIS
+            // block's own reference is refBlockHeader's id -- the candidate that block-append
+            // validation reconstructs from `block.header.reference`. That's a DIFFERENT candidate than
+            // what `vote()` produces (refBlockHeader's own parent, matching what a microblock
+            // extending refBlockHeader would need instead) -- embedding that mismatched candidate's
+            // signature here previously passed EndorsementStorage's own guards fine but failed real
+            // block-append validation with "Wrong BLS signature" every time, since the aggregated
+            // signature vouched for the wrong block. blockEndorser.voteSelf/tryCollectSelf is the
+            // parallel round that targets refBlockHeader's own id specifically for this use.
             finalizationVoting = FinalizationVoting.combine(
               refBlockHeader.header.finalizationVoting,
-              endorsementStorage.tryCollectAndClear(refBlockHeader.header.reference)
+              blockEndorser.tryCollectSelf(reference)
             ),
             committedGeneratorsHash = committedGeneratorsHash
           )

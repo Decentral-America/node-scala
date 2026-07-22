@@ -1,7 +1,8 @@
 package com.decentralchain.state
 
 import com.typesafe.scalalogging.StrictLogging
-import com.decentralchain.block.BlockEndorsement
+import com.decentralchain.block.Block.BlockId
+import com.decentralchain.block.{BlockEndorsement, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.network.{ChannelGroupExt, EndorseBlock}
 import com.decentralchain.wallet.Wallet
@@ -11,12 +12,21 @@ import java.util.concurrent.atomic.AtomicReference
 
 trait BlockEndorser {
 
-  /** Voting happens
-    *   for block at endorserHeight
-    *   with finalizedBlock at votingHeight
-    *   by generators, committed at votingHeight
+  /** Voting to finalize the block AT endorsedHeight (the just-appended block's own parent) -- matches
+    * what a microblock extending the just-appended block will embed as its finalizationVoting (a
+    * microblock's own reference is that same parent, unchanged across every microblock in the liquid
+    * period).
     */
   def vote(generatorSet: GeneratorSet): Unit
+
+  /** Voting to finalize the just-appended block ITSELF (both key blocks AND microblocks call this,
+    * since a NEW key block sealing this height's liquid period will reference the just-appended block
+    * directly). Without this, a key block extending a liquid-extended tip has no matching endorsements
+    * for its own reference field -- the only endorsements available target the tip's PARENT (from
+    * `vote`), a different candidate, so embedding them fails block-append validation ("Wrong BLS
+    * signature") instead of just being empty.
+    */
+  def voteSelf(generatorSet: GeneratorSet): Unit
 
   /** Idempotent re-emit of THIS node's own endorsement(s) for the current voting height.
     *
@@ -29,12 +39,20 @@ trait BlockEndorser {
     * height not yet finalized) — matching the per-height `startVoting` clear.
     */
   def rebroadcast(): Unit
+
+  /** Collect the self-target round (see `voteSelf`) for the given reference block ID. Called by
+    * Miner.forgeBlock when sealing a new key block, using that key block's own reference (the tip it
+    * extends) as endorsedId -- the exact candidate voteSelf produces.
+    */
+  def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting]
 }
 
 object BlockEndorser {
   object Disabled extends BlockEndorser {
     override def vote(generatorSet: GeneratorSet): Unit = {}
-    override def rebroadcast(): Unit                    = {}
+    override def voteSelf(generatorSet: GeneratorSet): Unit = {}
+    override def rebroadcast(): Unit = {}
+    override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = None
   }
 
   class InMemory(
@@ -42,6 +60,7 @@ object BlockEndorser {
       blockchain: Blockchain,
       wallet: Wallet,
       endorsementStorage: EndorsementStorage,
+      selfEndorsementStorage: EndorsementStorage,
       allChannels: ChannelGroup
   ) extends BlockEndorser,
         StrictLogging {
@@ -53,15 +72,22 @@ object BlockEndorser {
     // written in between (a lost update would drop this node's just-cast endorsements for a height).
     private val pending: AtomicReference[Option[(Int, Int, Seq[EndorseBlock])]] = new AtomicReference(None)
 
-    override def vote(generatorSet: GeneratorSet): Unit = {
-      val votingHeight   = Height(blockchain.height)
-      val endorsedHeight = votingHeight - 1
-      val msgs: Seq[EndorseBlock] =
-        if (endorsedHeight > GenesisBlockHeight) for {
+    /** Shared endorsement-casting logic for both the parent-target (`vote`) and self-target (`voteSelf`)
+      * rounds -- identical except which (endorsedHeight, endorsedId) pair and which EndorsementStorage
+      * instance they target.
+      */
+    private def castVote(
+        votingHeight: Height,
+        endorsedHeight: Height,
+        endorsedId: BlockId,
+        votingBlockHeader: SignedBlockHeader,
+        generatorSet: GeneratorSet,
+        storage: EndorsementStorage,
+        label: String
+    ): Seq[EndorseBlock] =
+      if (endorsedHeight > GenesisBlockHeight) {
+        val msgs: Seq[EndorseBlock] = for {
           votingPeriod <- blockchain.generationPeriodOf(votingHeight).toSeq
-
-          votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
-          endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
 
           finalizedHeight = blockchain.finalizedHeightOrFallback(maxSyncRollbackLength)
           if endorsedHeight > finalizedHeight
@@ -69,8 +95,6 @@ object BlockEndorser {
           finalizedId <- blockchain
             .blockId(finalizedHeight.toInt)
             .toSeq
-
-          endorsedId = endorsedBlockHeader.id()
 
           committed        = blockchain.committedGenerators(votingPeriod)
           votingBlockMiner = votingBlockHeader.header.generator.toAddress
@@ -99,11 +123,11 @@ object BlockEndorser {
             )
           }
           _ = logger.debug(
-            s"vote(): votingHeight=$votingHeight endorsedHeight=$endorsedHeight finalizedHeight=$finalizedHeight " +
+            s"$label(): votingHeight=$votingHeight endorsedHeight=$endorsedHeight endorsedId=$endorsedId finalizedHeight=$finalizedHeight " +
               s"committed=${committed.map(_._1)} minerIndex=$minerIndex isMiner=${wallet.privateKeyAccount(votingBlockMiner).isRight} " +
               s"balances=${balances.keySet}"
           )
-          if endorsementStorage.startVoting(filter)
+          if storage.startVoting(filter)
 
           (account, idx) <- for {
             ((committedAddr, _), idx) <- committed.zipWithIndex
@@ -114,7 +138,7 @@ object BlockEndorser {
 
           endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId)
           networkMsg  = EndorseBlock.from(endorsement)
-          broadcast <- endorsementStorage.tryAdd(networkMsg) match {
+          broadcast <- storage.tryAdd(networkMsg) match {
             case Right(r) => Some(r)
             case Left(err) =>
               logger.warn(s"Can't add endorsement from #$idx ${account.toAddress}: $err")
@@ -122,13 +146,37 @@ object BlockEndorser {
           }
           if broadcast
         } yield networkMsg
-        else Nil
 
-      logger.debug(s"vote(): produced ${msgs.size} message(s) for votingHeight=$votingHeight endorsedHeight=$endorsedHeight")
+        logger.debug(s"$label(): produced ${msgs.size} message(s) for votingHeight=$votingHeight endorsedHeight=$endorsedHeight endorsedId=$endorsedId")
+        msgs
+      } else Nil
+
+    override def vote(generatorSet: GeneratorSet): Unit = {
+      val votingHeight   = Height(blockchain.height)
+      val endorsedHeight = votingHeight - 1
+      val msgs: Seq[EndorseBlock] = (for {
+        votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
+        endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
+        msg <- castVote(votingHeight, endorsedHeight, endorsedBlockHeader.id(), votingBlockHeader, generatorSet, endorsementStorage, "vote")
+      } yield msg)
+
       msgs.foreach(m => allChannels.broadcast(m))
       // Record for rebroadcast() so a rotated aggregator can still receive these votes this height.
       pending.set(if (msgs.nonEmpty) Some((votingHeight.toInt, endorsedHeight.toInt, msgs)) else None)
     }
+
+    override def voteSelf(generatorSet: GeneratorSet): Unit = {
+      val votingHeight   = Height(blockchain.height)
+      val endorsedHeight = votingHeight
+      val msgs: Seq[EndorseBlock] = (for {
+        votingBlockHeader <- blockchain.blockHeader(votingHeight.toInt).toSeq
+        msg <- castVote(votingHeight, endorsedHeight, votingBlockHeader.id(), votingBlockHeader, generatorSet, selfEndorsementStorage, "voteSelf")
+      } yield msg)
+
+      msgs.foreach(m => allChannels.broadcast(m))
+    }
+
+    override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = selfEndorsementStorage.tryCollectAndClear(endorsedId)
 
     override def rebroadcast(): Unit = pending.get() match {
       case current @ Some((_, endorsedHeight, msgs)) =>

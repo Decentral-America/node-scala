@@ -4,7 +4,7 @@ import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block
 import com.decentralchain.mining.{MinerDebugInfo, MiningConstraint}
 import com.decentralchain.settings.MinerSettings
-import com.decentralchain.state.{Blockchain, EndorsementStorage}
+import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage}
 import com.decentralchain.transaction.BlockchainUpdater
 import com.decentralchain.utx.UtxPool
 import io.netty.channel.group.ChannelGroup
@@ -28,6 +28,7 @@ object MicroBlockMiner {
       blockchainUpdater: BlockchainUpdater & Blockchain,
       utx: UtxPool,
       endorsementStorage: EndorsementStorage,
+      blockEndorser: BlockEndorser,
       settings: MinerSettings,
       minerScheduler: Scheduler,
       appenderScheduler: Scheduler,
@@ -39,6 +40,7 @@ object MicroBlockMiner {
       blockchainUpdater,
       utx,
       endorsementStorage,
+      blockEndorser,
       settings,
       minerScheduler,
       appenderScheduler,

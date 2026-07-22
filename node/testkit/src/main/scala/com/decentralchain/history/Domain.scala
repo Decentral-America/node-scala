@@ -88,9 +88,14 @@ case class Domain(
   lazy val utxPool: UtxPoolImpl =
     new UtxPoolImpl(SystemTime, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
 
-  lazy val endorsementStorage: EndorsementStorage = EndorsementStorage.Disabled
-  def createBlockEndorser(allChannels: ChannelGroup, storage: EndorsementStorage = endorsementStorage): BlockEndorser =
-    new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchain, wallet, storage, allChannels)
+  lazy val endorsementStorage: EndorsementStorage     = EndorsementStorage.Disabled
+  lazy val selfEndorsementStorage: EndorsementStorage = EndorsementStorage.Disabled
+  def createBlockEndorser(
+      allChannels: ChannelGroup,
+      storage: EndorsementStorage = endorsementStorage,
+      selfStorage: EndorsementStorage = selfEndorsementStorage
+  ): BlockEndorser =
+    new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchain, wallet, storage, selfStorage, allChannels)
 
   lazy val wallet: Wallet = Wallet(settings.walletSettings.copy(file = None, seed = Some(ByteStr(DefaultWalletSeed))))
 
@@ -704,7 +709,14 @@ class DefaultAppender(d: Domain)(implicit appenderScheduler: SchedulerService) {
   )
 
   private val blockEndorser =
-    new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, d.endorsementStorage, allChannelGroup)
+    new BlockEndorser.InMemory(
+      d.settings.synchronizationSettings.maxRollback,
+      d.blockchain,
+      d.wallet,
+      d.endorsementStorage,
+      d.selfEndorsementStorage,
+      allChannelGroup
+    )
 
   private val appenderWithCatching = BlockAppender(
     d.blockchain,
