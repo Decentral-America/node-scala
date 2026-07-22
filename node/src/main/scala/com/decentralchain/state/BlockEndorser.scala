@@ -98,6 +98,11 @@ object BlockEndorser {
               conflict
             )
           }
+          _ = logger.debug(
+            s"vote(): votingHeight=$votingHeight endorsedHeight=$endorsedHeight finalizedHeight=$finalizedHeight " +
+              s"committed=${committed.map(_._1)} minerIndex=$minerIndex isMiner=${wallet.privateKeyAccount(votingBlockMiner).isRight} " +
+              s"balances=${balances.keySet}"
+          )
           if endorsementStorage.startVoting(filter)
 
           (account, idx) <- for {
@@ -119,6 +124,7 @@ object BlockEndorser {
         } yield networkMsg
         else Nil
 
+      logger.debug(s"vote(): produced ${msgs.size} message(s) for votingHeight=$votingHeight endorsedHeight=$endorsedHeight")
       msgs.foreach(m => allChannels.broadcast(m))
       // Record for rebroadcast() so a rotated aggregator can still receive these votes this height.
       pending.set(if (msgs.nonEmpty) Some((votingHeight.toInt, endorsedHeight.toInt, msgs)) else None)
@@ -134,6 +140,7 @@ object BlockEndorser {
         // rebroadcast regardless of how many newer blocks have since arrived, until it's finalized (or
         // vote() replaces `pending` with a fresher one, which it does on every new block anyway).
         val stillLiveVoting = blockchain.finalizedHeightOrFallback(maxSyncRollbackLength).toInt < endorsedHeight
+        logger.debug(s"rebroadcast(): endorsedHeight=$endorsedHeight msgs=${msgs.size} stillLiveVoting=$stillLiveVoting")
         if (stillLiveVoting) msgs.foreach(m => allChannels.broadcast(m))
         else pending.compareAndSet(current, None) // clear only if vote() hasn't written a fresher value meanwhile
       case None => ()
