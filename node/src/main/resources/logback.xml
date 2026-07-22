@@ -17,7 +17,7 @@
     <logger name="com.decentralchain.network.PeerSynchronizer" level="DEBUG"/>
     <logger name="com.decentralchain.transaction.smart" level="INFO"/>
 
-    <!-- TEMPORARY diagnostic for finalization node-it debugging -- revert once resolved -->
+    <!-- TEMPORARY diagnostic for finalization node-it debugging, revert once resolved -->
     <logger name="com.decentralchain.state.EndorsementStorage" level="DEBUG"/>
     <logger name="com.decentralchain.state.BlockchainUpdaterImpl" level="DEBUG"/>
     <logger name="com.decentralchain.state.FinalizationState" level="DEBUG"/>
