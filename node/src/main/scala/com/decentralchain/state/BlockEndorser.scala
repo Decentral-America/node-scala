@@ -125,10 +125,15 @@ object BlockEndorser {
     }
 
     override def rebroadcast(): Unit = pending.get() match {
-      case current @ Some((votingHeight, endorsedHeight, msgs)) =>
-        val stillLiveVoting =
-          blockchain.height == votingHeight &&
-            blockchain.finalizedHeightOrFallback(maxSyncRollbackLength).toInt < endorsedHeight
+      case current @ Some((_, endorsedHeight, msgs)) =>
+        // Only condition that matters: has THIS specific height already been finalized? Requiring
+        // blockchain.height == votingHeight (unchanged since vote()) was too strict -- with multiple
+        // rotating generators a new block can (and normally does) arrive well within the 3s rebroadcast
+        // interval, closing the window before a rotated aggregator ever got a chance to receive the
+        // endorsement even once. The endorsement targets a specific past height/id and stays valid to
+        // rebroadcast regardless of how many newer blocks have since arrived, until it's finalized (or
+        // vote() replaces `pending` with a fresher one, which it does on every new block anyway).
+        val stillLiveVoting = blockchain.finalizedHeightOrFallback(maxSyncRollbackLength).toInt < endorsedHeight
         if (stillLiveVoting) msgs.foreach(m => allChannels.broadcast(m))
         else pending.compareAndSet(current, None) // clear only if vote() hasn't written a fresher value meanwhile
       case None => ()
