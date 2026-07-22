@@ -4,7 +4,6 @@ import cats.syntax.either.*
 import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block
 import com.decentralchain.block.Block.*
-import com.decentralchain.block.FinalizationVoting
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
@@ -267,15 +266,17 @@ class MinerImpl(
             // block's own reference is refBlockHeader's id -- the candidate that block-append
             // validation reconstructs from `block.header.reference`. That's a DIFFERENT candidate than
             // what `vote()` produces (refBlockHeader's own parent, matching what a microblock
-            // extending refBlockHeader would need instead) -- embedding that mismatched candidate's
-            // signature here previously passed EndorsementStorage's own guards fine but failed real
-            // block-append validation with "Wrong BLS signature" every time, since the aggregated
-            // signature vouched for the wrong block. blockEndorser.voteSelf/tryCollectSelf is the
-            // parallel round that targets refBlockHeader's own id specifically for this use.
-            finalizationVoting = FinalizationVoting.combine(
-              refBlockHeader.header.finalizationVoting,
-              blockEndorser.tryCollectSelf(reference)
-            ),
+            // extending refBlockHeader would need instead), and ALSO different from whatever
+            // refBlockHeader.header.finalizationVoting itself already represents (a vote for ITS OWN
+            // reference, one hop further back) -- so unlike MicroBlockMinerImpl (where every microblock
+            // in a liquid period shares the SAME candidate and combine()'s carry-forward is correct),
+            // there is nothing valid to carry forward here: every key block targets a brand new
+            // candidate. Embedding the stale carried-forward value caused "Wrong BLS signature" on
+            // every subsequent key block once any earlier block had embedded a real signature for a
+            // now-irrelevant candidate. blockEndorser.tryCollectSelf is the parallel round that targets
+            // refBlockHeader's own id specifically -- use its result directly, or None if no fresh
+            // round is available for this exact candidate yet (safe: matches pre-fix behavior).
+            finalizationVoting = blockEndorser.tryCollectSelf(reference),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
