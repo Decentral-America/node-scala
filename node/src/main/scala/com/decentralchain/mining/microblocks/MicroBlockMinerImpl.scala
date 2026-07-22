@@ -13,7 +13,7 @@ import com.decentralchain.mining.microblocks.MicroBlockMinerImpl.*
 import com.decentralchain.network.{MicroBlockInv, *}
 import com.decentralchain.settings.MinerSettings
 import com.decentralchain.state.appender.MicroblockAppender
-import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage}
+import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage, NG}
 import com.decentralchain.transaction.{BlockchainUpdater, Transaction}
 import com.decentralchain.utils.ScorexLogging
 import com.decentralchain.utx.UtxPool
@@ -29,7 +29,7 @@ import scala.concurrent.duration.*
 class MicroBlockMinerImpl(
     setDebugState: MinerDebugInfo.State => Unit,
     allChannels: ChannelGroup,
-    blockchainUpdater: BlockchainUpdater & Blockchain,
+    blockchainUpdater: BlockchainUpdater & Blockchain & NG,
     utx: UtxPool,
     endorsementStorage: EndorsementStorage,
     blockEndorser: BlockEndorser,

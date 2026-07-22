@@ -4,7 +4,7 @@ import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block
 import com.decentralchain.mining.{MinerDebugInfo, MiningConstraint}
 import com.decentralchain.settings.MinerSettings
-import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage}
+import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage, NG}
 import com.decentralchain.transaction.BlockchainUpdater
 import com.decentralchain.utx.UtxPool
 import io.netty.channel.group.ChannelGroup
@@ -25,7 +25,7 @@ object MicroBlockMiner {
   def apply(
       setDebugState: MinerDebugInfo.State => Unit,
       allChannels: ChannelGroup,
-      blockchainUpdater: BlockchainUpdater & Blockchain,
+      blockchainUpdater: BlockchainUpdater & Blockchain & NG,
       utx: UtxPool,
       endorsementStorage: EndorsementStorage,
       blockEndorser: BlockEndorser,

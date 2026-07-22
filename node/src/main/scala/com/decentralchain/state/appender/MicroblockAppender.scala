@@ -10,7 +10,7 @@ import com.decentralchain.mining.BlockChallenger
 import com.decentralchain.network.*
 import com.decentralchain.network.MicroBlockSynchronizer.MicroblockData
 import io.decentralchain.protobuf.PBSnapshots
-import com.decentralchain.state.{BlockEndorser, Blockchain, Height}
+import com.decentralchain.state.{BlockEndorser, Blockchain, Height, NG}
 import com.decentralchain.transaction.BlockchainUpdater
 import com.decentralchain.transaction.TxValidationError.{InvalidSignature, InvalidStateHash}
 import com.decentralchain.utils.ScorexLogging
@@ -27,7 +27,7 @@ object MicroblockAppender extends ScorexLogging {
   private val microblockProcessingTimeStats = Kamon.timer("microblock-appender.processing-time").withoutTags()
 
   def apply(
-      blockchainUpdater: BlockchainUpdater & Blockchain,
+      blockchainUpdater: BlockchainUpdater & Blockchain & NG,
       utxStorage: UtxPool,
       blockEndorser: BlockEndorser,
       scheduler: Scheduler,
@@ -57,7 +57,7 @@ object MicroblockAppender extends ScorexLogging {
     }).executeOn(scheduler)
 
   def apply(
-      blockchainUpdater: BlockchainUpdater & Blockchain,
+      blockchainUpdater: BlockchainUpdater & Blockchain & NG,
       utxStorage: UtxPool,
       allChannels: ChannelGroup,
       peerDatabase: PeerDatabase,
