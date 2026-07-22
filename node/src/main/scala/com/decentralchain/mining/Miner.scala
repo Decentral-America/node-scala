@@ -4,6 +4,7 @@ import cats.syntax.either.*
 import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block
 import com.decentralchain.block.Block.*
+import com.decentralchain.block.FinalizationVoting
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
@@ -261,7 +262,12 @@ class MinerImpl(
             blockRewardVote(version),
             if (blockchain.supportsLightNodeBlockFields(newBlockHeight.toInt)) stateHash else None,
             challengedHeader = None,
-            finalizationVoting = None, // Haven't voted in a key block
+            // A key block is minted whenever there's no microblock actively extending the previous
+            // block (e.g. low tx volume), so this is the ONLY place that round's finality collection
+            // happens for that reference — MicroBlockMinerImpl.forgeBlocks does the equivalent for
+            // liquid-chain continuations. Without this, endorsements keep getting exchanged over P2P
+            // but never get embedded/persisted whenever a chain goes a round without a microblock.
+            finalizationVoting = FinalizationVoting.combine(refBlockHeader.header.finalizationVoting, endorsementStorage.tryCollectAndClear(reference)),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
