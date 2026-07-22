@@ -28,8 +28,8 @@ object Dependencies {
       jacksonModule("datatype", "datatype-jsr310"),
       // Force tools.jackson.core 3.2.0 (fixes GHSA-2m67-wjpj-xhg9 HIGH CVE, 3.1.0 baseline)
       // Transitive via pekko-http; 3.1.0 has document length constraint bypass.
-      "tools.jackson.core" % "jackson-core"     % "3.2.0",
-      "tools.jackson.core" % "jackson-databind" % "3.2.0",
+      "tools.jackson.core" % "jackson-core"     % "3.2.1",
+      "tools.jackson.core" % "jackson-databind" % "3.2.1",
       gProto
     )
   )
@@ -44,7 +44,7 @@ object Dependencies {
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.8.1"
 
-  private def jacksonModule(group: String, module: String, version: String = "2.22.0") =
+  private def jacksonModule(group: String, module: String, version: String = "2.22.1") =
     s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
   private def web3jModule(module: String) = "org.web3j" % module % "6.0.0" // requires Java 21+; safe on JDK 25 (was 4.13.0)
@@ -113,7 +113,7 @@ object Dependencies {
     "com.github.jnr"         % "jnr-unixsocket"                    % "0.39.1", // To support Apple ARM
     "com.github.docker-java" % "docker-java-core"                  % "3.7.1",
     "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
-    jacksonModule("dataformat", "dataformat-properties", "2.22.0"),
+    jacksonModule("dataformat", "dataformat-properties", "2.22.1"),
     asyncHttpClient
   ).map(_ % Test)
 
