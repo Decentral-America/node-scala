@@ -661,7 +661,7 @@ object SyncHttpApi extends Assertions with matchers.should.Matchers {
 
     def findTransactionInfo(txId: String): Option[TransactionInfo] = sync(async(n).findTransactionInfo(txId))
 
-    def connectedPeers: Seq[Peer] = (Json.parse(get("/peers/connected").getResponseBody) \ "peers").as[Seq[Peer]]
+    def connectedPeers: Seq[Peer] = sync(async(n).connectedPeers)
 
     def calculateFee(tx: JsObject, amountsAsStrings: Boolean = false): FeeInfo =
       sync(async(n).calculateFee(tx, amountsAsStrings))
