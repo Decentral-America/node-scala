@@ -307,12 +307,20 @@ class MinerImpl(
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
   private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
-    // TEMPORARY: widened from 1200ms to 8000ms to determine whether the remaining gap on live
-    // testnet is a pure timing issue (a longer window converges) or a genuine delivery failure (it
-    // never does regardless of how long we wait) -- revert to a sane bound once known. We have
-    // plenty of headroom: real block intervals are ~30-60s.
-    val deadline        = System.currentTimeMillis() + 8000
-    val pollIntervalMs  = 200
+    // Widening this window does NOT fix the live testnet gap -- confirmed by testing 1200ms and
+    // 8000ms side by side, both consistently return None (attempts maxed out, zero non-miner votes
+    // collected). Root cause (confirmed via live debug logs, see project_finality_stall_recurrence
+    // memory): the self-round's candidate is reset on EVERY microblock append (voteSelf() targets
+    // the just-appended block's own id, which changes every microblock), so by the time a key block
+    // is actually forged the live candidate has usually existed for well under a second -- nowhere
+    // near enough for a real cross-datacenter 2-of-3 BLS vote round-trip, no matter how long we then
+    // wait. Fixing this properly requires decoupling self-round vote accumulation from per-microblock
+    // resets (e.g. retroactive credit for a superseded candidate), which is a real design change, not
+    // a timing tweak -- scoped out as follow-up work. Kept at 1200ms (the node-it-verified bound,
+    // where the local low-latency test network converges within it) rather than the wider diagnostic
+    // value, since a longer wait has no live benefit and only delays block production for nothing.
+    val deadline        = System.currentTimeMillis() + 1200
+    val pollIntervalMs  = 100
     var attempts        = 1
     var result          = blockEndorser.tryCollectSelf(endorsedId)
     while (result.isEmpty && System.currentTimeMillis() < deadline) {
