@@ -46,7 +46,7 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
 
         val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
         val endorser =
-          new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, channels)
+          new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, endorsementStorage, channels)
 
         log.debug("Append block 2 with commitments")
         val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
@@ -85,7 +85,7 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
           val channel1 = manager(new EmbeddedChannel(new MessageCodec(PeerDatabase.NoOp)))
           channels.add(channel1)
           val endorser =
-            new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, channels)
+            new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, endorsementStorage, channels)
 
           log.debug("Append block 2 with commitments")
           val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))

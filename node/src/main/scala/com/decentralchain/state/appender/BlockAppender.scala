@@ -45,8 +45,10 @@ object BlockAppender extends ScorexLogging {
           appendChallengeBlock(blockchainUpdater, utxStorage, pos, time, log, verify, txSignParCheck)(newBlock, snapshot)
         } else {
           appendKeyBlock(blockchainUpdater, utxStorage, pos, time, log, verify, txSignParCheck)(newBlock, snapshot).tap {
-            case Right(Applied(generatorSet = gs)) => blockEndorser.vote(gs)
-            case _                                 =>
+            case Right(Applied(generatorSet = gs)) =>
+              blockEndorser.vote(gs)
+              blockEndorser.voteSelf(gs)
+            case _ =>
           }
         }
       } else if (blockchainUpdater.contains(newBlock.id()) || blockchainUpdater.isLastBlockId(newBlock.id()))

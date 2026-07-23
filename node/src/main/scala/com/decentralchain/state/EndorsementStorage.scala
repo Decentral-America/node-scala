@@ -126,6 +126,10 @@ object EndorsementStorage {
     }
 
     override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting] = synced {
+      logger.debug(
+        s"tryCollectAndClear($endorsedId): currentFilter.endorsedId=${currentFilter.map(_.endorsedId)}, " +
+          s"hasChanges=$hasChanges, valid.keys=[${valid.keysIterator.mkString(", ")}], conflict.keys=[${conflict.keysIterator.mkString(", ")}]"
+      )
       val r = for {
         currentFilter <- currentFilter.toRight("Voting not started")
         _             <- Either.raiseUnless(currentFilter.endorsedId == endorsedId && hasChanges)("No changes")

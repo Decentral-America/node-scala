@@ -11,7 +11,7 @@ import com.decentralchain.events.UtxEvent
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.mining.microblocks.MicroBlockMinerImpl
 import com.decentralchain.settings.TestFunctionalitySettings
-import com.decentralchain.state.{Blockchain, EndorsementStorage, StateSnapshot}
+import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage, StateSnapshot}
 import com.decentralchain.test.DomainPresets.RideV6
 import com.decentralchain.test.FlatSpec
 import com.decentralchain.transaction.TxHelpers.{defaultAddress, defaultSigner, secondAddress, transfer}
@@ -38,6 +38,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
         d.blockchainUpdater,
         utxPool,
         EndorsementStorage.Disabled,
+        BlockEndorser.Disabled,
         settings.minerSettings,
         scheduler,
         scheduler,
@@ -162,6 +163,7 @@ class MicroBlockMinerSpec extends FlatSpec with WithDomain {
         d.blockchainUpdater,
         utxPool,
         EndorsementStorage.Disabled,
+        BlockEndorser.Disabled,
         RideV6.minerSettings,
         miner,
         appender,
