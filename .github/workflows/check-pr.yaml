@@ -18,6 +18,12 @@ jobs:
   check-pr:
     name: Check PR
     runs-on: ubuntu-latest
+    # action-surefire-report updates this job's own check-run with test annotations; needs checks:write
+    # (workflow-level permissions are read-only) or it fails the job with "Resource not accessible by
+    # integration" even when the actual sbt build/tests pass.
+    permissions:
+      contents: read
+      checks: write
     outputs:
       lang-changed: ${{ steps.filter.outputs.lang == 'true' }}
     steps:
@@ -131,6 +137,10 @@ jobs:
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Same action-surefire-report requirement as check-pr above.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:

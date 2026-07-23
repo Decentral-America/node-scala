@@ -11,6 +11,7 @@ import org.apache.pekko.http.scaladsl.server.Directives.*
 import org.apache.pekko.http.scaladsl.server.RouteResult.Complete
 import org.slf4j.event.Level
 
+import scala.annotation.nowarn
 import scala.io.Source
 
 case class CompositeHttpService(routes: Seq[ApiRoute], settings: RestAPISettings) extends ScorexLogging {
@@ -44,6 +45,9 @@ case class CompositeHttpService(routes: Seq[ApiRoute], settings: RestAPISettings
 
   private val CorsAllowAllOrigin = "origin-from-request"
 
+  // req.attribute(...) resolves its JavaMapping via an implicit that pekko-http itself flags as an
+  // internal accessibility quirk slated to break in Scala 3.10 -- nothing on our end to restructure.
+  @nowarn("cat=deprecation")
   private def logRequestResponse(req: HttpRequest): PartialFunction[RouteResult, RouteResult] = { case r @ Complete(resp) =>
     log.underlying
       .atLevel(if (resp.status == StatusCodes.OK) Level.INFO else Level.WARN)
