@@ -9,6 +9,7 @@ import com.decentralchain.it.{BaseFreeSpec, NodeConfigs}
 import com.decentralchain.state.Height
 import com.decentralchain.test.NumericExt
 import com.decentralchain.utils.ScorexLogging
+import org.apache.pekko.http.scaladsl.model.StatusCodes
 import org.scalatest.OptionValues
 
 import scala.concurrent.duration.DurationInt
@@ -62,10 +63,16 @@ class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLoggin
     * safe regardless of how far the previous "it" block's commitment already reaches.
     */
   private def commitAllForNextPeriod(): Seq[GeneratorsResponse.Entry] = {
-    val period          = leader.currentGenerationPeriod.value.next
-    val alreadyCommitted = leader.generators(period.start).map(_.address).toSet
-    val toCommit         = hsNodes.filterNot(n => alreadyCommitted.contains(n.address))
-    val commits          = toCommit.map(n => n.sign(CommitToGenerationRequest(sender = Some(n.address))))
+    val period = leader.currentGenerationPeriod.value.next
+    // /generators/at/{h} 404s until the chain has actually reached height h (the route's own guard is
+    // period-based and would allow it, but the underlying height genuinely doesn't exist yet on the
+    // FIRST call in the suite, before anyone has committed or waited for anything) -- a 404 here means
+    // "nothing possibly committed there yet" exactly as much as an empty list would, so treat it the same.
+    val alreadyCommitted =
+      try leader.generators(period.start).map(_.address).toSet
+      catch { case ApiCallException(e: UnexpectedStatusCodeException) if e.statusCode == StatusCodes.NotFound.intValue => Set.empty[String] }
+    val toCommit = hsNodes.filterNot(n => alreadyCommitted.contains(n.address))
+    val commits  = toCommit.map(n => n.sign(CommitToGenerationRequest(sender = Some(n.address))))
     hsNodes.foreach(n => commits.foreach(n.broadcastRequest))
     hsNodes.foreach(_.waitForGenerationPeriod(period))
     leader.generators(period.start)
