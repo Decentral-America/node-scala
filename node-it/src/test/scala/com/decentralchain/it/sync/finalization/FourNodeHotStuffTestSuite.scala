@@ -48,12 +48,24 @@ class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLoggin
   private def hsNodes = dockerNodes()
   private def leader  = hsNodes.head
 
-  /** Commit every node as a generator for the next period and wait until that period is active.
-    * Returns the committed generators (address + generating balance) for that period.
+  /** Commit every not-yet-committed node as a generator for the next period and wait until that period
+    * is active. Returns the committed generators (address + generating balance) for that period.
+    *
+    * Idempotent: this suite reuses the same 4 live containers across all three "it" blocks (no reset
+    * in between), and a CommitToGenerationTransaction is deterministic per (sender, generationPeriodStart)
+    * -- re-signing produces a byte-identical transaction. If a PRIOR "it" block already committed
+    * everyone for this same upcoming period (plausible: committing itself takes far less time than a
+    * full period, so the "next" period computed here can be the SAME one an earlier block already
+    * secured), re-broadcasting would resubmit an already-included transaction and the node correctly
+    * rejects it with "already in the state" -- which used to fail the whole test outright. Checking
+    * who's already committed first, and only signing+broadcasting for the rest, makes repeated calls
+    * safe regardless of how far the previous "it" block's commitment already reaches.
     */
   private def commitAllForNextPeriod(): Seq[GeneratorsResponse.Entry] = {
-    val period  = leader.currentGenerationPeriod.value.next
-    val commits = hsNodes.map(n => n.sign(CommitToGenerationRequest(sender = Some(n.address))))
+    val period          = leader.currentGenerationPeriod.value.next
+    val alreadyCommitted = leader.generators(period.start).map(_.address).toSet
+    val toCommit         = hsNodes.filterNot(n => alreadyCommitted.contains(n.address))
+    val commits          = toCommit.map(n => n.sign(CommitToGenerationRequest(sender = Some(n.address))))
     hsNodes.foreach(n => commits.foreach(n.broadcastRequest))
     hsNodes.foreach(_.waitForGenerationPeriod(period))
     leader.generators(period.start)
