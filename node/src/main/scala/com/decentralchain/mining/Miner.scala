@@ -307,8 +307,12 @@ class MinerImpl(
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
   private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
-    val deadline        = System.currentTimeMillis() + 1200
-    val pollIntervalMs  = 100
+    // TEMPORARY: widened from 1200ms to 8000ms to determine whether the remaining gap on live
+    // testnet is a pure timing issue (a longer window converges) or a genuine delivery failure (it
+    // never does regardless of how long we wait) -- revert to a sane bound once known. We have
+    // plenty of headroom: real block intervals are ~30-60s.
+    val deadline        = System.currentTimeMillis() + 8000
+    val pollIntervalMs  = 200
     var attempts        = 1
     var result          = blockEndorser.tryCollectSelf(endorsedId)
     while (result.isEmpty && System.currentTimeMillis() < deadline) {
