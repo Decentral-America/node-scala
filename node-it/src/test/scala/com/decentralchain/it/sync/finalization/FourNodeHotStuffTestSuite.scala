@@ -9,6 +9,7 @@ import com.decentralchain.it.{BaseFreeSpec, NodeConfigs}
 import com.decentralchain.state.Height
 import com.decentralchain.test.NumericExt
 import com.decentralchain.utils.ScorexLogging
+import org.apache.pekko.http.scaladsl.model.StatusCodes
 import org.scalatest.OptionValues
 
 import scala.concurrent.duration.DurationInt
@@ -48,13 +49,49 @@ class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLoggin
   private def hsNodes = dockerNodes()
   private def leader  = hsNodes.head
 
-  /** Commit every node as a generator for the next period and wait until that period is active.
-    * Returns the committed generators (address + generating balance) for that period.
+  /** Commit every not-yet-committed node as a generator for the next period and wait until that period
+    * is active. Returns the committed generators (address + generating balance) for that period.
+    *
+    * Idempotent and race-safe against two distinct sources of "already in the state" rejections that
+    * both used to fail the whole test outright:
+    *
+    *   1. Across "it" blocks: this suite reuses the same 4 live containers for all three tests (no
+    *      reset in between), and a CommitToGenerationTransaction is deterministic per (sender,
+    *      generationPeriodStart) -- re-signing produces a byte-identical transaction. If a PRIOR "it"
+    *      block already committed everyone for this same upcoming period (plausible: committing itself
+    *      takes far less time than a full period, so the "next" period computed here can be the SAME
+    *      one an earlier block already secured), re-broadcasting would resubmit an already-included
+    *      transaction. Fixed by checking who's already committed (via /generators/at) before signing.
+    *
+    *   2. WITHIN one call, on a real P2P-connected 4-node cluster: broadcasting every commit to every
+    *      node (as this originally did) is redundant -- one broadcast is enough for gossip to reach the
+    *      whole cluster -- and that redundancy created a genuine race: by the time a LATER redundant
+    *      broadcast of the SAME transaction reached some node, gossip from an EARLIER broadcast (to a
+    *      different node) had often already gotten that transaction included in a block, so the node
+    *      correctly rejected the redundant copy. Fixed by broadcasting each commit exactly once, from
+    *      its own signing node, and treating a same-transaction "already in the state" rejection on
+    *      that single broadcast as benign (the transaction ending up included via some other path is
+    *      exactly the outcome we want) rather than a real failure.
     */
   private def commitAllForNextPeriod(): Seq[GeneratorsResponse.Entry] = {
-    val period  = leader.currentGenerationPeriod.value.next
-    val commits = hsNodes.map(n => n.sign(CommitToGenerationRequest(sender = Some(n.address))))
-    hsNodes.foreach(n => commits.foreach(n.broadcastRequest))
+    val period = leader.currentGenerationPeriod.value.next
+    // /generators/at/{h} 404s until the chain has actually reached height h (the route's own guard is
+    // period-based and would allow it, but the underlying height genuinely doesn't exist yet on the
+    // FIRST call in the suite, before anyone has committed or waited for anything) -- a 404 here means
+    // "nothing possibly committed there yet" exactly as much as an empty list would, so treat it the same.
+    val alreadyCommitted =
+      try leader.generators(period.start).map(_.address).toSet
+      catch { case ApiCallException(e: UnexpectedStatusCodeException) if e.statusCode == StatusCodes.NotFound.intValue => Set.empty[String] }
+    val toCommit = hsNodes.filterNot(n => alreadyCommitted.contains(n.address))
+    toCommit.foreach { n =>
+      val commit = n.sign(CommitToGenerationRequest(sender = Some(n.address)))
+      try n.broadcastRequest(commit)
+      catch {
+        case ApiCallException(e: UnexpectedStatusCodeException)
+            if e.statusCode == StatusCodes.BadRequest.intValue && e.responseBody.contains("already in the state") =>
+          log.info(s"CommitToGeneration for ${n.address} raced with a concurrent inclusion (benign, transaction ${commit.id} is in the state): skipping")
+      }
+    }
     hsNodes.foreach(_.waitForGenerationPeriod(period))
     leader.generators(period.start)
   }
