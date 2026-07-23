@@ -307,13 +307,16 @@ class MinerImpl(
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
   private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
-    val deadline   = System.currentTimeMillis() + 1200
-    val pollIntervalMs = 100
-    var result = blockEndorser.tryCollectSelf(endorsedId)
+    val deadline        = System.currentTimeMillis() + 1200
+    val pollIntervalMs  = 100
+    var attempts        = 1
+    var result          = blockEndorser.tryCollectSelf(endorsedId)
     while (result.isEmpty && System.currentTimeMillis() < deadline) {
       Thread.sleep(pollIntervalMs)
+      attempts += 1
       result = blockEndorser.tryCollectSelf(endorsedId)
     }
+    log.debug(s"tryCollectSelfWithGrace($endorsedId): attempts=$attempts result=$result")
     result
   }
 
