@@ -19,8 +19,8 @@ import monix.execution.schedulers.SchedulerService
 import monix.reactive.subjects.{ConcurrentSubject, Subject}
 import monix.reactive.{Observable, Observer}
 
-import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
+import scala.jdk.DurationConverters.*
 
 case class ExtensionBlocks(remoteScore: BigInt, blocks: Seq[Block], snapshots: Map[BlockId, BlockSnapshotResponse]) {
   override def toString: String = s"ExtensionBlocks($remoteScore, ${formatSignatures(blocks.map(_.id()))}"
@@ -358,7 +358,7 @@ object RxExtensionLoader extends ScorexLogging {
   private def cache[K <: AnyRef, V <: AnyRef](timeout: FiniteDuration): Cache[K, V] =
     CacheBuilder
       .newBuilder()
-      .expireAfterWrite(timeout.toMillis, TimeUnit.MILLISECONDS)
+      .expireAfterWrite(timeout.toJava)
       .build[K, V]()
 
   sealed trait LoaderState

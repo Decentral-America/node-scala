@@ -21,6 +21,8 @@ import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.utils.*
 import play.api.libs.json.*
 
+import scala.annotation.nowarn
+
 final case class InvokeScriptResult(
     data: Seq[InvokeScriptResult.DataEntry] = Nil,
     transfers: Seq[InvokeScriptResult.Payment] = Nil,
@@ -278,6 +280,9 @@ object InvokeScriptResult {
   private def toPbErrorMessage(em: ErrorMessage) =
     PBInvokeScriptResult.ErrorMessage(em.code, em.text)
 
+  // args_bytes is deprecated in favor of the structured `args` field, but must still be read here as a
+  // fallback for legacy wire data that predates the structured encoding.
+  @nowarn("cat=deprecation")
   private def toVanillaCall(i: PBInvokeScriptResult.Call): Call = {
     import com.decentralchain.lang.v1.compiler.Terms
 

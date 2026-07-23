@@ -8,14 +8,14 @@ import com.decentralchain.history
 import com.decentralchain.history.Domain.BlockchainUpdaterExt
 import com.decentralchain.state.*
 import com.decentralchain.test.DomainPresets.RideV6
-import com.decentralchain.test.{FreeSpec, HasSecurityManager}
+import com.decentralchain.test.{FreeSpec, HasExitInterceptor}
 import com.decentralchain.utils.UnsupportedFeature
 import org.scalactic.source.Position
 
 import java.util.concurrent.TimeUnit
 import scala.util.Try
 
-class BlockchainUpdaterTest extends FreeSpec with HistoryTest with WithDomain with HasSecurityManager {
+class BlockchainUpdaterTest extends FreeSpec with HistoryTest with WithDomain with HasExitInterceptor {
 
   private val ApprovalPeriod      = 100
   private val BlocksForActivation = (ApprovalPeriod * 0.9).toInt
@@ -419,7 +419,7 @@ class BlockchainUpdaterTest extends FreeSpec with HistoryTest with WithDomain wi
     DCCSettings
   ) { domain =>
     val b = domain.blockchainUpdater
-    withSecurityManager(UnsupportedFeature) { signal =>
+    withExitInterceptor(UnsupportedFeature) { signal =>
       b.processBlock(genesisBlock)
 
       (1 to ApprovalPeriod * 2 - 2).foreach { _ =>

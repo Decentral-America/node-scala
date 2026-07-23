@@ -5,7 +5,7 @@ import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
-import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
+import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
 
 import scala.collection.mutable
