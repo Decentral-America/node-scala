@@ -15,7 +15,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.appender.BlockAppender
 import com.decentralchain.state.diffs.ENOUGH_AMT
 import com.decentralchain.state.utils.TestRocksDB
-import com.decentralchain.test.{FreeSpec, HasSecurityManager}
+import com.decentralchain.test.{FreeSpec, HasExitInterceptor}
 import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction}
 import com.decentralchain.utils.BaseTargetReachedMaximum
 import com.decentralchain.utx.UtxPoolImpl
@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.Await
 import scala.concurrent.duration.*
 
-class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with DBCacheSettings with HasSecurityManager {
+class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with DBCacheSettings with HasExitInterceptor {
   "base target limit" - {
     "node should stop if base target greater than maximum in block creation " in {
       withEnv { case Env(settings, pos, bcu, utxPoolStub, scheduler, account, lastBlock) =>
@@ -53,7 +53,7 @@ class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with
           Observable.empty
         )
 
-        withSecurityManager(BaseTargetReachedMaximum) { signal =>
+        withExitInterceptor(BaseTargetReachedMaximum) { signal =>
           try {
             miner.forgeBlock(account)
           } catch {
@@ -67,7 +67,7 @@ class BlockWithMaxBaseTargetTest extends FreeSpec with WithNewDBForEachTest with
 
     "node should stop if base target greater than maximum in block append" in {
       withEnv { case Env(settings, pos, bcu, utxPoolStub, scheduler, _, lastBlock) =>
-        withSecurityManager(BaseTargetReachedMaximum) { signal =>
+        withExitInterceptor(BaseTargetReachedMaximum) { signal =>
           val blockAppendTask = BlockAppender(bcu, ntpTime, utxPoolStub, pos, BlockEndorser.Disabled, scheduler)(lastBlock, None)
             .onErrorRecoverWith[Any] { case _: SecurityException => Task.unit }
           Await.result(blockAppendTask.runToFuture(using scheduler), 1.minute)

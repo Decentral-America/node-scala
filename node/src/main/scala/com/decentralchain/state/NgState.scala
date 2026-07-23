@@ -10,7 +10,7 @@ import com.decentralchain.state.NgState.{CachedMicroDiff, MicroBlockInfo, NgStat
 import com.decentralchain.state.StateSnapshot.monoid
 import com.decentralchain.transaction.{DiscardedMicroBlocks, Transaction}
 
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 
 object NgState {
   case class MicroBlockInfo(totalBlockId: BlockId, microBlock: MicroBlock) {
@@ -23,13 +23,13 @@ object NgState {
     val blockSnapshotCache = CacheBuilder
       .newBuilder()
       .maximumSize(NgState.MaxTotalDiffs)
-      .expireAfterWrite(10, TimeUnit.MINUTES)
+      .expireAfterWrite(Duration.ofMinutes(10))
       .build[BlockId, (StateSnapshot, Long, Long, ByteStr)]()
 
     val forgedBlockCache = CacheBuilder
       .newBuilder()
       .maximumSize(NgState.MaxTotalDiffs)
-      .expireAfterWrite(10, TimeUnit.MINUTES)
+      .expireAfterWrite(Duration.ofMinutes(10))
       .build[BlockId, Option[(Block, DiscardedMicroBlocks)]]()
 
     @volatile
