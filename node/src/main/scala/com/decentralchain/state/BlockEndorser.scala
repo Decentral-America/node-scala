@@ -65,12 +65,33 @@ object BlockEndorser {
   ) extends BlockEndorser,
         StrictLogging {
 
-    // This node's own endorsements for the current voting, captured at `vote` time so `rebroadcast`
-    // can re-deliver them to a rotated aggregator without re-signing: (votingHeight, endorsedHeight, msgs).
-    // AtomicReference (not @volatile var): `vote` runs on the block-appender thread while `rebroadcast` runs
-    // on a 3s scheduler; rebroadcast's clear must be a compare-and-set so it can never clobber a fresh vote
-    // written in between (a lost update would drop this node's just-cast endorsements for a height).
+    // This node's own endorsements for the current voting, captured at `vote`/`voteSelf` time so
+    // `rebroadcast` can re-deliver them without re-signing: (votingHeight, endorsedHeight, msgs).
+    // AtomicReference (not @volatile var): `vote`/`voteSelf` run on the block-appender thread while
+    // `rebroadcast` runs on a 3s scheduler; rebroadcast's clear must be a compare-and-set so it can
+    // never clobber a fresher vote written in between.
     private val pending: AtomicReference[Option[(Int, Int, Seq[EndorseBlock])]] = new AtomicReference(None)
+    // Same, for the self-target round. Separate reference: the two rounds' targets change on
+    // different cadences (parent-target only on key-block append; self-target on every tip change,
+    // key block or microblock) and must be rebroadcast/cleared independently.
+    private val pendingSelf: AtomicReference[Option[(Int, Int, Seq[EndorseBlock])]] = new AtomicReference(None)
+
+    private def rebroadcastOne(ref: AtomicReference[Option[(Int, Int, Seq[EndorseBlock])]], label: String): Unit = ref.get() match {
+      case current @ Some((_, endorsedHeight, msgs)) =>
+        // Only condition that matters: has THIS specific height already been finalized? Requiring
+        // blockchain.height == votingHeight (unchanged since vote()) was too strict -- with multiple
+        // rotating generators a new block can (and normally does) arrive well within the 3s rebroadcast
+        // interval, closing the window before a rotated aggregator ever got a chance to receive the
+        // endorsement even once. The endorsement targets a specific past height/id and stays valid to
+        // rebroadcast regardless of how many newer blocks have since arrived, until it's finalized (or
+        // vote()/voteSelf() replaces the pending value with a fresher one, which happens on every new
+        // block/microblock anyway).
+        val stillLiveVoting = blockchain.finalizedHeightOrFallback(maxSyncRollbackLength).toInt < endorsedHeight
+        logger.debug(s"rebroadcast($label): endorsedHeight=$endorsedHeight msgs=${msgs.size} stillLiveVoting=$stillLiveVoting")
+        if (stillLiveVoting) msgs.foreach(m => allChannels.broadcast(m))
+        else ref.compareAndSet(current, None) // clear only if vote()/voteSelf() hasn't written a fresher value meanwhile
+      case None => ()
+    }
 
     /** Shared endorsement-casting logic for both the parent-target (`vote`) and self-target (`voteSelf`)
       * rounds -- identical except which (endorsedHeight, endorsedId) pair and which EndorsementStorage
@@ -174,24 +195,19 @@ object BlockEndorser {
       } yield msg)
 
       msgs.foreach(m => allChannels.broadcast(m))
+      // Record for rebroadcast() -- the self-target round changes on EVERY tip update (key block or
+      // microblock), unlike the parent-target round which only changes on key-block append, so a
+      // single-shot broadcast has a much narrower window to reach every endorser on a low-traffic
+      // chain producing only key blocks a block interval apart. Without this, real network latency
+      // between geographically-distributed nodes can miss that window every single round indefinitely.
+      pendingSelf.set(if (msgs.nonEmpty) Some((votingHeight.toInt, endorsedHeight.toInt, msgs)) else None)
     }
 
     override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = selfEndorsementStorage.tryCollectAndClear(endorsedId)
 
-    override def rebroadcast(): Unit = pending.get() match {
-      case current @ Some((_, endorsedHeight, msgs)) =>
-        // Only condition that matters: has THIS specific height already been finalized? Requiring
-        // blockchain.height == votingHeight (unchanged since vote()) was too strict -- with multiple
-        // rotating generators a new block can (and normally does) arrive well within the 3s rebroadcast
-        // interval, closing the window before a rotated aggregator ever got a chance to receive the
-        // endorsement even once. The endorsement targets a specific past height/id and stays valid to
-        // rebroadcast regardless of how many newer blocks have since arrived, until it's finalized (or
-        // vote() replaces `pending` with a fresher one, which it does on every new block anyway).
-        val stillLiveVoting = blockchain.finalizedHeightOrFallback(maxSyncRollbackLength).toInt < endorsedHeight
-        logger.debug(s"rebroadcast(): endorsedHeight=$endorsedHeight msgs=${msgs.size} stillLiveVoting=$stillLiveVoting")
-        if (stillLiveVoting) msgs.foreach(m => allChannels.broadcast(m))
-        else pending.compareAndSet(current, None) // clear only if vote() hasn't written a fresher value meanwhile
-      case None => ()
+    override def rebroadcast(): Unit = {
+      rebroadcastOne(pending, "vote")
+      rebroadcastOne(pendingSelf, "voteSelf")
     }
   }
 }
