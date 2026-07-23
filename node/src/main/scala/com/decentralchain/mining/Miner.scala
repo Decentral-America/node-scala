@@ -4,6 +4,7 @@ import cats.syntax.either.*
 import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block
 import com.decentralchain.block.Block.*
+import com.decentralchain.block.FinalizationVoting
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
@@ -274,9 +275,10 @@ class MinerImpl(
             // candidate. Embedding the stale carried-forward value caused "Wrong BLS signature" on
             // every subsequent key block once any earlier block had embedded a real signature for a
             // now-irrelevant candidate. blockEndorser.tryCollectSelf is the parallel round that targets
-            // refBlockHeader's own id specifically -- use its result directly, or None if no fresh
-            // round is available for this exact candidate yet (safe: matches pre-fix behavior).
-            finalizationVoting = blockEndorser.tryCollectSelf(reference),
+            // refBlockHeader's own id specifically -- use its result (see tryCollectSelfWithGrace for
+            // why a single immediate attempt isn't enough), or None if still nothing after giving
+            // other nodes' endorsements a fair chance to arrive (safe: matches pre-fix behavior).
+            finalizationVoting = tryCollectSelfWithGrace(reference),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
@@ -288,6 +290,31 @@ class MinerImpl(
           retryReasons(balance).leftMap(ForgeAttemptResult.TemporaryFailure.apply)
         }
     }.merge
+  }
+
+  // The self-target round's endorsedId is a brand new candidate every key block (unlike the
+  // parent-target round, which stays live across an entire liquid period's worth of microblock
+  // retries) -- this is the ONLY point anything ever collects for this specific candidate, so unlike
+  // MicroBlockMinerImpl (which gets many chances at the same target as microblocks keep arriving),
+  // there is no second attempt if this one is too early. Other committee members' endorsements for
+  // THIS candidate only start propagating once they've each independently processed the same
+  // just-appended tip, so a single immediate check races real network delivery time. Confirmed live:
+  // this node's own endorsement was recorded within ~5ms of voting starting, but the actual miner for
+  // the NEXT block (a different node, possibly on a different continent) can seal that next block
+  // before the other two members' broadcasts finish propagating to it, permanently losing the chance
+  // to embed a real quorum for this height. 1200ms matches the round-timeout already established
+  // elsewhere in this codebase for the same Frankfurt<->Newark link (p99 round latency ~1000ms +
+  // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
+  // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
+  private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
+    val deadline   = System.currentTimeMillis() + 1200
+    val pollIntervalMs = 100
+    var result = blockEndorser.tryCollectSelf(endorsedId)
+    while (result.isEmpty && System.currentTimeMillis() < deadline) {
+      Thread.sleep(pollIntervalMs)
+      result = blockEndorser.tryCollectSelf(endorsedId)
+    }
+    result
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =
