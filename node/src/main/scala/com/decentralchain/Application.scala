@@ -149,7 +149,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     // candidate from endorsementStorage's parent-target round (see BlockEndorser's docs), so it needs
     // its own independent voting state rather than sharing/overwriting the same slot.
     val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, height) => blockchainUpdater.blockId(height.toInt).contains(blockId))
-    val blockEndorser =
+    val blockEndorser          =
       new BlockEndorser.InMemory(
         settings.synchronizationSettings.maxRollback,
         blockchainUpdater,

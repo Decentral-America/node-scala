@@ -49,9 +49,9 @@ trait BlockEndorser {
 
 object BlockEndorser {
   object Disabled extends BlockEndorser {
-    override def vote(generatorSet: GeneratorSet): Unit = {}
-    override def voteSelf(generatorSet: GeneratorSet): Unit = {}
-    override def rebroadcast(): Unit = {}
+    override def vote(generatorSet: GeneratorSet): Unit                          = {}
+    override def voteSelf(generatorSet: GeneratorSet): Unit                      = {}
+    override def rebroadcast(): Unit                                             = {}
     override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = None
   }
 
@@ -147,17 +147,18 @@ object BlockEndorser {
           )
           if storage.startVoting(filter)
 
-          (account, idx) <- for {
-            ((committedAddr, _), idx) <- committed.zipWithIndex
-            if !filter.miner.contains(idx) // A miner doesn't need to endorse its own blocks - a mining is already an endorsement
-            pk <- wallet.privateKeyAccount(committedAddr).toSeq
-            if balances.contains(committedAddr)
-          } yield (pk, GeneratorIndex(idx))
+          (account, idx) <-
+            for {
+              ((committedAddr, _), idx) <- committed.zipWithIndex
+              if !filter.miner.contains(idx) // A miner doesn't need to endorse its own blocks - a mining is already an endorsement
+              pk <- wallet.privateKeyAccount(committedAddr).toSeq
+              if balances.contains(committedAddr)
+            } yield (pk, GeneratorIndex(idx))
 
           endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId)
           networkMsg  = EndorseBlock.from(endorsement)
           broadcast <- storage.tryAdd(networkMsg) match {
-            case Right(r) => Some(r)
+            case Right(r)  => Some(r)
             case Left(err) =>
               logger.warn(s"Can't add endorsement from #$idx ${account.toAddress}: $err")
               None
@@ -165,13 +166,15 @@ object BlockEndorser {
           if broadcast
         } yield networkMsg
 
-        logger.debug(s"$label(): produced ${msgs.size} message(s) for votingHeight=$votingHeight endorsedHeight=$endorsedHeight endorsedId=$endorsedId")
+        logger.debug(
+          s"$label(): produced ${msgs.size} message(s) for votingHeight=$votingHeight endorsedHeight=$endorsedHeight endorsedId=$endorsedId"
+        )
         msgs
       } else Nil
 
     override def vote(generatorSet: GeneratorSet): Unit = {
-      val votingHeight   = Height(blockchain.height)
-      val endorsedHeight = votingHeight - 1
+      val votingHeight            = Height(blockchain.height)
+      val endorsedHeight          = votingHeight - 1
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
         endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
@@ -184,8 +187,8 @@ object BlockEndorser {
     }
 
     override def voteSelf(generatorSet: GeneratorSet): Unit = {
-      val votingHeight   = Height(blockchain.height)
-      val endorsedHeight = votingHeight
+      val votingHeight            = Height(blockchain.height)
+      val endorsedHeight          = votingHeight
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader <- blockchain.blockHeader(votingHeight.toInt).toSeq
         msg <- castVote(votingHeight, endorsedHeight, votingBlockHeader.id(), votingBlockHeader, generatorSet, selfEndorsementStorage, "voteSelf")

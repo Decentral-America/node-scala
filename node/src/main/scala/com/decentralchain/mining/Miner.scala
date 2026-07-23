@@ -283,10 +283,10 @@ class MinerImpl(
     // a timing tweak -- scoped out as follow-up work. Kept at 1200ms (the node-it-verified bound,
     // where the local low-latency test network converges within it) rather than the wider diagnostic
     // value, since a longer wait has no live benefit and only delays block production for nothing.
-    val deadline        = System.currentTimeMillis() + 1200
-    val pollIntervalMs  = 100
-    var attempts        = 1
-    var result          = blockEndorser.tryCollectSelf(endorsedId)
+    val deadline       = System.currentTimeMillis() + 1200
+    val pollIntervalMs = 100
+    var attempts       = 1
+    var result         = blockEndorser.tryCollectSelf(endorsedId)
     while (result.isEmpty && System.currentTimeMillis() < deadline) {
       Thread.sleep(pollIntervalMs)
       attempts += 1
