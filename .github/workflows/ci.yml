@@ -57,7 +57,10 @@ jobs:
     name: Test
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The actual test run (node-tests + lang-tests + friends) consistently completes right at the ~45min
+    # mark (confirmed twice: "8893 tests run, 0 failed" both times), leaving no slack for the report/upload
+    # steps that follow -- the job was getting killed by its own timeout mid-cleanup despite a clean pass.
+    timeout-minutes: 60
     permissions:
       contents: read
       checks: write
