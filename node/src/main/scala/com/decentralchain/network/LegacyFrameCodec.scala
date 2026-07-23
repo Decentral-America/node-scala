@@ -16,6 +16,7 @@ import io.netty.handler.codec.ByteToMessageCodec
 
 import java.util
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters.*
 import scala.util.control.NonFatal
 
 abstract class LegacyFrameCodec(peerDatabase: PeerDatabase) extends ByteToMessageCodec[Any] with ScorexLogging {
@@ -80,7 +81,7 @@ class LegacyFrameCodecL1(peerDatabase: PeerDatabase, receivedTxsCacheTimeout: Fi
 
   private val receivedTxsCache = CacheBuilder
     .newBuilder()
-    .expireAfterWrite(receivedTxsCacheTimeout.length, receivedTxsCacheTimeout.unit)
+    .expireAfterWrite(receivedTxsCacheTimeout.toJava)
     .build[String, Object]()
 
   protected def specsByCodes: Map[MessageCode, Spec] = BasicMessagesRepo.specsByCodes
