@@ -51,3 +51,6 @@ repl/js/dist
 # nektos/act (local GitHub Actions)
 .secrets
 .artifacts/
+
+# git worktrees (session-local, not committed)
+.worktrees/
