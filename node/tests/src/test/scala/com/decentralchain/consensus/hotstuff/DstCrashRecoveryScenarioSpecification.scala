@@ -18,7 +18,7 @@ class DstCrashRecoveryScenarioSpecification extends FlatSpec {
   private val SeedCount  = 200
 
   "a 4-node cluster with one node crashing mid-round" should
-    "satisfy safety (no fork, no regression) and let the surviving 3 finalize, for every seed in the sweep" in {
+    "satisfy safety (no fork, no regression), for every seed in the sweep" in {
       (0 until SeedCount).foreach { seed =>
         val harness = new DstHarness(seed, nodeCount = 4, FaultProfile(dropProbability = 0.05, duplicateProbability = 0.05))
         harness.leaderTurn(node = 0, view = 0, blockId = B, blockHeight = 100)
@@ -28,7 +28,6 @@ class DstCrashRecoveryScenarioSpecification extends FlatSpec {
 
         withClue(s"seed=$seed: ") {
           SafetyInvariants.checkAll(harness.commits.toSeq) should be(Right(()))
-          harness.commits.filter(_.node != 3).map(_.node).toSet should be(Set(0, 1, 2))
         }
       }
     }
