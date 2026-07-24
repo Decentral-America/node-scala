@@ -7,6 +7,12 @@ enablePlugins(IntegrationTestsPlugin)
 
 description := "NODE integration tests"
 libraryDependencies ++= Dependencies.it
+// ToxiProxy-based fault injection (degraded-link chaos testing), ported from matcher's proven
+// dex-it-common/HasToxiProxy pattern -- see ToxiProxyHarness.scala.
+libraryDependencies ++= Seq(
+  "com.dimafeng"       %% "testcontainers-scala"      % "0.44.1" % Test,
+  "org.testcontainers"  % "testcontainers-toxiproxy"  % "2.0.5"  % Test
+)
 
 val docker = taskKey[Unit]("Build docker image for integration tests")
 docker := {
