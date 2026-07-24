@@ -9,7 +9,7 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures.LightNode
 import com.decentralchain.mining.MultiDimensionalMiningConstraint.Unlimited
 import com.decentralchain.mining.microblocks.MicroBlockMinerImpl
-import com.decentralchain.state.Height
+import com.decentralchain.state.{BlockEndorser, Height}
 import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.test.{PropSpec, produce}
 import com.decentralchain.transaction.TxHelpers
@@ -44,6 +44,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         d.blockchainUpdater,
         d.utxPool,
         d.endorsementStorage,
+        BlockEndorser.Disabled,
         d.settings.minerSettings,
         miner.minerScheduler,
         miner.appenderScheduler,
@@ -135,6 +136,7 @@ class LightNodeBlockFieldsTest extends PropSpec with WithMiner {
         d.blockchainUpdater,
         d.utxPool,
         d.endorsementStorage,
+        BlockEndorser.Disabled,
         d.settings.minerSettings,
         miner.minerScheduler,
         miner.appenderScheduler,

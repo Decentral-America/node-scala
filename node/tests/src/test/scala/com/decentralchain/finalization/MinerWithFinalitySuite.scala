@@ -413,8 +413,16 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
     withDomain(defaultSettings, initBalances, miner = Miner.forwardTo(miner), time = time) { d =>
       d.wallet.generateNewAccounts(1)
 
-      val endorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
-      val blockEndorser = BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, channels)
+      val endorsementStorage     = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
+      val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
+      val blockEndorser = BlockEndorser.InMemory(
+        d.settings.synchronizationSettings.maxRollback,
+        d.blockchain,
+        d.wallet,
+        endorsementStorage,
+        selfEndorsementStorage,
+        channels
+      )
       val utxEvents     = ConcurrentSubject.publish[Unit](using minerScheduler)
       val minerImpl     = new MinerImpl(
         channels,
@@ -502,8 +510,16 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
     withDomain(defaultSettings, initBalances, miner = Miner.forwardTo(miner), time = time) { d =>
       d.wallet.generateNewAccounts(1)
 
-      val endorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
-      val blockEndorser = BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, endorsementStorage, channels)
+      val endorsementStorage     = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
+      val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
+      val blockEndorser = BlockEndorser.InMemory(
+        d.settings.synchronizationSettings.maxRollback,
+        d.blockchain,
+        d.wallet,
+        endorsementStorage,
+        selfEndorsementStorage,
+        channels
+      )
       val minerImpl     = new MinerImpl(
         channels,
         d.blockchain,

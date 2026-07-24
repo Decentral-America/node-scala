@@ -13,7 +13,7 @@ import com.decentralchain.mining.microblocks.MicroBlockMinerImpl.*
 import com.decentralchain.network.{MicroBlockInv, *}
 import com.decentralchain.settings.MinerSettings
 import com.decentralchain.state.appender.MicroblockAppender
-import com.decentralchain.state.{Blockchain, EndorsementStorage}
+import com.decentralchain.state.{BlockEndorser, Blockchain, EndorsementStorage, NG}
 import com.decentralchain.transaction.{BlockchainUpdater, Transaction}
 import com.decentralchain.utils.ScorexLogging
 import com.decentralchain.utx.UtxPool
@@ -29,9 +29,10 @@ import scala.concurrent.duration.*
 class MicroBlockMinerImpl(
     setDebugState: MinerDebugInfo.State => Unit,
     allChannels: ChannelGroup,
-    blockchainUpdater: BlockchainUpdater & Blockchain,
+    blockchainUpdater: BlockchainUpdater & Blockchain & NG,
     utx: UtxPool,
     endorsementStorage: EndorsementStorage,
+    blockEndorser: BlockEndorser,
     settings: MinerSettings,
     minerScheduler: Scheduler,
     appenderScheduler: Scheduler,
@@ -146,7 +147,7 @@ class MicroBlockMinerImpl(
     Task(if (allChannels != null) allChannels.broadcast(MicroBlockInv(account, blockId, microBlock.reference)))
 
   private def appendMicroBlock(microBlock: MicroBlock): Task[BlockId] =
-    MicroblockAppender(blockchainUpdater, utx, appenderScheduler)(microBlock, None)
+    MicroblockAppender(blockchainUpdater, utx, blockEndorser, appenderScheduler)(microBlock, None)
       .flatMap {
         case Left(err) => Task.raiseError(MicroBlockAppendError(microBlock, err))
         case Right(v)  => Task.now(v)

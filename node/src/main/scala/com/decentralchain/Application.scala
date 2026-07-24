@@ -145,8 +145,19 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     val pos = PoSSelector(blockchainUpdater, settings.synchronizationSettings.maxBaseTarget)
 
     val endorsementStorage = EndorsementStorage.InMemory((blockId, height) => blockchainUpdater.blockId(height.toInt).contains(blockId))
-    val blockEndorser      =
-      new BlockEndorser.InMemory(settings.synchronizationSettings.maxRollback, blockchainUpdater, wallet, endorsementStorage, allChannels)
+    // Separate tracker for the self-target round (BlockEndorser.voteSelf/tryCollectSelf) -- a distinct
+    // candidate from endorsementStorage's parent-target round (see BlockEndorser's docs), so it needs
+    // its own independent voting state rather than sharing/overwriting the same slot.
+    val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, height) => blockchainUpdater.blockId(height.toInt).contains(blockId))
+    val blockEndorser          =
+      new BlockEndorser.InMemory(
+        settings.synchronizationSettings.maxRollback,
+        blockchainUpdater,
+        wallet,
+        endorsementStorage,
+        selfEndorsementStorage,
+        allChannels
+      )
 
     if (settings.minerSettings.enable)
       miner = new MinerImpl(
@@ -187,7 +198,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     val processFork =
       ExtensionAppender(blockchainUpdater, utxStorage, pos, time, knownInvalidBlocks, peerDatabase, appenderScheduler)
     val processMicroBlock =
-      MicroblockAppender(blockchainUpdater, utxStorage, allChannels, peerDatabase, blockChallenger, appenderScheduler)
+      MicroblockAppender(blockchainUpdater, utxStorage, allChannels, peerDatabase, blockChallenger, blockEndorser, appenderScheduler)
 
     import blockchainUpdater.lastBlockInfo
 

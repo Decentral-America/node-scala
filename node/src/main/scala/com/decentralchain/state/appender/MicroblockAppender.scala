@@ -10,7 +10,7 @@ import com.decentralchain.mining.BlockChallenger
 import com.decentralchain.network.*
 import com.decentralchain.network.MicroBlockSynchronizer.MicroblockData
 import io.decentralchain.protobuf.PBSnapshots
-import com.decentralchain.state.{Blockchain, Height}
+import com.decentralchain.state.{BlockEndorser, Blockchain, Height, NG}
 import com.decentralchain.transaction.BlockchainUpdater
 import com.decentralchain.transaction.TxValidationError.{InvalidSignature, InvalidStateHash}
 import com.decentralchain.utils.ScorexLogging
@@ -26,7 +26,13 @@ import scala.util.{Left, Right}
 object MicroblockAppender extends ScorexLogging {
   private val microblockProcessingTimeStats = Kamon.timer("microblock-appender.processing-time").withoutTags()
 
-  def apply(blockchainUpdater: BlockchainUpdater & Blockchain, utxStorage: UtxPool, scheduler: Scheduler, verify: Boolean = true)(
+  def apply(
+      blockchainUpdater: BlockchainUpdater & Blockchain & NG,
+      utxStorage: UtxPool,
+      blockEndorser: BlockEndorser,
+      scheduler: Scheduler,
+      verify: Boolean = true
+  )(
       microBlock: MicroBlock,
       snapshot: Option[MicroBlockSnapshot]
   ): Task[Either[ValidationError, BlockId]] =
@@ -42,16 +48,21 @@ object MicroblockAppender extends ScorexLogging {
           }
 
           utxStorage.scheduleCleanup()
+          // Refresh the self-target endorsement round (see BlockEndorser.voteSelf) for this new tip --
+          // needed regardless of whether THIS node mined the microblock, since any node might next
+          // need to seal a key block extending it.
+          blockEndorser.voteSelf(blockchainUpdater.currentGeneratorSet.getOrElse(Nil))
           totalBlockId
         }
     }).executeOn(scheduler)
 
   def apply(
-      blockchainUpdater: BlockchainUpdater & Blockchain,
+      blockchainUpdater: BlockchainUpdater & Blockchain & NG,
       utxStorage: UtxPool,
       allChannels: ChannelGroup,
       peerDatabase: PeerDatabase,
       blockChallenger: Option[BlockChallenger],
+      blockEndorser: BlockEndorser,
       scheduler: Scheduler
   )(ch: Channel, md: MicroblockData, snapshot: Option[(Channel, MicroBlockSnapshotResponse)]): Task[Unit] = {
     import md.microBlock
@@ -66,7 +77,7 @@ object MicroblockAppender extends ScorexLogging {
         }
         .map(ss => MicroBlockSnapshot(microblockTotalResBlockSig, ss))
 
-      blockId <- EitherT(apply(blockchainUpdater, utxStorage, scheduler)(microBlock, microBlockSnapshot))
+      blockId <- EitherT(apply(blockchainUpdater, utxStorage, blockEndorser, scheduler)(microBlock, microBlockSnapshot))
     } yield blockId).value.flatMap {
       case Right(blockId) =>
         Task {

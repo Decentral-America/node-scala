@@ -4,7 +4,10 @@ import sbt.{Def, *}
 import scalapb.compiler.Version.scalapbVersion
 
 object Dependencies {
-  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.15.Final" // CVE-2026-44249 patch
+  // 4.2.16.Final patches CVE-2026-59901 (Bzip2Decoder infinite loop), CVE-2026-55831/55833
+  // (HTTP codec), CVE-2026-56745 (SpdyHttpDecoder ByteBuf leak) -- all HIGH, on top of the
+  // earlier CVE-2026-44249 patch already applied at 4.2.15.Final.
+  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.16.Final"
 
   val gProtoVersion = "4.35.1"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
@@ -26,8 +29,9 @@ object Dependencies {
       jacksonModule("core", "databind"),
       jacksonModule("datatype", "datatype-jdk8"),
       jacksonModule("datatype", "datatype-jsr310"),
-      // Force tools.jackson.core 3.2.0 (fixes GHSA-2m67-wjpj-xhg9 HIGH CVE, 3.1.0 baseline)
-      // Transitive via pekko-http; 3.1.0 has document length constraint bypass.
+      // Force tools.jackson.core 3.2.1 (fixes GHSA-2m67-wjpj-xhg9 HIGH CVE, 3.1.0 baseline;
+      // transitive via pekko-http, document length constraint bypass) and GHSA-r7wm-3cxj-wff9
+      // HIGH CVE (incomplete fix in the 3.2.0/2.22.0 baseline).
       "tools.jackson.core" % "jackson-core"     % "3.2.1",
       "tools.jackson.core" % "jackson-databind" % "3.2.1",
       gProto
@@ -44,6 +48,7 @@ object Dependencies {
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.8.1"
 
+  // 2.22.1 fixes GHSA-r7wm-3cxj-wff9 HIGH CVE (incomplete fix in 2.22.0)
   private def jacksonModule(group: String, module: String, version: String = "2.22.1") =
     s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 

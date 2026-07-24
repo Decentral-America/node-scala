@@ -3,7 +3,7 @@ package com.decentralchain.mining
 import cats.syntax.either.*
 import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block.*
-import com.decentralchain.block.{Block, BlockHeader, SignedBlockHeader}
+import com.decentralchain.block.{Block, BlockHeader, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
@@ -84,6 +84,7 @@ class MinerImpl(
     blockchainUpdater,
     utx,
     endorsementStorage,
+    blockEndorser,
     settings.minerSettings,
     minerScheduler,
     appenderScheduler,
@@ -231,7 +232,18 @@ class MinerImpl(
             blockRewardVote(version),
             if (blockchainUpdater.supportsLightNodeBlockFields(height + 1)) stateHash else None,
             challengedHeader = None,
-            finalizationVoting = None // Haven't voted in a key block
+            // A key block seals the current tip (reference) and extends it directly, so THIS
+            // block's own reference is that tip's id -- the candidate that block-append validation
+            // reconstructs from `block.header.reference`. That's a DIFFERENT candidate than what
+            // `vote()` produces (the tip's own parent, matching what a microblock extending the tip
+            // would need instead) -- so unlike MicroBlockMinerImpl (where every microblock in a liquid
+            // period shares the SAME candidate and carrying forward a prior vote is correct), every key
+            // block targets a brand new candidate; there is nothing valid to carry forward here.
+            // blockEndorser.tryCollectSelf is the parallel round that targets the tip's own id
+            // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
+            // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
+            // fair chance to arrive (safe: matches pre-fix behavior).
+            finalizationVoting = tryCollectSelfWithGrace(reference)
           )
           .leftMap(_.err)
       } yield ForgeAttemptResult.Success(block, totalConstraint)
@@ -242,6 +254,46 @@ class MinerImpl(
           retryReasons(balance).leftMap(ForgeAttemptResult.TemporaryFailure.apply)
         }
     }.merge
+  }
+
+  // The self-target round's endorsedId is a brand new candidate every key block (unlike the
+  // parent-target round, which stays live across an entire liquid period's worth of microblock
+  // retries) -- this is the ONLY point anything ever collects for this specific candidate, so unlike
+  // MicroBlockMinerImpl (which gets many chances at the same target as microblocks keep arriving),
+  // there is no second attempt if this one is too early. Other committee members' endorsements for
+  // THIS candidate only start propagating once they've each independently processed the same
+  // just-appended tip, so a single immediate check races real network delivery time. Confirmed live:
+  // this node's own endorsement was recorded within ~5ms of voting starting, but the actual miner for
+  // the NEXT block (a different node, possibly on a different continent) can seal that next block
+  // before the other two members' broadcasts finish propagating to it, permanently losing the chance
+  // to embed a real quorum for this height. 1200ms matches the round-timeout already established
+  // elsewhere in this codebase for the same Frankfurt<->Newark link (p99 round latency ~1000ms +
+  // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
+  // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
+  private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
+    // Widening this window does NOT fix the live testnet gap -- confirmed by testing 1200ms and
+    // 8000ms side by side, both consistently return None (attempts maxed out, zero non-miner votes
+    // collected). Root cause (confirmed via live debug logs, see project_finality_stall_recurrence
+    // memory): the self-round's candidate is reset on EVERY microblock append (voteSelf() targets
+    // the just-appended block's own id, which changes every microblock), so by the time a key block
+    // is actually forged the live candidate has usually existed for well under a second -- nowhere
+    // near enough for a real cross-datacenter 2-of-3 BLS vote round-trip, no matter how long we then
+    // wait. Fixing this properly requires decoupling self-round vote accumulation from per-microblock
+    // resets (e.g. retroactive credit for a superseded candidate), which is a real design change, not
+    // a timing tweak -- scoped out as follow-up work. Kept at 1200ms (the node-it-verified bound,
+    // where the local low-latency test network converges within it) rather than the wider diagnostic
+    // value, since a longer wait has no live benefit and only delays block production for nothing.
+    val deadline       = System.currentTimeMillis() + 1200
+    val pollIntervalMs = 100
+    var attempts       = 1
+    var result         = blockEndorser.tryCollectSelf(endorsedId)
+    while (result.isEmpty && System.currentTimeMillis() < deadline) {
+      Thread.sleep(pollIntervalMs)
+      attempts += 1
+      result = blockEndorser.tryCollectSelf(endorsedId)
+    }
+    log.debug(s"tryCollectSelfWithGrace($endorsedId): attempts=$attempts result=$result")
+    result
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =
