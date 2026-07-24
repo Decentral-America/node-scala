@@ -19,16 +19,29 @@ final case class FaultProfile(
 final class SimNetwork[Msg](clock: SimClock, nodeCount: Int, faultProfile: FaultProfile) {
   private val partitioned = scala.collection.mutable.Set.empty[(Int, Int)]
 
-  def partition(from: Set[Int], to: Set[Int]): Unit =
-    for (a <- from; b <- to if a != b) { partitioned += ((a, b)); partitioned += ((b, a)) }
+  private def requireValidPeer(index: Int): Unit =
+    require(index >= 0 && index < nodeCount, s"peer index=$index out of range [0, $nodeCount)")
 
-  def healPartition(from: Set[Int], to: Set[Int]): Unit =
+  private def requireValidPeers(indices: Set[Int]): Unit = indices.foreach(requireValidPeer)
+
+  def partition(from: Set[Int], to: Set[Int]): Unit = {
+    requireValidPeers(from)
+    requireValidPeers(to)
+    for (a <- from; b <- to if a != b) { partitioned += ((a, b)); partitioned += ((b, a)) }
+  }
+
+  def healPartition(from: Set[Int], to: Set[Int]): Unit = {
+    requireValidPeers(from)
+    requireValidPeers(to)
     for (a <- from; b <- to if a != b) { partitioned -= ((a, b)); partitioned -= ((b, a)) }
+  }
 
   /** Send `msg` from `from` to every peer in `to` (the sender is skipped even if present in `to`),
     * subject to fault injection (partition block, drop, duplicate, random delay).
     */
-  def send(from: Int, to: Set[Int])(msg: Msg)(deliver: (Int, Msg) => Unit): Unit =
+  def send(from: Int, to: Set[Int])(msg: Msg)(deliver: (Int, Msg) => Unit): Unit = {
+    requireValidPeer(from)
+    requireValidPeers(to)
     to.foreach { recipient =>
       if (recipient != from && !partitioned.contains((from, recipient))) {
         if (clock.random.nextDouble() >= faultProfile.dropProbability) {
@@ -41,4 +54,5 @@ final class SimNetwork[Msg](clock: SimClock, nodeCount: Int, faultProfile: Fault
         }
       }
     }
+  }
 }

@@ -43,4 +43,22 @@ class SimNetworkSpecification extends FlatSpec {
     clock.runToQuiescence()
     delivered.map(_._1).sorted.toList should be(List(1, 2, 3))
   }
+
+  it should "reject out-of-range peer indices" in {
+    val clock   = new SimClock(seed = 7L)
+    val network = new SimNetwork[String](clock, nodeCount = 4, FaultProfile())
+
+    assertThrows[IllegalArgumentException] {
+      network.send(from = -1, to = Set(1, 2, 3))("x")((_, _) => ())
+    }
+    assertThrows[IllegalArgumentException] {
+      network.send(from = 0, to = Set(4))("x")((_, _) => ())
+    }
+    assertThrows[IllegalArgumentException] {
+      network.partition(Set(0), Set(4))
+    }
+    assertThrows[IllegalArgumentException] {
+      network.healPartition(Set(-1), Set(0))
+    }
+  }
 }
