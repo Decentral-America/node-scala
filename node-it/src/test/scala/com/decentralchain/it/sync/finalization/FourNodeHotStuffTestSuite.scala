@@ -14,28 +14,15 @@ import org.scalatest.OptionValues
 
 import scala.concurrent.duration.DurationInt
 
-/** Step-5 runtime validation of the T2 HotStuff 4c-bind wiring on a real multi-node cluster.
-  *
-  * Brings up 4 nodes with `dcc.hotstuff.enabled = true` (feature 25 pre-activated) and exercises the
-  * cluster under three conditions, all with HotStuff running:
-  *   1. happy path — finality advances on every node without halting or forking;
-  *   2. crashed generator — safety holds while a generator is down, and it re-syncs on restart;
-  *   3. network partition — no divergent finality, and the cluster reconverges after healing.
-  *
-  * HotStuff commit is currently observational (feature-25 `finalizedHeight` stays authoritative), so
-  * these suites validate that enabling HotStuff is non-destructive AND preserves feature-25's BFT
-  * safety under real faults. Assertions are deliberately restricted to deterministic SAFETY invariants
-  * (finalized height is monotonic; the cluster reconverges on one chain; a recovered node re-syncs) —
-  * NOT liveness-during-fault thresholds, which depend on the committed-stake distribution and generation
-  * period boundaries and would be flaky. Liveness/view-change is covered by the pure-core unit tests and
-  * by scenario (1). Byzantine equivocation is covered adversarially at the unit level
-  * (`HotStuffSafety.equivocators`); a node-it double-vote test needs a fault-injection node build and is
-  * tracked as future work in docs/hotstuff-integration-design.md.
-  *
-  * These are resource-sensitive: run on a host where node-it has real memory headroom (CI ubuntu-latest),
-  * not a memory-pressured laptop where the peer mesh fragments regardless of HotStuff.
+/** Shared 4-node HotStuff cluster bring-up + helper vocabulary (`nodeConfigs`, `hsNodes`, `leader`,
+  * `commitAllForNextPeriod`, `smallestStakeNode`), factored out of what used to be a single concrete
+  * `FourNodeHotStuffTestSuite` so a second chaos scenario (`DegradedLinkHotStuffTestSuite`, the
+  * degraded-link/ToxiProxy suite) can reuse the exact same cluster setup and vocabulary WITHOUT also
+  * inheriting -- and therefore re-running -- `FourNodeHotStuffTestSuite`'s own three "it" cases as a side
+  * effect of plain Scala class inheritance. `FourNodeHotStuffTestSuite` below and
+  * `DegradedLinkHotStuffTestSuite` both extend this instead of one extending the other.
   */
-class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLogging {
+abstract class HotStuffFourNodeSuite extends BaseFreeSpec, OptionValues, ScorexLogging {
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.preactivatedFeatures((BlockchainFeatures.DeterministicFinality.id, Height(0))))
@@ -46,8 +33,8 @@ class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLoggin
       .withDefault(4)
       .buildNonConflicting()
 
-  private def hsNodes = dockerNodes()
-  private def leader  = hsNodes.head
+  protected def hsNodes = dockerNodes()
+  protected def leader  = hsNodes.head
 
   /** Commit every not-yet-committed node as a generator for the next period and wait until that period
     * is active. Returns the committed generators (address + generating balance) for that period.
@@ -73,7 +60,7 @@ class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLoggin
     *      that single broadcast as benign (the transaction ending up included via some other path is
     *      exactly the outcome we want) rather than a real failure.
     */
-  private def commitAllForNextPeriod(): Seq[GeneratorsResponse.Entry] = {
+  protected def commitAllForNextPeriod(): Seq[GeneratorsResponse.Entry] = {
     val period = leader.currentGenerationPeriod.value.next
     // /generators/at/{h} 404s until the chain has actually reached height h (the route's own guard is
     // period-based and would allow it, but the underlying height genuinely doesn't exist yet on the
@@ -99,9 +86,32 @@ class FourNodeHotStuffTestSuite extends BaseFreeSpec, OptionValues, ScorexLoggin
   /** The committed generator with the smallest generating balance — crashing/partitioning it removes the
     * least committed stake, so the surviving set retains the most quorum weight.
     */
-  private def smallestStakeNode(generators: Seq[GeneratorsResponse.Entry]) =
+  protected def smallestStakeNode(generators: Seq[GeneratorsResponse.Entry]) =
     hsNodes.minBy(n => generators.find(_.address == n.address).map(_.balance).getOrElse(Long.MaxValue))
+}
 
+/** Step-5 runtime validation of the T2 HotStuff 4c-bind wiring on a real multi-node cluster.
+  *
+  * Brings up 4 nodes with `dcc.hotstuff.enabled = true` (feature 25 pre-activated) and exercises the
+  * cluster under three conditions, all with HotStuff running:
+  *   1. happy path — finality advances on every node without halting or forking;
+  *   2. crashed generator — safety holds while a generator is down, and it re-syncs on restart;
+  *   3. network partition — no divergent finality, and the cluster reconverges after healing.
+  *
+  * HotStuff commit is currently observational (feature-25 `finalizedHeight` stays authoritative), so
+  * these suites validate that enabling HotStuff is non-destructive AND preserves feature-25's BFT
+  * safety under real faults. Assertions are deliberately restricted to deterministic SAFETY invariants
+  * (finalized height is monotonic; the cluster reconverges on one chain; a recovered node re-syncs) —
+  * NOT liveness-during-fault thresholds, which depend on the committed-stake distribution and generation
+  * period boundaries and would be flaky. Liveness/view-change is covered by the pure-core unit tests and
+  * by scenario (1). Byzantine equivocation is covered adversarially at the unit level
+  * (`HotStuffSafety.equivocators`); a node-it double-vote test needs a fault-injection node build and is
+  * tracked as future work in docs/hotstuff-integration-design.md.
+  *
+  * These are resource-sensitive: run on a host where node-it has real memory headroom (CI ubuntu-latest),
+  * not a memory-pressured laptop where the peer mesh fragments regardless of HotStuff.
+  */
+class FourNodeHotStuffTestSuite extends HotStuffFourNodeSuite {
   "T2 HotStuff on a real 4-node cluster" - {
 
     "finalizes on every node without halting or forking" in {

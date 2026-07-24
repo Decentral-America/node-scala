@@ -149,6 +149,45 @@ class Docker(
 
   def createNetwork: Network = dccNetwork
 
+  /** A fixed address in this network's `/28` that no node container ever gets: node containers only ever
+    * claim `ipForNode(n)` for `n` derived from a `dcc.network.node-name` in `node01`..`node10` (i.e. 1..10),
+    * and `ipForNode(0xe)` is the gateway. `13` is free by construction, matching matcher's own convention
+    * for pinning an auxiliary (non-node) container to a stable slot instead of Docker's default IPAM
+    * auto-assignment -- which otherwise races real node containers for the same address if the auxiliary
+    * container is attached to the network before those nodes reserve their own fixed IPs (confirmed via a
+    * real "failed to set up container networking: Address already in use" 403 while wiring
+    * ToxiProxyHarness's toxiproxy container into a live 4-node cluster: the auto-assigned address landed on
+    * the same one a node reserved seconds later).
+    */
+  def auxiliaryContainerAddress: String = ipForNode(13)
+
+  /** Attach an already-running container (started on some OTHER network, e.g. the default bridge) to this
+    * network at a fixed address, ADDING the attachment rather than swapping an existing one.
+    *
+    * This is deliberately NOT the disconnect-then-reconnect dance `startNodeInternal` uses for node
+    * containers at creation time (before they're started) -- that dance disconnects the container's ONLY
+    * network attachment, and doing that to an ALREADY-RUNNING container with published host ports (as
+    * opposed to one that hasn't started yet) tears down the NAT/port-publish rules for those ports along
+    * with it. Confirmed directly: disconnecting + reconnecting a running container's sole network mid-flight
+    * turned its host-mapped port into an immediate `Connection reset`, even though the reconnect itself
+    * succeeded and the container kept running; ADDING a second network attachment (as this method does)
+    * to a container that keeps its original one intact leaves existing port publishing untouched. Callers
+    * (`ToxiProxyHarness`) rely on this: the toxiproxy container starts on its default network first (so its
+    * control-port wait-strategy and host access work normally), then gets attached to `dccNetwork` at a
+    * fixed, never-node-assigned address via this method.
+    */
+  def attachToNetworkAtFixedAddress(containerId: String, ip: String): Unit =
+    client
+      .connectToNetworkCmd()
+      .withContainerId(containerId)
+      .withNetworkId(dccNetwork.getId)
+      .withContainerNetwork(
+        new ContainerNetwork()
+          .withIpv4Address(ip)
+          .withIpamConfig(new ContainerNetwork.Ipam().withIpv4Address(ip))
+      )
+      .exec()
+
   def startNodes(nodeConfigs: Seq[Config]): Seq[DockerNode] = {
     log.trace(s"Starting ${nodeConfigs.size} containers")
     val all = nodeConfigs.map(startNodeInternal(_))
@@ -280,9 +319,14 @@ class Docker(
         exposedPorts.add(ExposedPort.tcp(6881))
       }
 
+      val jenkinsJobIdFromEnv = sys.env.get("JENKINS_JOB_ID").fold("")(s => s"-$s")
+      // Hoisted out of the containerId block below (and threaded into DockerNode) so callers that need
+      // the container's real `--name` -- e.g. ToxiProxyHarness, which must proxy a peer's actual Docker
+      // DNS name rather than its logical `dcc.network.node-name` -- can read it back off the node instead
+      // of re-deriving it. Nothing else about container creation changes.
+      val containerName = s"${dccNetwork.getName}-$nodeName$jenkinsJobIdFromEnv"
+
       val containerId = {
-        val jenkinsJobIdFromEnv = sys.env.get("JENKINS_JOB_ID").fold("")(s => s"-$s")
-        val containerName       = s"${dccNetwork.getName}-$nodeName$jenkinsJobIdFromEnv"
         dumpContainers(
           client.listContainersCmd().withNameFilter(java.util.List.of(containerName)).exec(),
           "Containers with same name"
@@ -319,7 +363,7 @@ class Docker(
 
       client.startContainerCmd(containerId).exec()
 
-      val node = new DockerNode(actualConfig, containerId, getNodeInfo(containerId, DCCSettings.fromRootConfig(actualConfig)))
+      val node = new DockerNode(actualConfig, containerId, containerName, getNodeInfo(containerId, DCCSettings.fromRootConfig(actualConfig)))
       nodes.add(node)
       log.debug(s"Started $containerId -> ${node.name}: ${node.nodeInfo}${if (enableDebugger) s", debugger port = $debuggerPort" else ""}")
       node
@@ -709,7 +753,7 @@ object Docker {
     }
   }
 
-  class DockerNode(config: Config, val containerId: String, private[Docker] var nodeInfo: NodeInfo) extends Node(config) {
+  class DockerNode(config: Config, val containerId: String, val containerName: String, private[Docker] var nodeInfo: NodeInfo) extends Node(config) {
     override def nodeExternalPort(internalPort: Int): Int = nodeInfo.externalPort(internalPort)
 
     override def nodeApiEndpoint: URL = nodeInfo.nodeApiEndpoint

@@ -62,11 +62,13 @@ trait ToxiProxyHarness { self: DockerBased =>
   protected val toxiContainer: ConfigurableToxicProxyContainer = mkToxiProxyContainer
 
   private def mkToxiProxyContainer: ConfigurableToxicProxyContainer = {
-    val dockerNetworkName = self.docker.createNetwork.getName
-    val c                 = new ConfigurableToxicProxyContainer("shopify/toxiproxy:2.1.0", maxProxiedPorts)
+    val c = new ConfigurableToxicProxyContainer("shopify/toxiproxy:2.1.0", maxProxiedPorts)
+    // Deliberately NOT attached to `dccNetwork` here (contrast with node containers, which set
+    // `withNetworkMode` at create time) -- see the doc comment on `toxiContainer.start()` below and on
+    // `Docker.attachToNetworkAtFixedAddress` for why the network attachment has to happen as a separate,
+    // later step instead.
     c.container.withCreateContainerCmdModifier { cmd =>
       cmd.withName(toxiProxyHostName)
-      cmd.getHostConfig.withNetworkMode(dockerNetworkName)
       ()
     }
     c
@@ -84,7 +86,28 @@ trait ToxiProxyHarness { self: DockerBased =>
     */
   protected def mkToxiProxy(hostname: String, port: Int): ContainerProxy = toxiContainer.getProxy(hostname, port)
 
+  // Started WITHOUT `dccNetwork` attached (see `mkToxiProxyContainer` above) so its control-port wait
+  // strategy and host access (both go through the host-mapped port on whatever default network
+  // testcontainers gives it) come up normally, unaffected by anything to do with node-it's own network.
   toxiContainer.start()
+
+  // *Then* attach it to `dccNetwork` at a fixed, never-node-assigned address (`Docker.auxiliaryContainerAddress`).
+  // Two real, empirically-confirmed problems this avoids, in order:
+  //   1. Attaching at create time (as node containers do via `withNetworkMode`) and leaving the address to
+  //      Docker's default IPAM let it land on the SAME address a real node container reserves moments
+  //      later, which fails that node's container creation outright with "failed to set up container
+  //      networking: Address already in use" -- hit running this harness against a real multi-node cluster
+  //      for the first time (node-it's own test suites had never done that before this file existed).
+  //   2. Fixing #1 by pinning the address the way `startNodeInternal` pins node IPs (disconnect the
+  //      container's current network, then reconnect with an explicit IP) breaks the container as soon as
+  //      it's already RUNNING with a published host port: disconnecting an already-started container's
+  //      sole network attachment tears down the NAT/port-publish rule for that port along with it (confirmed
+  //      directly against a throwaway container: the host-mapped port started returning "Connection reset"
+  //      immediately after a disconnect+reconnect cycle, even though the reconnect itself succeeded and the
+  //      container kept running). ADDING a second network attachment to a container that keeps its original
+  //      one intact does not have this problem (confirmed the same way) -- hence attach-after-start via
+  //      `attachToNetworkAtFixedAddress`, not the node-container disconnect/reconnect pattern.
+  self.docker.attachToNetworkAtFixedAddress(toxiContainer.getContainerInfo.getId, self.docker.auxiliaryContainerAddress)
 }
 
 object ToxiProxyHarness {
