@@ -34,6 +34,43 @@ import com.decentralchain.test.FlatSpec
   * `refreshCommittee()` re-reads — i.e. the genuine "mid-view, cross-committee QC" hazard this test is
   * meant to probe. Neither bucket is ever ~0%, and the round is never anywhere close to full completion
   * at switch time, so the sweep now exercises both regimes on every run instead of only the pre-QC one.
+  *
+  * ## Known limitation
+  *
+  * `SafetyInvariants.checkAll` as invoked below CANNOT currently detect the hazard this scenario is
+  * built to probe. This harness only ever injects ONE candidate `BlockId` (`B`, above) via a single
+  * `leaderTurn` call, at a single height (100). `SafetyInvariants.noFork` only fires when two
+  * DIFFERENT block IDs commit at the same height, and `SafetyInvariants.noRegression` only fires when
+  * a committed height decreases; with exactly one value and one height ever in play, neither check has
+  * anything to compare against and can never return `Left` here, no matter what
+  * `HotStuffCoordinator`/`refreshCommittee()` do internally. This is not specific to this file: none of
+  * `DstCrashRecoveryScenarioSpecification`, `DstPartitionScenarioSpecification`, or this
+  * `DstCommitteeChangeScenarioSpecification` ever introduces a second candidate block ID, so all three
+  * scenarios' safety checks are structurally vacuous for fork detection in the same way.
+  *
+  * Concretely, "clean at 200 seeds" for this test means: production `HotStuffCoordinator` code ran to
+  * completion under this fault/timing injection without crashing, hanging, or otherwise producing an
+  * externally-observable inconsistency in the single committed value — it does NOT mean "the
+  * mid-round/atomic-committee-transition gap described above is safe." The gap remains structurally
+  * real and unexercised by this test.
+  *
+  * A real fork-capable test needs one of two separately-scoped follow-ups (not attempted here):
+  *
+  *   1. A multi-view/multi-leader equivocation scenario: competing proposals for different `BlockId`s
+  *      driven through DIFFERENT views (not the same view), since
+  *      `HotStuffSafety.safeToVote` (node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffSafety.scala:35-44)
+  *      rejects any second proposal in an already-voted view via the `proposal.view >
+  *      state.lastVotedView` check before `extendsBranch`/lock logic ever runs — `lastVotedView` is
+  *      recorded per-view, not per-`BlockId`, in `recordVote`, so a same-view competing block can never
+  *      collect votes from a node that already voted in that view. The equivocation has to cross views
+  *      to have any chance of exercising `noFork`.
+  *   2. A direct test at the `HotStuffVotePool`/`HotStuffQuorum` level: hand-construct two disjoint vote
+  *      sets and check whether each independently forms a valid, `verifyQC`-passing QC for a DIFFERENT
+  *      block under a DIFFERENT committee snapshot — bypassing the coordinator's `lastVotedView` gate
+  *      entirely, since the actual hazard here is the quorum threshold/membership changing between
+  *      snapshots, not any single node's vote-casting behavior.
+  *
+  * Both are real, separately-scoped engineering work, not a one-line patch to this file.
   */
 class DstCommitteeChangeScenarioSpecification extends FlatSpec {
   private val B: BlockId = ByteStr(Array.fill[Byte](32)(42))
