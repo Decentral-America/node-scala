@@ -25,6 +25,11 @@ class HotStuffVotePoolSpecification extends FlatSpec {
     HotStuffVote(5, PREPARE, block, Height(h), i, kps(i).sign(msg).byteStr)
   }
 
+  private def voteAtView(i: Int, view: Int): HotStuffVote = {
+    val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr)
+  }
+
   "onVote" should "accumulate below quorum without emitting a QC" in {
     val (p1, qc1) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
     qc1 should be(None)
@@ -84,5 +89,35 @@ class HotStuffVotePoolSpecification extends FlatSpec {
     val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
     val (p2, _) = HotStuffVotePool.onVote(p1, voteOther, committee)
     p2.pending.keySet.size should be(2)
+  }
+
+  // Bounded-memory guard (audit finding): targets that never resolve (losing-fork blocks, junk votes
+  // for bogus targets) must not accumulate in the pool forever. pruneOlderThan drops every target
+  // strictly older than the given minView, from both pending and seenCommittees, without touching
+  // newer targets or the ability to still form a QC for them.
+  "pruneOlderThan" should "evict targets older than minView from pending AND seenCommittees, keeping newer ones" in {
+    // Two unresolved old-view targets (views 3 and 4) and one current-view target (view 6).
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtView(0, 3), committee)
+    val (p2, _) = HotStuffVotePool.onVote(p1, voteAtView(0, 4), committee)
+    val (p3, _) = HotStuffVotePool.onVote(p2, voteAtView(0, 6), committee)
+    p3.pending.keySet.map(_._1) should be(Set(3, 4, 6))
+    p3.seenCommittees.keySet.map(_._1) should be(Set(3, 4, 6))
+
+    val pruned = HotStuffVotePool.pruneOlderThan(p3, minView = 5)
+    pruned.pending.keySet.map(_._1) should be(Set(6))        // views 3 and 4 evicted
+    pruned.seenCommittees.keySet.map(_._1) should be(Set(6)) // snapshot sets evicted in lockstep
+  }
+
+  it should "not affect a newer target's ability to still reach quorum after older ones are pruned" in {
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtView(0, 3), committee) // stale target, view 3
+    val pruned  = HotStuffVotePool.pruneOlderThan(p1, minView = 6)
+    pruned.pending should be(empty)
+
+    // A fresh view-7 target accumulates to quorum unaffected by the prune.
+    val (q1, _) = HotStuffVotePool.onVote(pruned, voteAtView(0, 7), committee)
+    val (q2, _) = HotStuffVotePool.onVote(q1, voteAtView(1, 7), committee)
+    val (_, qc) = HotStuffVotePool.onVote(q2, voteAtView(2, 7), committee)
+    qc.isDefined should be(true)
+    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(true))
   }
 }

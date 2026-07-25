@@ -74,6 +74,17 @@ object HotStuffCoordinator {
     // the start of each event so reducers always see the current period's set.
     private def refreshCommittee(): Unit = engine = engine.copy(committee = committeeProvider())
 
+    // Bounded eviction of superseded pool entries (memory-leak guard, audit finding 2026-07-25). A
+    // target never resolves on its own — a losing-fork block, or junk votes broadcast for bogus
+    // targets — so its bucket + committee-snapshot set would leak into `pool` forever with no other
+    // removal path (buckets are only cleared on successful QC formation). Prune every target strictly
+    // older than the currently-active view whenever the view advances. Margin of ONE view is required
+    // for correctness: after a PREPARE QC the pacemaker is already at v+1 while this node is still
+    // accumulating PRE_COMMIT/COMMIT votes for view v, so we retain `view >= pacemaker.view - 1` to
+    // avoid evicting the active view's still-in-flight later phases. Pure reducer; no timers/threads.
+    private def prunePool(): Unit =
+      pool = HotStuffVotePool.pruneOlderThan(pool, engine.pacemaker.view - 1)
+
     private def bid(b: BlockId): String = b.toString.take(8)
 
     /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool. */
@@ -139,12 +150,23 @@ object HotStuffCoordinator {
             s"— votes disagree on blockHeight=${bucket.map(_.blockHeight.toInt).distinct.sorted} (must be identical to form a QC)"
         )
       maybeQC.foreach { qc =>
-        effects.broadcast(qc)
-        onQC(qc)
+        // Self-verify BEFORE broadcasting. `applyQC` re-reads the committee (`refreshCommittee`) and
+        // re-verifies the QC; if the committee shifted between `onVote`'s read above and this read,
+        // the node must NOT broadcast a QC it then locally rejects. Passing the broadcast as the
+        // by-name `onAccepted` runs it only when local self-verification succeeds, at the same point
+        // (before commit/phase-progression) the broadcast previously occupied.
+        applyQC(qc, effects.broadcast(qc))
       }
     }
 
-    def onQC(qc: QuorumCertificate): Unit = {
+    def onQC(qc: QuorumCertificate): Unit = applyQC(qc, ()) // wire-received QC: no re-broadcast on accept
+
+    /** Apply a QC to local state: refresh committee → `HotStuffEngine.onQC` (verify) → commit →
+      * phase-progress → prune. `onAccepted` (by-name) runs exactly once, IFF the QC passes this node's
+      * own re-verification (was not `Rejected`), positioned after verification but before commit/phase-
+      * progression — the hook a self-formed QC uses to broadcast only after it self-verifies.
+      */
+    private def applyQC(qc: QuorumCertificate, onAccepted: => Unit): Unit = {
       refreshCommittee()
       val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
       engine = nextEngine
@@ -154,6 +176,7 @@ object HotStuffCoordinator {
       // A rejected QC is worth surfacing (committee/view skew, e.g. during post-restart catch-up); a
       // healthy QC is per-view chatter => DEBUG. The commit itself is logged by NodeHotStuffEffects.onCommit.
       if (rejected) logger.warn(line) else logger.debug(line)
+      if (!rejected) onAccepted // e.g. broadcast a self-formed QC — only now that WE accept it
       actions.foreach {
         case HotStuffAction.Committed(blockId, height) => effects.onCommit(blockId, height)
         case _                                         => ()
@@ -167,6 +190,7 @@ object HotStuffCoordinator {
         }
         nextPhase.foreach(p => castVotes(qc.view, p, qc.blockId, qc.blockHeight.toInt))
       }
+      prunePool() // the view may have advanced — evict superseded targets (bounded-memory guard)
     }
 
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = {
@@ -180,6 +204,7 @@ object HotStuffCoordinator {
     def onTimeout(): Unit = {
       val (nextEngine, _) = HotStuffEngine.onTimeout(engine)
       engine = nextEngine
+      prunePool() // view advanced on timeout — evict superseded targets (bounded-memory guard)
     }
   }
 }
