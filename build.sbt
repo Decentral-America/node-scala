@@ -253,7 +253,16 @@ inScope(Global)(
     // published to Maven Central, this resolver and the CI mvn install chain
     // become unnecessary.
     resolvers ++= Resolver.sonatypeCentralSnapshots +: Seq(Resolver.mavenLocal),
-    Compile / packageDoc / publishArtifact := false,
+    // Maven Central's Central Portal rejects any published artifact missing a
+    // javadoc jar ("Javadocs must be provided but not found in entries") --
+    // only surfaced once this repo was actually published there for the
+    // first time. This block is Global-scoped (`inScope(Global)`), which is
+    // NOT specific enough to override sbt's own per-project packageDoc/
+    // mappings default (JvmPlugin's Defaults.packageTaskSettings applies at
+    // the Project axis, which always wins over Global) -- so real scaladoc
+    // generation runs instead of a placeholder; verified it succeeds
+    // (grpc-server: 31s, no errors).
+    Compile / packageDoc / publishArtifact := true,
     concurrentRestrictions                 := Seq(Tags.limit(Tags.Test, math.min(EvaluateTask.SystemProcessors, 8))),
     excludeLintKeys ++= Set(
       node / Universal / configuration,

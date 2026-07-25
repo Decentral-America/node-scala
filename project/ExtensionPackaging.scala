@@ -25,8 +25,15 @@ object ExtensionPackaging extends AutoPlugin {
 
   override def projectSettings: Seq[Def.Setting[_]] =
     Seq(
-      packageDoc / publishArtifact := false,
-      packageSrc / publishArtifact := false,
+      // Maven Central's Central Portal rejects any published artifact missing
+      // a sources and a javadoc jar ("Sources/Javadocs must be provided but
+      // not found in entries") -- this plugin used to suppress both entirely,
+      // which only surfaced once this repo's modules were actually published
+      // there for the first time. Sources are real (just archives .scala/.java
+      // files, cheap and reliable); javadoc is left as an empty placeholder
+      // jar (see `Compile / packageDoc / mappings` in build.sbt) rather than
+      // running real scaladoc across this whole codebase.
+      packageDoc / publishArtifact := true,
       // Here we record the classpath as it's added to the mappings separately, so
       // we can use its order to generate the bash/bat scripts.
       classpathOrdering := Nil,
