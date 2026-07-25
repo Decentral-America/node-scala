@@ -53,11 +53,15 @@ object HotStuffVotePool {
   /** Ingest one vote. `liveCommittee` is whatever the caller's committee-provider currently returns
     * (it may differ from call to call). The vote's OWN signature is checked against `liveCommittee`
     * (the committee genuinely active when THIS vote arrived — using anything else would be checking
-    * a real vote against a snapshot that was never in effect when it was received). `liveCommittee` is
-    * also added to this target's set of observed snapshots; the quorum-threshold question ("do the
-    * accumulated signers reach 2/3?") is then answered against EVERY snapshot ever observed for this
-    * target, not just this one, so a QC only forms if the signer set would have satisfied every
-    * committee configuration that was live at any point during this target's accumulation.
+    * a real vote against a snapshot that was never in effect when it was received). The target's
+    * bucket is then re-filtered against `liveCommittee`, silently evicting any previously-pooled vote
+    * whose signer is no longer valid under it (removed or slot-reassigned by a committee rollover) —
+    * this keeps the gate and `formQC` below over a single self-consistent signer set and closes a
+    * permanent-stall bug (see the eviction comment inside the method). `liveCommittee` is also added
+    * to this target's set of observed snapshots; the quorum-threshold question ("do the accumulated
+    * signers reach 2/3?") is then answered against EVERY snapshot ever observed for this target, not
+    * just this one, so a QC only forms if the signer set would have satisfied every committee
+    * configuration that was live at any point during this target's accumulation.
     * Returns the updated pool and, if this vote completes the (all-snapshots) quorum for its target,
     * the freshly-formed QC (and clears that bucket + its observed-snapshot set). Invalid votes are
     * ignored.
@@ -68,7 +72,18 @@ object HotStuffVotePool {
     if (!HotStuffQuorum.verifyVote(vote, liveCommittee)) (pool, None) // drop invalid — do not pool it
     else {
       val bucket        = pool.pending.getOrElse(key, Vector.empty)
-      val updated       = if (bucket.exists(_.voterIndex == vote.voterIndex)) bucket else bucket :+ vote
+      val withNew       = if (bucket.exists(_.voterIndex == vote.voterIndex)) bucket else bucket :+ vote
+      // Evict any pooled vote that no longer verifies against the CURRENT live committee — e.g. its
+      // signer was dropped by a committed-generators/conflict-generators period rollover, or its
+      // positional slot was reassigned to a different generator. This is REQUIRED for liveness, not
+      // just tidiness: `HotStuffQuorum.formQC` rejects the ENTIRE vote set (`Left`) if ANY single vote
+      // fails `verifyVote` — it does not filter-and-retry on a valid subset. So one stale vote from a
+      // since-removed generator, left sitting in the bucket, makes every future `formQC` call for this
+      // target return `Left` forever, permanently stalling QC formation even when a safe quorum of
+      // still-valid signers exists. Filtering here evicts such votes the instant a committee change
+      // invalidates them, so the gate and `formQC` below always see a single self-consistent signer
+      // set drawn from the live committee.
+      val updated       = withNew.filter(v => HotStuffQuorum.verifyVote(v, liveCommittee))
       val priorSeen     = pool.seenCommittees.getOrElse(key, Set.empty)
       val seenNow       = priorSeen + liveCommittee
       val withObserved  = pool.copy(seenCommittees = pool.seenCommittees.updated(key, seenNow))
@@ -76,13 +91,16 @@ object HotStuffVotePool {
 
       // Gate: EVERY committee ever observed for this target must independently agree quorum is
       // reached. One committee snapshot saying "yes" is not enough if an earlier (or later) one
-      // that was also live during this target's accumulation would have said "no".
+      // that was also live during this target's accumulation would have said "no". `updated` has
+      // already been filtered to votes valid under the live committee, so a shrink that evicted a
+      // signer still has to clear the ORIGINAL (larger) snapshot's threshold with the REMAINING
+      // signers — the shrink hazard stays closed.
       if (seenNow.forall(c => HotStuffQuorum.hasQuorum(signerIndexes, c))) {
-        // formQC re-verifies every vote's signature against ONE concrete committee (the latest
-        // live one — the closest available proxy for what a receiver checking this QC "right now"
-        // would also use) and aggregates. A signer whose key is no longer valid under the latest
-        // committee is excluded from the aggregate by formQC itself; the all-snapshots gate above
-        // already ensures the REMAINING signers are enough under every snapshot seen regardless.
+        // formQC re-verifies every remaining vote's signature against the live committee and
+        // aggregates. Because `updated` was already filtered to votes that verify under this same
+        // committee, formQC cannot reject the set on a stale-signer basis here; the all-snapshots
+        // gate above independently guarantees the remaining signers clear quorum under every
+        // committee that was ever live while this target accumulated.
         HotStuffQuorum.formQC(updated, liveCommittee) match {
           case Right(qc) =>
             // quorum → emit + clear this target's bucket AND its observed-snapshot set

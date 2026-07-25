@@ -123,6 +123,37 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
       qcAfterThird should be(None)
     }
 
+  // Equal-stake committee for the permanent-stall regression below. C0 = {0,1,2,3} at 25 each,
+  // total 100, 2/3 threshold = 67. After generator 3 is removed, C1 = {0,1,2} at 25 each, total 75,
+  // 2/3 threshold = 50 (75*2=150, endorsed*3>=150 => endorsed>=50).
+  private val equalC0: GeneratorSet = Seq(generator(0, 25), generator(1, 25), generator(2, 25), generator(3, 25))
+  private val equalC1: GeneratorSet = Seq(generator(0, 25), generator(1, 25), generator(2, 25))
+
+  "HotStuffVotePool.onVote, when a vote from a since-REMOVED generator is still sitting in the bucket" should
+    "evict the stale vote and STILL form a QC once enough valid votes arrive under the shrunk committee (permanent-stall regression)" in {
+      // Reproduces the exact stall the audit flagged: vote(3) then vote(0) accumulate under C0 (50
+      // stake, no quorum). Generator 3 is then removed by a rollover -> C1. If vote(3) were left in
+      // the bucket, formQC(bucket={3,0,1,2}, C1) would call verifyVote(vote3, C1), which fails (3 is
+      // not in C1), and formQC rejects the ENTIRE set (Left) forever -> no QC ever forms, even though
+      // {0,1,2} is a trivially-safe quorum. The fix filters the bucket against the live committee on
+      // each vote, evicting vote(3) the moment C1 takes effect.
+      val (afterV3, qc3) = HotStuffVotePool.onVote(VotePool(), voteOf(3), equalC0)
+      qc3 should be(None)
+      val (afterV0, qc0) = HotStuffVotePool.onVote(afterV3, voteOf(0), equalC0)
+      qc0 should be(None) // {3,0} = 50 stake under C0, below 67
+
+      // Generator 3 removed. vote(1) arrives under C1: bucket {3,0,1} filters to {0,1} (3 evicted).
+      val (afterV1, qc1) = HotStuffVotePool.onVote(afterV0, voteOf(1), equalC1)
+      qc1 should be(None) // {0,1} = 50 stake: clears C1's 50 but NOT C0's 67 (all-snapshots gate)
+
+      // vote(2) arrives under C1: {0,1,2} = 75 stake clears BOTH C0's 67 and C1's 50 -> QC forms.
+      val (afterV2, qc2) = HotStuffVotePool.onVote(afterV1, voteOf(2), equalC1)
+      qc2.isDefined should be(true)                                 // stall is closed: a QC does form
+      qc2.get.signerIndexes.sorted should be(Seq(0, 1, 2))          // and the removed signer 3 is NOT in it
+      HotStuffQuorum.verifyQC(qc2.get, equalC1) should be(Right(true))
+      afterV2.pending should be(empty)                              // bucket cleared on emit
+    }
+
   "a QC formed by HotStuffVotePool" should
     "pass HotStuffEngine's own local re-verification against the committee active at formation time (self-consistency)" in {
       // Mirrors HotStuffCoordinator.Enabled.onVote's real sequence: onVote -> broadcast(qc) -> onQC(qc),
