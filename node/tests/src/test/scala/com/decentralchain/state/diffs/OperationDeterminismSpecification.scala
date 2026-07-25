@@ -3,16 +3,22 @@ package com.decentralchain.state.diffs
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.tags.SlowTest
+import com.decentralchain.test.DomainPresets.TransactionStateSnapshot
 import com.decentralchain.test.{FreeSpec, NumericExt}
 import com.decentralchain.transaction.TxHelpers
 
 import scala.util.Random
 
 /** Applies the SAME seeded operation sequence to two independently-genesised `Domain` instances and
-  * checks their per-account balance state matches after every single step. A divergence here would be
-  * exactly the "two nodes computed different state from the same transaction sequence" failure class
-  * behind the open Committed-Generators StateHash Finding, so this is a targeted regression check for
-  * that finding rather than a general fuzzer.
+  * checks their per-account balance state AND full state hash match after every single step.
+  *
+  * The balance-only comparison this spec started with is weaker evidence than it looks: a divergence in
+  * committed-generators bookkeeping (or any other piece of state that doesn't feed account balances)
+  * with coincidentally-matching balances would not be caught by balances alone. `TransactionStateSnapshot`
+  * activates `BlockchainFeatures.LightNode`, which makes every appended block carry a real
+  * `header.stateHash` (computed by `Domain.createBlockE`'s auto-fill path) -- comparing THAT is a much
+  * stronger, full-state check and is exactly the "two nodes computed different state from the same
+  * transaction sequence" failure class behind the open Committed-Generators StateHash Finding.
   */
 class OperationDeterminismSpecification extends FreeSpec with WithDomain {
   private val PoolSize = 5
@@ -51,8 +57,8 @@ class OperationDeterminismSpecification extends FreeSpec with WithDomain {
       (step, tx)
     }
 
-    withDomain(balances = genesisBalances) { domainA =>
-      withDomain(balances = genesisBalances) { domainB =>
+    withDomain(TransactionStateSnapshot, balances = genesisBalances) { domainA =>
+      withDomain(TransactionStateSnapshot, balances = genesisBalances) { domainB =>
         ops.foreach { case (step, tx) =>
           val resultA = domainA.appendBlockE(tx)
           val resultB = domainB.appendBlockE(tx)
@@ -69,6 +75,17 @@ class OperationDeterminismSpecification extends FreeSpec with WithDomain {
             ) {
               domainA.balance(account.toAddress) shouldBe domainB.balance(account.toAddress)
             }
+          }
+
+          val stateHashA = domainA.blockchain.lastBlockHeader.flatMap(_.header.stateHash)
+          val stateHashB = domainB.blockchain.lastBlockHeader.flatMap(_.header.stateHash)
+          withClue(s"seed=$seed step=$step tx=${tx.id()}: LightNode should be active, stateHash must be computed: ") {
+            stateHashA.isDefined shouldBe true
+          }
+          withClue(
+            s"seed=$seed step=$step tx=${tx.id()}: full state hash diverged between the two instances (A=$stateHashA, B=$stateHashB): "
+          ) {
+            stateHashA shouldEqual stateHashB
           }
         }
       }
