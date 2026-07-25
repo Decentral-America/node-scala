@@ -36,10 +36,11 @@ case class NodeApiRoute(settings: RestAPISettings, blockchain: Blockchain, appli
     val hotStuff = HotStuffObservation.committedHeightOpt.fold(Json.obj())(h => Json.obj("hotStuffFinalizedHeight" -> h))
     complete(
       Json.obj(
-        "blockchainHeight" -> blockchain.height,
-        "stateHeight"      -> blockchain.height,
-        "updatedTimestamp" -> lastUpdated,
-        "updatedDate"      -> Instant.ofEpochMilli(lastUpdated).toString
+        "blockchainHeight"       -> blockchain.height,
+        "stateHeight"            -> blockchain.height,
+        "updatedTimestamp"       -> lastUpdated,
+        "updatedDate"            -> Instant.ofEpochMilli(lastUpdated).toString,
+        "generationPeriodLength" -> blockchain.settings.functionalitySettings.generationPeriodLength
       ) ++ hotStuff
     )
   }
