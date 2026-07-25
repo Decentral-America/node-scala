@@ -45,7 +45,6 @@ jobs:
       packages: write
       attestations: write
       id-token: write
-      artifact-metadata: write
     outputs:
       digest: ${{ steps.push.outputs.digest }}
       node-version: ${{ steps.versions.outputs.node-version }}

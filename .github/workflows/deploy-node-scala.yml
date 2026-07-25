@@ -22,7 +22,6 @@ permissions:
   packages: write
   attestations: write
   id-token: write
-  artifact-metadata: write
   security-events: write
 
 concurrency:
