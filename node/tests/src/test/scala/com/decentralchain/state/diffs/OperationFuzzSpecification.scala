@@ -2,6 +2,7 @@ package com.decentralchain.state.diffs
 
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
+import com.decentralchain.tags.SlowTest
 import com.decentralchain.test.{FreeSpec, NumericExt}
 import com.decentralchain.transaction.TxHelpers
 
@@ -14,7 +15,11 @@ import scala.util.Random
   * sequences + invariant checks).
   */
 class OperationFuzzSpecification extends FreeSpec with WithDomain {
-  private val PoolSize       = 5
+  private val PoolSize = 5
+  // Overridable at runtime via -Ddcc.fuzz.seedCount so the nightly workflow (which does real
+  // per-block RocksDB appends per seed, unlike the push-gated budget) can sweep far more seeds
+  // than the 50 baked into the push-gated run without touching this file.
+  private val SeedCount      = sys.props.get("dcc.fuzz.seedCount").map(_.toInt).getOrElse(50)
   private val OperationCount = 200
   private val InitialBalance = 1000.dcc
   private val TransferFee    = 100000L // min fee for Transfer: FeeConstants(Transfer) = 1 * FeeUnit (100000)
@@ -110,8 +115,8 @@ class OperationFuzzSpecification extends FreeSpec with WithDomain {
   }
 
   "a pool of 5 accounts under 200 random transfer/lease operations per seed" - {
-    (0 until 50).foreach { seed =>
-      s"seed=$seed: every accepted operation conserves balance/lease-balance exactly, every rejection is a no-op" in runFuzzRound(
+    (0 until SeedCount).foreach { seed =>
+      s"seed=$seed: every accepted operation conserves balance/lease-balance exactly, every rejection is a no-op" taggedAs SlowTest in runFuzzRound(
         seed.toLong
       )
     }

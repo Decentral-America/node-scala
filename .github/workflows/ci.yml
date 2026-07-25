@@ -102,7 +102,7 @@ jobs:
             "repl/test" \
             "grpc-server/test" \
             "ride-runner/test" \
-            "node-tests/test" \
+            "node-tests/testOnly -- -l com.decentralchain.tags.SlowTest" \
             coverageAggregate
       - name: Upload coverage to Codecov
         if: always()

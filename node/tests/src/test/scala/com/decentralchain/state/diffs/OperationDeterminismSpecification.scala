@@ -2,6 +2,7 @@ package com.decentralchain.state.diffs
 
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
+import com.decentralchain.tags.SlowTest
 import com.decentralchain.test.{FreeSpec, NumericExt}
 import com.decentralchain.transaction.TxHelpers
 
@@ -14,7 +15,9 @@ import scala.util.Random
   * that finding rather than a general fuzzer.
   */
 class OperationDeterminismSpecification extends FreeSpec with WithDomain {
-  private val PoolSize       = 5
+  private val PoolSize = 5
+  // Overridable at runtime via -Ddcc.fuzz.seedCount — see OperationFuzzSpecification for rationale.
+  private val SeedCount      = sys.props.get("dcc.fuzz.seedCount").map(_.toInt).getOrElse(50)
   private val OperationCount = 200
   private val InitialBalance = 1000.dcc
   private val TransferFee    = 100000L // min fee for Transfer: FeeConstants(Transfer) = 1 * FeeUnit (100000)
@@ -73,8 +76,8 @@ class OperationDeterminismSpecification extends FreeSpec with WithDomain {
   }
 
   "two independently-genesised Domain instances fed the identical seeded operation sequence" - {
-    (0 until 50).foreach { seed =>
-      s"seed=$seed: must reach identical balance state at every step" in runDeterminismRound(seed.toLong)
+    (0 until SeedCount).foreach { seed =>
+      s"seed=$seed: must reach identical balance state at every step" taggedAs SlowTest in runDeterminismRound(seed.toLong)
     }
   }
 }
