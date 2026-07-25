@@ -8,6 +8,39 @@ permissions:
   contents: read
 
 jobs:
+  # matcher's dex-ext build (project/NodeArtifactsPlugin.scala) downloads a
+  # `dcc-grpc-server-<version>.tgz` (and a `dcc-grpc-server-stagenet-<version>.tgz`)
+  # release asset from this repo's GitHub Releases API to build its own Docker
+  # image -- confirmed missing entirely on this repo's first real release
+  # ("Can't find the grpc-server archive"), since nothing had ever uploaded it.
+  # This repo doesn't build network-differentiated Universal tarballs (that's
+  # only done for Debian packages), so both expected names get the same content.
+  publish-grpc-server-tarball:
+    name: Upload grpc-server tarball (matcher dex-ext dependency)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write  # gh release upload
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520  # v5.4.0
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+      - run: sbt --batch 'grpc-server/Universal/packageZipTarball'
+      - name: Upload tarball under both names matcher's build expects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tgz=$(find grpc-server/target/universal -maxdepth 1 -name 'dcc-grpc-server-*.tgz')
+          version="${{ github.ref_name }}"
+          version="${version#v}"
+          cp "$tgz" "dcc-grpc-server-stagenet-${version}.tgz"
+          gh release upload "${{ github.ref_name }}" "$tgz" "dcc-grpc-server-stagenet-${version}.tgz" --repo "${{ github.repository }}"
+
   publish-node-image:
     name: Publish DCC Node Image
     uses: ./.github/workflows/publish-node-scala.yml
