@@ -150,12 +150,23 @@ object HotStuffCoordinator {
             s"— votes disagree on blockHeight=${bucket.map(_.blockHeight.toInt).distinct.sorted} (must be identical to form a QC)"
         )
       maybeQC.foreach { qc =>
-        effects.broadcast(qc)
-        onQC(qc)
+        // Self-verify BEFORE broadcasting. `applyQC` re-reads the committee (`refreshCommittee`) and
+        // re-verifies the QC; if the committee shifted between `onVote`'s read above and this read,
+        // the node must NOT broadcast a QC it then locally rejects. Passing the broadcast as the
+        // by-name `onAccepted` runs it only when local self-verification succeeds, at the same point
+        // (before commit/phase-progression) the broadcast previously occupied.
+        applyQC(qc, effects.broadcast(qc))
       }
     }
 
-    def onQC(qc: QuorumCertificate): Unit = {
+    def onQC(qc: QuorumCertificate): Unit = applyQC(qc, ()) // wire-received QC: no re-broadcast on accept
+
+    /** Apply a QC to local state: refresh committee → `HotStuffEngine.onQC` (verify) → commit →
+      * phase-progress → prune. `onAccepted` (by-name) runs exactly once, IFF the QC passes this node's
+      * own re-verification (was not `Rejected`), positioned after verification but before commit/phase-
+      * progression — the hook a self-formed QC uses to broadcast only after it self-verifies.
+      */
+    private def applyQC(qc: QuorumCertificate, onAccepted: => Unit): Unit = {
       refreshCommittee()
       val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
       engine = nextEngine
@@ -165,6 +176,7 @@ object HotStuffCoordinator {
       // A rejected QC is worth surfacing (committee/view skew, e.g. during post-restart catch-up); a
       // healthy QC is per-view chatter => DEBUG. The commit itself is logged by NodeHotStuffEffects.onCommit.
       if (rejected) logger.warn(line) else logger.debug(line)
+      if (!rejected) onAccepted // e.g. broadcast a self-formed QC — only now that WE accept it
       actions.foreach {
         case HotStuffAction.Committed(blockId, height) => effects.onCommit(blockId, height)
         case _                                         => ()
