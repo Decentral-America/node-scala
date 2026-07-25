@@ -253,3 +253,55 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-results.sarif
+
+  # ── OpenAPI contract/schema conformance ─────────────────────────────────────
+  # Fails the PR if either OpenAPI spec (node REST API, ride-runner REST API)
+  # changes in a way that breaks existing clients (oasdiff classifies each
+  # schema/path change and this job gates on ERR-level findings only). Runs
+  # standalone -- it just diffs file revisions -- so it has no `needs:` on
+  # build/test/package and can report back well before those longer jobs finish.
+  api-schema-conformance:
+    name: OpenAPI Breaking-Change Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Extract base-branch specs
+        run: |
+          git show "origin/${{ github.base_ref }}:node/src/main/resources/swagger-ui/openapi.yaml" > /tmp/node-openapi-base.yaml
+          git show "origin/${{ github.base_ref }}:ride-runner/src/main/resources/swagger-ui/openapi.yaml" > /tmp/ride-runner-openapi-base.yaml
+
+      - name: Install oasdiff
+        # Installed via the project's official install script rather than a
+        # hardcoded release-asset URL -- mirrors the matcher repo's
+        # api-schema-conformance job (feat/tier5-oasdiff there). Verified live
+        # against the current release (v1.26.0, 2026-07-24): oasdiff's Linux
+        # tarballs are named oasdiff_<version>_<os>_<arch>.tar.gz (e.g.
+        # oasdiff_1.26.0_linux_amd64.tar.gz) -- there is no unversioned
+        # oasdiff_linux_amd64.tar.gz asset, so a bare
+        # `releases/latest/download/oasdiff_linux_amd64.tar.gz` URL 404s.
+        # install.sh resolves the correct per-platform asset name, verifies
+        # its sha256 against the release's checksums.txt, and installs to
+        # /usr/local/bin/oasdiff.
+        #
+        # Fetched from the v1.26.0 tag (not `main`) and `version=` pinned to
+        # match, so both the installer logic and the oasdiff version it
+        # installs are frozen -- a new oasdiff release can add new
+        # breaking-change checks, and an unpinned install could make a PR
+        # start failing this job for reasons unrelated to its own diff. Bump
+        # both together, deliberately, and keep in sync with matcher's pin.
+        run: curl -fsSL https://raw.githubusercontent.com/oasdiff/oasdiff/v1.26.0/install.sh | version=1.26.0 sh
+
+      - name: Check node REST API for breaking changes
+        # --fail-on ERR: exit 1 only on definite breaking changes (ERR),
+        # not WARN-level maybes.
+        run: oasdiff breaking /tmp/node-openapi-base.yaml node/src/main/resources/swagger-ui/openapi.yaml --fail-on ERR
+
+      - name: Check ride-runner REST API for breaking changes
+        run: oasdiff breaking /tmp/ride-runner-openapi-base.yaml ride-runner/src/main/resources/swagger-ui/openapi.yaml --fail-on ERR
