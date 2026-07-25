@@ -46,6 +46,16 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # The image is pushed to ghcr.io (not Docker Hub, despite this job's
+      # name/login above) but there was no ghcr.io login at all -- push
+      # failed with "failed to fetch anonymous token: 403 Forbidden" on the
+      # very first real release. GITHUB_TOKEN + this job's packages:write
+      # permission is all ghcr.io needs.
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta-ride-runner
         uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
         with:

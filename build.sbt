@@ -44,7 +44,14 @@ ThisBuild / publishTo              := {
     // GitHub Packages uses GITHUB_TOKEN Basic auth — simple and free.
     Some("GitHub Packages" at "https://maven.pkg.github.com/Decentral-America/node-scala")
   else
-    sonatypePublishToBundle.value
+    // sbt's own native Central Portal support (the `sonaRelease` command this
+    // repo actually calls) reads staged artifacts from `localStaging`, not
+    // from the xerial sbt-sonatype plugin's own bundle directory. Pointing
+    // publishTo at `sonatypePublishToBundle.value` (xerial's task) staged
+    // everything into a directory `sonaRelease` never looks at, so it always
+    // uploaded an empty bundle ("Bundle has no files") on this repo's first
+    // real release. See https://www.scala-sbt.org/2.x/docs/en/recipes/central.html.
+    localStaging.value
 }
 ThisBuild / credentials ++= {
   // Release credentials: Central Portal API token
