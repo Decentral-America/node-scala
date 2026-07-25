@@ -814,6 +814,16 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Height'
+  /blocks/height/finalized:
+    get:
+      tags:
+        - blocks
+      summary: Finalized blockchain height
+      description: Get the current finalized blockchain height
+      operationId: getFinalizedHeight
+      responses:
+        '200':
+          $ref: '#/components/responses/Height'
   '/blocks/at/{height}':
     get:
       tags:
@@ -973,6 +983,47 @@ paths:
               examples:
                 largeSignificandBlock:
                   $ref: '#/components/examples/largeSignificandBlock'
+  /blocks/headers/finalized:
+    get:
+      tags:
+        - blocks
+      summary: Finalized block headers
+      description: Get headers of the block at the current finalized blockchain height
+      operationId: getFinalizedBlockHeaders
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockHeader'
+            application/json;large-significand-format=string:
+              schema:
+                $ref: '#/components/schemas/BlockHeaderLSF'
+              examples:
+                largeSignificandBlock:
+                  $ref: '#/components/examples/largeSignificandBlock'
+  '/blocks/finalized/at/{height}':
+    get:
+      tags:
+        - blocks
+      summary: Finalized height at height
+      description: >-
+        Get the blockchain height that was already finalized as observed at a
+        given block height. Returns a 404 `Not finalized` error if the given
+        height is not less than the current blockchain height (i.e. finality
+        at that height is not yet known).
+      operationId: getFinalizedHeightAt
+      parameters:
+        - name: height
+          in: path
+          description: Block height
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/Height'
   /peers/connect:
     post:
       tags:
@@ -1213,6 +1264,68 @@ paths:
               examples:
                 largeSignificandblockchainRewards:
                   $ref: '#/components/examples/largeSignificandblockchainRewards'
+  '/generators/at/{height}':
+    get:
+      tags:
+        - blockchain
+      summary: Generators at height
+      description: >-
+        Get the list of committed block generators (consensus committee) at a
+        given height: each generator's address, the balance used for
+        selection, the ID of the commitment transaction, and (if a
+        conflicting commitment was detected) the height at which the
+        conflict occurred. Not guaranteed to be accurate for future heights.
+      operationId: getGeneratorsAtHeight
+      parameters:
+        - name: height
+          in: path
+          description: Block height
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [ address, balance, transactionId ]
+                  properties:
+                    address:
+                      $ref: '#/components/schemas/Address'
+                    balance:
+                      type: integer
+                      format: int64
+                      minimum: 0
+                    transactionId:
+                      $ref: '#/components/schemas/TransactionId'
+                    conflictHeight:
+                      $ref: '#/components/schemas/Height'
+            application/json;large-significand-format=string:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [ address, balance, transactionId ]
+                  properties:
+                    address:
+                      $ref: '#/components/schemas/Address'
+                    balance:
+                      type: string
+                    transactionId:
+                      $ref: '#/components/schemas/TransactionId'
+                    conflictHeight:
+                      $ref: '#/components/schemas/Height'
+        '404':
+          description: The given height is greater than the current blockchain height
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 0
   '/transactions/status/{id}':
     get:
       tags:
@@ -2453,6 +2566,39 @@ paths:
                 items:
                   $ref: '#/components/schemas/AssetDetails'
       x-codegen-request-body-name: ids
+  /eth/assets:
+    get:
+      tags:
+        - assets
+      summary: Asset details by ERC20 address
+      description: >-
+        Get detailed information about assets identified by their ERC20
+        contract addresses, for use with the Ethereum-compatible JSON-RPC
+        bridge. Limited by `rest-api.asset-details-limit`, 100 by default.
+      operationId: getAssetDetailsByErc20Id
+      parameters:
+        - name: id
+          in: query
+          description: >-
+            ERC20 asset ID: 20-byte hex string of the asset address,
+            optionally 0x-prefixed
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: '^(0x)?[0-9a-fA-F]{40}$'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetDetails'
   '/assets/balance/{address}/{assetId}':
     get:
       tags:
