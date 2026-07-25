@@ -74,6 +74,17 @@ object HotStuffCoordinator {
     // the start of each event so reducers always see the current period's set.
     private def refreshCommittee(): Unit = engine = engine.copy(committee = committeeProvider())
 
+    // Bounded eviction of superseded pool entries (memory-leak guard, audit finding 2026-07-25). A
+    // target never resolves on its own — a losing-fork block, or junk votes broadcast for bogus
+    // targets — so its bucket + committee-snapshot set would leak into `pool` forever with no other
+    // removal path (buckets are only cleared on successful QC formation). Prune every target strictly
+    // older than the currently-active view whenever the view advances. Margin of ONE view is required
+    // for correctness: after a PREPARE QC the pacemaker is already at v+1 while this node is still
+    // accumulating PRE_COMMIT/COMMIT votes for view v, so we retain `view >= pacemaker.view - 1` to
+    // avoid evicting the active view's still-in-flight later phases. Pure reducer; no timers/threads.
+    private def prunePool(): Unit =
+      pool = HotStuffVotePool.pruneOlderThan(pool, engine.pacemaker.view - 1)
+
     private def bid(b: BlockId): String = b.toString.take(8)
 
     /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool. */
@@ -167,6 +178,7 @@ object HotStuffCoordinator {
         }
         nextPhase.foreach(p => castVotes(qc.view, p, qc.blockId, qc.blockHeight.toInt))
       }
+      prunePool() // the view may have advanced — evict superseded targets (bounded-memory guard)
     }
 
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = {
@@ -180,6 +192,7 @@ object HotStuffCoordinator {
     def onTimeout(): Unit = {
       val (nextEngine, _) = HotStuffEngine.onTimeout(engine)
       engine = nextEngine
+      prunePool() // view advanced on timeout — evict superseded targets (bounded-memory guard)
     }
   }
 }

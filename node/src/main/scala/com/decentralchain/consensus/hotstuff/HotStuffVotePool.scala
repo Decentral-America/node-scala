@@ -116,4 +116,18 @@ object HotStuffVotePool {
       } else (withObserved.copy(pending = withObserved.pending.updated(key, updated)), None)
     }
   }
+
+  /** Bounded eviction (memory-leak guard): drop every target whose `view` is strictly older than
+    * `minView`, from BOTH `pending` and `seenCommittees`. A target never resolves on its own — a
+    * losing-fork block, or junk votes deliberately broadcast for bogus targets, would otherwise leak
+    * one bucket plus one committee-snapshot set into the pool forever (`seenCommittees` is unbounded
+    * by distinct-snapshot count, so this matters). The coordinator calls this from its view/height-
+    * advance path with a `minView` chosen to retain the currently-active view's still-in-flight phases
+    * (see `HotStuffCoordinator`). Pure and side-effect free — no timers or background threads.
+    */
+  def pruneOlderThan(pool: VotePool, minView: Int): VotePool =
+    VotePool(
+      pending = pool.pending.filter { case ((view, _, _), _) => view >= minView },
+      seenCommittees = pool.seenCommittees.filter { case ((view, _, _), _) => view >= minView }
+    )
 }
