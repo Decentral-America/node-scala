@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: Decentral-America/DecentralChain
-          ref: ${{ inputs.monorepo-ref }}
+          ref: ${{ inputs.monorepo-ref || '2c886b76999e658bf4fa058a290eacb40b83c1d3' }}
           path: _dcc-monorepo
           persist-credentials: false
           sparse-checkout: |
