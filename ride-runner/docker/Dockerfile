@@ -5,6 +5,11 @@ FROM eclipse-temurin:25-jdk-noble@sha256:76dfe92b7a1af973928c04cf9be0d682120d88e
 
 SHELL ["/bin/bash", "-c"]
 
+# Additional dependencies (installed before the async-profiler download below,
+# which needs wget -- the eclipse-temurin:25-jdk-noble base image doesn't ship
+# it, so downloading before this step fails with "wget: command not found")
+RUN apt-get update && apt-get install -y --no-install-recommends wget unzip gosu libjemalloc-dev graphviz || exit 1
+
 # async profiler
 # /usr/local/async-profiler/build/libasyncProfiler.so
 ENV ASYNCPROF_VERSION=4.4
@@ -14,10 +19,8 @@ RUN export ASYNCPROF_ARCHIVE="async-profiler-${ASYNCPROF_VERSION}-linux-x64.tar.
       echo "${ASYNCPROF_SHA256}  /tmp/${ASYNCPROF_ARCHIVE}" | sha256sum -c - && \
       mkdir /usr/local/async-profiler; tar -xvzf /tmp/$ASYNCPROF_ARCHIVE --strip-components=1 -C /usr/local/async-profiler || exit 1;
 
-# Additional dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends wget unzip gosu libjemalloc-dev graphviz || exit 1; \
-    # Clean
-    apt-get remove -y wget unzip && apt-get autoremove -y && apt-get autoclean && rm -rf /var/lib/apt/lists/*
+# Clean up build-time-only tools now that both steps above are done
+RUN apt-get remove -y wget unzip && apt-get autoremove -y && apt-get autoclean && rm -rf /var/lib/apt/lists/*
 
 ENV RIDE_LOG_LEVEL=INFO
 ENV RIDE_HEAP_SIZE=2500m
