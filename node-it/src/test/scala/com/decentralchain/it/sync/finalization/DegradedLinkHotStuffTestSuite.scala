@@ -92,8 +92,12 @@ class DegradedLinkHotStuffTestSuite extends HotStuffFourNodeSuite with ToxiProxy
     val leader          = docker.startNode(leaderOverride.withFallback(configs.head), autoConnect = false)
 
     // 4. The other two nodes: normal bring-up, real addresses, healthy links to both leader and farSide.
-    val other1 = docker.startNode(configs(2), autoConnect = true)
-    val other2 = docker.startNode(configs(3), autoConnect = true)
+    //    Neither depends on the other (unlike steps 1-3 above, which are a genuine dependency chain), so
+    //    bring them up the same way the base `Docker.startNodes` does for the default cluster: create both
+    //    containers first, then await both `waitForStartup()`s concurrently (`Future.traverse` inside
+    //    `startNodes`), instead of two back-to-back `startNode` calls each blocking on its own 3-minute
+    //    `Await.result` before the next one even starts.
+    val Seq(other1, other2) = docker.startNodes(Seq(configs(2), configs(3)))
 
     // Preserve nodeConfigs' original ordering (leader, farSide, other, other) so `hsNodes(1)` below still
     // means "the far side of the degraded link", matching this suite's own setup above.
