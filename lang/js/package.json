@@ -1,5 +1,5 @@
 {
-  "name": "@dcc/ride-lang",
+  "name": "@decentralchain/ride-lang",
   "version": "0.1.0",
   "description": "RIDE Compiler and Evaluator",
   "main": "dist/lang.js",
