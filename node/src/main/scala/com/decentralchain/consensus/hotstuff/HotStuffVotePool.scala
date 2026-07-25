@@ -27,7 +27,14 @@ import io.decentralchain.protobuf.block.HotStuffPhase
   * this target was accumulating — monotonically safe in both directions: a shrinking committee cannot
   * make an insufficient signer set sufficient (it must still clear the ORIGINAL, larger threshold),
   * and a growing committee cannot let a QC form representing less than 2/3 of the CURRENT stake (it
-  * must also clear the NEW, larger threshold). This does not by itself guarantee cross-replica
+  * must also clear the NEW, larger threshold). Note this "≥2/3 of every seen committee by stake"
+  * guarantee holds BECAUSE of the COMBINATION of this stake gate AND `formQC`/`verifyQC`'s BLS
+  * signature re-verification against each committee's real per-generator pubkeys — NOT from the stake
+  * gate alone. The gate counts positional `GeneratorIndex`es, and an index can be reassigned to a
+  * different generator across a period rollover, so index-based stake-counting on its own would not
+  * bind the count to the generators who actually signed; the signature re-verification layered on top
+  * is what makes the counted stake correspond to genuine signers under each committee. This does not
+  * by itself guarantee cross-replica
   * agreement on which committee a QC "belongs to" during an active transition (that would need the
   * committee's identity bound into the signed vote/QC content, or a full joint-consensus-style
   * two-phase membership-change protocol) — it closes the LOCAL, single-replica formation hazard this
