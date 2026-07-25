@@ -5,6 +5,8 @@ name: node-it (integration tests)
 # then `node-it/testOnly` the requested suites. The monorepo ref is pinned so the JVM deps
 # (protobuf-schemas etc.) match the node-scala ref being built.
 on:
+  schedule:
+    - cron: '37 3 * * *'  # daily 03:37 UTC
   workflow_dispatch:
     inputs:
       suite:
@@ -84,7 +86,7 @@ jobs:
       - name: Build node-it docker image (buildTarballsForDocker + docker build)
         run: sbt --batch "node-it/docker"
       - name: Run node-it suites
-        run: sbt --batch "node-it/testOnly ${{ inputs.suite }}"
+        run: sbt --batch "node-it/testOnly ${{ inputs.suite || 'com.decentralchain.it.sync.finalization.*' }}"
       - name: Upload node-it logs on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
