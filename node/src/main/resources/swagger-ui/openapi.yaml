@@ -3476,6 +3476,7 @@ paths:
                   - stateHeight
                   - updatedDate
                   - updatedTimestamp
+                  - generationPeriodLength
                 type: object
                 properties:
                   blockchainHeight:
@@ -3486,6 +3487,9 @@ paths:
                     $ref: '#/components/schemas/Timestamp'
                   updatedDate:
                     type: string
+                  generationPeriodLength:
+                    type: integer
+                    description: Length, in blocks, of one generation period on this network. Deployment-specific (differs between mainnet/testnet/stagenet).
   /node/version:
     get:
       tags:
