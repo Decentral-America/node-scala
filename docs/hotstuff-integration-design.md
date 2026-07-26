@@ -132,9 +132,29 @@ Mirror the existing feature-25 endorsement path:
 - **Step 5 (smoke green):** `node-it` multi-node suites (pattern: `node-it/.../sync/finalization/*`).
   `FourNodeHotStuffTestSuite` **passes on CI** (ubuntu-latest, PR #17) — the enabled wiring is
   non-destructive and feature-25 finality advances on all 4 nodes with HotStuff on. (Flaky only on a
-  memory-pressured host; see §5 — not a HotStuff issue.) Still TODO: crashed-leader, network-partition,
-  equivocating-validator scenarios, then testnet soak behind the flag. BFT safety/liveness only manifest
-  across ≥4 nodes; no unit test substitutes.
+  memory-pressured host; see §5 — not a HotStuff issue.) **Update (2026-07-26):** crashed-leader and
+  network-partition are done — the suite's own three cases now cover happy-path, smallest-stake-node
+  crash (survivors' finalized height never regresses, reconverges on restart), and real Docker-level
+  partition of the smallest-stake node via `Docker.disconnectFromNetwork` (majority's finalized height
+  never regresses during isolation, reconverges on heal). This is provably sufficient for a partition
+  under a SINGLE FIXED committee: any two ≥2/3-stake quorums of the same committee must share ≥1/3 of
+  it, so a static-committee partition can never yield two independent quorums for different blocks —
+  ordinary BFT quorum-intersection math, not something a bigger seed sweep would add confidence to.
+  Remaining, precisely re-scoped by `HotStuffCrossEpochForkSpecification`
+  (`node/tests/.../consensus/hotstuff/HotStuffCrossEpochForkSpecification.scala`): that
+  quorum-intersection guarantee does NOT extend across two DIFFERENT committees (e.g. a full
+  validator-set rotation between committed-generators periods) — the spec exhibits two disjoint,
+  entirely honest 2/3-quorums independently certifying different blocks at an identical (view,
+  height), with zero shared signers, invisible to `HotStuffSafety.equivocators` (which only catches a
+  single voter double-signing). This is the concrete form of "follow-up (a)" below; closing it needs a
+  wire-format committee-identity binding plus a coordinator-level transition-gating rule, or a full
+  joint-consensus two-phase membership protocol — both real protocol-design decisions, not bounded
+  bugs, and deliberately not attempted without dedicated multi-round adversarial review (see that
+  spec's doc comment). A genuine Twins-style equivocating-validator node-it test (one node double-
+  voting into two live partitions) remains separate future work — needs a purpose-built
+  fault-injection node image, per `FourNodeHotStuffTestSuite`'s own doc comment. BFT safety/liveness
+  only manifest across ≥4 nodes; no unit test substitutes for the node-it layer, but the cross-epoch
+  hazard above is fully demonstrated at the unit layer and does not need one.
 
 ## 7. Wire format (schemas 1.6.4, `dcc/block.proto`)
 `HotStuffPhase{UNSPECIFIED,PREPARE,PRE_COMMIT,COMMIT}`;
@@ -148,5 +168,8 @@ via central-publishing-maven-plugin); node-scala CI resolves it. (Was the last p
 1. ✅ Publish `protobuf-schemas` 1.6.4 (credentialed release) — **done**, live on Maven Central.
 2. ✅ Step 4c shell landed + step-5 smoke **green on CI** (`FourNodeHotStuffTestSuite` passes on
    ubuntu-latest, PR #17: 4-node cluster finalizes with HotStuff enabled).
-   ◻ Remaining: crashed-leader / partition / equivocator scenarios + testnet soak.
+   ✅ Crashed-leader and static-committee partition scenarios (see §6, 2026-07-26 update).
+   ◻ Remaining: cross-committee-epoch fork hazard (`HotStuffCrossEpochForkSpecification` — needs a
+     protocol-design decision, see §6), Twins-style equivocating-validator node-it scenario
+     (needs a fault-injection node build), then testnet soak behind the flag.
 3. ◻ External audit before `hotstuff.enabled = true` on mainnet.
