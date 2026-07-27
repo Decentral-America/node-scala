@@ -59,8 +59,19 @@ abstract class HotStuffFourNodeSuite extends BaseFreeSpec, OptionValues, ScorexL
     *      its own signing node, and treating a same-transaction "already in the state" rejection on
     *      that single broadcast as benign (the transaction ending up included via some other path is
     *      exactly the outcome we want) rather than a real failure.
+    *
+    *   3. Across the WHOLE call, on a loaded CI runner: `period` is computed once up front, but signing
+    *      and broadcasting one commit per not-yet-committed node is real wall-clock time. If that adds up
+    *      to a full period length before the last node's broadcast lands, the chain has already rolled
+    *      over to the period after the one this call targeted, and `CommitToGenerationTransactionDiff`
+    *      correctly rejects the now-stale `generationPeriodStart` with "Expected the next period start
+    *      height (X), got Y" -- a real, observed 400 on CI, distinct from both races above (it's neither
+    *      an already-committed sender nor an already-included transaction). Fixed by treating that
+    *      specific rejection as a signal to retry the whole selection against the freshly-current period
+    *      rather than a failure: any node that already got included under the old period will show up in
+    *      the next attempt's `alreadyCommitted` and won't be resubmitted.
     */
-  protected def commitAllForNextPeriod(): Seq[GeneratorsResponse.Entry] = {
+  protected def commitAllForNextPeriod(retriesLeft: Int = 2): Seq[GeneratorsResponse.Entry] = {
     val period = leader.currentGenerationPeriod.value.next
     // /generators/at/{h} 404s until the chain has actually reached height h (the route's own guard is
     // period-based and would allow it, but the underlying height genuinely doesn't exist yet on the
@@ -69,18 +80,34 @@ abstract class HotStuffFourNodeSuite extends BaseFreeSpec, OptionValues, ScorexL
     val alreadyCommitted =
       try leader.generators(period.start).map(_.address).toSet
       catch { case ApiCallException(e: UnexpectedStatusCodeException) if e.statusCode == StatusCodes.NotFound.intValue => Set.empty[String] }
-    val toCommit = hsNodes.filterNot(n => alreadyCommitted.contains(n.address))
-    toCommit.foreach { n =>
+    val toCommit         = hsNodes.filterNot(n => alreadyCommitted.contains(n.address))
+    val periodRolledOver = toCommit.exists { n =>
       val commit = n.sign(CommitToGenerationRequest(sender = Some(n.address)))
-      try n.broadcastRequest(commit)
-      catch {
+      try {
+        n.broadcastRequest(commit)
+        false
+      } catch {
         case ApiCallException(e: UnexpectedStatusCodeException)
             if e.statusCode == StatusCodes.BadRequest.intValue && e.responseBody.contains("already in the state") =>
-          log.info(s"CommitToGeneration for ${n.address} raced with a concurrent inclusion (benign, transaction ${commit.id} is in the state): skipping")
+          log.info(
+            s"CommitToGeneration for ${n.address} raced with a concurrent inclusion (benign, transaction ${commit.id} is in the state): skipping"
+          )
+          false
+        case ApiCallException(e: UnexpectedStatusCodeException)
+            if e.statusCode == StatusCodes.BadRequest.intValue && e.responseBody.contains("Expected the next period start height") =>
+          log.info(
+            s"CommitToGeneration for ${n.address} targeted period ${period.start}, which already rolled over while committing the batch: retrying"
+          )
+          true
       }
     }
-    hsNodes.foreach(_.waitForGenerationPeriod(period))
-    leader.generators(period.start)
+    if (periodRolledOver) {
+      require(retriesLeft > 0, s"commitAllForNextPeriod: generation period kept rolling over past all retries")
+      commitAllForNextPeriod(retriesLeft - 1)
+    } else {
+      hsNodes.foreach(_.waitForGenerationPeriod(period))
+      leader.generators(period.start)
+    }
   }
 
   /** The committed generator with the smallest generating balance — crashing/partitioning it removes the
