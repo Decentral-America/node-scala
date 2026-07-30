@@ -86,7 +86,17 @@ jobs:
       - name: Build node-it docker image (buildTarballsForDocker + docker build)
         run: sbt --batch "node-it/docker"
       - name: Run node-it suites
-        run: sbt --batch "node-it/testOnly ${{ inputs.suite || 'com.decentralchain.it.sync.finalization.*' }}"
+        # -Ddcc.it.max-parallel-suites=1 forces the finalization suites to run ONE AT A TIME.
+        # IntegrationTestsPlugin defaults this to dockerCpu*2 (= 8 on ubuntu-latest's 4 vCPUs), so
+        # all four finalization suites -- 1+2+4+4 = 11 node JVMs -- were booting and running
+        # concurrently on a 4-core runner. HotStuff's round-timeout is 1200ms; under that much CPU
+        # overcommit the rounds can't be serviced in time, so finalization stalls and the suites
+        # fail nondeterministically (confirmed: the exact same commit passed and failed on different
+        # nightly runs, and all four suite headers printed at the same instant). These are multi-node
+        # consensus-liveness suites -- each one wants the whole runner -- so serialize them; the
+        # HotStuffFourNodeSuite docstring already warns they are resource-sensitive. Wall-clock cost
+        # is minor (well within this job's 90m budget) and buys deterministic runs.
+        run: sbt --batch -Ddcc.it.max-parallel-suites=1 "node-it/testOnly ${{ inputs.suite || 'com.decentralchain.it.sync.finalization.*' }}"
       - name: Upload node-it logs on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
