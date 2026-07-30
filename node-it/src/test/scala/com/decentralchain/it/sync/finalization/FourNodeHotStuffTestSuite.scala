@@ -142,12 +142,23 @@ class FourNodeHotStuffTestSuite extends HotStuffFourNodeSuite {
   "T2 HotStuff on a real 4-node cluster" - {
 
     "finalizes on every node without halting or forking" in {
-      commitAllForNextPeriod()
       val start    = leader.finalizedHeight
       val target   = start + 2
       val deadline = 4.minutes.fromNow
       var done     = false
       while (!done && deadline.hasTimeLeft()) {
+        // Re-commit every round, not just once up front. `generation-period-length` is only 3
+        // blocks in node-it (template.conf), so a single commit's committee is live for ~3 blocks
+        // and then goes empty at the period boundary -- after which every node logs "Generator set
+        // is empty, don't collect endorsements" and finalization stalls permanently. Confirmed
+        // directly from a failing run's node logs: the committee finalized up to HotStuff height 3
+        // during its one committed period, then emptied and never recovered, leaving T0
+        // finalizedHeight pinned. This is by design -- the live testnet runs an
+        // auto-commit-generators cron that re-commits every period for exactly this reason -- so
+        // the test must keep the committee populated across period rollovers the same way.
+        // commitAllForNextPeriod is idempotent (skips already-committed generators) and tolerant of
+        // period rollover mid-batch, so calling it each round is safe and cheap.
+        commitAllForNextPeriod()
         // one tx per round -> microblock -> endorsement voting -> finalization progresses
         leader.transfer(leader.keyPair, hsNodes(1).address, 1.dcc, waitForTx = true)
         val fhs = hsNodes.map(_.finalizedHeight)
