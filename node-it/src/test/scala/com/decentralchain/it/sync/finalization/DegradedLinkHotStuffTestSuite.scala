@@ -89,7 +89,7 @@ class DegradedLinkHotStuffTestSuite extends HotStuffFourNodeSuite with ToxiProxy
 
     // 3. Near side, wired to dial ONLY the proxy -- see class doc for why autoConnect must be false here.
     val leaderOverride = ConfigFactory.parseString(s"""dcc.network.known-peers = ["$proxyAddress"]""")
-    val leader          = docker.startNode(leaderOverride.withFallback(configs.head), autoConnect = false)
+    val leader         = docker.startNode(leaderOverride.withFallback(configs.head), autoConnect = false)
 
     // 4. The other two nodes: normal bring-up, real addresses, healthy links to both leader and farSide.
     //    Neither depends on the other (unlike steps 1-3 above, which are a genuine dependency chain), so
@@ -115,13 +115,24 @@ class DegradedLinkHotStuffTestSuite extends HotStuffFourNodeSuite with ToxiProxy
       val deadline = 6.minutes.fromNow // longer than the happy-path deadline: the link is degraded, not down
       var done     = false
       while (!done && deadline.hasTimeLeft()) {
+        // Re-commit the committee every round, exactly as FourNodeHotStuffTestSuite does. node-it's
+        // `generation-period-length` is only 3 blocks, so a committee is live for ~3 blocks and then
+        // empties at the period boundary -- after which every node logs "Generator set is empty, don't
+        // collect endorsements" and finalization stalls permanently (the empty-committee guard in
+        // EndorsementStorage is correct BFT defense: finalizing with no committee would be unsafe).
+        // Without this call the committee is empty from genesis on and finalizedHeight never leaves 1 --
+        // the degraded link is a red herring; this suite was simply missing the committee bootstrap
+        // every other HotStuff suite performs. commitAllForNextPeriod is idempotent + rollover-tolerant.
+        commitAllForNextPeriod()
         leader.transfer(leader.keyPair, hsNodes(1).address, 1.dcc, waitForTx = true)
         val fhs = hsNodes.map(_.finalizedHeight)
         fhs.foreach(fh => if (fh < start) fail(s"finalized height regressed below $start under a degraded link: got $fh"))
         done = fhs.forall(_ >= target)
       }
       if (!done)
-        fail(s"HotStuff-enabled cluster with a degraded link did not finalize to $target within the deadline; per-node finalized=${hsNodes.map(_.finalizedHeight)}")
+        fail(
+          s"HotStuff-enabled cluster with a degraded link did not finalize to $target within the deadline; per-node finalized=${hsNodes.map(_.finalizedHeight)}"
+        )
 
       proxiedLink.toxics.get("degraded-link-latency").remove()
       proxiedLink.toxics.get("degraded-link-bandwidth").remove()
