@@ -71,7 +71,7 @@ object ExtensionAppender extends ScorexLogging {
                   // stops at the first failure, so only applied blocks contribute) and re-offered on
                   // success below; the priority pool re-validates and cleanup drops any the incoming fork
                   // already included.
-                  val discardedSnapshots = Seq.newBuilder[StateSnapshot]
+                  val discardedSnapshots      = Seq.newBuilder[StateSnapshot]
                   val forkApplicationResultEi = {
                     newBlocks.view
                       .map { b =>
