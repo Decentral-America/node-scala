@@ -384,7 +384,7 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
     }
   }
 
-  routePath("/script/meta") ignore {
+  routePath("/script/meta") in {
     // Expression
     val exprBase64 = ExprScript(script).explicitGet().bytes().base64
     Post(routePath("/script/meta"), exprBase64) ~> route ~> check {

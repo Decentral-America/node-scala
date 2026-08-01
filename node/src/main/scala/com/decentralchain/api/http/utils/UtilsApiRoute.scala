@@ -16,7 +16,7 @@ import com.decentralchain.lang.script.Script
 import com.decentralchain.lang.script.Script.ComplexityInfo
 import com.decentralchain.lang.v1.ContractLimits
 import com.decentralchain.lang.v1.estimator.ScriptEstimator
-import com.decentralchain.lang.{API, CompileResult}
+import com.decentralchain.lang.{API, CompileResult, Global}
 import com.decentralchain.settings.RestAPISettings
 import com.decentralchain.state.Blockchain
 import com.decentralchain.state.diffs.FeeValidation
@@ -35,7 +35,8 @@ case class UtilsApiRoute(
     blockchain: Blockchain
 ) extends ApiRoute
     with AuthRoute
-    with TimeLimitedRoute {
+    with TimeLimitedRoute
+    with JsonFormats {
 
   import UtilsApiRoute.*
 
@@ -55,7 +56,17 @@ case class UtilsApiRoute(
 
   override val route: Route = pathPrefix("utils") {
     time ~ seedRoute ~ length ~ hashFast ~ hashSecure ~
-      decompile ~ compileCode ~ compileWithImports ~ estimate ~ evaluate ~ transactionSerialize
+      decompile ~ scriptMeta ~ compileCode ~ compileWithImports ~ estimate ~ evaluate ~ transactionSerialize
+  }
+
+  // Return the callable-function signatures (meta) of a compiled dApp, or ScriptParseError for a
+  // non-dApp (Expression) script. Mirrors AddressApiRoute's scriptInfo/{addr}/meta, but reads the
+  // script from the POST body instead of an on-chain account. All logic pre-exists (Global.dAppFuncTypes
+  // + functionSignaturesWrites); the route had simply never been ported to /utils.
+  def scriptMeta: Route = path("script" / "meta") {
+    (post & entity(as[String])) { base64 =>
+      complete(Script.fromBase64String(base64.trim).flatMap(Global.dAppFuncTypes))
+    }
   }
 
   def decompile: Route = path("script" / "decompile") {
