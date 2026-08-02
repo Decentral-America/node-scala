@@ -20,6 +20,7 @@ import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.assets.IssueTransaction
 import com.decentralchain.transaction.smart.script.trace.{AssetVerifierTrace, InvokeScriptTrace}
 import com.decentralchain.transaction.smart.{InvokeScriptTransaction, SetScriptTransaction}
+import com.decentralchain.transaction.TxValidationError.{FailedTransactionError, ScriptExecutionError}
 import com.decentralchain.transaction.{GenesisTransaction, TransactionType, TxHelpers}
 import org.scalatest.EitherValues
 
@@ -90,7 +91,7 @@ class CallableV4DiffTest extends PropSpec with WithDomain with EitherValues {
     )(_ should produceRejectOrFailedDiff(s" with 6 total scripts invoked does not exceed minimal value of $minimalFee DCC"))
   }
 
-  ignore("trace") {
+  property("trace") {
     val (genesis, setScript, invoke, issue, _, _, _, _, _) = multiActionPreconditions(invokeFee = 0.005.dcc, withScriptError = true)
     assertDiffEiTraced(
       Seq(TestBlock.create(genesis :+ setScript :+ issue)),
@@ -102,7 +103,16 @@ class CallableV4DiffTest extends PropSpec with WithDomain with EitherValues {
 
       val assetTrace = r.trace.tail.asInstanceOf[List[AssetVerifierTrace]]
       assetTrace.take(2).foreach(_.errorOpt shouldBe None)
-      assetTrace.last.errorOpt.get shouldBe r.resultE.left.value.asInstanceOf[TransactionValidationError].cause
+
+      // NOTE: under RideV6 (SynchronousCalls) a fail-free FailedTransactionError is converted to
+      // ScriptExecutionError only at the top-level transaction result (TransactionDiffer.validate's
+      // final leftMap); the per-step AssetVerifierTrace entries keep the raw FailedTransactionError.
+      // These are therefore two different case classes describing the same underlying failure, not
+      // structurally equal values -- compare the semantically-relevant fields instead of the whole object.
+      val lastTraceError = assetTrace.last.errorOpt.get.asInstanceOf[FailedTransactionError]
+      val finalError      = r.resultE.left.value.asInstanceOf[TransactionValidationError].cause.asInstanceOf[ScriptExecutionError]
+      lastTraceError.message shouldBe finalError.message
+      lastTraceError.assetId shouldBe finalError.assetId
     }
   }
 
