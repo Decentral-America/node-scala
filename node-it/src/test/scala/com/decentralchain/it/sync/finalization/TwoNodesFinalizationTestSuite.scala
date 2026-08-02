@@ -1,11 +1,10 @@
 package com.decentralchain.it.sync.finalization
 
 import com.typesafe.config.Config
-import com.decentralchain.api.http.requests.CommitToGenerationRequest
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.it.api.*
 import com.decentralchain.it.api.SyncHttpApi.*
-import com.decentralchain.it.{BaseFreeSpec, NodeConfigs}
+import com.decentralchain.it.{BaseFreeSpec, Node, NodeConfigs}
 import com.decentralchain.state.Height
 import com.decentralchain.test.NumericExt
 import com.decentralchain.utils.ScorexLogging
@@ -13,7 +12,7 @@ import org.scalatest.OptionValues
 
 import scala.concurrent.duration.DurationInt
 
-class TwoNodesFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLogging {
+class TwoNodesFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLogging, HotStuffCommitOps {
   override protected def nodeConfigs: Seq[Config] =
     NodeConfigs.newBuilder
       .overrideBase(_.preactivatedFeatures((BlockchainFeatures.DeterministicFinality.id, Height(0))))
@@ -29,29 +28,20 @@ class TwoNodesFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLo
 
   private lazy val miner2Addr = node2.address
 
-  "finalization activated and works" in {
-    val period1 = node1.currentGenerationPeriod.value.next
+  override protected def commitTargets: Seq[(Node, String)] = Seq((node1, miner1Addr), (node2, miner2Addr))
+  override protected def commitLeader: Node                 = node1
 
-    step("Commit to generation")
-    val commitTxn1 = node1.sign(CommitToGenerationRequest(sender = Some(miner1Addr)))
-    val commitTxn2 = node2.sign(CommitToGenerationRequest(sender = Some(miner2Addr)))
-    Seq(node1, node2).foreach { node =>
-      node.broadcastRequest(commitTxn1)
-      node.broadcastRequest(commitTxn2)
-    }
-    node1.waitForGenerationPeriod(period1)
-    node2.waitForGenerationPeriod(period1)
+  "finalization activated and works" in {
+    step("Commit to generation (rollover-hardened)")
+    val generators = commitAllForNextPeriod()
 
     step("Generators")
     isolated {
-      val generators = node1.generators(period1.start)
       generators.size shouldBe 2
-      // Assert the committed identities (address + commit tx), not exact balances: the generating
-      // balance drifts with block rewards/fees between runs, so hardcoded magic numbers are brittle.
-      generators.map(e => (e.address, e.transactionId)) should contain theSameElementsAs Seq(
-        (miner1Addr, commitTxn1.id),
-        (miner2Addr, commitTxn2.id)
-      )
+      // Assert the committed addresses (the consensus-relevant identity), not exact (address, txId)
+      // pairs: the hardened commit helper can legitimately re-sign/retry across a period rollover,
+      // so the locally-signed transaction id from a single attempt is no longer guaranteed to match.
+      generators.map(_.address) should contain theSameElementsAs Seq(miner1Addr, miner2Addr)
       all(generators.map(_.balance)) should be > 0L
     }
 
