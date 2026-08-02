@@ -4,8 +4,11 @@ on:
   pull_request:
   push:
     branches:
+      # dev is kept as a pure fast-forward mirror of main (never diverges) -- triggering here too
+      # made every merge fire this workflow TWICE for the identical commit (once per ref), racing
+      # two "Test" check-runs against each other and making the surefire-report upload step fail
+      # with "Found multiple in progress 'Test' checks for sha ..." even though every test passed.
       - main
-      - dev
 
 # Minimal permissions at workflow level; jobs that need more declare explicitly.
 permissions:

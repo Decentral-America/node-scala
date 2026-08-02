@@ -2,7 +2,10 @@ name: Semgrep SAST
 
 on:
   push:
-    branches: ["main", "dev"]
+    # dev is a pure fast-forward mirror of main (never diverges) -- triggering push here too fired
+    # this workflow twice per merge for the identical commit. PRs targeting dev still get scanned
+    # via pull_request below.
+    branches: ["main"]
   pull_request:
     branches: ["main", "dev"]
   schedule:
