@@ -80,6 +80,12 @@ jobs:
           (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
           (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
       - name: Check PR
+        # gc.log* capture is on top of the workflow-level JAVA_TOOL_OPTIONS so a hung/slow sbt JVM
+        # (see the 30-min timeout note above -- the ~1h48m wedge that motivated it) leaves a GC log
+        # behind for the "Save debug data" step to pick up on the next real occurrence, instead of
+        # having to guess at the starved resource after the fact.
+        env:
+          JAVA_TOOL_OPTIONS: "${{ env.JAVA_TOOL_OPTIONS }} -Xlog:gc*:file=gc.log:time,uptime,level,tags"
         run: sbt --batch checkPR
       - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
         if: always()
@@ -102,7 +108,10 @@ jobs:
           retention-days: 1
       - name: Save debug data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
+        # Only on failure: gc.log now generated on every run (see the "Check PR" step's
+        # JAVA_TOOL_OPTIONS), so uploading unconditionally would burn storage on every green PR.
+        # Matches the node-it.yml precedent for its own debug-artifact step.
+        if: failure()
         with:
           if-no-files-found: ignore
           name: debug-data
@@ -110,7 +119,8 @@ jobs:
             gc.log*
             hs*.log
             core*
-          retention-days: 7
+            **/target/test-reports/*.xml
+          retention-days: 14
 
   run-smoke-tests:
     needs: check-pr
