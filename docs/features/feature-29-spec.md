@@ -5,6 +5,30 @@
 > running old rules would build/accept a different chain than a node running new rules
 > once real transactions start exercising the gap, which is a hard fork if not gated.
 
+> **UPDATE (post-diagnosis): Items 1 and 2 (SC-575, SC-580) are CONFIRMED ALREADY FIXED in
+> current production code — no feature scaffold or gated diff is needed for either.**
+> Real Docker integration test evidence (`GrpcIssueReissueBurnAssetSuite`, both previously-
+> `ignore`d tests now green):
+> - **SC-575**: the invocation genuinely rejects with `State check failed. Reason: Asset
+>   ... is already issued` when two Issue actions in one invocation produce the same asset
+>   ID. The test itself was underfunded (default `invokeFee` insufficient for a 2-Issue
+>   invocation, masking this behind an unrelated fee error) and its expected message was a
+>   stale placeholder that never matched real production copy — both fixed in
+>   `node-it/src/test/scala/com/decentralchain/it/asset/GrpcIssueReissueBurnAssetSuite.scala`.
+> - **SC-580**: the invocation genuinely rejects with `INVALID_ARGUMENT: Asset is not
+>   reissuable` when a second same-invocation reissue follows an earlier action that set
+>   `reissuable = false`. The test's own body asserted success (`totalVolume` increase)
+>   instead of checking for the error its own name describes — fixed to `assertGrpcError`,
+>   matching the pattern already used by sibling tests in the same file.
+>
+> **Item 3 (SC-695) remains genuinely open** — see that section below; it needs its own
+> separate design pass (an unspecified tx-version/script-version matrix plus an entirely
+> unimplemented `extraFeePerStep` fee mechanism), independent of this outcome.
+>
+> Everything below this point is retained as the original spec (written before this
+> diagnosis) for historical/audit context — it no longer describes work to be scheduled for
+> Items 1–2.
+
 ## Why a new feature, not a fix to existing code
 
 RideV6 (`BlockchainFeatures.RideV6`, id 17) is **already activated** on this chain (mainnet

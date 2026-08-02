@@ -113,12 +113,16 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
   "Restrictions in " + CallableMethod - {
     val method = CallableMethod
 
-    "Issue two identical assets with the same nonce (one invocation) should produce an error" ignore {
-      /* SC-575  */
+    "Issue two identical assets with the same nonce (one invocation) should produce an error" in {
+      /* SC-575: the test was underfunded (default invokeFee is insufficient for a 2-Issue
+       * invocation), which masked the real duplicate-nonce check behind an unrelated
+       * insufficient-fee error. Fixed to invocationCost(2); the duplicate-nonce check already
+       * correctly rejects in production with "Asset ... is already issued" -- only this test's
+       * expected message was a stale placeholder. */
       val acc = createDapp(script(simpleNonreissuableAsset))
       assertGrpcError(
-        invokeScript(acc, "issue2Assets"),
-        "State check failed. Reason: Reason should be here"
+        invokeScript(acc, "issue2Assets", fee = invocationCost(2)),
+        "State check failed. Reason: .* is already issued"
       )
     }
 
@@ -161,14 +165,12 @@ class GrpcIssueReissueBurnAssetSuite extends AnyFreeSpec with GrpcBaseTransactio
       assertGrpcError(reissue(acc, method, assetId, 2, reissuable = true, checkStateChanges = false), "Asset is not reissuable")
     }
 
-    "Reissuing after setting isReissuiable to falser inside one invocation should produce an error" ignore /* SC-580 */ {
+    "Reissuing after setting isReissuiable to falser inside one invocation should produce an error" in /* SC-580 */ {
       val acc     = createDapp(script(simpleReissuableAsset))
       val txIssue = issue(acc, method, simpleReissuableAsset, invocationCost(1))
       val assetId = validateIssuedAssets(acc, txIssue, simpleReissuableAsset, method = method)
 
-      invokeScript(acc, "reissueAndReissue", assetId = assetId, count = 1000)
-
-      sender.assetInfo(assetId).totalVolume should be(simpleReissuableAsset.quantity + 1000)
+      assertGrpcError(invokeScript(acc, "reissueAndReissue", assetId = assetId, count = 1000), "Asset is not reissuable")
     }
   }
 
