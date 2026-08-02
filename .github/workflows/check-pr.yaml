@@ -18,6 +18,12 @@ jobs:
   check-pr:
     name: Check PR
     runs-on: ubuntu-latest
+    # `sbt checkPR` (compile + unit tests + -Werror) runs ~15 min; the parallel "DCC Node CI / Test"
+    # job covers the same work in ~14 min. Without an explicit cap this job inherits GitHub's 360-min
+    # default, so a hung runner (observed: sbt checkPR wedged for ~1h48m with no progress) silently
+    # burns up to 6h of minutes before failing. 30 min is 2x the normal runtime -- generous headroom
+    # for a slow runner, but fails fast on a genuine hang.
+    timeout-minutes: 30
     # action-surefire-report updates this job's own check-run with test annotations; needs checks:write
     # (workflow-level permissions are read-only) or it fails the job with "Resource not accessible by
     # integration" even when the actual sbt build/tests pass.
