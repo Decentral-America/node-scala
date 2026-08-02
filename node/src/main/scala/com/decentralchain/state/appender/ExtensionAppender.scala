@@ -8,6 +8,7 @@ import com.decentralchain.metrics.{BlockStats, Metrics}
 import com.decentralchain.network.{ExtensionBlocks, InvalidBlockStorage, PeerDatabase, formatBlocks, id}
 import com.decentralchain.state.*
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
+import com.decentralchain.state.StateSnapshot
 import com.decentralchain.transaction.*
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.utils.{ScorexLogging, Time}
@@ -60,6 +61,17 @@ object ExtensionAppender extends ScorexLogging {
                     ParSignatureChecker.checkTxSignatures(block.transactionData, rideV6Activated)
                   }
 
+                  // Microblocks discarded by this fork must be returned to the UTX pool, exactly as
+                  // appendKeyBlock does on the broadcast path (utx.setPrioritySnapshots(discardedDiffs)).
+                  // Otherwise a same-height fork received via sync -- one that references the base of our
+                  // current liquid block and ignores our microblocks -- silently drops those
+                  // microblock-only txs forever: they live only in the discarded liquid block, so
+                  // `droppedBlocks` (from removeAfter) never contains them, and this path previously threw
+                  // the discardedDiffs away. Captured here per successfully-applied block (the lazy view
+                  // stops at the first failure, so only applied blocks contribute) and re-offered on
+                  // success below; the priority pool re-validates and cleanup drops any the incoming fork
+                  // already included.
+                  val discardedSnapshots      = Seq.newBuilder[StateSnapshot]
                   val forkApplicationResultEi = {
                     newBlocks.view
                       .map { b =>
@@ -68,8 +80,10 @@ object ExtensionAppender extends ScorexLogging {
                           extension.snapshots.get(b.id())
                         )
                           .map {
-                            case (_: Applied, height) => BlockStats.applied(b, BlockStats.Source.Ext, height)
-                            case _                    =>
+                            case (Applied(discardedDiffs, _, _), height) =>
+                              discardedSnapshots ++= discardedDiffs
+                              BlockStats.applied(b, BlockStats.Source.Ext, height)
+                            case _ =>
                           }
                       }
                       .zipWithIndex
@@ -116,6 +130,8 @@ object ExtensionAppender extends ScorexLogging {
                       val newTransactions = newBlocks.view.flatMap(_.transactionData).toSet
                       utxStorage.removeAll(newTransactions)
                       utxStorage.addAndScheduleCleanup(droppedBlocks.flatMap(_._1.transactionData).filterNot(newTransactions))
+                      val discarded = discardedSnapshots.result()
+                      if (discarded.nonEmpty) utxStorage.setPrioritySnapshots(discarded)
                       Right(Some(blockchainUpdater.score))
                   }
                 }

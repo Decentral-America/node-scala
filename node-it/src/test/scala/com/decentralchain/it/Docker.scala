@@ -318,6 +318,15 @@ class Docker(
       if (Try(nodeConfig.getStringList("dcc.extensions").contains("com.decentralchain.events.BlockchainUpdates")).getOrElse(false)) {
         exposedPorts.add(ExposedPort.tcp(6881))
       }
+      // Same reasoning as the P2P/REST ports above: when the gRPC API extension is enabled the node
+      // listens on dcc.grpc.port (default 6870), but that port is NOT in the image's EXPOSE, so
+      // withPublishAllPorts never binds it and Node.grpcChannel -> nodeExternalPort(6870) NPEs on a null
+      // port binding (the whole `*GrpcSuite` family fails identically). Publish it explicitly from the
+      // RESOLVED config (actualConfig -- nodeConfig may not carry the template's extension list) so every
+      // gRPC suite can reach the node.
+      if (Try(actualConfig.getStringList("dcc.extensions").contains("com.decentralchain.api.grpc.GRPCServerExtension")).getOrElse(false)) {
+        exposedPorts.add(ExposedPort.tcp(Try(actualConfig.getInt("dcc.grpc.port")).getOrElse(6870)))
+      }
 
       val jenkinsJobIdFromEnv = sys.env.get("JENKINS_JOB_ID").fold("")(s => s"-$s")
       // Hoisted out of the containerId block below (and threaded into DockerNode) so callers that need
@@ -382,15 +391,20 @@ class Docker(
     // Host port bindings are populated by Docker shortly AFTER the container starts, and with
     // withPublishAllPorts each published port's host binding can appear a beat apart. The first
     // inspect (right after startContainer) may return no bindings — or only some — which used to
-    // NPE in NodeInfo.externalPort. Wait until BOTH ports NodeInfo reads (REST + network) are bound.
-    def isBound(info: com.github.dockerjava.api.command.InspectContainerResponse, port: Int): Boolean =
-      Option(info.getNetworkSettings.getPorts.getBindings.get(ExposedPort.tcp(port))).exists(_.nonEmpty)
+    // NPE in NodeInfo.externalPort. Wait until EVERY exposed port is bound before snapshotting
+    // NodeInfo.ports: NodeInfo reads REST + network eagerly, but a gRPC suite reads dcc.grpc.port
+    // (6870) via the lazy grpcChannel -- if that binding hadn't appeared yet when the snapshot was
+    // taken, externalPort(6870) NPEd (the `*GrpcSuite` family). Waiting for all exposed ports covers
+    // REST, network, blockchain-updates (6881) and gRPC (6870) uniformly.
+    def isBound(info: com.github.dockerjava.api.command.InspectContainerResponse, port: ExposedPort): Boolean =
+      Option(info.getNetworkSettings.getPorts.getBindings.get(port)).exists(_.nonEmpty)
 
     @tailrec def awaitPortBindings(attempt: Int): com.github.dockerjava.api.command.InspectContainerResponse = {
-      val info = inspectContainer(containerId)
-      if ((isBound(info, restApiPort) && isBound(info, networkPort)) || attempt >= 40) info
+      val info         = inspectContainer(containerId)
+      val exposedPorts = Option(info.getConfig.getExposedPorts).map(_.toSeq).getOrElse(Seq.empty)
+      if ((exposedPorts.nonEmpty && exposedPorts.forall(isBound(info, _))) || attempt >= 40) info
       else {
-        log.debug(s"Container $containerId ports $restApiPort/$networkPort not fully bound yet, retry")
+        log.debug(s"Container $containerId exposed ports not all bound yet (attempt $attempt), retry")
         Thread.sleep(500)
         awaitPortBindings(attempt + 1)
       }

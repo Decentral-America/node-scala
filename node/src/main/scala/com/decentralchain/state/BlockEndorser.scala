@@ -45,6 +45,13 @@ trait BlockEndorser {
     * extends) as endorsedId -- the exact candidate voteSelf produces.
     */
   def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting]
+
+  /** Whether this endorser ever participates in finality voting. `false` only for
+    * [[BlockEndorser.Disabled]] (used by tests, the importer and the block generator), where every
+    * collect call is a guaranteed no-op -- letting callers skip pointless grace/poll waits. Always
+    * `true` in production, which wires [[BlockEndorser.InMemory]].
+    */
+  def enabled: Boolean
 }
 
 object BlockEndorser {
@@ -53,6 +60,7 @@ object BlockEndorser {
     override def voteSelf(generatorSet: GeneratorSet): Unit                      = {}
     override def rebroadcast(): Unit                                             = {}
     override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = None
+    override val enabled: Boolean                                                = false
   }
 
   class InMemory(
@@ -64,6 +72,8 @@ object BlockEndorser {
       allChannels: ChannelGroup
   ) extends BlockEndorser,
         StrictLogging {
+
+    override val enabled: Boolean = true
 
     // This node's own endorsements for the current voting, captured at `vote`/`voteSelf` time so
     // `rebroadcast` can re-deliver them without re-signing: (votingHeight, endorsedHeight, msgs).

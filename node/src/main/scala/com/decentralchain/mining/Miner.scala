@@ -271,6 +271,13 @@ class MinerImpl(
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
   private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
+    // Fast path: a disabled endorser (tests, the importer, the block generator) never collects
+    // anything, so the grace poll below would burn the full 1200ms window on EVERY key-block forge
+    // waiting for a guaranteed-None result -- pathologically slowing any miner-heavy suite. Production
+    // always wires BlockEndorser.InMemory (enabled == true), so this skip changes no real forging or
+    // finality behavior; it only removes dead waiting where nothing can ever arrive.
+    if (!blockEndorser.enabled) return None
+
     // Widening this window does NOT fix the live testnet gap -- confirmed by testing 1200ms and
     // 8000ms side by side, both consistently return None (attempts maxed out, zero non-miner votes
     // collected). Root cause (confirmed via live debug logs, see project_finality_stall_recurrence

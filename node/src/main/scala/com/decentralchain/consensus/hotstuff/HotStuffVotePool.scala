@@ -78,8 +78,8 @@ object HotStuffVotePool {
 
     if (!HotStuffQuorum.verifyVote(vote, liveCommittee)) (pool, None) // drop invalid — do not pool it
     else {
-      val bucket        = pool.pending.getOrElse(key, Vector.empty)
-      val withNew       = if (bucket.exists(_.voterIndex == vote.voterIndex)) bucket else bucket :+ vote
+      val bucket  = pool.pending.getOrElse(key, Vector.empty)
+      val withNew = if (bucket.exists(_.voterIndex == vote.voterIndex)) bucket else bucket :+ vote
       // Evict any pooled vote that no longer verifies against the CURRENT live committee — e.g. its
       // signer was dropped by a committed-generators/conflict-generators period rollover, or its
       // positional slot was reassigned to a different generator. This is REQUIRED for liveness, not

@@ -11,7 +11,7 @@ import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.diffs.FeeValidation
 import com.decentralchain.transaction.TransactionType
 import com.decentralchain.wallet.Wallet
-import io.grpc.{ManagedChannel, ManagedChannelBuilder}
+import io.grpc.{CallOptions, Channel, ClientCall, ClientInterceptor, ForwardingClientCall, ManagedChannel, ManagedChannelBuilder, Metadata, MethodDescriptor}
 import org.asynchttpclient.*
 import org.asynchttpclient.Dsl.{config as clientConfig, *}
 import org.slf4j.LoggerFactory
@@ -26,9 +26,14 @@ abstract class Node(val config: Config) extends AutoCloseable {
       .setNettyTimer(GlobalTimer.instance)
   )
 
+  // The node's gRPC server sits behind ApiKeyInterceptor, which rejects EVERY call whose X-Api-Key
+  // metadata doesn't hash to rest-api.api-key-hash (UNAUTHENTICATED: "Invalid API key"). The channel
+  // must therefore attach the same key the REST client uses; without this every `*GrpcSuite` aborts in
+  // beforeAll. Injected once at the channel level so all stubs built on it are authenticated.
   lazy val grpcChannel: ManagedChannel = ManagedChannelBuilder
     .forAddress(nodeApiEndpoint.getHost, nodeExternalPort(6870))
     .usePlaintext()
+    .intercept(new Node.ApiKeyClientInterceptor(apiKey))
     .build()
 
   private val wallet = Wallet(settings.walletSettings.copy(file = None))
@@ -57,6 +62,25 @@ abstract class Node(val config: Config) extends AutoCloseable {
 }
 
 object Node {
+
+  /** Attaches the node's API key as X-Api-Key metadata to every gRPC call so the server-side
+    * ApiKeyInterceptor accepts it (mirrors how the REST client sends the key). */
+  private final class ApiKeyClientInterceptor(apiKey: String) extends ClientInterceptor {
+    private val ApiKeyHeader: Metadata.Key[String] = Metadata.Key.of("X-Api-Key", Metadata.ASCII_STRING_MARSHALLER)
+
+    override def interceptCall[ReqT, RespT](
+        method: MethodDescriptor[ReqT, RespT],
+        callOptions: CallOptions,
+        next: Channel
+    ): ClientCall[ReqT, RespT] =
+      new ForwardingClientCall.SimpleForwardingClientCall[ReqT, RespT](next.newCall(method, callOptions)) {
+        override def start(responseListener: ClientCall.Listener[RespT], headers: Metadata): Unit = {
+          headers.put(ApiKeyHeader, apiKey)
+          super.start(responseListener, headers)
+        }
+      }
+  }
+
   implicit class NodeExt(val n: Node) extends AnyVal {
     def name: String               = n.settings.networkSettings.derivedNodeName
     def publicKeyStr: String       = n.publicKey.toString
