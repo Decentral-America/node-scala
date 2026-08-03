@@ -265,6 +265,18 @@ object Keys {
     _.fold(Array.emptyByteArray)(_.toByteArray)
   )
 
+  // T2 HotStuff authoritative-finality floor (testnet-only opt-in, `hotstuff.authoritative`). A single
+  // global monotonic value, separate from feature-25's own `finalizedHeight`/`finalizedHeightAt`: the
+  // effective finalized height reported to all readers is `max(feature-25 value, this floor)` -- see
+  // `Caches.finalizedHeight` / `RocksDBWriter.finalizedHeightAt`. Never written when
+  // `hotstuff.authoritative = false` (the default) -- stays `None` forever, zero behaviour change.
+  val hotStuffAuthoritativeFloor: Key[Option[Height]] = Key(
+    HotStuffAuthoritativeFloor,
+    Array.emptyByteArray,
+    bytes => Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) },
+    _.fold(Array.emptyByteArray)(_.toByteArray)
+  )
+
   /** Key: Int(committedPeriod.start) ++ Int(commitmentHeight)
     * @note
     *   committedPeriod.start >= commitmentHeight, because a generator can commit only for a next period

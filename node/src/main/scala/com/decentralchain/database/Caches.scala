@@ -37,6 +37,17 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
   @volatile
   private var currentFinalizedHeight = loadFinalizedHeight()
 
+  // T2 HotStuff authoritative-finality floor (testnet-only opt-in, `hotstuff.authoritative`). Separate
+  // from `currentFinalizedHeight` (feature-25's own value, still written unconditionally by `append`
+  // below) so that a HotStuff-raised floor can never be silently overwritten/regressed by the next
+  // ordinary block append -- the effective `finalizedHeight` exposed to every reader is
+  // `max(currentFinalizedHeight, currentHotStuffFloor)`, computed at read time. Stays `None` forever
+  // (this whole mechanism is inert) unless `raiseHotStuffFinalizedHeight` is ever called, which itself
+  // only happens when `hotstuff.authoritative = true` -- see `NodeHotStuffEffects.onCommit` and
+  // `BlockchainUpdaterImpl.raiseHotStuffFinalizedHeight`.
+  @volatile
+  private var currentHotStuffFloor = loadHotStuffFloor()
+
   private def loadCurrentBlock() = {
     val height = loadHeight()
     CurrentBlockInfo(height, loadBlockMeta(height), loadTxs(height))
@@ -44,12 +55,45 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
 
   protected def loadHeight(): Height
   protected def loadFinalizedHeight(): Option[Height]
+  protected def loadHotStuffFloor(): Option[Height]
 
   protected def loadBlockMeta(height: Height): Option[PBBlockMeta]
   protected def loadTxs(height: Height): Seq[Transaction]
 
+  /** Persists a NEW (already-validated-as-higher-by-the-caller) HotStuff authoritative floor. Callers
+    * MUST only invoke this after confirming monotonicity themselves (see `raiseHotStuffFinalizedHeight`,
+    * which is the actual public entry point and the only intended caller).
+    */
+  protected def persistHotStuffFloor(newFloor: Height): Unit
+
+  protected def maxHeight(a: Option[Height], b: Option[Height]): Option[Height] = (a, b) match {
+    case (Some(x), Some(y))     => Some(Height(math.max(x.toInt, y.toInt)))
+    case (some @ Some(_), None) => some
+    case (None, some @ Some(_)) => some
+    case (None, None)           => None
+  }
+
   override def height: Int                     = current.height.toInt
-  override def finalizedHeight: Option[Height] = currentFinalizedHeight
+  override def finalizedHeight: Option[Height] = maxHeight(currentFinalizedHeight, currentHotStuffFloor)
+
+  /** T2 HotStuff authoritative-finality hook. Monotonic: raises the floor to `newFloor` ONLY if it is
+    * strictly higher than the current floor -- never lowers, and re-delivering an already-applied (or
+    * lower/stale) height is a pure no-op. Returns `true` iff the floor was actually raised.
+    *
+    * SAFETY IS ENFORCED BY THE CALLER, NOT HERE: this method has no notion of "is this block really on
+    * my chain" -- that agreement check lives in `BlockchainUpdaterImpl.raiseHotStuffFinalizedHeight`,
+    * which is the only intended caller. This method's sole job is the monotonic persist.
+    */
+  def raiseHotStuffFinalizedHeight(newFloor: Height): Boolean = synchronized {
+    val current = currentHotStuffFloor
+    if (current.forall(_.toInt < newFloor.toInt)) {
+      persistHotStuffFloor(newFloor)
+      currentHotStuffFloor = Some(newFloor)
+      true
+    } else {
+      false
+    }
+  }
 
   override def score: BigInt = current.score
 
@@ -489,6 +533,7 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     } yield {
       current = loadCurrentBlock()
       currentFinalizedHeight = loadFinalizedHeight()
+      currentHotStuffFloor = loadHotStuffFloor()
 
       activatedFeaturesCache = loadActivatedFeatures()
       approvedFeaturesCache = loadApprovedFeatures()

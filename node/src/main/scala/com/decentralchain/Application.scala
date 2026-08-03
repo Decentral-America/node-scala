@@ -275,7 +275,19 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         if (s > 0) blockchainUpdater.blockId(s).map(id => (id, s)) else None
       }
 
-      val hsEffects = new NodeHotStuffEffects(committee, wallet, allChannels)
+      // TESTNET-ONLY opt-in (see HotStuffSettings.authoritative doc + docs/hotstuff-audit-readiness.md):
+      // when true, a genuine commit ALSO raises the authoritative feature-25 finalizedHeight via
+      // `blockchainUpdater.raiseHotStuffFinalizedHeight`, which independently re-checks the certified
+      // block against this node's own canonical chain before ever applying anything. Defaults to false
+      // (purely observational, today's unchanged behaviour) -- must never be set true on mainnet ahead
+      // of the external audit.
+      val hsEffects = new NodeHotStuffEffects(
+        committee,
+        wallet,
+        allChannels,
+        authoritative = settings.hotStuffSettings.authoritative,
+        raiseFinalizedHeight = (id, h) => blockchainUpdater.raiseHotStuffFinalizedHeight(id, com.decentralchain.state.Height(h))
+      )
 
       // Closes the post-restart `lockedQC=None` window (see `HotStuffSafety.safeToVote`'s doc comment
       // and `HotStuffLockedQCStore`): reload this replica's last-persisted lock at startup, and persist
