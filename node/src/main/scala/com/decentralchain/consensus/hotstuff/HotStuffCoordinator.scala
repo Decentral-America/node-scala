@@ -118,9 +118,9 @@ object HotStuffCoordinator {
       heightOf: BlockId => Option[Int] = _ => None
   ) extends HotStuffCoordinator
       with StrictLogging {
-    private var engine       = EngineState(committeeProvider())
-    private var pool         = VotePool()
-    private var voted        = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
+    private var engine = EngineState(committeeProvider())
+    private var pool   = VotePool()
+    private var voted  = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
     // Baseline for stall detection in `onRoundTimerTick`: the pacemaker view as of the PREVIOUS tick,
     // or `None` before the first tick. `None` ensures the very first tick only establishes the
     // baseline and never mistakes "no ticks have happened yet" for "the leader stalled".
@@ -166,7 +166,9 @@ object HotStuffCoordinator {
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
       if (!proposalValid(proposal.blockId)) {
-        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not a block this replica recognizes on its own chain)")
+        logger.debug(
+          s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not a block this replica recognizes on its own chain)"
+        )
       } else {
         val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
         engine = nextEngine
@@ -279,7 +281,7 @@ object HotStuffCoordinator {
         // view (same rule bare onTimeout() uses) and, if the deterministic rotation makes THIS replica
         // the new leader, drive the view-change ourselves instead of waiting on an external trigger.
         onTimeout()
-        val newView = engine.pacemaker.view
+        val newView  = engine.pacemaker.view
         val amLeader = effects.myVoterIndexes.exists(idx => HotStuffPacemaker.isLeader(idx, newView, engine.committee))
         if (amLeader) {
           blockSource() match {

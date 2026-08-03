@@ -269,7 +269,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         if (s > 0) blockchainUpdater.blockId(s).map(id => (id, s)) else None
       }
 
-      val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
+      val hsEffects = new NodeHotStuffEffects(committee, wallet, allChannels)
       // `heightOf` lets the self-vote path (`onLeaderTurn`) independently re-derive a block's height
       // from its blockId, the same defense-in-depth the receive path below already applies via
       // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
