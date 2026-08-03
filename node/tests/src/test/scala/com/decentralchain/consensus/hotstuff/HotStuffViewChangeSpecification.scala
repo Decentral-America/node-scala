@@ -1,0 +1,128 @@
+package com.decentralchain.consensus.hotstuff
+
+import com.decentralchain.account.KeyPair
+import com.decentralchain.block.Block.BlockId
+import com.decentralchain.common.state.ByteStr
+import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
+import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
+import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
+import com.decentralchain.test.FlatSpec
+
+import scala.collection.mutable
+
+/** Task 8 Step 2 (see docs/hotstuff-step5-findings-and-rework.md §4 Option A): today
+  * `HotStuffPacemaker.leaderFor`/`onTimeout` are pure, unit-tested primitives (see
+  * `HotStuffPacemakerSpecification`) but are NOT actually wired as the shell's view-driver.
+  * In production (`Application.scala`), "who proposes" is decided externally by checking the
+  * FairPoS forger of a settled block height, and `HotStuffCoordinator.Enabled.onTimeout()` only
+  * bumps the internal `EngineState.pacemaker` counter -- nothing observes that bump, so a leader
+  * that goes silent (crash/partition) never triggers an actual view-change: no new leader ever
+  * proposes as a result of the timeout alone.
+  *
+  * This spec demonstrates the gap and then (once implemented) proves the fix: a round-timer tick
+  * that finds the view stalled (no QC formed since the last tick) must advance the pacemaker AND,
+  * if the calling replica is the deterministically-rotated leader for the NEW view
+  * (`HotStuffPacemaker.leaderFor`), automatically propose -- without any external FairPoS/height
+  * check. This is a genuinely new coordinator entry point (`onRoundTimerTick`) and constructor
+  * parameter (`blockSource`), so today this file does not compile -- that IS the RED: the wiring
+  * this test requires does not exist yet.
+  */
+class HotStuffViewChangeSpecification extends FlatSpec {
+  private val kps                     = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
+  private val committee: GeneratorSet = kps.zipWithIndex.map { case (kp, i) =>
+    GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, 25L)
+  }
+  private val B: BlockId = ByteStr(Array.fill[Byte](32)(7))
+  private val H          = 500
+
+  private class RecordingEffects(self: Int) extends HotStuffEffects {
+    val sent: mutable.ListBuffer[Message]                          = mutable.ListBuffer.empty
+    def broadcast(m: Message): Unit                                = sent += m
+    def myVoterIndexes: Set[Int]                                   = Set(self)
+    def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
+    def onCommit(blockId: BlockId, height: Int): Unit              = ()
+  }
+
+  "onRoundTimerTick" should "leave the pacemaker view unchanged and propose nothing on the very first tick (no prior progress to compare against)" in {
+    val fx   = new RecordingEffects(1)
+    val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true, blockSource = () => Some((B, H)))
+    node.currentView should be(0)
+    node.onRoundTimerTick()
+    node.currentView should be(0) // first tick just establishes the baseline; nothing was stalled yet
+    fx.sent shouldBe empty
+  }
+
+  it should "advance the view and let the newly-rotated leader auto-propose when the round stalls (no QC progress between two ticks)" in {
+    // node 1 is NOT leaderFor(view=0) (that's node 0), but per round-robin IS leaderFor(view=1).
+    val fx1   = new RecordingEffects(1)
+    val node1 = new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, blockSource = () => Some((B, H)))
+
+    node1.onRoundTimerTick() // baseline tick: view stays 0, node1 is not leader of view 0 -> no propose
+    fx1.sent shouldBe empty
+
+    node1.onRoundTimerTick() // no QC arrived between ticks => view 0 stalled => view-change to 1
+    node1.currentView should be(1)
+    HotStuffPacemaker.isLeader(1, node1.currentView, committee) should be(true)
+    fx1.sent.collect { case p: HotStuffProposal => p } should not be empty
+    fx1.sent.collect { case p: HotStuffProposal => p }.head.view should be(1)
+    fx1.sent.collect { case p: HotStuffProposal => p }.head.blockId should be(B)
+  }
+
+  it should "NOT auto-propose on a stalled round when this replica is not the leader for the new view" in {
+    // node 2 is leaderFor(view=2), not leaderFor(view=1) -- a stall from view 0 -> 1 must not make it propose.
+    val fx2   = new RecordingEffects(2)
+    val node2 = new HotStuffCoordinator.Enabled(() => committee, fx2, (_, _) => true, blockSource = () => Some((B, H)))
+
+    node2.onRoundTimerTick() // baseline
+    node2.onRoundTimerTick() // stall -> view-change to 1; node2 is not leaderFor(1)
+    node2.currentView should be(1)
+    HotStuffPacemaker.isLeader(2, node2.currentView, committee) should be(false)
+    fx2.sent.collect { case p: HotStuffProposal => p } shouldBe empty
+  }
+
+  it should "NOT stall/advance the view if a QC actually formed between ticks (real progress, not a false timeout)" in {
+    val fx0   = new RecordingEffects(0)
+    val node0 = new HotStuffCoordinator.Enabled(() => committee, fx0, (_, _) => true, blockSource = () => Some((B, H)))
+
+    node0.onRoundTimerTick() // baseline, view 0
+    // Node 0 (leader of view 0) proposes and self-votes; feed the other 3 votes in to actually form a QC,
+    // advancing the pacemaker to view 1 the "normal" way (via onQC), i.e. real progress happened.
+    node0.onLeaderTurn(0, B, H)
+    val proposal = fx0.sent.collect { case p: HotStuffProposal => p }.head
+    (1 to 3).foreach { i =>
+      val msg = HotStuffQuorum.voteMessage(proposal.view, io.decentralchain.protobuf.block.HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, H)
+      val vote = HotStuffVote(
+        proposal.view,
+        io.decentralchain.protobuf.block.HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+        proposal.blockId,
+        com.decentralchain.state.Height(H),
+        i,
+        kps(i).sign(msg).byteStr
+      )
+      node0.onVote(vote)
+    }
+    node0.currentView should be >= 1 // progressed via QC, not stall
+    val viewAfterProgress = node0.currentView
+    fx0.sent.clear()
+
+    node0.onRoundTimerTick() // this call just re-baselines against the already-advanced view: no false stall
+    node0.currentView should be(viewAfterProgress)
+  }
+
+  "the default blockSource (unset)" should "keep onRoundTimerTick a pure pacemaker bump with zero proposing side effects" in {
+    // Backward-compat: existing call sites that don't pass blockSource must still compile and behave
+    // exactly as a bare pacemaker advance (no auto-propose ever, since there's nothing to propose).
+    val fx   = new RecordingEffects(1)
+    val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true)
+    node.onRoundTimerTick()
+    node.onRoundTimerTick()
+    node.currentView should be(1)
+    fx.sent shouldBe empty
+  }
+
+  "HotStuffCoordinator.Disabled" should "report currentView 0 and ignore onRoundTimerTick (zero behaviour change when dcc.hotstuff.enabled=false)" in {
+    HotStuffCoordinator.Disabled.currentView should be(0)
+    noException should be thrownBy HotStuffCoordinator.Disabled.onRoundTimerTick()
+    HotStuffCoordinator.Disabled.currentView should be(0)
+  }
+}
