@@ -126,36 +126,48 @@ class HotStuffViewChangeSpecification extends FlatSpec {
     HotStuffCoordinator.Disabled.currentView should be(0)
   }
 
-  // RED (Task 8 Step 2 follow-up, see docs/hotstuff-step5-findings-and-rework.md §4 Option A and the
-  // 09bd1fd932 deferral note): `blockSource` exists but was deliberately never wired into production
-  // because `Application.scala`'s real `proposalValid` guard is
+  // GREEN (was RED -- see git history on this file / commit 4bf3217e87 on this branch): proved that a
+  // production-style HEIGHT-COUPLED `proposalValid` guard --
   //   (view, blockId) => blockchainUpdater.blockId(view).contains(blockId)
-  // i.e. "blockId is literally the canonical block AT HEIGHT == view". That equality holds in the
-  // per-height happy path (view IS the settled height there by construction), but a pacemaker-driven
-  // view-change advances `view` independently of any block's height -- `blockSource` re-proposes the
-  // SAME settled block B at its real (fixed) height H under a NEW, larger view number. A guard keyed
-  // on "view" cannot distinguish that legitimate case from a fabricated proposal and incorrectly
-  // rejects it -- exactly the height/view conflation class findings #2 and #5 already had to fix once
-  // (this time on the replica-side safety guard instead of the vote-message height field).
+  // -- silently drops a legitimate pacemaker-driven view-change proposal, because it assumes
+  // `view == the proposed block's height`, which a leader-timeout view-change necessarily breaks
+  // (findings #2/#5's height/view conflation bug class, reintroduced at this guard). The fix: decouple
+  // `proposalValid` from `view` entirely -- it now takes only `BlockId` and checks chain-membership
+  // (does WE independently recognize this block as canonical, at whatever height it actually lives at),
+  // which is view-number-agnostic by construction. View-ordering/lock safety is unaffected: it is still
+  // enforced unconditionally by `HotStuffSafety.safeToVote` inside `HotStuffEngine.onProposal`, which
+  // runs after this guard passes.
   "a pacemaker-driven view-change proposal that re-proposes the replica's own canonical block" should
-    "still be safe to vote for even though view != the block's real height (current height-coupled guard wrongly rejects it)" in {
-      // Mirrors production's ACTUAL guard verbatim (modulo swapping the real blockchain for the fixed
-      // fact "B is the canonical block at height H" that this whole spec already assumes).
-      val heightCoupledProposalValid: (Int, BlockId) => Boolean = (view, blockId) => view == H && blockId == B
+    "be safe to vote for even though view != the block's real height, once proposalValid is chain-membership-based instead of height-coupled" in {
+      // Mirrors production's ACTUAL (fixed) guard: "is blockId a block I recognize" -- no view/height
+      // check at all. In this spec's fixed single-block world that's simply "is it B".
+      val chainMembershipProposalValid: BlockId => Boolean = _ == B
 
       val fx1   = new RecordingEffects(1)
-      val node1 = new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, heightCoupledProposalValid, blockSource = () => Some((B, H)))
+      val node1 = new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, chainMembershipProposalValid, blockSource = () => Some((B, H)))
 
       node1.onRoundTimerTick() // baseline, view 0
       node1.onRoundTimerTick() // stall -> view-change to 1; node1 is leaderFor(1) -> auto-proposes (B, H)
       node1.currentView should be(1)
 
-      // onLeaderTurn always broadcasts the proposal unconditionally...
       fx1.sent.collect { case p: HotStuffProposal => p } should not be empty
-      // ...but this replica's own self-vote is what actually matters for liveness/safety semantics: B
-      // genuinely IS this replica's own canonical block (at its real height H) and re-proposing it on
-      // a view-change is exactly the standard HotStuff pacemaker liveness case -- it MUST be votable.
-      // Today it is silently dropped instead, because the guard conflates "view" with "height".
+      // B genuinely IS this replica's own canonical block (at its real, unchanged height H) and
+      // re-proposing it on a view-change is exactly the standard HotStuff pacemaker liveness case --
+      // it IS now votable, because the guard no longer conflates "view" with "height".
       fx1.sent.collect { case v: HotStuffVote => v } should not be empty
     }
+
+  it should "still reject a proposal for a block the replica does NOT recognize, regardless of view (the guard's Byzantine-rejection purpose is preserved)" in {
+    val chainMembershipProposalValid: BlockId => Boolean = _ == B
+    val bogus: BlockId                                    = ByteStr(Array.fill[Byte](32)(66))
+
+    val fx1   = new RecordingEffects(1)
+    val node1 = new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, chainMembershipProposalValid, blockSource = () => Some((bogus, H)))
+
+    node1.onRoundTimerTick() // baseline, view 0
+    node1.onRoundTimerTick() // stall -> view-change to 1; node1 auto-proposes the bogus block
+
+    fx1.sent.collect { case p: HotStuffProposal => p } should not be empty // broadcast is unconditional
+    fx1.sent.collect { case v: HotStuffVote => v } shouldBe empty          // but self-vote is rejected: not chain-recognized
+  }
 }

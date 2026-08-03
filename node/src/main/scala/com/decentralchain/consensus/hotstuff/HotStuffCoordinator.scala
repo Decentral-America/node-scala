@@ -81,10 +81,26 @@ object HotStuffCoordinator {
       committeeProvider: () => GeneratorSet,
       effects: HotStuffEffects,
       extendsBranch: (BlockId, BlockId) => Boolean,
-      // Safety guard for HotStuff-over-FairPoS: is `blockId` THE canonical block at height `view`?
-      // A replica votes only for a proposal that matches its own settled chain, so a Byzantine leader
-      // cannot make honest nodes vote for a fabricated block. Default permissive for the in-memory sim.
-      proposalValid: (Int, BlockId) => Boolean = (_, _) => true,
+      // Safety guard for HotStuff-over-FairPoS: does `blockId` live anywhere on THIS replica's own
+      // canonical chain? A replica votes only for a proposal that matches its own settled chain, so a
+      // Byzantine leader cannot make honest nodes vote for a fabricated block. Default permissive for
+      // the in-memory sim.
+      //
+      // Deliberately NOT parameterized on `view` (see docs/hotstuff-step5-findings-and-rework.md §4
+      // Option A and the RED test in HotStuffViewChangeSpecification this replaces): the original guard
+      // was `(view, blockId) => blockchainUpdater.blockId(view).contains(blockId)`, i.e. "blockId is
+      // literally the canonical block AT HEIGHT == view". That assumed view == the proposed block's
+      // height, which holds in the per-height happy path (one view per settled height) but breaks the
+      // instant a pacemaker-driven view-change advances `view` independently of height -- exactly
+      // findings #2/#5's height/view conflation bug class, reintroduced at this guard instead of the
+      // vote-message height field. Checking chain-membership of `blockId` alone is view-number-agnostic
+      // by construction: it answers "is this a real block on MY chain" regardless of which view number
+      // it is (re-)proposed under. View-ordering/lock safety is enforced separately and unconditionally
+      // by `HotStuffSafety.safeToVote` (via `extendsBranch`/`lockedQC`/`lastVotedView`) inside
+      // `HotStuffEngine.onProposal`, which already runs after this guard passes -- this guard's sole job
+      // is rejecting proposals for blocks the replica doesn't independently recognize as real, not
+      // reasoning about view ordering.
+      proposalValid: BlockId => Boolean = _ => true,
       // What to (re-)propose if `onRoundTimerTick` finds THIS replica is the new leader after a
       // leader-timeout view-change (Task 8 Step 2). Returns `None` when there is nothing safe/settled
       // to propose yet. Defaults to `None` so existing call sites (the height-driven happy path in
@@ -140,8 +156,8 @@ object HotStuffCoordinator {
 
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
-      if (!proposalValid(proposal.view, proposal.blockId)) {
-        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not the canonical block at this view)")
+      if (!proposalValid(proposal.blockId)) {
+        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not a block this replica recognizes on its own chain)")
       } else {
         val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
         engine = nextEngine

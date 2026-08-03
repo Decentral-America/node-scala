@@ -231,13 +231,42 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           ha <- blockchainUpdater.heightOf(ancestor)
         } yield hc >= ha).getOrElse(false)
 
-      // Replica safety guard: only vote for a proposal whose block is THE canonical block at height=view
-      // on our own settled chain (rejects a Byzantine leader proposing a fabricated / non-canonical block).
-      val proposalValid: (Int, BlockId) => Boolean =
-        (view, blockId) => blockchainUpdater.blockId(view).contains(blockId)
+      // Replica safety guard: does `blockId` live anywhere on OUR OWN canonical chain? Deliberately NOT
+      // keyed on `view` (Task 8 Step 2 follow-up; see docs/hotstuff-step5-findings-and-rework.md §4
+      // Option A and consensus/hotstuff-pacemaker-rework's RED test in HotStuffViewChangeSpecification).
+      // The previous guard was `blockchainUpdater.blockId(view).contains(blockId)`, i.e. "blockId is
+      // literally the canonical block AT HEIGHT == view" -- true in the per-height happy path (one view
+      // per settled height, below) but false the instant a pacemaker-driven view-change advances `view`
+      // independently of height, silently dropping a legitimate re-proposal of an already-canonical
+      // block (exactly findings #2/#5's height/view conflation bug class, reintroduced here). Chain
+      // membership of `blockId` alone answers the real question -- "is this a real block on MY chain" --
+      // without assuming anything about `view`. View-ordering/lock safety (can we vote in this view;
+      // does this extend our locked branch or carry a newer justify-QC) is enforced separately,
+      // unconditionally, by `HotStuffSafety.safeToVote` inside `HotStuffEngine.onProposal`, which runs
+      // AFTER this guard passes -- this guard's sole job is rejecting proposals for blocks we don't
+      // independently recognize as real, not reasoning about view numbers.
+      val proposalValid: BlockId => Boolean =
+        blockId => blockchainUpdater.heightOf(blockId).exists(h => blockchainUpdater.blockId(h).contains(blockId))
+
+      // What to (re-)propose if a leader-timeout view-change (Task 8 Step 2) makes THIS node the newly
+      // rotated leader. Always proposes the current settled tip -- the SAME block the per-height happy
+      // path below would propose next -- so a pacemaker-driven proposal is never for a different/newer
+      // block than the happy path would pick; it only differs in WHEN and under WHICH view number it
+      // fires (reacting to a stalled round instead of a height increment). This is deliberately the
+      // simple, well-understood case (re-derive "the current settled tip" fresh each time) rather than
+      // re-proposing a specific prior not-yet-QC'd proposal extending the locked/prepareQC branch (the
+      // more sophisticated pacemaker liveness optimization from the classic protocol) -- that would
+      // require exposing HotStuffCoordinator's internal safety state (prepareQC) through a new API, a
+      // real design question left as follow-up. This smaller, self-contained increment is enough to make
+      // `onRoundTimerTick`'s blockSource-driven path a real, safe action instead of a permanent no-op.
+      val blockSource: () => Option[(BlockId, Int)] = () => {
+        val tip = blockchainUpdater.height
+        val s   = tip - settings.hotStuffSettings.settledDepth
+        if (s > 0) blockchainUpdater.blockId(s).map(id => (id, s)) else None
+      }
 
       val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
-      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid)
+      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid, blockSource)
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
@@ -259,14 +288,23 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, p) =>
-          // blockHeight MUST be the proposal's settled view (`p.view`), NOT our local tip
-          // (`blockchainUpdater.height`). The leader signs its vote over height = s (the settled view);
-          // if a replica signed over its local tip (~s + settledDepth) instead, every replica's vote
-          // would carry a different blockHeight. Such votes still share the (view, phase, blockId) pool
-          // bucket and pass the voter-count quorum, but `HotStuffQuorum.formQC` requires an identical
-          // blockHeight across all votes, so the QC would never form (silently). view == settled height
-          // by construction, so p.view is the canonical, node-agnostic height.
-          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p)) hsCoordinator.onProposal(p, p.view)
+          // blockHeight MUST be independently derived from the proposal's OWN blockId
+          // (`blockchainUpdater.heightOf(p.blockId)`), NOT taken from `p.view`. In the per-height happy
+          // path view == the block's settled height so the two happened to agree, but that equality is
+          // exactly the assumption a pacemaker-driven view-change breaks (view can be strictly greater
+          // than the re-proposed block's real height). Deriving height from blockId -- the same way the
+          // leader's own `blockSource`/happy-path height is derived, and the same way `proposalValid`
+          // above independently re-derives it -- guarantees every honest replica computes the IDENTICAL
+          // blockHeight for a given blockId regardless of which view it arrives under, which is what
+          // `HotStuffQuorum.formQC` requires (an identical blockHeight across all votes for a target) --
+          // this is precisely the invariant finding #5 needed once already (there, a replica used its
+          // local tip instead of the settled view; here, deriving from blockId instead of view prevents
+          // that whole class of mismatch by construction rather than by convention). Falls back to
+          // `p.view` only when we don't recognize the block at all (heightOf is None) -- in that case
+          // `proposalValid` above has already rejected the proposal via the same lookup, so this
+          // fallback value is never actually consumed by a cast vote.
+          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p))
+            hsCoordinator.onProposal(p, blockchainUpdater.heightOf(p.blockId).getOrElse(p.view))
         }(using hotStuffScheduler)
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
@@ -314,14 +352,29 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // Uses `onRoundTimerTick` (Task 8 Step 2 rework), which now genuinely detects a stalled round (no
       // QC formed since the previous tick) rather than treating every tick as a timeout -- see
       // HotStuffCoordinator.onRoundTimerTick and docs/hotstuff-step5-findings-and-rework.md §4 Option A.
-      // NOT wiring the coordinator's `blockSource` auto-propose-on-view-change here yet: this shell's
-      // `proposalValid` guard (above) checks `blockchainUpdater.blockId(view).contains(blockId)`, which
-      // assumes `view == the settled height of the proposed block` -- exactly the coupling finding #2/#5
-      // in the step-5 findings had to fix once already. A pacemaker-driven view-change would propose
-      // under a NEW view (view+1) for a block still at the OLD settled height, violating that guard.
-      // Untangling proposalValid/vote-height semantics for view != block-height is real design work for
-      // full Option A and must not be rushed in this pass; left as follow-up. Until then this call is a
-      // behavior-identical rename of the previous `onTimeout()` (pure pacemaker-view bump only).
+      //
+      // `blockSource` (above) IS now wired for real: on a genuine leader-timeout, if this replica is the
+      // newly-rotated leader, it (re-)proposes the current settled tip under the new (higher) view
+      // number. This is now safe because `proposalValid` (above) no longer assumes view == height --
+      // it checks chain-membership of the blockId alone -- so a proposal whose view exceeds its block's
+      // real height (the normal outcome of a pacemaker view-change) is no longer silently rejected.
+      // `HotStuffQuorum.formQC` still requires every vote for a given (view, phase, blockId) target to
+      // carry an IDENTICAL blockHeight; both this leader-timeout path and the message-observer's receive
+      // path (above) derive that height the same way -- `blockchainUpdater.heightOf(blockId)` -- so
+      // every honest replica computes the same value regardless of which path or view triggered the vote.
+      //
+      // Safety reasoning for enabling this on a live network (testnet has `dcc.hotstuff.enabled=true`
+      // today): T2 remains STRICTLY OBSERVATIONAL here -- `NodeHotStuffEffects.onCommit` only advances
+      // `hotStuffFinalizedHeight`, a status field; feature-25 Deterministic Finality remains the sole
+      // authoritative finality source and is untouched by any of this. Every vote/QC this change can
+      // possibly cause is still gated by the SAME unconditional safety machinery as the happy path:
+      // `HotStuffSafety.safeToVote` (view/lock ordering) and `HotStuffQuorum.verifyQC`/`formQC`
+      // (cryptographic + identical-height quorum). The worst case a pacemaker-driven proposal can cause
+      // if replicas' local view counters diverge (each node's timer/QC history can differ slightly) is
+      // that votes for that specific (view, blockId) target never reach quorum -- a liveness/no-QC
+      // outcome, not a safety one -- functionally identical to any other non-quorate HotStuff round
+      // today. It cannot fabricate a commit, and cannot regress feature-25. This must still be re-audited
+      // (docs/hotstuff-audit-readiness.md) before HotStuff is ever made mainnet-authoritative.
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
       hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onRoundTimerTick())
       log.info(
