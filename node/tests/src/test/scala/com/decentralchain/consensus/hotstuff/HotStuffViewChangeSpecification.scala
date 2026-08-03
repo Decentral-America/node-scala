@@ -424,4 +424,66 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       // abandoned for an unrelated, older tip.
       proposals.last.blockId should be(B)
     }
+
+  // Adversarial-review finding on THIS branch (commits 7e6d5a6c3d/1347c83367): `inFlightBranch` returns
+  // `Some` for as long as `prepareQC.blockHeight > committedHeight`, and NOTHING ever aged `prepareQC`
+  // out on its own before this test's fix -- only a strictly-higher-view QC actually forming ever
+  // replaced it, and no counter/timestamp/attempt-cap existed. If a specific in-flight branch can NEVER
+  // re-gather quorum again (e.g. a mid-round committee-membership change permanently shifts who counts
+  // toward quorum for it -- this codebase has a live committee-rotation feature, `refreshCommittee`, and
+  // a dedicated `DstCommitteeChangeScenarioSpecification` exists precisely because committees change
+  // mid-round), then WITHOUT a bound, EVERY subsequent leader-timeout, forever, would re-propose the
+  // identical stuck block -- a genuine livelock, strictly worse than the OLD code (which unconditionally
+  // fell back to a fresh, universally-acceptable `blockSource()` tip on every stall and so could never
+  // get permanently stuck on one unrecoverable branch).
+  //
+  // Drives node2 through `HotStuffCoordinator.Enabled.MaxConsecutiveReproposeAttempts` + 1 leader turns
+  // with the SAME in-flight blockId B never resolving (no further votes ever arrive after the initial
+  // PREPARE QC -- exactly the "permanently non-quorate branch" scenario): the first
+  // `MaxConsecutiveReproposeAttempts` turns must re-propose B (the existing liveness optimization is not
+  // regressed), but the NEXT one must fall back to `blockSource`'s fresh tip instead of re-proposing B
+  // again -- proving the escape valve actually fires instead of retrying identically forever.
+  it should "eventually abandon a permanently-non-quorate in-flight branch in favor of blockSource's fresh tip, instead of re-proposing it forever" in {
+    val settledTip: BlockId = ByteStr(Array.fill[Byte](32)(55)) // a DIFFERENT block than the in-flight one
+    val settledTipHeight    = 300
+    val cap                 = HotStuffCoordinator.Enabled.MaxConsecutiveReproposeAttempts
+
+    val fx2   = new RecordingEffects(2)
+    val node2 = new HotStuffCoordinator.Enabled(() => committee, fx2, (_, _) => true, blockSource = () => Some((settledTip, settledTipHeight)))
+
+    node2.onRoundTimerTick() // baseline, view 0
+
+    // Form a real PREPARE QC for B (in-flight, never committed) exactly as the previous test does. No
+    // further votes for B ever arrive after this -- B can NEVER reach PRE_COMMIT/COMMIT quorum again,
+    // modelling a branch that has permanently lost the ability to gather quorum.
+    node2.onProposal(HotStuffProposal(0, B, justify = None), H)
+    Seq(0, 1).foreach { i =>
+      val msg = HotStuffQuorum.voteMessage(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, H)
+      node2.onVote(HotStuffVote(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, com.decentralchain.state.Height(H), i, kps(i).sign(msg).byteStr))
+    }
+    node2.currentView should be(1)
+    fx2.sent.clear()
+    node2.onRoundTimerTick() // re-baseline at view 1 (real progress just happened, not a stall)
+
+    // Collect the blockId node2 proposes each time the round-robin rotation makes it the leader again
+    // (every 4 views, in this 4-node committee), for `cap + 1` consecutive leader turns. Between each of
+    // node2's own leader turns, the round simply keeps stalling (no other node ever forms a QC either,
+    // since nobody feeds any further votes in) -- i.e. every one of these leader turns is a genuine
+    // leader-timeout re-propose decision, not a one-off.
+    val reproposedBlockIds: Seq[BlockId] = (1 to (cap + 1)).map { _ =>
+      while (!HotStuffPacemaker.isLeader(2, node2.currentView, committee)) node2.onRoundTimerTick()
+      val proposedBlockId = fx2.sent.collect { case p: HotStuffProposal => p }.last.blockId
+      fx2.sent.clear()
+      node2.onRoundTimerTick() // step off this leader-turn's view before the next iteration's while-loop
+      proposedBlockId
+    }
+
+    // The first `cap` consecutive re-proposals still correctly favor the in-flight branch (the existing
+    // optimization from commit 1347c83367 is not regressed by adding the bound).
+    reproposedBlockIds.take(cap) should be(Seq.fill(cap)(B))
+    // But the `cap + 1`-th must NOT be B again: without the fix, `inFlightBranch` never ages out and
+    // this would be B forever (the livelock this test proves is closed) -- with the fix, this replica
+    // abandons the permanently-stuck branch and falls back to `blockSource`'s fresh tip instead.
+    reproposedBlockIds.last should be(settledTip)
+  }
 }

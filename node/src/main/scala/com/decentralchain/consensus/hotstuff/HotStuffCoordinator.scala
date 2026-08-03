@@ -71,6 +71,20 @@ object HotStuffCoordinator {
     def onRoundTimerTick(): Unit                                          = ()
   }
 
+  object Enabled {
+
+    /** Bounded retry cap for `onRoundTimerTick`'s in-flight-branch re-propose optimization
+      * (adversarial-review finding, `consensus/hotstuff-repropose-locked-branch`): after this many
+      * CONSECUTIVE leader-timeouts re-proposing the SAME unresolved `prepareQC` blockId, this replica
+      * abandons it in favor of `blockSource()`'s fresh tip instead of retrying forever. Deliberately
+      * small (a handful of stalled rounds is already a strong "this branch is stuck" signal -- e.g. a
+      * mid-round committee change that permanently excludes it from ever regathering quorum again --
+      * not a value meant to tolerate many more genuine transient hiccups than that); the point is to
+      * bound the livelock, not to give the in-flight branch every possible chance.
+      */
+    val MaxConsecutiveReproposeAttempts: Int = 3
+  }
+
   /** The active coordinator. Single-threaded — the shell MUST confine all calls to one actor/scheduler
     * thread (the mutable state is not synchronized).
     *
@@ -138,6 +152,21 @@ object HotStuffCoordinator {
     // or `None` before the first tick. `None` ensures the very first tick only establishes the
     // baseline and never mistakes "no ticks have happened yet" for "the leader stalled".
     private var lastTickView: Option[Int] = None
+
+    // Bounded escape valve for `inFlightBranch` re-proposing (adversarial-review finding, this branch):
+    // tracks the blockId THIS replica most recently re-proposed via the `inFlightBranch` path, and how
+    // many CONSECUTIVE leader-timeouts in a row it has been re-proposed without resolving (committing,
+    // or being superseded by a different in-flight branch). Nothing previously aged `prepareQC` out on
+    // its own -- only a strictly-higher-view QC forming ever replaced it -- so a branch that can never
+    // re-gather quorum again (e.g. a mid-round committee change permanently shifts who counts toward
+    // quorum for it) would otherwise be re-proposed identically on every single subsequent leader-timeout,
+    // forever: a genuine livelock, with the old (pre-this-branch) behaviour of unconditionally falling
+    // back to `blockSource()`'s universally-fresh tip strictly more robust here. Reset to `(None, 0)`
+    // whenever the in-flight blockId changes or resolves (i.e. whenever this replica ends up NOT
+    // re-proposing via the in-flight path on some tick), so a genuinely-recovering branch is never
+    // penalized by attempts accumulated against a since-abandoned one.
+    private var lastReproposedBlockId: Option[BlockId] = None
+    private var reproposeAttempts: Int                 = 0
 
     // The committed-generator committee rotates per generation period; refresh it from the chain at
     // the start of each event so reducers always see the current period's set.
@@ -322,12 +351,38 @@ object HotStuffCoordinator {
         val amLeader = effects.myVoterIndexes.exists(idx => HotStuffPacemaker.isLeader(idx, newView, engine.committee))
         if (amLeader) {
           // Prefer re-proposing our own in-flight (QC'd-but-not-committed) branch over `blockSource`'s
-          // answer -- see `inFlightBranch`'s doc above. Falls back to `blockSource()` exactly as before
-          // when nothing was in-flight (the common case: a clean timeout with no prior round in progress).
+          // answer -- see `inFlightBranch`'s doc above -- UNLESS this exact blockId has already been
+          // re-proposed `HotStuffCoordinator.Enabled.MaxConsecutiveReproposeAttempts` consecutive times
+          // by this replica without resolving: that many identical, unresolved re-proposals is a strong
+          // signal the branch can no longer gather quorum (e.g. a mid-round committee change permanently
+          // shifted who counts toward it), so this is a genuinely-stuck round, not merely a slow one, and
+          // continuing to re-propose it forever would be an unbounded livelock (see field doc above).
+          // Falls back to `blockSource()` exactly as before both in the "nothing was in-flight" case
+          // (a clean timeout with no prior round in progress) and in this exhausted-retries case.
           val fromInFlight = inFlightBranch
-          fromInFlight.orElse(blockSource()) match {
+          val exhausted    = fromInFlight.exists { case (blockId, _) =>
+            lastReproposedBlockId.contains(blockId) && reproposeAttempts >= HotStuffCoordinator.Enabled.MaxConsecutiveReproposeAttempts
+          }
+          val effectiveInFlight = if (exhausted) None else fromInFlight
+          if (exhausted)
+            logger.warn(
+              s"[HotStuff] leader-timeout view-change: v=$newView abandoning in-flight b=${bid(fromInFlight.get._1)} after " +
+                s"$reproposeAttempts consecutive unresolved re-propose attempts -- falling back to blockSource's fresh tip"
+            )
+          effectiveInFlight.orElse(blockSource()) match {
             case Some((blockId, blockHeight)) =>
-              val why = if (fromInFlight.isDefined) "RE-proposing in-flight (prepareQC not yet committed)" else "auto-proposing"
+              if (effectiveInFlight.isDefined) {
+                // Re-proposing the in-flight branch again: bump (or start) its consecutive-attempt counter.
+                reproposeAttempts = if (lastReproposedBlockId.contains(blockId)) reproposeAttempts + 1 else 1
+                lastReproposedBlockId = Some(blockId)
+              } else {
+                // Fell back to blockSource's fresh tip (nothing in-flight, or the in-flight branch was
+                // just abandoned above) -- reset the tracker so a future, genuinely-different in-flight
+                // branch starts its own attempt count from zero.
+                lastReproposedBlockId = None
+                reproposeAttempts = 0
+              }
+              val why = if (effectiveInFlight.isDefined) "RE-proposing in-flight (prepareQC not yet committed)" else "auto-proposing"
               logger.debug(s"[HotStuff] leader-timeout view-change: v=$newView I am the new leader -> $why b=${bid(blockId)}")
               onLeaderTurn(newView, blockId, blockHeight)
             case None =>
