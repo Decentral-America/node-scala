@@ -7,8 +7,6 @@ import com.decentralchain.it.api.SyncHttpApi.*
 import com.decentralchain.it.NodeConfigs
 import com.decentralchain.state.Height
 import com.decentralchain.test.NumericExt
-import com.decentralchain.utils.ScorexLogging
-import org.scalatest.OptionValues
 
 import scala.concurrent.duration.DurationInt
 
