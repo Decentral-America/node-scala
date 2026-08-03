@@ -76,8 +76,8 @@ class HotStuffSimulationSpecification extends FlatSpec {
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(1).sign(msg))
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
     }
-    // Real-world guard: only B is the canonical block at this view (blockchain.blockId(view) == B).
-    val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true, (_, b) => b == B)
+    // Real-world guard: only B is a block this replica recognizes as canonical on its own chain.
+    val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true, (b: BlockId) => b == B)
 
     val bogus: BlockId = ByteStr(Array.fill[Byte](32)(99))
     node.onProposal(HotStuffProposal(0, bogus, None), H)
