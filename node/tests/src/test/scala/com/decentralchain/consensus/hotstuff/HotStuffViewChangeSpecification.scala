@@ -9,6 +9,7 @@ import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
 import io.decentralchain.protobuf.block.HotStuffPhase
 
+import java.nio.file.Files
 import scala.collection.mutable
 
 /** Task 8 Step 2 (see docs/hotstuff-step5-findings-and-rework.md §4 Option A): today
@@ -303,5 +304,76 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       val blankRestart = new HotStuffCoordinator.Enabled(() => committee, fx3, extendsBranchReal)
       blankRestart.onProposal(replayedProposal, Hold)
       fx3.sent.collect { case v: HotStuffVote => v } should not be empty
+    }
+
+  // Adversarial-review Condition 1 (reviewer A): the corrupted-file test coverage in
+  // `HotStuffLockedQCStoreSpecification` only exercises outright-invalid-wire-format bytes
+  // (`Array[Byte](1,2,3,4,5)`) -- a strawman, since that can never parse into a `QuorumCertificate` at
+  // all. The genuinely adversarial case is a WELL-FORMED, PARSEABLE protobuf QC with fabricated content
+  // (garbage blockId, an inflated view number, a signature that would never pass real BLS verification)
+  // -- exactly what a corrupted-but-still-valid-shape on-disk file, or a compromised/buggy write path,
+  // could hand back from `HotStuffLockedQCStore.load`. This proves the fabrication's blast radius is
+  // bounded to a LIVENESS/self-DoS effect on the one replica that loaded it, never a safety violation:
+  //  (a) it round-trips through the real store faithfully (the store has no way to know it's fabricated
+  //      -- it only checks the bytes parse, not that the QC is real);
+  //  (b) seeded as `initialLockedQC`, it makes THIS replica's own `safeToVote` permanently reject a
+  //      genuine proposal that doesn't extend the fabricated (unknown) blockId and isn't justified above
+  //      the fabricated inflated view -- a self-inflicted liveness stall, not a wrongly-cast vote;
+  //  (c) the OTHER honest committee members don't need this replica's vote at all: their stake alone
+  //      already clears the 2/3 quorum, so the network commits normally around the self-DoS'd replica;
+  //  (d) even if the very same fabricated QC were broadcast onto the wire, `HotStuffEngine.onQC`'s
+  //      independent BLS/quorum re-verification (which never consults `lockedQC`) rejects it outright --
+  //      it can never be "wrongly accepted" as a real branch/commit.
+  "a fabricated-but-well-formed QC loaded as initialLockedQC" should
+    "never let this replica cast an unsafe vote or corrupt consensus -- only ever a bounded, self-contained liveness stall on that one replica" in {
+      val garbageBlockId: BlockId = ByteStr(Array.fill[Byte](32)(200.toByte)) // fabricated: not a real block on any chain
+      val inflatedView            = Int.MaxValue - 1
+      val garbageSignature        = ByteStr(Array.fill[Byte](96)(42)) // right shape for a BLS agg sig, but not real
+
+      val fabricatedQC = QuorumCertificate(
+        view = inflatedView,
+        phase = HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT,
+        blockId = garbageBlockId,
+        blockHeight = com.decentralchain.state.Height(1),
+        signerIndexes = Seq(0, 1, 2),
+        aggregatedSignature = garbageSignature
+      )
+
+      // (a) It is exactly the shape `HotStuffLockedQCStore.load` would hand back from a corrupted-but-
+      // parseable persisted file: round-trip it through the real store to prove this scenario is
+      // realistic, not synthetic -- the store faithfully persists/reloads fabricated content because it
+      // only checks that the bytes parse as a QC, never that the QC is cryptographically real.
+      val storeDir  = Files.createTempDirectory("hotstuff-fabricated-qc-spec")
+      val storePath = storeDir.resolve("locked-qc.dat")
+      HotStuffLockedQCStore.save(storePath, fabricatedQC)
+      val reloaded = HotStuffLockedQCStore.load(storePath)
+      reloaded should be(Some(fabricatedQC))
+
+      // Node 3 boots "post-restart" seeded with this fabricated lock, exactly as Application.scala's
+      // wiring would seed `initialLockedQC` from whatever `HotStuffLockedQCStore.load` returns.
+      val fxPoisoned = new RecordingEffects(3)
+      val poisoned   = new HotStuffCoordinator.Enabled(() => committee, fxPoisoned, extendsBranchReal, initialLockedQC = reloaded)
+
+      // (b) RESTRICTIVE consequence: a genuine, honestly-proposed block (B, real height H) doesn't
+      // extend the fabricated lock's (unknown, off-chain) blockId, and carries no justify-QC above the
+      // fabricated inflated view -- `safeToVote`'s `Some(locked)` branch permanently rejects it. This
+      // replica can no longer vote for anything short of a QC justified above `Int.MaxValue - 1`: a
+      // self-inflicted liveness stall, never an unsafe vote.
+      val genuineProposal = HotStuffProposal(view = 10, blockId = B, justify = None)
+      poisoned.onProposal(genuineProposal, H)
+      fxPoisoned.sent.collect { case v: HotStuffVote => v } shouldBe empty // self-DoS: this node casts nothing
+
+      // (c) The fabrication does not escalate into a network-wide problem: the other 3 committee members
+      // form a real quorum for B WITHOUT node 3's participation at all -- their combined stake (75 of
+      // 100) alone already clears the 2/3-stake threshold.
+      val honestVotes = (0 to 2).map(i => committeeVoteFor(10, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, H, i))
+      val honestQC     = HotStuffQuorum.formQC(honestVotes, committee)
+      honestQC.isRight should be(true) // quorum reached with zero help from the poisoned replica
+
+      // (d) And if the fabricated QC itself were somehow broadcast onto the wire, the engine's own
+      // independent verification -- which never consults `lockedQC` -- rejects it outright: fabricated
+      // content can never be "wrongly accepted" as a real branch or commit, on this node or any other.
+      val (_, actions) = HotStuffEngine.onQC(EngineState(committee), fabricatedQC)
+      actions should matchPattern { case Seq(HotStuffAction.Rejected(_)) => }
     }
 }
