@@ -106,7 +106,16 @@ object HotStuffCoordinator {
       // to propose yet. Defaults to `None` so existing call sites (the height-driven happy path in
       // `Application.scala`, and every pre-existing test) are unaffected: with no blockSource,
       // `onRoundTimerTick` degrades to a pure pacemaker-view bump, identical to bare `onTimeout()`.
-      blockSource: () => Option[(BlockId, Int)] = () => None
+      blockSource: () => Option[(BlockId, Int)] = () => None,
+      // Independently re-derive a block's height from its blockId, the SAME way the receive path
+      // (`messageObserver.hotStuffProposals` in Application.scala) already does via
+      // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting the literal `blockHeight` argument
+      // `onLeaderTurn` is called with. Without this, the self-vote path relies on an unstated invariant
+      // (a block's height never changes after `blockSource`/the caller reads it) rather than being
+      // defended the same way the receive path defends itself. Defaults to `_ => None` so existing call
+      // sites/tests (which have no blockchain to query) are unaffected: `getOrElse(blockHeight)` then
+      // falls back to the literal argument exactly as before.
+      heightOf: BlockId => Option[Int] = _ => None
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine       = EngineState(committeeProvider())
@@ -242,10 +251,15 @@ object HotStuffCoordinator {
 
     def onLeaderTurn(view: Int, blockId: BlockId, blockHeight: Int): Unit = {
       refreshCommittee()
+      // Defense-in-depth parity with the receive path: re-derive height from `blockId` itself rather
+      // than trusting the caller's literal `blockHeight` (see `heightOf`'s doc above). Falls back to
+      // `blockHeight` only when we can't independently resolve the block (e.g. no `heightOf` wired, as
+      // in tests/sim).
+      val derivedHeight = heightOf(blockId).getOrElse(blockHeight)
       logger.debug(s"[HotStuff] onLeaderTurn v=$view b=${bid(blockId)} committee=${engine.committee.size} myIndexes=${effects.myVoterIndexes}")
       val proposal = HotStuffProposal(view, blockId, engine.safety.prepareQC)
       effects.broadcast(proposal)
-      onProposal(proposal, blockHeight) // the leader also votes for its own proposal
+      onProposal(proposal, derivedHeight) // the leader also votes for its own proposal
     }
 
     def onTimeout(): Unit = {

@@ -270,7 +270,12 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       }
 
       val hsEffects     = new NodeHotStuffEffects(committee, wallet, allChannels)
-      val hsCoordinator = new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid, blockSource)
+      // `heightOf` lets the self-vote path (`onLeaderTurn`) independently re-derive a block's height
+      // from its blockId, the same defense-in-depth the receive path below already applies via
+      // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
+      // literally.
+      val hsCoordinator =
+        new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid, blockSource, blockchainUpdater.heightOf)
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
