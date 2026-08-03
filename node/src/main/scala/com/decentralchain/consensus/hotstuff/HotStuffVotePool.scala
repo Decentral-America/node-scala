@@ -57,6 +57,17 @@ case class VotePool(
   */
 object HotStuffVotePool {
 
+  /** Hard cap on the number of distinct committee snapshots retained per (view, phase, blockId) target
+    * in `seenCommittees`, enforced by `onVote` itself (Task 8 Step 3 — see the class-level scaladoc's
+    * unbounded-growth warning, and `HotStuffLargeCommitteeSpecification`, which measured 50 snapshots ->
+    * 25,000 retained `GeneratorInfo` copies for ONE target with no internal bound). Chosen well above
+    * that spec's 50-snapshot stress figure (so it is unaffected) and far above any realistic number of
+    * committee rollovers a single in-flight target should survive in correct operation — the coordinator
+    * also prunes stale targets by view on every view-advance (`prunePool`/`pruneOlderThan`), so a target
+    * surviving this many rollovers unresolved on one view already indicates a stall far beyond normal
+    * operation. TODO */
+  val MaxSeenCommitteesPerTarget: Int = 128
+
   /** Ingest one vote. `liveCommittee` is whatever the caller's committee-provider currently returns
     * (it may differ from call to call). The vote's OWN signature is checked against `liveCommittee`
     * (the committee genuinely active when THIS vote arrived — using anything else would be checking
