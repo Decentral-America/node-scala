@@ -62,14 +62,15 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
 
   /** Persists a NEW (already-validated-as-higher-by-the-caller) HotStuff authoritative floor. Callers
     * MUST only invoke this after confirming monotonicity themselves (see `raiseHotStuffFinalizedHeight`,
-    * which is the actual public entry point and the only intended caller). */
+    * which is the actual public entry point and the only intended caller).
+    */
   protected def persistHotStuffFloor(newFloor: Height): Unit
 
   protected def maxHeight(a: Option[Height], b: Option[Height]): Option[Height] = (a, b) match {
-    case (Some(x), Some(y)) => Some(Height(math.max(x.toInt, y.toInt)))
+    case (Some(x), Some(y))     => Some(Height(math.max(x.toInt, y.toInt)))
     case (some @ Some(_), None) => some
     case (None, some @ Some(_)) => some
-    case (None, None) => None
+    case (None, None)           => None
   }
 
   override def height: Int                     = current.height.toInt
@@ -81,7 +82,8 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     *
     * SAFETY IS ENFORCED BY THE CALLER, NOT HERE: this method has no notion of "is this block really on
     * my chain" -- that agreement check lives in `BlockchainUpdaterImpl.raiseHotStuffFinalizedHeight`,
-    * which is the only intended caller. This method's sole job is the monotonic persist. */
+    * which is the only intended caller. This method's sole job is the monotonic persist.
+    */
   def raiseHotStuffFinalizedHeight(newFloor: Height): Boolean = synchronized {
     val current = currentHotStuffFloor
     if (current.forall(_.toInt < newFloor.toInt)) {

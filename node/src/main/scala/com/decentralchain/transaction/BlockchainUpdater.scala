@@ -38,7 +38,8 @@ trait BlockchainUpdater {
     *
     * Default no-op (always refuses) so every OTHER `BlockchainUpdater` implementation (test mocks, the
     * `EmptyBlockchain`-based harness in `MiningFailuresSuite`, etc.) is unaffected without needing its
-    * own override -- only `BlockchainUpdaterImpl` (the real chain) implements this for real. */
+    * own override -- only `BlockchainUpdaterImpl` (the real chain) implements this for real.
+    */
   def raiseHotStuffFinalizedHeight(certifiedBlockId: ByteStr, certifiedHeight: Height): Boolean = false
 }
 
