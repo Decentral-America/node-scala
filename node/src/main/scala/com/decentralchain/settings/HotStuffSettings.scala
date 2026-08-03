@@ -23,14 +23,25 @@ import scala.concurrent.duration.FiniteDuration
   *                     block (its id is final, not the liquid tip id) and votes converge on one target.
   *                     Too small ⇒ replicas still see the height as their liquid tip and reject the
   *                     proposal ⇒ no quorum. Too large ⇒ HotStuff finalizes further behind the tip.
+  * @param authoritative TESTNET-ONLY opt-in escape hatch from the observational-only commit mode. When
+  *                     `true` (and only when `enabled` is also `true`), a genuine HotStuff `commitQC` is
+  *                     allowed to RAISE the authoritative feature-25 finalized height (never lower it),
+  *                     but ONLY for a block already present on this node's own canonical/synced chain --
+  *                     see `NodeHotStuffEffects.onCommit` / `BlockchainUpdaterImpl.raiseHotStuffFinalizedHeight`.
+  *                     Defaults to `false`: today's fully-observational behaviour (`hotStuffFinalizedHeight`
+  *                     metric only, feature-25 remains sole authority) is unchanged unless BOTH flags are
+  *                     explicitly set. Do NOT set `true` on mainnet -- this is ahead of the external audit
+  *                     (see docs/hotstuff-audit-readiness.md) and is accepted, scoped risk for testnet only.
   */
 case class HotStuffSettings(
     enabled: Boolean,
     roundTimeout: FiniteDuration,
-    settledDepth: Int = 3
+    settledDepth: Int = 3,
+    authoritative: Boolean = false
 ) derives ConfigReader {
   if (enabled) {
     require(roundTimeout.toMillis > 0, "dcc.hotstuff.round-timeout must be positive when hotstuff is enabled")
     require(settledDepth >= 1, "dcc.hotstuff.settled-depth must be >= 1 when hotstuff is enabled")
   }
+  require(!authoritative || enabled, "hotstuff.authoritative requires hotstuff.enabled")
 }
