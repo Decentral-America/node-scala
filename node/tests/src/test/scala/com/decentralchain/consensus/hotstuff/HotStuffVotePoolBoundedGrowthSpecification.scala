@@ -43,10 +43,10 @@ class HotStuffVotePoolBoundedGrowthSpecification extends FlatSpec {
   private val fillerAddress = KeyPair(ByteStr(Array.fill[Byte](32)(43))).toAddress
   private val realKp        = TestBlsKeyPair.unsafe(Array.fill[Byte](32)(7))
 
-  private val view   = 42
-  private val phase  = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
-  private val target = ByteStr(Array.fill[Byte](32)(11))
-  private val height = 900000
+  private val view      = 42
+  private val phase     = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
+  private val target    = ByteStr(Array.fill[Byte](32)(11))
+  private val height    = 900000
   private val targetKey = (view, phase, target)
 
   // Voter 0 is the only real signer; its stake changes per epoch so every epoch's committee is a
