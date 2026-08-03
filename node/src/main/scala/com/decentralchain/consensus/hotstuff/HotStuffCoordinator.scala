@@ -291,6 +291,24 @@ object HotStuffCoordinator {
 
     def currentView: Int = engine.pacemaker.view
 
+    // The classic HotStuff pacemaker liveness optimization (deferred at `blockSource`'s doc comment
+    // above and its twin in Application.scala): if this replica already holds a real, quorum-backed QC
+    // for a branch that hasn't reached full COMMIT yet, a leader-timeout view-change should re-propose
+    // THAT branch -- giving the votes already cast for it a chance to actually finish -- instead of
+    // always jumping to whatever `blockSource` would otherwise propose (in production: the current
+    // settled tip), which abandons the in-flight round.
+    //
+    // No new state to track: `SafetyState.prepareQC` (`HotStuffSafety.update`) already records the
+    // highest-view QC this replica has seen/formed, regardless of phase, and `EngineState.committedHeight`
+    // already advances only on a verified COMMIT-phase QC (`HotStuffEngine.onQC`). So
+    // `prepareQC.blockHeight > committedHeight` is exactly "this branch has quorum-backed progress that
+    // hasn't finished committing" -- both pieces of data predate this change; the gap was only that
+    // `onRoundTimerTick` never consulted them.
+    private def inFlightBranch: Option[(BlockId, Int)] =
+      engine.safety.prepareQC
+        .filter(_.blockHeight.toInt > engine.committedHeight)
+        .map(qc => (qc.blockId, qc.blockHeight.toInt))
+
     def onRoundTimerTick(): Unit = {
       refreshCommittee()
       val stalled = lastTickView.contains(engine.pacemaker.view)
@@ -303,9 +321,14 @@ object HotStuffCoordinator {
         val newView  = engine.pacemaker.view
         val amLeader = effects.myVoterIndexes.exists(idx => HotStuffPacemaker.isLeader(idx, newView, engine.committee))
         if (amLeader) {
-          blockSource() match {
+          // Prefer re-proposing our own in-flight (QC'd-but-not-committed) branch over `blockSource`'s
+          // answer -- see `inFlightBranch`'s doc above. Falls back to `blockSource()` exactly as before
+          // when nothing was in-flight (the common case: a clean timeout with no prior round in progress).
+          val fromInFlight = inFlightBranch
+          fromInFlight.orElse(blockSource()) match {
             case Some((blockId, blockHeight)) =>
-              logger.debug(s"[HotStuff] leader-timeout view-change: v=$newView I am the new leader -> auto-proposing b=${bid(blockId)}")
+              val why = if (fromInFlight.isDefined) "RE-proposing in-flight (prepareQC not yet committed)" else "auto-proposing"
+              logger.debug(s"[HotStuff] leader-timeout view-change: v=$newView I am the new leader -> $why b=${bid(blockId)}")
               onLeaderTurn(newView, blockId, blockHeight)
             case None =>
               logger.debug(s"[HotStuff] leader-timeout view-change: v=$newView I am the new leader but blockSource has nothing to propose yet")

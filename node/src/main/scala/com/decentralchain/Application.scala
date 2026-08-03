@@ -252,17 +252,23 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       val proposalValid: BlockId => Boolean =
         blockId => blockchainUpdater.heightOf(blockId).exists(h => blockchainUpdater.blockId(h).contains(blockId))
 
-      // What to (re-)propose if a leader-timeout view-change (Task 8 Step 2) makes THIS node the newly
-      // rotated leader. Always proposes the current settled tip -- the SAME block the per-height happy
-      // path below would propose next -- so a pacemaker-driven proposal is never for a different/newer
-      // block than the happy path would pick; it only differs in WHEN and under WHICH view number it
-      // fires (reacting to a stalled round instead of a height increment). This is deliberately the
-      // simple, well-understood case (re-derive "the current settled tip" fresh each time) rather than
-      // re-proposing a specific prior not-yet-QC'd proposal extending the locked/prepareQC branch (the
-      // more sophisticated pacemaker liveness optimization from the classic protocol) -- that would
-      // require exposing HotStuffCoordinator's internal safety state (prepareQC) through a new API, a
-      // real design question left as follow-up. This smaller, self-contained increment is enough to make
-      // `onRoundTimerTick`'s blockSource-driven path a real, safe action instead of a permanent no-op.
+      // FALLBACK for what to (re-)propose if a leader-timeout view-change (Task 8 Step 2) makes THIS
+      // node the newly rotated leader and it has NOTHING already in flight. Proposes the current settled
+      // tip -- the SAME block the per-height happy path below would propose next -- so a pacemaker-driven
+      // proposal is never for a different/newer block than the happy path would pick; it only differs in
+      // WHEN and under WHICH view number it fires (reacting to a stalled round instead of a height
+      // increment).
+      //
+      // `HotStuffCoordinator.Enabled.onRoundTimerTick` now prefers re-proposing a real, quorum-backed,
+      // not-yet-committed branch it already holds (`SafetyState.prepareQC`, exposed internally as
+      // `inFlightBranch`) over calling this `blockSource` at all -- the classic HotStuff pacemaker
+      // liveness optimization this comment used to defer as a "real design question left as follow-up".
+      // No new API surface was needed: `prepareQC`/`committedHeight` already existed in
+      // `SafetyState`/`EngineState` before this change; the gap was only that the leader-timeout path
+      // never consulted them. This `blockSource` closure is consulted ONLY when nothing is in flight
+      // (the common, clean-timeout case) -- see HotStuffCoordinator.scala's `inFlightBranch`/
+      // `onRoundTimerTick` and HotStuffViewChangeSpecification's "onRoundTimerTick's leader-timeout
+      // re-propose choice" test.
       val blockSource: () => Option[(BlockId, Int)] = () => {
         val tip = blockchainUpdater.height
         val s   = tip - settings.hotStuffSettings.settledDepth
