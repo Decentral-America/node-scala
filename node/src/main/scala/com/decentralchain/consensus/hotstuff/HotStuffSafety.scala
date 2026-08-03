@@ -35,6 +35,28 @@ object HotStuffSafety {
   def safeToVote(proposal: HotStuffProposal, state: SafetyState, extendsBranch: (BlockId, BlockId) => Boolean): Boolean =
     proposal.view > state.lastVotedView && {
       state.lockedQC match {
+        // Nothing locked yet — safe to vote, subject only to `view > lastVotedView` above.
+        //
+        // KNOWN, ACCEPTED, BOUNDED NARROWING (post-restart window): a freshly-constructed `SafetyState`
+        // (e.g. right after a coordinator restart) starts with `lockedQC = None`, and this branch will
+        // unconditionally admit ANY proposal until this replica accumulates its own lock again — including
+        // a Byzantine leader replaying an old-but-real on-chain block under an inflated view number. Such
+        // a proposal also clears `HotStuffCoordinator`'s `proposalValid` guard (chain-membership only, not
+        // view-aware — see Application.scala/HotStuffCoordinator.scala's Task 8 Step 2 notes), so this
+        // window can get an honest just-restarted replica to vote/form a QC for that replayed block under
+        // the inflated view. This is a real narrowing versus the old view-coupled guard (`blockId(view)`),
+        // which incidentally also gated this case by construction.
+        //
+        // It is deliberately left as-is (not restored) because it is bounded, not fatal: `HotStuffEngine`'s
+        // commit path (`onQC`'s `qc.blockHeight > committedHeight` check) is separately monotonic in block
+        // height, so no vote/QC formed via this window can ever regress or falsely-advance
+        // `hotStuffFinalizedHeight` — T2 remains observational-only and feature-25 Deterministic Finality
+        // is untouched regardless. The only consequence is a wasted round (a vote/QC for a
+        // proposal that doesn't correspond to real new progress), not a safety violation. See the
+        // regression test "a freshly-restarted replica (lockedQC=None) votes for a replayed old-but-real
+        // block under an inflated view, but the commit height is monotonically bounded" in
+        // HotStuffViewChangeSpecification for a concrete demonstration that this cannot regress
+        // `hotStuffFinalizedHeight`.
         case None         => true // nothing locked yet — safe to vote
         case Some(locked) =>
           val safety   = extendsBranch(proposal.blockId, locked.blockId) // extends the locked branch
