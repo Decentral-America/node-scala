@@ -55,6 +55,7 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
 | T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 |
 | T9 | Crashed leader / partition (liveness + safety) | pacemaker + safety | unit + `FourNodeHotStuffTestSuite`; **needs live soak** |
+| T10 | Cross-committee-epoch fork — two disjoint committees (e.g. a full validator-set rotation between committed-generators periods) each independently form a valid, honestly-signed 2/3-stake QC for a *different* block at the identical (view, height), with zero shared signers | `HotStuffQuorum`/`HotStuffVotePool` — committee identity is not bound into the signed vote/QC bytes | **NOT stopped today** — proven reachable by `HotStuffCrossEpochForkSpecification` (unit-level, no coordinator/network needed); invisible to `HotStuffSafety.equivocators` (single-voter double-sign detector only, blind to disjoint-signer forks); full write-up in `docs/hotstuff-integration-design.md` §6 and §8 Open Gates item 2. **Bounded**: T2 commit is observational only (see §1) — this cannot fork, halt, or roll back the chain today. Closing it for real is a genuine protocol-design decision (bind committee identity into signed vote/QC bytes + a coordinator-level transition-gating rule, or a full joint-consensus two-phase membership-change protocol), comparable in scope to the pacemaker rework — deliberately left open for this audit to weigh in on rather than rushed |
 
 ## 5. Code surface (package `com.decentralchain.consensus.hotstuff` unless noted)
 | File | Role | Audit priority |
@@ -89,6 +90,17 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 3. **Equivocation → slashing** not wired to `conflictGenerators` (T5) — acceptable while observational;
    required before authoritative.
 4. **hotStuffFinalizedHeight is observational only** — no path raises the authoritative finalized height.
+5. **Cross-committee-epoch fork (T10)** — committee identity is not bound into the signed vote/QC bytes
+   in `HotStuffQuorum`, so two disjoint committees (e.g. a full validator-set rotation between committed-
+   generators periods) can each independently certify a valid, honest 2/3-stake QC for a *different* block
+   at the same (view, height) — zero shared signers, invisible to `HotStuffSafety.equivocators`. Proven
+   reachable by `HotStuffCrossEpochForkSpecification`; full write-up in `docs/hotstuff-integration-design.md`
+   §6 and §8 Open Gates item 2. This is a real gap in the production QC/committee-binding logic, but it is
+   bounded today: T2 stays strictly observational (§1) — it cannot fork, halt, or roll back the chain;
+   feature-25 remains sole authoritative finality. Closing it for real requires a genuine protocol-design
+   decision (binding committee identity into signed vote/QC bytes plus a coordinator-level transition-
+   gating rule, or a full joint-consensus membership-change protocol) — comparable in scope to the
+   pacemaker rework, and deliberately left for this audit to weigh in on rather than rushed.
 
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.enabled = true` on mainnet)
 - [x] Pure core + engine + shell implemented, gated OFF by default
