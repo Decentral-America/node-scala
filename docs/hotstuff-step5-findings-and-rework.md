@@ -110,6 +110,25 @@ a proper pacemaker. If no → Option B, and T2-as-HotStuff is descoped.
 - [ ] §4 A-vs-B decision — now a pure *product* call (commit works either way); if Option A, add the
       pacemaker/single-active-view rework + adversarial tests (leader rotation, view change,
       concurrent-height safety) + fresh internal review before re-running step-5.
+      **Partial progress (branch `consensus/hotstuff-pacemaker-rework`, not yet merged):**
+      `HotStuffPacemaker.leaderFor`/`onTimeout` existed as pure, unit-tested primitives but were never
+      actually wired as the shell's view-driver -- `HotStuffCoordinator.onTimeout()` only bumped
+      `EngineState.pacemaker` with nothing observing it, and Application.scala picked the proposer
+      purely via a FairPoS-forger check on a settled height. Added `HotStuffCoordinator.onRoundTimerTick`
+      (real leader-timeout detection: only advances the view + triggers the newly-rotated leader to
+      auto-propose via an injected `blockSource` when NO QC formed since the previous tick) and
+      `currentView`. Wired into `Application.scala`'s scheduler as a behavior-identical rename
+      (`blockSource` intentionally left unset there -- see that commit's message and the follow-up
+      below). Pure core (Engine/Safety/Quorum/VotePool) untouched. 87/87 existing hotstuff unit/DST
+      tests green, zero regressions.
+      **Deferred (not done in this pass):** full view/height decoupling. The shell's `proposalValid`
+      guard (`blockchainUpdater.blockId(view).contains(blockId)`) assumes `view == the settled height of
+      the proposed block` -- the same coupling findings #2/#5 above already had to fix once. Actually
+      auto-proposing on a pacemaker-driven view-change in production requires first redesigning what
+      `proposalValid`/vote-height mean when `view != block height` (e.g., a proposal carries its own
+      target height distinct from the view number). That redesign, plus 3-chain pipelining across
+      genuinely sequential views and Task 8 Steps 3-4 (bounding `HotStuffVotePool.seenCommittees`,
+      re-running node-it finalization suites), remain open follow-up work before this is audit-ready.
 - [ ] External audit before any mainnet enable (of the shipped model, or the reworked one if Option A).
 - The five fixed transport/model/height bugs and the observability (`hotStuffFinalizedHeight`,
   instrumentation) carry forward regardless of A/B.
