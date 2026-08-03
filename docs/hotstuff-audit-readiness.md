@@ -56,6 +56,7 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 |
 | T9 | Crashed leader / partition (liveness + safety) | pacemaker + safety | unit + `FourNodeHotStuffTestSuite`; **needs live soak** |
 | T10 | Cross-committee-epoch fork — two disjoint committees (e.g. a full validator-set rotation between committed-generators periods) each independently form a valid, honestly-signed 2/3-stake QC for a *different* block at the identical (view, height), with zero shared signers | `HotStuffQuorum`/`HotStuffVotePool` — committee identity is not bound into the signed vote/QC bytes | **NOT stopped today** — proven reachable by `HotStuffCrossEpochForkSpecification` (unit-level, no coordinator/network needed); invisible to `HotStuffSafety.equivocators` (single-voter double-sign detector only, blind to disjoint-signer forks); full write-up in `docs/hotstuff-integration-design.md` §6 and §8 Open Gates item 2. **Bounded**: T2 commit is observational only (see §1) — this cannot fork, halt, or roll back the chain today. Closing it for real is a genuine protocol-design decision (bind committee identity into signed vote/QC bytes + a coordinator-level transition-gating rule, or a full joint-consensus two-phase membership-change protocol), comparable in scope to the pacemaker rework — deliberately left open for this audit to weigh in on rather than rushed |
+| T11 | Post-restart replay under a blank safety lock — a freshly-constructed `SafetyState` (`lockedQC = None`) admits ANY view-ordering-valid proposal, incl. a Byzantine leader's replay of an old-but-real block under an inflated view, until the replica re-accumulates its own lock | `HotStuffSafety.safeToVote`'s `None` branch / `HotStuffCoordinator.Enabled`'s `initialLockedQC` | **Narrowed, not fully closed** — `HotStuffLockedQCStore` persists a replica's real `lockedQC` to disk on every genuine advance and reloads it via `initialLockedQC` at coordinator construction, so a restart resumes from the replica's actual last lock instead of blank state. This closes the window on every restart from a replica's SECOND boot onward, adversarially tested against a fabricated-but-well-formed persisted QC (`HotStuffViewChangeSpecification`, "a fabricated-but-well-formed QC loaded as initialLockedQC" — proven to at worst self-DoS that one replica's voting, never corrupt consensus, since `HotStuffEngine.onQC` independently re-verifies BLS/quorum regardless of `lockedQC`). It does **not** close the window on a replica's very first-ever boot, when by definition nothing has been locked/persisted yet — that one-time gap still exists, bounded the same way as before (`HotStuffEngine.onQC`'s monotonic commit-height guard; see T4) |
 
 ## 5. Code surface (package `com.decentralchain.consensus.hotstuff` unless noted)
 | File | Role | Audit priority |
@@ -101,6 +102,16 @@ HotStuff authoritative (not built); non-consensus node subsystems.
    decision (binding committee identity into signed vote/QC bytes plus a coordinator-level transition-
    gating rule, or a full joint-consensus membership-change protocol) — comparable in scope to the
    pacemaker rework, and deliberately left for this audit to weigh in on rather than rushed.
+6. **Post-restart `lockedQC` replay window (T11) — narrowed, not fully closed.** `HotStuffLockedQCStore`
+   persists each replica's real `lockedQC` to disk on every genuine advance and reloads it as
+   `initialLockedQC` at coordinator construction, so a restart resumes from the replica's last real lock
+   instead of `SafetyState()`'s blank slate. This closes the window for every restart from a replica's
+   SECOND boot onward. It does **not** close it for a replica's very first-ever boot: at that point, by
+   definition, nothing has ever been locked or persisted yet, so there is nothing for `load` to return —
+   the original blank-slate replay risk documented at `HotStuffSafety.safeToVote` still technically exists
+   for that one-time event. It remains bounded exactly as before (`HotStuffEngine.onQC`'s monotonic
+   commit-height guard applies regardless of how the vote/QC was formed) — a wasted round at worst, never
+   a safety break. Do not overclaim this mitigation as "fully closed."
 
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.enabled = true` on mainnet)
 - [x] Pure core + engine + shell implemented, gated OFF by default
