@@ -4,7 +4,7 @@ import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
-import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message}
+import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
 import io.decentralchain.protobuf.block.HotStuffPhase
@@ -251,5 +251,55 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       val (afterStale, actionsStale) = HotStuffEngine.onQC(afterReplay, staleQC)
       actionsStale.collect { case c: HotStuffAction.Committed => c } shouldBe empty // guard blocks the regression
       afterStale.committedHeight should be(Hold)                                   // NOT regressed to Holder
+    }
+
+  // RED (closing the gap documented above and at HotStuffSafety.safeToVote's `lockedQC=None` branch):
+  // today `HotStuffCoordinator.Enabled` has no way to seed its `SafetyState` with a pre-existing
+  // `lockedQC` at construction time, nor any hook to observe when the lock advances so it could be
+  // persisted -- a real coordinator restart is therefore *exactly* `SafetyState()`, unconditionally.
+  // This test constructs a "pre-restart" replica, lets it genuinely lock onto B via a real quorum,
+  // captures that lock through a not-yet-existing `onLockedQCPersist` hook, and feeds it back into a
+  // "post-restart" replica via a not-yet-existing `initialLockedQC` constructor parameter. Neither
+  // parameter exists yet, so this file does not compile -- that IS the RED, same pattern as the
+  // `onRoundTimerTick`/`blockSource` RED earlier in this file.
+  "a coordinator restart that reloads its persisted lockedQC" should
+    "reject the same old-but-real block replay under an inflated view that a blank-slate restart would wrongly admit" in {
+      val fx1 = new RecordingEffects(0)
+      var persisted: Option[QuorumCertificate] = None
+      val node1 = new HotStuffCoordinator.Enabled(
+        () => committee,
+        fx1,
+        extendsBranchReal,
+        onLockedQCPersist = qc => persisted = Some(qc)
+      )
+
+      // Node 1 genuinely locks onto B: feed a real PRE_COMMIT QC (quorum of real BLS votes) via onQC.
+      val lockVotesForB = (0 to 2).map(i => committeeVoteFor(5, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, H, i))
+      val lockQCForB     = HotStuffQuorum.formQC(lockVotesForB, committee).toOption.get
+      node1.onQC(lockQCForB)
+
+      persisted should be(Some(lockQCForB)) // the hook fired with exactly the newly-locked QC
+
+      // "Restart": a fresh coordinator, but seeded with the persisted lock instead of a blank SafetyState.
+      val fx2 = new RecordingEffects(0)
+      val restarted = new HotStuffCoordinator.Enabled(
+        () => committee,
+        fx2,
+        extendsBranchReal,
+        initialLockedQC = persisted
+      )
+
+      val inflatedView     = 9999
+      val replayedProposal = HotStuffProposal(inflatedView, Bold, justify = None)
+      restarted.onProposal(replayedProposal, Hold)
+
+      fx2.sent.collect { case v: HotStuffVote => v } shouldBe empty // rejected: locked on B, Bold doesn't extend it
+
+      // Contrast: a blank-slate restart (today's only behaviour) DOES vote for the same replay -- proving
+      // this is a real fix, not a coincidence of the test setup.
+      val fx3 = new RecordingEffects(0)
+      val blankRestart = new HotStuffCoordinator.Enabled(() => committee, fx3, extendsBranchReal)
+      blankRestart.onProposal(replayedProposal, Hold)
+      fx3.sent.collect { case v: HotStuffVote => v } should not be empty
     }
 }
