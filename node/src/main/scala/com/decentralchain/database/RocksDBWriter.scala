@@ -1222,6 +1222,20 @@ class RocksDBWriter(
         discardedBlock
       }
 
+    // Cap the HotStuff authoritative floor (`Keys.hotStuffAuthoritativeFloor`) to the post-rollback
+    // chain, exactly as feature-25's own `finalizedHeight`/`finalizedHeightAt` is capped above. Without
+    // this, a force rollback (`/debug/rollback`, DB repair, any reorg path reaching `doRollback`) would
+    // leave the persisted floor pointing past `targetHeight` -- `Caches.finalizedHeight`, computed as
+    // `max(currentFinalizedHeight, currentHotStuffFloor)`, would then report a `finalizedHeight` for a
+    // block that no longer exists on this chain. Capping (not merely clearing) preserves whatever
+    // portion of the HotStuff-certified floor still legitimately applies to the post-rollback chain.
+    readWrite { rw =>
+      val currentFloor = rw.get(Keys.hotStuffAuthoritativeFloor)
+      if (currentFloor.exists(_.toInt > targetHeight.toInt)) {
+        rw.put(Keys.hotStuffAuthoritativeFloor, Some(targetHeight))
+      }
+    }
+
     log.debug(s"Rollback to block $targetBlockId at $targetHeight completed")
     discardedBlocks.reverse
   }

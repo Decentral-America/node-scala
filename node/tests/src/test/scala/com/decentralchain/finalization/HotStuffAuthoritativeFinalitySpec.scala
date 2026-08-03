@@ -1,5 +1,6 @@
 package com.decentralchain.finalization
 
+import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.TxHelpers
@@ -16,7 +17,13 @@ import com.decentralchain.transaction.TxHelpers
   */
 class HotStuffAuthoritativeFinalitySpec extends BaseFinalizationSpec {
   private val node0Acc = TxHelpers.signer(0)
-  private val settings = DomainPresets.DeterministicFinality
+
+  // `raiseHotStuffFinalizedHeight` now refuses outright (defense-in-depth, mirroring the
+  // `Application.scala` wiring gate) unless `hotstuff.authoritative = true` -- these tests exercise
+  // authoritative-mode behaviour directly, so the flag must genuinely be on here.
+  private val settings = DomainPresets.DeterministicFinality.copy(
+    hotStuffSettings = DomainPresets.DeterministicFinality.hotStuffSettings.copy(enabled = true, authoritative = true)
+  )
 
   "raiseHotStuffFinalizedHeight" - {
     "raises finalizedHeight past feature-25's own floor for a block already on the canonical chain" in withDomain(
@@ -70,6 +77,48 @@ class HotStuffAuthoritativeFinalitySpec extends BaseFinalizationSpec {
       // re-delivering the SAME already-applied high QC again is a pure idempotent no-op
       d.blockchainUpdater.raiseHotStuffFinalizedHeight(highBlockId, highHeight)
       d.blockchain.finalizedHeight.value shouldBe afterHigh
+    }
+
+    "a force rollback below a HotStuff-raised floor MUST cap/clear the persisted floor -- finalizedHeight must never reference a nonexistent block" in withDomain(
+      settings,
+      AddrWithBalance.enoughBalances(node0Acc)
+    ) { d =>
+      (1 to 10).foreach(_ => d.appendBlock())
+
+      val raisedHeight = Height(11)
+      val raisedBlockId = d.blockchain.blockId(raisedHeight.toInt).value
+      d.blockchainUpdater.raiseHotStuffFinalizedHeight(raisedBlockId, raisedHeight) shouldBe true
+      d.blockchain.finalizedHeight.value shouldBe raisedHeight
+
+      val rollbackTarget = Height(6)
+      val rollbackBlockId = d.blockchain.blockId(rollbackTarget.toInt).value
+      d.blockchainUpdater.removeAfter(rollbackBlockId).explicitGet()
+
+      // the block the HotStuff floor pointed at no longer exists on the post-rollback chain
+      d.blockchain.blockId(raisedHeight.toInt) shouldBe None
+
+      // ... yet finalizedHeight, sourced from the un-capped HotStuff floor, still claims it.
+      // This is the invariant violation: finalizedHeight must NEVER reference a nonexistent block.
+      d.blockchain.finalizedHeight.value.toInt should be <= rollbackTarget.toInt
+    }
+
+    "defense-in-depth: REFUSES to raise when hotstuff.authoritative=false, even for a real block this node agrees on, even if some other caller reaches this method directly" in withDomain(
+      DomainPresets.DeterministicFinality.copy(
+        hotStuffSettings = DomainPresets.DeterministicFinality.hotStuffSettings.copy(enabled = true, authoritative = false)
+      ),
+      AddrWithBalance.enoughBalances(node0Acc)
+    ) { d =>
+      (1 to 5).foreach(_ => d.appendBlock())
+      val floorBefore   = d.blockchain.finalizedHeight
+      val targetHeight  = Height(d.blockchain.height)
+      val targetBlockId = d.blockchain.blockId(targetHeight.toInt).value // a REAL, agreeing block -- not a foreign/mismatched one
+
+      val applied = d.blockchainUpdater.raiseHotStuffFinalizedHeight(targetBlockId, targetHeight)
+
+      // must be refused purely on the `authoritative` flag, independent of the `Application.scala`
+      // wiring gate and independent of chain agreement (which is genuine here)
+      applied shouldBe false
+      d.blockchain.finalizedHeight shouldBe floorBefore
     }
   }
 }

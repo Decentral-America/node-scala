@@ -713,21 +713,35 @@ class BlockchainUpdaterImpl(
   // `/blocks/height/finalized`, `BlockEndorser`) sees the raised value automatically, with zero changes
   // to their own code. Monotonic by construction (`Caches.raiseHotStuffFinalizedHeight` only ever raises).
   override def raiseHotStuffFinalizedHeight(certifiedBlockId: BlockId, certifiedHeight: Height): Boolean = writeLock {
-    this.blockId(certifiedHeight.toInt) match {
-      case Some(localBlockId) if localBlockId == certifiedBlockId =>
-        val applied = rocksdb.raiseHotStuffFinalizedHeight(certifiedHeight)
-        if (applied) {
-          log.info(s"[HotStuff] AUTHORITATIVE raise: finalizedHeight -> $certifiedHeight (block $certifiedBlockId)")
-        }
-        applied
-      case localBlockId =>
-        log.warn(
-          s"[HotStuff] REFUSING authoritative raise to height $certifiedHeight: certified block " +
-            s"$certifiedBlockId does not match this node's local canonical chain at that height " +
-            s"(local=$localBlockId). feature-25 finalizedHeight remains the floor; this HotStuff commit " +
-            s"is treated as observational-only for this height."
-        )
-        false
+    // Defense-in-depth: the mainnet-safety boundary for this whole feature must NOT rest solely on the
+    // `Application.scala` wiring site choosing whether to pass a real closure or an inert no-op into
+    // `NodeHotStuffEffects`. Re-check the flag directly here, at the actual raise site, so that any
+    // future caller reaching this method via a different wiring path still cannot raise the
+    // authoritative floor unless `hotstuff.authoritative = true` is genuinely set.
+    if (!dccSettings.hotStuffSettings.authoritative) {
+      log.warn(
+        s"[HotStuff] REFUSING authoritative raise to height $certifiedHeight (block $certifiedBlockId): " +
+          s"hotstuff.authoritative is not enabled on this node. This call should be unreachable when the " +
+          s"flag is off -- treating as a defense-in-depth no-op rather than trusting the caller."
+      )
+      false
+    } else {
+      this.blockId(certifiedHeight.toInt) match {
+        case Some(localBlockId) if localBlockId == certifiedBlockId =>
+          val applied = rocksdb.raiseHotStuffFinalizedHeight(certifiedHeight)
+          if (applied) {
+            log.info(s"[HotStuff] AUTHORITATIVE raise: finalizedHeight -> $certifiedHeight (block $certifiedBlockId)")
+          }
+          applied
+        case localBlockId =>
+          log.warn(
+            s"[HotStuff] REFUSING authoritative raise to height $certifiedHeight: certified block " +
+              s"$certifiedBlockId does not match this node's local canonical chain at that height " +
+              s"(local=$localBlockId). feature-25 finalizedHeight remains the floor; this HotStuff commit " +
+              s"is treated as observational-only for this height."
+          )
+          false
+      }
     }
   }
 
