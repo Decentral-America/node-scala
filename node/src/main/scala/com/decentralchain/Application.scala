@@ -270,12 +270,30 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       }
 
       val hsEffects = new NodeHotStuffEffects(committee, wallet, allChannels)
+
+      // Closes the post-restart `lockedQC=None` window (see `HotStuffSafety.safeToVote`'s doc comment
+      // and `HotStuffLockedQCStore`): reload this replica's last-persisted lock at startup, and persist
+      // every subsequent advance so the NEXT restart also resumes from a real lock instead of nothing.
+      // Lives under the node's own data directory (like `dcc.db.directory`), so it is never touched
+      // while `dcc.hotstuff.enabled = false` -- this whole block only runs when enabled.
+      import com.decentralchain.consensus.hotstuff.HotStuffLockedQCStore
+      val hsLockedQCPath    = java.nio.file.Paths.get(settings.directory, "hotstuff", "locked-qc.dat")
+      val hsInitialLockedQC = HotStuffLockedQCStore.load(hsLockedQCPath)
       // `heightOf` lets the self-vote path (`onLeaderTurn`) independently re-derive a block's height
       // from its blockId, the same defense-in-depth the receive path below already applies via
       // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
       // literally.
       val hsCoordinator =
-        new HotStuffCoordinator.Enabled(committee, hsEffects, extendsBranch, proposalValid, blockSource, blockchainUpdater.heightOf)
+        new HotStuffCoordinator.Enabled(
+          committee,
+          hsEffects,
+          extendsBranch,
+          proposalValid,
+          blockSource,
+          blockchainUpdater.heightOf,
+          hsInitialLockedQC,
+          qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc)
+        )
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen

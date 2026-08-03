@@ -115,10 +115,23 @@ object HotStuffCoordinator {
       // defended the same way the receive path defends itself. Defaults to `_ => None` so existing call
       // sites/tests (which have no blockchain to query) are unaffected: `getOrElse(blockHeight)` then
       // falls back to the literal argument exactly as before.
-      heightOf: BlockId => Option[Int] = _ => None
+      heightOf: BlockId => Option[Int] = _ => None,
+      // Closes the "post-restart lockedQC=None" narrowing documented at `HotStuffSafety.safeToVote`:
+      // seeds THIS replica's `SafetyState` with a `lockedQC` recovered from local disk (see
+      // `HotStuffLockedQCStore`), instead of always starting from a blank slate. `None` (the default)
+      // preserves today's exact behaviour for every existing call site/test that doesn't pass this --
+      // a fresh `SafetyState()`, same as before this change.
+      initialLockedQC: Option[QuorumCertificate] = None,
+      // Fires exactly once per genuine lockedQC advance (never on a no-op/rejected QC), with the new
+      // lock, so the shell can persist it (see `HotStuffLockedQCStore.save` / Application.scala) and
+      // survive a future restart via `initialLockedQC` above. Defaults to a no-op so existing call
+      // sites/tests are unaffected -- and, per `dcc.hotstuff.enabled=false`'s `Disabled` coordinator
+      // never constructing an `Enabled` at all, this callback (and any disk I/O it drives) simply never
+      // runs when HotStuff is disabled.
+      onLockedQCPersist: QuorumCertificate => Unit = _ => ()
   ) extends HotStuffCoordinator
       with StrictLogging {
-    private var engine = EngineState(committeeProvider())
+    private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC))
     private var pool   = VotePool()
     private var voted  = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
     // Baseline for stall detection in `onRoundTimerTick`: the pacemaker view as of the PREVIOUS tick,
@@ -226,8 +239,14 @@ object HotStuffCoordinator {
       */
     private def applyQC(qc: QuorumCertificate, onAccepted: => Unit): Unit = {
       refreshCommittee()
+      val previousLockedQC      = engine.safety.lockedQC
       val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
       engine = nextEngine
+      // `HotStuffSafety.update` only ever advances `lockedQC` monotonically (never regresses, never
+      // touches it on a rejected QC -- a rejected QC's `actions` never reach here with a changed safety
+      // state). Persist exactly on a genuine advance, so a later restart can seed `initialLockedQC`
+      // with THIS replica's actual last lock instead of `None`.
+      engine.safety.lockedQC.foreach(newLock => if (!previousLockedQC.contains(newLock)) onLockedQCPersist(newLock))
       val rejected = actions.exists { case _: HotStuffAction.Rejected => true; case _ => false }
       val line     =
         s"[HotStuff] onQC ${qc.phase} v=${qc.view} b=${bid(qc.blockId)} signers=${qc.signerIndexes.size} rejected=$rejected actions=${actions.mkString(",")}"

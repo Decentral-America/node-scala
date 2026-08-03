@@ -91,7 +91,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
     node0.onLeaderTurn(0, B, H)
     val proposal = fx0.sent.collect { case p: HotStuffProposal => p }.head
     (1 to 3).foreach { i =>
-      val msg = HotStuffQuorum.voteMessage(proposal.view, io.decentralchain.protobuf.block.HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, H)
+      val msg  = HotStuffQuorum.voteMessage(proposal.view, io.decentralchain.protobuf.block.HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, H)
       val vote = HotStuffVote(
         proposal.view,
         io.decentralchain.protobuf.block.HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
@@ -145,7 +145,8 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       val chainMembershipProposalValid: BlockId => Boolean = _ == B
 
       val fx1   = new RecordingEffects(1)
-      val node1 = new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, chainMembershipProposalValid, blockSource = () => Some((B, H)))
+      val node1 =
+        new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, chainMembershipProposalValid, blockSource = () => Some((B, H)))
 
       node1.onRoundTimerTick() // baseline, view 0
       node1.onRoundTimerTick() // stall -> view-change to 1; node1 is leaderFor(1) -> auto-proposes (B, H)
@@ -160,16 +161,17 @@ class HotStuffViewChangeSpecification extends FlatSpec {
 
   it should "still reject a proposal for a block the replica does NOT recognize, regardless of view (the guard's Byzantine-rejection purpose is preserved)" in {
     val chainMembershipProposalValid: BlockId => Boolean = _ == B
-    val bogus: BlockId                                    = ByteStr(Array.fill[Byte](32)(66))
+    val bogus: BlockId                                   = ByteStr(Array.fill[Byte](32)(66))
 
     val fx1   = new RecordingEffects(1)
-    val node1 = new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, chainMembershipProposalValid, blockSource = () => Some((bogus, H)))
+    val node1 =
+      new HotStuffCoordinator.Enabled(() => committee, fx1, (_, _) => true, chainMembershipProposalValid, blockSource = () => Some((bogus, H)))
 
     node1.onRoundTimerTick() // baseline, view 0
     node1.onRoundTimerTick() // stall -> view-change to 1; node1 auto-proposes the bogus block
 
     fx1.sent.collect { case p: HotStuffProposal => p } should not be empty // broadcast is unconditional
-    fx1.sent.collect { case v: HotStuffVote => v } shouldBe empty          // but self-vote is rejected: not chain-recognized
+    fx1.sent.collect { case v: HotStuffVote => v } shouldBe empty // but self-vote is rejected: not chain-recognized
   }
 
   // Regression test for the post-restart `lockedQC = None` bootstrap-window narrowing documented at
@@ -189,7 +191,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
   private val Bolder: BlockId = ByteStr(Array.fill[Byte](32)(9))
   private val Holder          = 100
 
-  private val heights: Map[BlockId, Int]               = Map(B -> H, Bold -> Hold)
+  private val heights: Map[BlockId, Int]                       = Map(B -> H, Bold -> Hold)
   private val extendsBranchReal: (BlockId, BlockId) => Boolean = (child, ancestor) =>
     child == ancestor || (for {
       hc <- heights.get(child)
@@ -203,9 +205,9 @@ class HotStuffViewChangeSpecification extends FlatSpec {
 
   "HotStuffSafety.safeToVote's lockedQC=None branch (fresh post-restart SafetyState)" should
     "admit a Byzantine leader's replay of an old-but-real block under an inflated view, unlike a replica that retained its pre-restart lock" in {
-      val inflatedView      = 9999
-      val replayedProposal  = HotStuffProposal(inflatedView, Bold, justify = None)
-      val freshlyRestarted  = SafetyState() // lockedQC = None, lastVotedView = -1: exactly post-restart
+      val inflatedView     = 9999
+      val replayedProposal = HotStuffProposal(inflatedView, Bold, justify = None)
+      val freshlyRestarted = SafetyState() // lockedQC = None, lastVotedView = -1: exactly post-restart
 
       // The narrowing itself: nothing locked yet -> admitted, subject only to view > lastVotedView.
       HotStuffSafety.safeToVote(replayedProposal, freshlyRestarted, extendsBranchReal) should be(true)
@@ -214,12 +216,12 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       // same replayed proposal for the older, non-descendant block Bold is correctly rejected --
       // proving the gap is specific to the `lockedQC = None` bootstrap window, not a general hole in
       // `safeToVote`.
-      val lockVotesForB = (0 to 2).map(i => committeeVoteFor(5, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, H, i))
-      val lockQCForB     = HotStuffQuorum.formQC(lockVotesForB, committee).toOption.get
+      val lockVotesForB    = (0 to 2).map(i => committeeVoteFor(5, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, H, i))
+      val lockQCForB       = HotStuffQuorum.formQC(lockVotesForB, committee).toOption.get
       val preRestartLocked = SafetyState(lockedQC = Some(lockQCForB))
 
-      extendsBranchReal(Bold, B) should be(false)                                       // Bold does not extend the locked branch
-      replayedProposal.justify.exists(_.view > lockQCForB.view) should be(false)         // no newer justify-QC either
+      extendsBranchReal(Bold, B) should be(false)                                // Bold does not extend the locked branch
+      replayedProposal.justify.exists(_.view > lockQCForB.view) should be(false) // no newer justify-QC either
       HotStuffSafety.safeToVote(replayedProposal, preRestartLocked, extendsBranchReal) should be(false)
     }
 
@@ -233,7 +235,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       val replayCommitVotes = (0 to 2).map(i => committeeVoteFor(inflatedView, HotStuffPhase.HOTSTUFF_PHASE_COMMIT, Bold, Hold, i))
       val replayCommitQC    = HotStuffQuorum.formQC(replayCommitVotes, committee).toOption.get
 
-      val freshEngine                    = EngineState(committee) // committedHeight = 0: matches a freshly-restarted replica
+      val freshEngine                  = EngineState(committee) // committedHeight = 0: matches a freshly-restarted replica
       val (afterReplay, actionsReplay) = HotStuffEngine.onQC(freshEngine, replayCommitQC)
 
       // The commit DOES form (Bold is a real block, and the QC is cryptographically genuine) -- this is
@@ -250,7 +252,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
 
       val (afterStale, actionsStale) = HotStuffEngine.onQC(afterReplay, staleQC)
       actionsStale.collect { case c: HotStuffAction.Committed => c } shouldBe empty // guard blocks the regression
-      afterStale.committedHeight should be(Hold)                                   // NOT regressed to Holder
+      afterStale.committedHeight should be(Hold) // NOT regressed to Holder
     }
 
   // RED (closing the gap documented above and at HotStuffSafety.safeToVote's `lockedQC=None` branch):
@@ -264,9 +266,9 @@ class HotStuffViewChangeSpecification extends FlatSpec {
   // `onRoundTimerTick`/`blockSource` RED earlier in this file.
   "a coordinator restart that reloads its persisted lockedQC" should
     "reject the same old-but-real block replay under an inflated view that a blank-slate restart would wrongly admit" in {
-      val fx1 = new RecordingEffects(0)
+      val fx1                                  = new RecordingEffects(0)
       var persisted: Option[QuorumCertificate] = None
-      val node1 = new HotStuffCoordinator.Enabled(
+      val node1                                = new HotStuffCoordinator.Enabled(
         () => committee,
         fx1,
         extendsBranchReal,
@@ -275,13 +277,13 @@ class HotStuffViewChangeSpecification extends FlatSpec {
 
       // Node 1 genuinely locks onto B: feed a real PRE_COMMIT QC (quorum of real BLS votes) via onQC.
       val lockVotesForB = (0 to 2).map(i => committeeVoteFor(5, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, H, i))
-      val lockQCForB     = HotStuffQuorum.formQC(lockVotesForB, committee).toOption.get
+      val lockQCForB    = HotStuffQuorum.formQC(lockVotesForB, committee).toOption.get
       node1.onQC(lockQCForB)
 
       persisted should be(Some(lockQCForB)) // the hook fired with exactly the newly-locked QC
 
       // "Restart": a fresh coordinator, but seeded with the persisted lock instead of a blank SafetyState.
-      val fx2 = new RecordingEffects(0)
+      val fx2       = new RecordingEffects(0)
       val restarted = new HotStuffCoordinator.Enabled(
         () => committee,
         fx2,
@@ -297,7 +299,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
 
       // Contrast: a blank-slate restart (today's only behaviour) DOES vote for the same replay -- proving
       // this is a real fix, not a coincidence of the test setup.
-      val fx3 = new RecordingEffects(0)
+      val fx3          = new RecordingEffects(0)
       val blankRestart = new HotStuffCoordinator.Enabled(() => committee, fx3, extendsBranchReal)
       blankRestart.onProposal(replayedProposal, Hold)
       fx3.sent.collect { case v: HotStuffVote => v } should not be empty
