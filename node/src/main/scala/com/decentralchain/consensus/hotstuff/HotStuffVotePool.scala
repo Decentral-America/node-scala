@@ -9,8 +9,13 @@ import io.decentralchain.protobuf.block.HotStuffPhase
   * per-voter-deduplicated votes are retained (see `HotStuffVotePool.onVote`).
   *
   * `seenCommittees` records, per target, EVERY DISTINCT committee snapshot that was live at the
-  * moment some vote for that target was processed. SAFETY (audit finding, 2026-07-25 — see
-  * `HotStuffVotePoolCommitteeChangeSpecification`): the committee handed to `onVote` on each call is
+  * moment some vote for that target was processed, up to `HotStuffVotePool.MaxSeenCommitteesPerTarget`
+  * (Task 8 Step 3, 2026-08-02 — see `onVote`'s cap-enforcement comment and
+  * `HotStuffVotePoolBoundedGrowthSpecification`): earlier versions of this pool left this set genuinely
+  * unbounded, reclaimed only by the coordinator's external `pruneOlderThan` call; it is now also capped
+  * from inside the pool itself so a single pathological target cannot leak memory unboundedly even if
+  * `pruneOlderThan` is never called or is called too infrequently. SAFETY (audit finding, 2026-07-25 —
+  * see `HotStuffVotePoolCommitteeChangeSpecification`): the committee handed to `onVote` on each call is
   * whatever `HotStuffCoordinator.refreshCommittee()` currently holds, re-read fresh on every event.
   * A committee-membership change (a generator removed or added via a committed-generators/
   * conflict-generators period rollover) taking effect WHILE votes for one target are still
@@ -57,6 +62,33 @@ case class VotePool(
   */
 object HotStuffVotePool {
 
+  /** Hard cap on the number of distinct committee snapshots retained per (view, phase, blockId) target
+    * in `seenCommittees`, enforced by `onVote` itself (Task 8 Step 3 — see the class-level scaladoc's
+    * unbounded-growth warning, and `HotStuffLargeCommitteeSpecification`, which measured 50 snapshots ->
+    * 25,000 retained `GeneratorInfo` copies for ONE target with no internal bound). Chosen well above
+    * that spec's 50-snapshot stress figure (so it is unaffected) and far above any realistic number of
+    * committee rollovers a single in-flight target should survive in correct operation — the coordinator
+    * also prunes stale targets by view on every view-advance (`prunePool`/`pruneOlderThan`), so a target
+    * surviving this many rollovers unresolved on one view already indicates a stall far beyond normal
+    * operation, not a case this bound needs to stay live for.
+    *
+    * Enforcement is FAIL-CLOSED, not an LRU eviction: once a target has `MaxSeenCommitteesPerTarget`
+    * distinct snapshots recorded, `onVote` refuses to admit any vote that would introduce a NEW, not
+    * -yet-seen committee for that target (the vote is dropped exactly like an invalid one — pool
+    * unchanged). It does NOT evict any already-observed snapshot to make room. This is deliberate:
+    * the pool's core safety property (a QC only forms if the signer set clears quorum under EVERY
+    * committee snapshot ever observed while the target accumulated — see the class scaladoc) depends on
+    * never forgetting a snapshot that was genuinely checked. Evicting an old one to admit a new one would
+    * let a later QC form without having been checked against it, silently reopening the shrink/grow
+    * hazard `HotStuffVotePoolCommitteeChangeSpecification` closes. Refusing new growth once capped instead
+    * means: at worst, an already-pathological target (100+ committee rollovers without resolving) simply
+    * stops being able to form a QC at all until the coordinator's `pruneOlderThan` clears it — safe, if
+    * not maximally live, and memory stays bounded either way. Votes under a committee ALREADY in the
+    * observed set are unaffected by the cap (no new snapshot needs to be recorded), so this never
+    * penalizes normal re-votes under a committee already seen.
+    */
+  val MaxSeenCommitteesPerTarget: Int = 128
+
   /** Ingest one vote. `liveCommittee` is whatever the caller's committee-provider currently returns
     * (it may differ from call to call). The vote's OWN signature is checked against `liveCommittee`
     * (the committee genuinely active when THIS vote arrived — using anything else would be checking
@@ -76,7 +108,12 @@ object HotStuffVotePool {
   def onVote(pool: VotePool, vote: HotStuffVote, liveCommittee: GeneratorSet): (VotePool, Option[QuorumCertificate]) = {
     val key = (vote.view, vote.phase, vote.blockId)
 
+    val priorSeen      = pool.seenCommittees.getOrElse(key, Set.empty)
+    val isNewCommittee = !priorSeen.contains(liveCommittee)
+    val wouldExceedCap = isNewCommittee && priorSeen.size >= MaxSeenCommitteesPerTarget
+
     if (!HotStuffQuorum.verifyVote(vote, liveCommittee)) (pool, None) // drop invalid — do not pool it
+    else if (wouldExceedCap) (pool, None)                             // capped (Task 8 Step 3): fail closed, do not grow seenCommittees further
     else {
       val bucket  = pool.pending.getOrElse(key, Vector.empty)
       val withNew = if (bucket.exists(_.voterIndex == vote.voterIndex)) bucket else bucket :+ vote
@@ -91,7 +128,6 @@ object HotStuffVotePool {
       // invalidates them, so the gate and `formQC` below always see a single self-consistent signer
       // set drawn from the live committee.
       val updated       = withNew.filter(v => HotStuffQuorum.verifyVote(v, liveCommittee))
-      val priorSeen     = pool.seenCommittees.getOrElse(key, Set.empty)
       val seenNow       = priorSeen + liveCommittee
       val withObserved  = pool.copy(seenCommittees = pool.seenCommittees.updated(key, seenNow))
       val signerIndexes = updated.map(_.voterIndex)
@@ -127,10 +163,14 @@ object HotStuffVotePool {
   /** Bounded eviction (memory-leak guard): drop every target whose `view` is strictly older than
     * `minView`, from BOTH `pending` and `seenCommittees`. A target never resolves on its own — a
     * losing-fork block, or junk votes deliberately broadcast for bogus targets, would otherwise leak
-    * one bucket plus one committee-snapshot set into the pool forever (`seenCommittees` is unbounded
-    * by distinct-snapshot count, so this matters). The coordinator calls this from its view/height-
-    * advance path with a `minView` chosen to retain the currently-active view's still-in-flight phases
-    * (see `HotStuffCoordinator`). Pure and side-effect free — no timers or background threads.
+    * one bucket plus one committee-snapshot set into the pool forever, and (before Task 8 Step 3)
+    * `seenCommittees` was unbounded by distinct-snapshot count per target on top of that. `onVote` now
+    * also caps distinct-snapshot growth per target internally (`MaxSeenCommitteesPerTarget`), but this
+    * method remains the only way to reclaim memory from a target's ENTIRE bucket/snapshot-set once it
+    * stops being relevant — the two are complementary, not redundant. The coordinator calls this from
+    * its view/height-advance path with a `minView` chosen to retain the currently-active view's
+    * still-in-flight phases (see `HotStuffCoordinator`). Pure and side-effect free — no timers or
+    * background threads.
     */
   def pruneOlderThan(pool: VotePool, minView: Int): VotePool =
     VotePool(

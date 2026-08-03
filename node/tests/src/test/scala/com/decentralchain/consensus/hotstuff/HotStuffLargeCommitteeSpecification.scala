@@ -143,9 +143,13 @@ class HotStuffLargeCommitteeSpecification extends FlatSpec {
       // in-flight (view, phase, blockId) target, for as long as it never resolves to a QC.
       seen.toSeq.map(_.size).sum should be(50 * 500)
 
-      // The growth above is real and unbounded by the pool itself; it is bounded only by the
-      // coordinator's external pruneOlderThan discipline (see HotStuffVotePoolSpecification), not by
-      // anything inside onVote.
+      // UPDATE (Task 8 Step 3, 2026-08-02): the growth measured above is real, but as of this change it
+      // is no longer unbounded from the pool's own perspective -- onVote now caps distinct-snapshot
+      // growth per target at HotStuffVotePool.MaxSeenCommitteesPerTarget (128, well above this spec's
+      // 50, so the assertions above are unaffected). See HotStuffVotePoolBoundedGrowthSpecification for
+      // the growth-past-the-cap probe and HotStuffVotePool.onVote's fail-closed cap-enforcement comment.
+      // The coordinator's external pruneOlderThan discipline (see HotStuffVotePoolSpecification) remains
+      // the only way to reclaim memory from an ENTIRE target once it stops being relevant.
       val pruned = HotStuffVotePool.pruneOlderThan(finalPool, minView = view + 1)
       pruned.seenCommittees.get(key) should be(None)
     }
