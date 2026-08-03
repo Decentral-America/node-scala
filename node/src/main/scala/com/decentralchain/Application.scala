@@ -311,8 +311,19 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         }(using hotStuffScheduler)
 
       // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
+      // Uses `onRoundTimerTick` (Task 8 Step 2 rework), which now genuinely detects a stalled round (no
+      // QC formed since the previous tick) rather than treating every tick as a timeout -- see
+      // HotStuffCoordinator.onRoundTimerTick and docs/hotstuff-step5-findings-and-rework.md §4 Option A.
+      // NOT wiring the coordinator's `blockSource` auto-propose-on-view-change here yet: this shell's
+      // `proposalValid` guard (above) checks `blockchainUpdater.blockId(view).contains(blockId)`, which
+      // assumes `view == the settled height of the proposed block` -- exactly the coupling finding #2/#5
+      // in the step-5 findings had to fix once already. A pacemaker-driven view-change would propose
+      // under a NEW view (view+1) for a block still at the OLD settled height, violating that guard.
+      // Untangling proposalValid/vote-height semantics for view != block-height is real design work for
+      // full Option A and must not be rushed in this pass; left as follow-up. Until then this call is a
+      // behavior-identical rename of the previous `onTimeout()` (pure pacemaker-view bump only).
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
-      hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onTimeout())
+      hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onRoundTimerTick())
       log.info(
         s"T2 HotStuff coordinator ENABLED (observational; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."
       )
