@@ -189,7 +189,26 @@ class RocksDBWriter(
 
   override protected def loadFinalizedHeight(): Option[Height] = writableDB.get(Keys.finalizedHeight)
 
-  override def finalizedHeightAt(at: Height): Option[Height] = writableDB.get(Keys.finalizedHeightAt(at))
+  override protected def loadHotStuffFloor(): Option[Height] = writableDB.get(Keys.hotStuffAuthoritativeFloor)
+
+  override protected def persistHotStuffFloor(newFloor: Height): Unit =
+    readWrite(_.put(Keys.hotStuffAuthoritativeFloor, Some(newFloor)))
+
+  override def finalizedHeightAt(at: Height): Option[Height] = {
+    val recorded = writableDB.get(Keys.finalizedHeightAt(at))
+    // The HotStuff floor only ever applies to queries "at" a height >= the floor itself: once HotStuff
+    // certifies height H as finalized, "finalized-as-of-height X" is at least H for any X >= H (H was
+    // already on the canonical chain and stays finalized), but it says nothing about heights strictly
+    // before H -- so we never retroactively inflate a historical query below the floor. This is what
+    // keeps this reader-side max safe against the one call site that matters most: the NEXT ordinary
+    // block append reads `finalizedHeightAt(currentTopHeight)` as its own floor (BlockchainUpdaterImpl),
+    // and `currentTopHeight` is always >= H by construction (the raise only ever applies to a block
+    // already present on this node's own chain).
+    loadHotStuffFloor() match {
+      case Some(floor) if floor.toInt <= at.toInt => maxHeight(recorded, Some(floor))
+      case _                                      => recorded
+    }
+  }
 
   override def safeRollbackHeight: Height = writableDB.get(Keys.safeRollbackHeight)
 

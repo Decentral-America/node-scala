@@ -693,6 +693,44 @@ class BlockchainUpdaterImpl(
     rocksdb.finalizedHeightAt(at)
   }
 
+  // T2 HotStuff authoritative-finality hook (testnet-only opt-in, `hotstuff.authoritative`; see
+  // HotStuffSettings and docs/hotstuff-integration-design.md). Called from `NodeHotStuffEffects.onCommit`
+  // ONLY when `authoritative = true` -- default behaviour (flag off) never reaches this method at all.
+  //
+  // The safety guard: `certifiedBlockId` must be EXACTLY the block this node's own canonical chain
+  // already has at `certifiedHeight` (`this.blockId`, the same `blockHeader(..).id()` lookup every other
+  // consumer of chain state uses -- NOT re-derived from the HotStuff QC itself). If it disagrees --
+  // including the T10 cross-epoch-fork scenario where two disjoint committees could each certify a
+  // DIFFERENT block at the same height -- the raise is refused outright and feature-25's own
+  // `finalizedHeight` remains the floor, exactly as if HotStuff had never run. This is what keeps
+  // authoritative mode from ever letting HotStuff inject or cause acceptance of a block the ordinary
+  // sync/validation path hasn't already independently processed: the disagreement is caught HERE, before
+  // any state mutation, not downstream.
+  //
+  // Persisted via `rocksdb.raiseHotStuffFinalizedHeight`, the SAME underlying store feature-25 uses
+  // (`Keys.hotStuffAuthoritativeFloor`, read back by `Caches.finalizedHeight`/`RocksDBWriter.finalizedHeightAt`
+  // as `max(feature-25 value, this floor)`) -- so every existing reader (`Blockchain.lastBlockIds`,
+  // `/blocks/height/finalized`, `BlockEndorser`) sees the raised value automatically, with zero changes
+  // to their own code. Monotonic by construction (`Caches.raiseHotStuffFinalizedHeight` only ever raises).
+  override def raiseHotStuffFinalizedHeight(certifiedBlockId: BlockId, certifiedHeight: Height): Boolean = writeLock {
+    this.blockId(certifiedHeight.toInt) match {
+      case Some(localBlockId) if localBlockId == certifiedBlockId =>
+        val applied = rocksdb.raiseHotStuffFinalizedHeight(certifiedHeight)
+        if (applied) {
+          log.info(s"[HotStuff] AUTHORITATIVE raise: finalizedHeight -> $certifiedHeight (block $certifiedBlockId)")
+        }
+        applied
+      case localBlockId =>
+        log.warn(
+          s"[HotStuff] REFUSING authoritative raise to height $certifiedHeight: certified block " +
+            s"$certifiedBlockId does not match this node's local canonical chain at that height " +
+            s"(local=$localBlockId). feature-25 finalizedHeight remains the floor; this HotStuff commit " +
+            s"is treated as observational-only for this height."
+        )
+        false
+    }
+  }
+
   override def heightOf(blockId: BlockId): Option[Int] = readLock {
     ngState
       .collect {

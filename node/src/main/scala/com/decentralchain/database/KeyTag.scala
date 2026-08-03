@@ -64,7 +64,8 @@ enum KeyTag {
     CommittedGenerators,
     ConflictGenerators,
     CommitmentTransactions,
-    GeneratorBalances
+    GeneratorBalances,
+    HotStuffAuthoritativeFloor
 
   def prefixBytes: Array[Byte] = Shorts.toByteArray(ordinal.toShort)
 }
