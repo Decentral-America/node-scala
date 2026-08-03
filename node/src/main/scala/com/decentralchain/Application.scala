@@ -216,9 +216,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     // ---- T2 HotStuff (gated behind dcc.hotstuff.enabled; observational commit). ----
     // See docs/hotstuff-integration-design.md. Skipped entirely when disabled (the default) => zero
     // behaviour change. When enabled: a single-thread scheduler confines all coordinator state; the
-    // committee is read fresh per period; view = block height, leader = FairPoS forger. NOT validated
-    // on a running multi-node network yet (that is step 5) -- must not be enabled on mainnet before
-    // step 5 + an external audit. Commit is observational only (feature-25 stays authoritative).
+    // committee is read fresh per period. Per-height happy path: view = settled block height, leader =
+    // FairPoS forger. On a leader-timeout, the pacemaker can ALSO advance the view independently of
+    // height (see `blockSource`/`onRoundTimerTick` below) -- `proposalValid`/vote-height derivation are
+    // written to not assume view == height (Task 8 Step 2, docs/hotstuff-step5-findings-and-rework.md
+    // §4 Option A). NOT validated on a running multi-node network yet (that is step 5) -- must not be
+    // enabled on mainnet before step 5 + an external audit. Commit is observational only (feature-25
+    // stays authoritative).
     if (settings.hotStuffSettings.enabled) {
       import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, NodeHotStuffEffects}
       import com.decentralchain.block.Block.BlockId

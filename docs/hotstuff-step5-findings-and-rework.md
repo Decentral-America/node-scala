@@ -110,25 +110,48 @@ a proper pacemaker. If no → Option B, and T2-as-HotStuff is descoped.
 - [ ] §4 A-vs-B decision — now a pure *product* call (commit works either way); if Option A, add the
       pacemaker/single-active-view rework + adversarial tests (leader rotation, view change,
       concurrent-height safety) + fresh internal review before re-running step-5.
-      **Partial progress (branch `consensus/hotstuff-pacemaker-rework`, not yet merged):**
+      **Progress (branch `consensus/hotstuff-pacemaker-rework`, not yet merged):**
       `HotStuffPacemaker.leaderFor`/`onTimeout` existed as pure, unit-tested primitives but were never
       actually wired as the shell's view-driver -- `HotStuffCoordinator.onTimeout()` only bumped
       `EngineState.pacemaker` with nothing observing it, and Application.scala picked the proposer
       purely via a FairPoS-forger check on a settled height. Added `HotStuffCoordinator.onRoundTimerTick`
       (real leader-timeout detection: only advances the view + triggers the newly-rotated leader to
       auto-propose via an injected `blockSource` when NO QC formed since the previous tick) and
-      `currentView`. Wired into `Application.scala`'s scheduler as a behavior-identical rename
-      (`blockSource` intentionally left unset there -- see that commit's message and the follow-up
-      below). Pure core (Engine/Safety/Quorum/VotePool) untouched. 87/87 existing hotstuff unit/DST
-      tests green, zero regressions.
-      **Deferred (not done in this pass):** full view/height decoupling. The shell's `proposalValid`
-      guard (`blockchainUpdater.blockId(view).contains(blockId)`) assumes `view == the settled height of
-      the proposed block` -- the same coupling findings #2/#5 above already had to fix once. Actually
-      auto-proposing on a pacemaker-driven view-change in production requires first redesigning what
-      `proposalValid`/vote-height mean when `view != block height` (e.g., a proposal carries its own
-      target height distinct from the view number). That redesign, plus 3-chain pipelining across
-      genuinely sequential views and Task 8 Steps 3-4 (bounding `HotStuffVotePool.seenCommittees`,
-      re-running node-it finalization suites), remain open follow-up work before this is audit-ready.
+      `currentView`. Pure core (Engine/Safety/Quorum/VotePool) untouched throughout.
+      **View/height decoupling (this pass):** the shell's `proposalValid` guard originally read
+      `blockchainUpdater.blockId(view).contains(blockId)`, assuming `view == the settled height of the
+      proposed block` -- the same coupling findings #2/#5 above already had to fix once, reintroduced
+      here for a genuine pacemaker view-change (view advances independently of height on a
+      leader-timeout). A RED test (`HotStuffViewChangeSpecification`, commit `4bf3217e87`) proved this
+      concretely: wiring a height-coupled `proposalValid` + a real `blockSource` and driving a
+      leader-timeout produced a proposal that was broadcast but never self-voted ("ListBuffer() was
+      empty") -- a silent liveness gap, not a compile-time hypothetical. Fix (commit `fd5e4ea15e`):
+      `proposalValid` changed from `(Int, BlockId) => Boolean` (view, blockId) to `BlockId => Boolean` --
+      it now answers "does this replica recognize blockId on its own chain" (chain-membership, via
+      `blockchainUpdater.heightOf`), with no view involved at all. View-ordering/lock safety is
+      unaffected -- it was always `HotStuffSafety.safeToVote`'s job (extends-locked-branch / newer
+      justify-QC), unconditionally enforced inside `HotStuffEngine.onProposal` after this guard passes.
+      The message-observer's blockHeight (used for the vote message, and required identical across all
+      votes for a target by `HotStuffQuorum.formQC`) is now derived from the proposal's own `blockId`
+      (`blockchainUpdater.heightOf(p.blockId)`) instead of from `p.view`, so every honest replica
+      computes the same value regardless of view -- preventing finding #5's mismatch class by
+      construction rather than convention. `blockSource` is wired for real in `Application.scala`:
+      on a leader-timeout, the newly-rotated leader (re-)proposes the current settled tip (same block
+      the per-height happy path would pick next). Safety reasoning for wiring this on a live network
+      (testnet has `dcc.hotstuff.enabled=true`): T2 stays strictly observational (only
+      `hotStuffFinalizedHeight` moves; feature-25 remains sole authoritative finality); worst case if
+      replicas' view counters diverge is a non-quorate round (liveness, not safety) -- functionally
+      identical to any other non-quorate HotStuff round today. 89/89 relevant unit/DST/message/settings
+      specs green (79 hotstuff + 10 messages/settings), 0 regressions; `node` module compiles clean.
+      **Deferred (not done in this pass, genuine open follow-up):** `blockSource`'s re-proposal strategy
+      is deliberately the *simple* case only -- always re-derive "the current settled tip" fresh. It does
+      NOT implement the more sophisticated classic-HotStuff pacemaker liveness optimization of
+      re-proposing a specific prior not-yet-QC'd proposal extending the locked/prepareQC branch (which
+      would require exposing `HotStuffCoordinator`'s internal safety state, e.g. `prepareQC`, through a
+      new API surface -- a real design question, not mechanical, left for whoever picks this up next).
+      Also still open: 3-chain pipelining across genuinely sequential views, and Task 8 Steps 3-4
+      (bounding `HotStuffVotePool.seenCommittees`, re-running node-it finalization suites on a real
+      cluster). None of this is audit-ready until those are addressed and external audit runs.
 - [ ] External audit before any mainnet enable (of the shipped model, or the reworked one if Option A).
 - The five fixed transport/model/height bugs and the observability (`hotStuffFinalizedHeight`,
   instrumentation) carry forward regardless of A/B.
