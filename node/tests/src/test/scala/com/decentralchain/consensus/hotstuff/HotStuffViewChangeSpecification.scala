@@ -376,4 +376,52 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       val (_, actions) = HotStuffEngine.onQC(EngineState(committee), fabricatedQC)
       actions should matchPattern { case Seq(HotStuffAction.Rejected(_)) => }
     }
+
+  // RED (Task 8 Step 2's remaining deferral -- see `blockSource`'s constructor doc comment above and
+  // its twin in Application.scala): `onRoundTimerTick` was deliberately left as the SIMPLE case --
+  // on a leader-timeout view-change, a newly-rotated leader ALWAYS calls `blockSource()` and proposes
+  // whatever it returns (in production: the current settled tip), even if this replica already holds a
+  // real, quorum-backed QC for a DIFFERENT, more recent, not-yet-committed branch
+  // (`SafetyState.prepareQC`, tracked since the original 3-phase engine). That wastes the votes already
+  // cast for the in-flight branch: instead of giving it a chance to actually reach COMMIT under the new
+  // view (the standard HotStuff pacemaker recovery behaviour), the round is abandoned for an unrelated,
+  // older block. This test proves the gap: node2 helps form a real PREPARE QC for B (in-flight, never
+  // committed) at view 0 -- advancing the pacemaker to view 1, whose deterministic leader is index 1,
+  // NOT this replica -- so the round then genuinely stalls (no further QC progress) until node2 rotates
+  // into the leader seat by timeout alone. TODAY, once that happens, it re-proposes `blockSource`'s tip
+  // instead of B.
+  "onRoundTimerTick's leader-timeout re-propose choice" should
+    "re-propose the in-flight prepareQC'd-but-not-committed branch instead of jumping to blockSource's settled tip" in {
+      val settledTip: BlockId = ByteStr(Array.fill[Byte](32)(55)) // a DIFFERENT block than the in-flight one
+      val settledTipHeight    = 300
+
+      val fx2   = new RecordingEffects(2)
+      val node2 = new HotStuffCoordinator.Enabled(() => committee, fx2, (_, _) => true, blockSource = () => Some((settledTip, settledTipHeight)))
+
+      node2.onRoundTimerTick() // baseline, view 0
+
+      // A leader (view 0) proposes B; node2 votes; 2 more real committee votes arrive, forming a
+      // genuine PREPARE QC for B -- an in-flight, QC'd-but-not-yet-committed branch (only PREPARE
+      // reached; no PRE_COMMIT/COMMIT quorum ever forms for it in this test).
+      node2.onProposal(HotStuffProposal(0, B, justify = None), H)
+      Seq(0, 1).foreach { i =>
+        val msg = HotStuffQuorum.voteMessage(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, H)
+        node2.onVote(HotStuffVote(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, com.decentralchain.state.Height(H), i, kps(i).sign(msg).byteStr))
+      }
+      node2.currentView should be(1) // advanced via the real QC, not a stall -- view 1's leader is index 1, not us
+      HotStuffPacemaker.isLeader(2, node2.currentView, committee) should be(false)
+      fx2.sent.clear()
+
+      node2.onRoundTimerTick() // re-baseline at view 1 (real progress just happened, not a stall)
+
+      // Stall the round repeatedly (no further QC progress) until node2 rotates into the leader seat.
+      while (!HotStuffPacemaker.isLeader(2, node2.currentView, committee)) node2.onRoundTimerTick()
+
+      val proposals = fx2.sent.collect { case p: HotStuffProposal => p }
+      proposals should not be empty
+      // THE GAP: today this is `settledTip` (blockSource's answer) -- it should be `B`, the in-flight
+      // prepareQC'd branch, so the round-in-progress gets a real chance to finish instead of being
+      // abandoned for an unrelated, older tip.
+      proposals.last.blockId should be(B)
+    }
 }
