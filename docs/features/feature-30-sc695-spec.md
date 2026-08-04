@@ -331,3 +331,31 @@ activated.
 
 **Do not implement any part of this document until the above three items are resolved by a
 human reviewer and the design is signed off.**
+
+## Implementation Notes (2026-08-03)
+
+This feature has been implemented (`InvokeScriptTransaction` version x STDLIB-version
+compatibility matrix + the step-based extra-fee mechanism), adversarially reviewed twice
+(both passes concluded SAFE-TO-PROCEED, with real test evidence: 2705/2705 regression suite,
+7/7 unit tests, 7/7 real dockerized node-it tests), and merged. It is gated behind
+`BlockchainFeature(30)` and has **zero live effect** on any running network until governance
+activation is proposed and voted in.
+
+Two items from the "Non-goals / explicitly open questions" section above were **not**
+resolved by the implementation and remain open, to be revisited before activation is ever
+proposed:
+
+- **Open question 2 (fee value) was not resolved — it was placeholdered, not decided.**
+  `FeeValidation.InvokeExtraFeePerStep = 100000L` is a **placeholder value with no economic
+  justification**. It was picked to make the implementation and tests concrete, not derived
+  from any cost/benefit analysis. Before this feature is ever proposed for activation, this
+  number must be revisited and justified — e.g. via a proportional analysis against the
+  existing `ScriptExtraFee` and the real marginal cost of an invocation step — by whoever owns
+  the RIDE fee model. Shipping this value to mainnet without that analysis would be an
+  unreviewed economic decision masquerading as a settled implementation detail.
+- **Open question 3 (`InvokeExpressionTransaction` scope) remains open and undecided.** The
+  implementation, matching the ignored tests it was built from, only covers
+  `InvokeScriptTransaction`. Free calls via `InvokeExpressionTransaction` are untouched by the
+  version gate or the fee mechanism, per this spec's own Non-goal #3. Whether an analogous
+  gate is needed there was never decided and still needs a product/design call before
+  activation.
