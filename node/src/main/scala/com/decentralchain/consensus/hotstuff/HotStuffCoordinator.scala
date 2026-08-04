@@ -142,10 +142,18 @@ object HotStuffCoordinator {
       // sites/tests are unaffected -- and, per `dcc.hotstuff.enabled=false`'s `Disabled` coordinator
       // never constructing an `Enabled` at all, this callback (and any disk I/O it drives) simply never
       // runs when HotStuff is disabled.
-      onLockedQCPersist: QuorumCertificate => Unit = _ => ()
+      onLockedQCPersist: QuorumCertificate => Unit = _ => (),
+      // T10 fix: the committee epoch (see `state.GenerationPeriod`) THIS replica currently believes is
+      // active, re-read fresh alongside `committeeProvider` on every event (see `refreshCommittee`).
+      // Defaults to a constant `0`, matching the default `committeeEpoch` on `HotStuffVote`/
+      // `QuorumCertificate`/`EngineState` -- so every existing call site/test that doesn't pass this
+      // observes byte-for-byte the same behaviour as before this fix (0 always compares equal to 0 in
+      // `HotStuffQuorum.acceptableCommitteeEpoch`). Production wiring supplies the real generation
+      // period (see `Application.scala`).
+      committeeEpochProvider: () => Int = () => 0
   ) extends HotStuffCoordinator
       with StrictLogging {
-    private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC))
+    private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC), committeeEpoch = committeeEpochProvider())
     private var pool   = VotePool()
     private var voted  = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
     // Baseline for stall detection in `onRoundTimerTick`: the pacemaker view as of the PREVIOUS tick,
@@ -170,7 +178,8 @@ object HotStuffCoordinator {
 
     // The committed-generator committee rotates per generation period; refresh it from the chain at
     // the start of each event so reducers always see the current period's set.
-    private def refreshCommittee(): Unit = engine = engine.copy(committee = committeeProvider())
+    private def refreshCommittee(): Unit =
+      engine = engine.copy(committee = committeeProvider(), committeeEpoch = committeeEpochProvider())
 
     // Bounded eviction of superseded pool entries (memory-leak guard, audit finding 2026-07-25). A
     // target never resolves on its own — a losing-fork block, or junk votes broadcast for bogus
@@ -190,13 +199,15 @@ object HotStuffCoordinator {
       val key = (view, phase, blockId)
       if (!voted.contains(key)) {
         voted += key
-        val message = HotStuffQuorum.voteMessage(view, phase, blockId, height)
+        val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, engine.committeeEpoch)
         val mine    = effects.myVoterIndexes
-        logger.debug(s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size}")
+        logger.debug(
+          s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=${engine.committeeEpoch}"
+        )
         mine.foreach { idx =>
           effects.signVote(message, idx) match {
             case Some(sig) =>
-              val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr)
+              val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr, engine.committeeEpoch)
               effects.broadcast(vote)
               onVote(vote) // count our own vote locally
             case None => logger.warn(s"[HotStuff] signVote returned None for idx=$idx (no BLS key for this committee slot?)")

@@ -228,7 +228,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       import com.decentralchain.block.Block.BlockId
       import com.decentralchain.state.GeneratorSet
 
-      val committee: () => GeneratorSet                = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
+      val committee: () => GeneratorSet = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
+      // T10 fix (cross-committee-epoch fork, see docs/hotstuff-audit-readiness.md and
+      // HotStuffQuorum.acceptableCommitteeEpoch): the committee epoch this replica currently believes
+      // is active, reused directly from the existing generation-period rotation identifier
+      // (`GenerationPeriod.index` -- see that class's doc) rather than inventing a new committee-hash
+      // concept. `0` before/at feature activation (no generation period exists yet), matching the
+      // `committeeEpoch` default on `HotStuffVote`/`QuorumCertificate`/`EngineState`.
+      val committeeEpoch: () => Int                    = () => blockchainUpdater.currentGenerationPeriod.map(_.index).getOrElse(0)
       val extendsBranch: (BlockId, BlockId) => Boolean = (child, ancestor) =>
         child == ancestor || (for {
           hc <- blockchainUpdater.heightOf(child)
@@ -310,7 +317,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           blockSource,
           blockchainUpdater.heightOf,
           hsInitialLockedQC,
-          qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc)
+          qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc),
+          committeeEpoch
         )
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
