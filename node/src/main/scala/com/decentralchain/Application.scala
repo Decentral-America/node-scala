@@ -422,8 +422,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // (docs/hotstuff-audit-readiness.md) before HotStuff is ever made mainnet-authoritative.
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
       hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onRoundTimerTick())
+      val hsModeLabel = if (settings.hotStuffSettings.authoritative) "AUTHORITATIVE" else "observational"
       log.info(
-        s"T2 HotStuff coordinator ENABLED (observational; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."
+        s"T2 HotStuff coordinator ENABLED ($hsModeLabel; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."
       )
     }
 

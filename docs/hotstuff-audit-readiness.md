@@ -4,13 +4,22 @@
 > the threat scenarios to probe, the code surface, and the evidence already produced — so the audit can
 > start from a known baseline instead of rediscovering it.
 >
-> **Status of the thing being audited:** ⚠️ **REWORK PENDING — audit the reworked model, not today's shell.**
-> The pure core + tests are sound, but the first live multi-node run (step 5) showed the `view=block-height`
-> shell model does not work on an NG chain and needs redesign. **Read
-> [`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md) first** — it records the
-> four bugs fixed live, the still-open QC-formation issue, and the pacemaker-vs-feature-25 decision the audit
-> should weigh in on. The scope/threat-model/evidence below remain valid for the *core*; the shell view/leader
-> mapping is being reworked. Gated behind `dcc.hotstuff.enabled` (default `false`) — no behaviour change today.
+> **Status of the thing being audited:** ✅ **Ready for audit against `main` @ `304bd0e408`** (2026-08-03).
+> The pacemaker/single-active-view rework (Task 8) that this banner previously marked as pending — fixing
+> the `view=block-height` shell model's conflation of view and block height, plus vote-pool bounding,
+> `lockedQC` persistence across restarts, and the re-propose-locked-branch leader-timeout optimization — is
+> complete and merged. The code described in this package (scope, threat model, evidence index below) is
+> now frozen at that commit for the external auditor to review; it is not a moving target. See
+> [`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md) for the history of what
+> was found and fixed to get here.
+>
+> **Separately — not covered by this audit-readiness status:** by explicit human decision, ahead of this
+> external audit, a new `dcc.hotstuff.authoritative` opt-in flag was deployed live on testnet only
+> (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml`:
+> `hotstuff.authoritative = true`). That is an already-made operational decision for testnet, not something
+> this audit retroactively covers — the audit is exactly what is required before `authoritative` could ever
+> be considered for mainnet (§1, §7 item 4, §8 checklist still gate that). Gated behind
+> `dcc.hotstuff.enabled` (default `false` outside testnet) — no behaviour change on mainnet today.
 
 ## 1. What it is, and the one property that bounds the whole audit
 Basic 3-phase HotStuff (prepare → pre-commit → commit) over the **committed-generator committee**
