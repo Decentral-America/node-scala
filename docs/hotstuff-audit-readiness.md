@@ -4,22 +4,30 @@
 > the threat scenarios to probe, the code surface, and the evidence already produced — so the audit can
 > start from a known baseline instead of rediscovering it.
 >
-> **Status of the thing being audited:** ✅ **Ready for audit against `main` @ `304bd0e408`** (2026-08-03).
-> The pacemaker/single-active-view rework (Task 8) that this banner previously marked as pending — fixing
-> the `view=block-height` shell model's conflation of view and block height, plus vote-pool bounding,
-> `lockedQC` persistence across restarts, and the re-propose-locked-branch leader-timeout optimization — is
-> complete and merged. The code described in this package (scope, threat model, evidence index below) is
-> now frozen at that commit for the external auditor to review; it is not a moving target. See
+> **Status of the thing being audited (updated 2026-08-04):** ✅ **Ready for audit against `main` @
+> `9c49632398`** (bumped 2026-08-04 from the prior baseline `304bd0e408` — scope has grown since: SC-695
+> (an unrelated RIDE feature, feature id 30, dormant) and the T10 cross-committee-epoch-fork fix + its
+> 2026-08-04 liveness follow-up fix are now also on `main` and are part of the HotStuff-relevant surface,
+> so the frozen baseline commit is updated to match). The pacemaker/single-active-view rework (Task 8) that
+> this banner previously marked as pending — fixing the `view=block-height` shell model's conflation of
+> view and block height, plus vote-pool bounding, `lockedQC` persistence across restarts, and the
+> re-propose-locked-branch leader-timeout optimization — is complete and merged, as is T10 (see §4/§7 T10
+> entry). The code described in this package (scope, threat model, evidence index below) is frozen at
+> `9c49632398` for the external auditor to review; if HotStuff-area commits land on `main` after this date,
+> this banner's commit reference needs bumping again before audit kickoff. See
 > [`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md) for the history of what
 > was found and fixed to get here.
 >
 > **Separately — not covered by this audit-readiness status:** by explicit human decision, ahead of this
 > external audit, a new `dcc.hotstuff.authoritative` opt-in flag was deployed live on testnet only
 > (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml`:
-> `hotstuff.authoritative = true`). That is an already-made operational decision for testnet, not something
+> `hotstuff.authoritative = true`, image `sha-9c49632`). `GET /blocks/height/finalized` is confirmed
+> genuinely advancing on live testnet via this mechanism (verified 2026-08-04: chain height `107779`,
+> finalized height `107697`). That is an already-made operational decision for testnet, not something
 > this audit retroactively covers — the audit is exactly what is required before `authoritative` could ever
 > be considered for mainnet (§1, §7 item 4, §8 checklist still gate that). Gated behind
-> `dcc.hotstuff.enabled` (default `false` outside testnet) — no behaviour change on mainnet today.
+> `dcc.hotstuff.enabled`/`dcc.hotstuff.authoritative` (both default `false` outside testnet) — no behaviour
+> change on mainnet today.
 
 ## 1. What it is, and the one property that bounds the whole audit
 Basic 3-phase HotStuff (prepare → pre-commit → commit) over the **committed-generator committee**
@@ -153,12 +161,22 @@ laptop (see
    commit-height guard applies regardless of how the vote/QC was formed) — a wasted round at worst, never
    a safety break. Do not overclaim this mitigation as "fully closed."
 
-## 8. Enable-gate checklist (all required before `dcc.hotstuff.enabled = true` on mainnet)
-- [x] Pure core + engine + shell implemented, gated OFF by default
-- [x] 45 unit tests + adversarial cases green
+## 8. Enable-gate checklist (all required before `dcc.hotstuff.authoritative = true` on **mainnet** — testnet already has both flags on, see banner)
+- [x] Pure core + engine + shell implemented, gated OFF by default (mainnet)
+- [x] 45+ unit tests + adversarial cases green (114/114 HotStuff-area tests as of the T10 fix, 2026-08-04)
 - [x] Multi-node finality IT green on CI
 - [x] `protobuf-schemas` 1.6.4 published (wire types)
-- [ ] Testnet deploy (infra PR #49) + multi-day soak with crash/partition/equivocation scenarios recorded
-- [ ] Equivocation → `conflictGenerators` slashing wired (T5) before HotStuff is made authoritative
-- [ ] **External third-party consensus audit sign-off** (this package)
-- [ ] Decision + re-audit if/when HotStuff is made authoritative (raise finalized height on commitQC)
+- [x] `protobuf-schemas` 1.6.5 published (T10 `committee_epoch` field) — verified live on Maven Central 2026-08-04
+- [x] Testnet deploy + `dcc.hotstuff.authoritative = true` live on all 4 testnet nodes (2026-08-03/04, by
+      explicit human decision, testnet-only, ahead of this audit); `GET /blocks/height/finalized` confirmed
+      advancing via this mechanism (2026-08-04)
+- [ ] Multi-day soak with crash/partition/equivocation scenarios formally recorded for the
+      reworked/authoritative model — not yet documented despite the live deployment above
+- [ ] Equivocation → `conflictGenerators` slashing wired (T5) before HotStuff is made authoritative **on
+      mainnet** (testnet's authoritative flag was enabled without this, by the same explicit human
+      decision — acceptable for testnet, not for mainnet)
+- [ ] **External third-party consensus audit sign-off** (this package) — required before mainnet
+      `authoritative`, not yet engaged
+- [ ] Live multi-node Docker evidence of an actual committee-epoch (T10) transition — unit/DST-simulation
+      only so far
+- [ ] Decision + re-audit if/when HotStuff `authoritative` is proposed for mainnet
