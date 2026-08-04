@@ -1,9 +1,9 @@
 # DCC Consensus Upgrade Plan
 
-> Last updated: July 8, 2026  
+> Last updated: July 8, 2026 · **Updated 2026-08-03**: T2 status refreshed below — pacemaker rework complete and merged to `main`, testnet-only `authoritative` opt-in deployed live.  
 > **T0: ✅ Testnet active** — feature-25 Deterministic Finality live (single-round BLS, 2/3 committed-stake quorum); `finalizedHeight` advancing at the tip. Mainnet: ❌ not yet activated.  
 > **T1: ✅ Implemented** — FillReceipt code complete and deployed on testnet matcher.  
-> **T2: 🚧 REWORK PENDING** — HotStuff core + shell merged to node-scala `dev` (gated `dcc.hotstuff.enabled`, default false); 45 unit tests + CI simulation green. But the first live multi-node run (step 5, testnet 2026-07-12) proved the `view=block-height` shell model does NOT work on an NG chain — four fixes (transport, view/canonical-block, settled-depth, gossip) got validators voting on the same block, yet QC formation is still unconfirmed live. It needs a design pass (pacemaker/single-active-view) — or reconsideration against feature-25, which already gives 2/3 deterministic finality. See `node-scala/docs/hotstuff-step5-findings-and-rework.md`. (The earlier "✅ Active / soak PASSED" status was fiction — it referenced a `/blockchain/finality` endpoint that does not exist.) Mainnet: ❌ not enabled.  
+> **T2: ✅ Rework complete, testnet-authoritative (mainnet still gated behind external audit)** — the pacemaker/single-active-view rework (view-change no longer conflated with block height, vote-pool bounding, `lockedQC` persistence across restarts, re-propose-locked-branch leader-timeout optimization) is merged to node-scala `main`. By explicit human decision, ahead of the external audit and scoped to testnet only, a new `dcc.hotstuff.authoritative` opt-in flag was added and deployed live to all 4 testnet nodes (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml` — `hotstuff.authoritative = true`). With that flag on, a genuine HotStuff commit now also raises the authoritative feature-25 `finalizedHeight` (monotonic max()-merge, never injects a block outside this node's own canonical chain). `GET /blocks/height/finalized`, previously stalled on testnet for an unrelated committee/peer issue, was confirmed advancing again via this mechanism once that unrelated issue was fixed. Mainnet: ❌ `authoritative` remains false — unaffected, still gated behind the external audit (see `docs/hotstuff-audit-readiness.md`).  
 > **Blockers before mainnet**: see Approval Checklist below.  
 > Covers: T0 activation → T1 matcher → T2 HotStuff
 
@@ -222,7 +222,7 @@ Error (404):  {"error": "receipt not found — order not yet filled or receipt e
 ## Phase 2 (T2) — HotStuff on Committed Generators
 
 **Timeline**: Months — after T0 stable on mainnet for 60+ days  
-**Status**: ✅ Implemented and active on testnet (`hotstuff.enabled = true`)  
+**Status**: ✅ Implemented, pacemaker rework merged to `main`, and **testnet-authoritative** (`hotstuff.enabled = true`, `hotstuff.authoritative = true` — testnet only, ahead of the external audit, by explicit human decision). Mainnet unaffected; `authoritative` stays false there pending audit.  
 **Prerequisite**: T0 in production, BLS infrastructure proven
 
 ### Why CommitToGenerationTransaction solves HotStuff's validator set problem
@@ -248,10 +248,14 @@ The generation period commitment IS the rotating committee. T2 builds directly o
 
 4. **Leader rotation**: block forger = HotStuff leader for that block's voting round (FairPoS schedule)
 
-5. **Testnet soak** — ❌ NOT yet run. T2 has never been deployed to testnet (the nodes still run a
-   pre-HotStuff image). The soak begins once a `dev`-built node image is deployed with
-   `dcc.hotstuff.enabled = true`. (Any earlier "completed 2026-06-30 / all 4 scenarios passed" note was
-   fiction — no soak occurred.)
+5. **Testnet deployment (2026-08-03)** — ✅ The pacemaker/single-active-view rework is merged to `main`
+   and deployed live to all 4 testnet nodes with `dcc.hotstuff.enabled = true`. By explicit human
+   decision, ahead of the external audit and scoped to testnet only, `dcc.hotstuff.authoritative = true`
+   is also live there (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml`).
+   `GET /blocks/height/finalized` — previously stalled on a pre-existing, unrelated committee/peer issue —
+   was confirmed genuinely advancing again via this mechanism once that unrelated issue was fixed. A
+   formal multi-day soak record (crash/partition/equivocation scenarios) for this reworked model has not
+   been documented here; do not infer one beyond what's stated above.
 
 ### Codebase reference (actual — package `com.decentralchain.consensus.hotstuff` unless noted)
 
@@ -424,8 +428,9 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 - [x] All 3 generators committed via `CommitToGenerationTransaction` — auto-renewed every 35 min
 - [x] T2 HotStuff BFT engine implemented — 3-phase protocol, BLS QCs, P2P msgs 39/40/41, 45 unit tests, merged to `dev` (gated OFF)
 - [x] T2 multi-node finality IT (`FourNodeHotStuffTestSuite`) green on CI (ubuntu-latest) — 4-node cluster finalizes with HotStuff on
-- [ ] T2 deployed to testnet — needs a `dev`-built node image + `dcc.hotstuff { enabled = true, round-timeout = 1200ms }` (NOT yet done; nodes run a pre-HotStuff image)
-- [ ] T2 testnet soak with the flag on (crash / partition / equivocation over time) — NOT yet run
+- [x] T2 deployed to testnet — `main` built and deployed to all 4 testnet nodes with `dcc.hotstuff { enabled = true, round-timeout = 1200ms }`
+- [x] T2 made testnet-authoritative — `dcc.hotstuff.authoritative = true` live on all 4 testnet nodes (2026-08-03), by explicit human decision, ahead of the external audit, scoped to testnet only; `GET /blocks/height/finalized` confirmed advancing via this mechanism
+- [ ] T2 testnet soak with the flag on (crash / partition / equivocation over time) — no formal multi-day soak record for the reworked/authoritative model documented here yet
 - [ ] Expose `hotStuffFinalizedHeight` (observational metric) via REST for monitoring — NOT yet implemented; monitoring uses feature-25 `GET /blocks/height/finalized`
 - [x] Auto-commit cron — `auto-commit-generators.yml` every 35 min
 - [x] BPS updated — `CommitToGenerationTransaction` no longer crashes consumer (skip without error)
@@ -462,7 +467,7 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 | HotStuff engine | `node-scala/node/src/main/scala/com/decentralchain/consensus/hotstuff/` | ✅ Active on testnet |
 | Testnet config | `node-scala/node/decentralchain-testnet.conf` | ✅ `hotstuff.enabled=true`, feature 25 active |
 | Mainnet config | `node-scala/node/decentralchain-mainnet.conf` | ❌ Feature 25 not yet activated |
-| VPS dcc.conf | `/opt/dcc/config/node-testnet/dcc.conf` | ⚠ has `hotstuff.enabled=true` but the deployed image predates HotStuff, so it is inert until a `dev` image is deployed; key must be `round-timeout = 1200ms` |
+| VPS dcc.conf | `/opt/dcc/config/node-testnet/dcc.conf` | ✅ `hotstuff.enabled=true`, `hotstuff.authoritative=true` (2026-08-03, testnet-only) live on the deployed `main` image; `round-timeout = 1200ms` |
 | Matcher FillReceipt | `Ecosystem/matcher/dex/src/main/scala/.../model/FillReceipt.scala` | ✅ Complete, deployed on testnet |
 | Block proto | `DecentralChain/packages/sdk/protobuf-schemas/proto/dcc/block.proto` | ✅ Field 14 `committed_generators_hash` added (1.6.3) |
 | BPS type-19 | `DecentralChain/apps/blockchain-postgres-sync/src/lib/consumer/` | ✅ Code fixed (`2f35c45a`) — deploy pending |
@@ -471,4 +476,4 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 
 ---
 
-*DCC Consensus Upgrade Plan · Last updated June 30, 2026*
+*DCC Consensus Upgrade Plan · Last updated June 30, 2026 · T2 status updated 2026-08-03*
