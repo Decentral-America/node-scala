@@ -25,6 +25,17 @@ case class GenerationPeriod(activation: Height, start: Height, length: Int) exte
 
   def max(other: GenerationPeriod): GenerationPeriod = if (start < other.start) other else this
 
+  /** This period's small, sequential, zero-based ordinal (0, 1, 2, ...) — the inverse of the
+    * `periodIndex` computation `GenerationPeriod.from` already performs internally to pick `start`.
+    * Exposed for T2 HotStuff's committee-epoch binding (see `consensus.hotstuff.HotStuffQuorum`,
+    * threat T10): a small monotonic integer, one apart between adjacent periods by construction,
+    * reused directly as the wire `committeeEpoch` identifier rather than inventing a separate
+    * committee-hash scheme — every honest node derives the identical value for a given height from
+    * purely local, already-replicated data (activation height + `generationPeriodLength` + on-chain
+    * `CommitToGenerationTransaction` history), with nothing new to transmit.
+    */
+  def index: Int = if (isZero) 0 else (start.toInt - activation.toInt - 1) / length
+
   private def isZero: Boolean = activation == start
 
   private def move(newStart: Height): GenerationPeriod = GenerationPeriod(activation, newStart, length)

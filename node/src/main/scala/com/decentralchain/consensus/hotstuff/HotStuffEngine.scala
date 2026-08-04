@@ -4,13 +4,24 @@ import com.decentralchain.block.Block.BlockId
 import com.decentralchain.network.{HotStuffProposal, QuorumCertificate}
 import com.decentralchain.state.GeneratorSet
 
-/** Per-replica HotStuff engine state (pure). Composes safety + pacemaker with commit tracking. */
+/** Per-replica HotStuff engine state (pure). Composes safety + pacemaker with commit tracking.
+  *
+  * `committeeEpoch` (T10 fix) is the committee epoch THIS replica currently believes is active (see
+  * `state.GenerationPeriod` — the existing generation-period index, reused here rather than inventing
+  * a new committee-hash concept). It is compared against an inbound QC's own signed `committeeEpoch`
+  * via `HotStuffQuorum.acceptableCommitteeEpoch` before the QC can influence safety/commit state —
+  * this is the transition-gating rule half of the fix (the wire-binding half lives in
+  * `HotStuffQuorum.voteMessage`). Defaults to `0`, matching the default `committeeEpoch` on
+  * `HotStuffVote`/`QuorumCertificate`, so every existing call site/test that never sets an epoch keeps
+  * comparing 0 == 0 and observes byte-for-byte the same behaviour as before this fix.
+  */
 case class EngineState(
     committee: GeneratorSet,
     safety: SafetyState = SafetyState(),
     pacemaker: PacemakerState = PacemakerState(),
     committedBlockId: Option[BlockId] = None,
-    committedHeight: Int = 0
+    committedHeight: Int = 0,
+    committeeEpoch: Int = 0
 )
 
 sealed trait HotStuffAction
@@ -39,35 +50,51 @@ object HotStuffEngine {
 
   /** Ingest a QC. Verifies it first (finding #1); on a valid COMMIT QC for a higher block than already
     * committed, emits a `Committed` action (finding #2). Always advances the view on a valid QC.
+    *
+    * T10 fix: a QC is now ALSO rejected if its signed `committeeEpoch` is not one
+    * `HotStuffQuorum.acceptableCommitteeEpoch` says this replica should currently accept (current
+    * epoch, or the immediately preceding one during a rotation's transition window) — applied BEFORE
+    * cryptographic verification so a rejected-epoch QC never even reaches `verifyQC` (cheaper, and
+    * keeps the two failure reasons distinct in the `Rejected` action for observability).
     */
   def onQC(state: EngineState, qc: QuorumCertificate): (EngineState, Seq[HotStuffAction]) =
-    HotStuffQuorum.verifyQC(qc, state.committee) match {
-      case Left(err)    => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
-      case Right(false) => (state, Seq(HotStuffAction.Rejected("QC signature verification failed")))
-      case Right(true)  =>
-        val advanced = state.copy(
-          safety = HotStuffSafety.update(qc, state.safety),
-          pacemaker = HotStuffPacemaker.onQC(qc.view, state.pacemaker)
-        )
-        HotStuffSafety.committedBlock(qc) match {
-          case Some(bid) if qc.blockHeight.toInt > advanced.committedHeight =>
-            val committed = advanced.copy(committedBlockId = Some(bid), committedHeight = qc.blockHeight.toInt)
-            (committed, Seq(HotStuffAction.Committed(bid, qc.blockHeight.toInt), HotStuffAction.EnteredView(committed.pacemaker.view)))
-          case _ =>
-            (advanced, Seq(HotStuffAction.EnteredView(advanced.pacemaker.view)))
-        }
-    }
+    if (!HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
+      (state, Seq(HotStuffAction.Rejected(s"QC rejected: committee epoch ${qc.committeeEpoch} not acceptable (current=${state.committeeEpoch})")))
+    else
+      HotStuffQuorum.verifyQC(qc, state.committee) match {
+        case Left(err)    => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
+        case Right(false) => (state, Seq(HotStuffAction.Rejected("QC signature verification failed")))
+        case Right(true)  =>
+          val advanced = state.copy(
+            safety = HotStuffSafety.update(qc, state.safety),
+            pacemaker = HotStuffPacemaker.onQC(qc.view, state.pacemaker)
+          )
+          HotStuffSafety.committedBlock(qc) match {
+            case Some(bid) if qc.blockHeight.toInt > advanced.committedHeight =>
+              val committed = advanced.copy(committedBlockId = Some(bid), committedHeight = qc.blockHeight.toInt)
+              (committed, Seq(HotStuffAction.Committed(bid, qc.blockHeight.toInt), HotStuffAction.EnteredView(committed.pacemaker.view)))
+            case _ =>
+              (advanced, Seq(HotStuffAction.EnteredView(advanced.pacemaker.view)))
+          }
+      }
 
   /** Decide whether to vote for a leader's proposal. Verifies the justify QC (finding #1), folds it into
     * safety (catch-up), then applies the HotStuff voting rule. Returns the updated state and whether a
     * vote should be cast (the shell signs + broadcasts the HotStuffVote when true).
+    *
+    * T10 fix: a justify QC claiming a committee epoch `HotStuffQuorum.acceptableCommitteeEpoch` says
+    * this replica should NOT currently accept is treated the same as a cryptographically-invalid
+    * justify QC — the proposal is not voted for. This is what stops a leader (honest or not) who is
+    * still operating under a stale/foreign committee epoch from ever getting an honest replica to
+    * extend its branch.
     */
   def onProposal(
       state: EngineState,
       proposal: HotStuffProposal,
       extendsBranch: (BlockId, BlockId) => Boolean
   ): (EngineState, Boolean) = {
-    val justifyValid = proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).contains(true))
+    val justifyEpochOk = proposal.justify.forall(qc => HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
+    val justifyValid   = justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).contains(true))
     if (!justifyValid) (state, false)
     else {
       val caughtUp   = proposal.justify.fold(state)(qc => state.copy(safety = HotStuffSafety.update(qc, state.safety)))

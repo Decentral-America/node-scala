@@ -18,7 +18,19 @@ final case class CommitObservation(node: Int, blockId: BlockId, height: Int, at:
   * driven by a [[SimClock]]. No threads, no wall clock, no real networking — everything is reproducible
   * from `seed`. See the scope limitation note in this task's plan entry regarding restart/resync.
   */
-final class DstHarness(seed: Long, nodeCount: Int, faultProfile: FaultProfile = FaultProfile()) {
+final class DstHarness(
+    seed: Long,
+    nodeCount: Int,
+    faultProfile: FaultProfile = FaultProfile(),
+    // T10-liveness root-cause fix (2026-08-04): a PURE function of a vote's target height, shared
+    // identically by every node in this harness -- exactly the shape of `Application.scala`'s
+    // production `committeeEpochOf` (`blockchain.generationPeriodOf(h).index`). Defaults to a constant
+    // `0`, matching every existing DST scenario/test that doesn't pass this and preserving prior
+    // behaviour byte-for-byte. See `DstCommitteeEpochRotationScenarioSpecification` for a scenario that
+    // exercises a real, height-driven committee-epoch rotation with this wired to a genuinely
+    // height-varying function.
+    committeeEpochOf: Int => Int = _ => 0
+) {
   val clock: SimClock                                = new SimClock(seed)
   val commits: mutable.ListBuffer[CommitObservation] = mutable.ListBuffer.empty
 
@@ -29,6 +41,14 @@ final class DstHarness(seed: Long, nodeCount: Int, faultProfile: FaultProfile = 
   }
   private val live         = mutable.Set.from(0 until nodeCount)
   private val heightOfView = mutable.Map.empty[Int, Int]
+  // Every node's shared "currently-believed-active committee epoch" -- the DST-harness equivalent of
+  // production's `committeeEpoch` closure (`blockchainUpdater.currentGenerationPeriod`, read fresh from
+  // each node's OWN live chain tip). Used ONLY for `HotStuffEngine.onQC`/`onProposal`'s transition-
+  // gating decision (`HotStuffQuorum.acceptableCommitteeEpoch`), never for what a node signs (that is
+  // `committeeEpochOf` above). Advances via `advanceEpochBelief` to simulate every node's live tip
+  // having genuinely progressed to (agreed on) the new generation period -- see
+  // `DstCommitteeEpochRotationScenarioSpecification`.
+  private var epochBelief: Int = 0
   // Per-node "settled tip" (most recent T2-committed blockId/height), fed to that node's own
   // `HotStuffCoordinator.Enabled` as its `blockSource` -- see below. Mirrors production's `blockSource`
   // (Application.scala): "the current settled tip", not an in-flight/uncommitted branch.
@@ -39,7 +59,7 @@ final class DstHarness(seed: Long, nodeCount: Int, faultProfile: FaultProfile = 
       network.send(from = self, to = live.toSet)(m) { case (to, msg) => deliver(to, msg) }
     def myVoterIndexes: Set[Int]                                   = Set(self)
     def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
-    def onCommit(blockId: BlockId, height: Int): Unit = {
+    def onCommit(blockId: BlockId, height: Int): Unit              = {
       commits += CommitObservation(self, blockId, height, clock.currentTime)
       committedTip(self) = (blockId, height)
     }
@@ -55,7 +75,9 @@ final class DstHarness(seed: Long, nodeCount: Int, faultProfile: FaultProfile = 
           // Wires the real `onRoundTimerTick` leader-timeout re-propose path (including its
           // `inFlightBranch`/bounded-retry logic) into the simulation: on a genuine stall, node `i`
           // falls back to ITS OWN last-committed tip, exactly as production's `blockSource` would.
-          blockSource = () => committedTip.get(i)
+          blockSource = () => committedTip.get(i),
+          committeeEpochProvider = () => epochBelief,
+          committeeEpochOf = committeeEpochOf
         )
       )
       .toMap
@@ -100,6 +122,16 @@ final class DstHarness(seed: Long, nodeCount: Int, faultProfile: FaultProfile = 
   def isLive(node: Int): Boolean = live.contains(node)
 
   def setCommittee(next: GeneratorSet): Unit = committee = next
+
+  /** Advance every node's shared `committeeEpoch` gating belief (see `epochBelief` above) to `next` --
+    * simulating every replica's own live chain tip having genuinely progressed into (and agreed on) a
+    * new generation period, the real-world trigger for production's `committeeEpoch` provider to
+    * advance. `HotStuffEngine.onQC`'s transition-gating rule (`HotStuffQuorum.acceptableCommitteeEpoch`)
+    * still accepts `next` or `next - 1`, so this does not need to be called with perfect synchrony
+    * relative to `committeeEpochOf`-derived vote/QC epochs -- it only needs to reflect that the epoch
+    * a round's votes/QCs are signed under is (or was, one step back) one this replica currently accepts.
+    */
+  def advanceEpochBelief(next: Int): Unit = epochBelief = next
 
   def partition(a: Set[Int], b: Set[Int]): Unit     = network.partition(a, b)
   def healPartition(a: Set[Int], b: Set[Int]): Unit = network.healPartition(a, b)

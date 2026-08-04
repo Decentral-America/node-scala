@@ -124,4 +124,96 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
       val votes = Seq(voteFor(0, blockA), voteFor(1, blockA), voteFor(2, blockA), voteFor(4, blockB), voteFor(5, blockB), voteFor(6, blockB))
       HotStuffSafety.equivocators(votes) should be(Set.empty)
     }
+
+  // --- T10 FIX (2026-08-03): committee-epoch binding + transition-gating rule ------------------------
+  // The two tests above prove the hazard using UNLABELED votes (committeeEpoch defaults to 0 for both
+  // sides -- exactly what every pre-fix vote/QC looked like on the wire). They must keep passing
+  // unchanged: labeling is opt-in, not retroactive amnesia for already-analyzed unlabeled traffic.
+  //
+  // The tests below prove the FIX: once each side signs its votes under its OWN distinct
+  // `committeeEpoch` (the natural, already-existing `GenerationPeriod.index` -- see that class's doc
+  // -- reused rather than inventing a new committee-hash scheme), the two committees' votes can no
+  // longer be confused with each other, and a replica's transition-gating rule
+  // (`HotStuffQuorum.acceptableCommitteeEpoch`) rejects a QC from any epoch it does not currently
+  // consider live.
+  private def voteForEpoch(i: Int, block: BlockId, epoch: Int): HotStuffVote = {
+    val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height, epoch)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr, epoch)
+  }
+
+  "binding committee epoch into the signed vote message" should
+    "prevent a QC formed under one committee's epoch from ever verifying as valid under the other epoch's bytes, even at the identical (view, height)" in {
+      val epochA = 41
+      val epochB = 42
+
+      val (afterA1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(0, blockA, epochA), committeeEpochA)
+      val (afterA2, _) = HotStuffVotePool.onVote(afterA1, voteForEpoch(1, blockA, epochA), committeeEpochA)
+      val (_, qcAOpt)  = HotStuffVotePool.onVote(afterA2, voteForEpoch(2, blockA, epochA), committeeEpochA)
+      val qcA          = qcAOpt.getOrElse(fail("expected a QC for blockA under committeeEpochA/epochA"))
+      qcA.committeeEpoch should be(epochA)
+
+      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(4, blockB, epochB), committeeEpochB)
+      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteForEpoch(5, blockB, epochB), committeeEpochB)
+      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteForEpoch(6, blockB, epochB), committeeEpochB)
+      val qcB          = qcBOpt.getOrElse(fail("expected a QC for blockB under committeeEpochB/epochB"))
+      qcB.committeeEpoch should be(epochB)
+
+      // Each QC still verifies fine against its OWN committee (no regression to the happy path).
+      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(true))
+      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(true))
+
+      // The tamper-evidence property: relabeling qcA's committeeEpoch to claim it was epochB does NOT
+      // make it pass as an epochB QC -- the aggregated BLS signature was computed over bytes that
+      // included epochA, so re-verifying against the relabeled epoch's canonical bytes fails.
+      val relabeled = qcA.copy(committeeEpoch = epochB)
+      HotStuffQuorum.verifyQC(relabeled, committeeEpochA) should be(Right(false))
+    }
+
+  "formQC" should
+    "refuse to merge votes that agree on (view, phase, block, height) but disagree on committeeEpoch (unlike the pre-fix code, which had no such field to disagree on)" in {
+      val mixed = Seq(
+        voteForEpoch(0, blockA, 41),
+        voteForEpoch(1, blockA, 41),
+        voteForEpoch(2, blockA, 42) // same view/phase/block/height, but a DIFFERENT claimed epoch
+      )
+      HotStuffQuorum.formQC(mixed, committeeEpochA) shouldBe a[Left[?, ?]]
+    }
+
+  "HotStuffQuorum.acceptableCommitteeEpoch (the transition-gating rule)" should
+    "accept the current epoch and the immediately-previous one (the legitimate single-committee-rotation-over-time case), and reject everything else" in {
+      HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch = 42, currentEpoch = 42) should be(true)  // current
+      HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch = 41, currentEpoch = 42) should be(true)  // one-step-back transition window
+      HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch = 40, currentEpoch = 42) should be(false) // too far in the past
+      HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch = 43, currentEpoch = 42) should be(
+        false
+      ) // a future epoch nobody has finalized a transition to yet
+    }
+
+  "HotStuffEngine.onQC" should
+    "REJECT the disjoint committeeEpochB's QC when this replica currently believes committeeEpochA (numeric epoch 41) is active -- closing the T10 hazard end-to-end" in {
+      val epochA = 41
+      val epochB = 99 // far outside the one-step transition window from 41
+
+      val (afterA1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(0, blockA, epochA), committeeEpochA)
+      val (afterA2, _) = HotStuffVotePool.onVote(afterA1, voteForEpoch(1, blockA, epochA), committeeEpochA)
+      val (_, qcAOpt)  = HotStuffVotePool.onVote(afterA2, voteForEpoch(2, blockA, epochA), committeeEpochA)
+      val qcA          = qcAOpt.getOrElse(fail("expected a QC for blockA under committeeEpochA"))
+
+      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(4, blockB, epochB), committeeEpochB)
+      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteForEpoch(5, blockB, epochB), committeeEpochB)
+      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteForEpoch(6, blockB, epochB), committeeEpochB)
+      val qcB          = qcBOpt.getOrElse(fail("expected a QC for blockB under committeeEpochB"))
+
+      // A replica whose engine currently believes epochA (41) is active and holds committeeEpochA as
+      // its committee: qcA (its own genuine epoch) is accepted; qcB (epoch 99, a disjoint committee
+      // entirely outside the transition window) is REJECTED before it can ever influence safety/commit
+      // state -- this is the fix actually closing the fork the earlier tests in this file proved open.
+      val engine = EngineState(committee = committeeEpochA, committeeEpoch = epochA)
+
+      val (_, actionsA) = HotStuffEngine.onQC(engine, qcA)
+      actionsA.exists { case HotStuffAction.Rejected(_) => true; case _ => false } should be(false)
+
+      val (_, actionsB) = HotStuffEngine.onQC(engine, qcB)
+      actionsB should matchPattern { case Seq(HotStuffAction.Rejected(msg)) if msg.contains("committee epoch") => }
+    }
 }
