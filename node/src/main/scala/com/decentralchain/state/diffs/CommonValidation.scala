@@ -13,7 +13,7 @@ import com.decentralchain.lang.script.v1.ExprScript
 import com.decentralchain.lang.script.{ContractScript, Script}
 import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.*
-import com.decentralchain.state.diffs.invoke.InvokeDiffsCommon
+import com.decentralchain.state.diffs.invoke.{InvokeDiffsCommon, InvokeVersionGating}
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.*
@@ -237,8 +237,14 @@ object CommonValidation {
       case t: ReissueTransaction     => generic1or2Barrier(t)
       case t: BurnTransaction        => generic1or2Barrier(t)
 
-      case _: SponsorFeeTransaction   => activationBarrier(BlockchainFeatures.FeeSponsorship)
-      case _: InvokeScriptTransaction => activationBarrier(BlockchainFeatures.Ride4DApps)
+      case _: SponsorFeeTransaction     => activationBarrier(BlockchainFeatures.FeeSponsorship)
+      case itx: InvokeScriptTransaction =>
+        activationBarrier(BlockchainFeatures.Ride4DApps).flatMap { _ =>
+          if (InvokeVersionGating.rejectsInvocation(blockchain, itx))
+            Left(GenericError(InvokeVersionGating.rejectionMessage(blockchain, itx)))
+          else
+            Right(tx)
+        }
 
       case _: UpdateAssetInfoTransaction    => activationBarrier(BlockchainFeatures.BlockV5)
       case iet: InvokeExpressionTransaction =>

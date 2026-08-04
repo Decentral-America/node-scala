@@ -11,6 +11,7 @@ import com.decentralchain.transaction.EthereumTransaction.Transfer
 import com.decentralchain.transaction.TxValidationError.*
 import com.decentralchain.transaction.assets.*
 import com.decentralchain.transaction.assets.exchange.*
+import com.decentralchain.state.diffs.invoke.InvokeVersionGating
 import com.decentralchain.transaction.smart.*
 import com.decentralchain.transaction.transfer.*
 import com.decentralchain.transaction.validation.impl.DataTxValidator
@@ -23,6 +24,12 @@ object FeeValidation {
   val FeeUnit           = 100000
   val NFTMultiplier     = 0.001
   val BlockV5Multiplier = 0.001
+
+  // SC-695 (BlockchainFeatures.InvokeVersionGating, feature id 30): static per-step extra fee
+  // required when an InvokeScriptTransaction V3 invokes a pre-V5 (STDLIB V3/V4) dApp. Dormant
+  // (steps always 0, so no fee change) unless the feature is activated -- see
+  // com.decentralchain.state.diffs.invoke.InvokeVersionGating for the full rationale.
+  val InvokeExtraFeePerStep = 100000L
 
   val FeeConstants: Map[TransactionType.TransactionType, Long] = Map(
     TransactionType.Genesis            -> 0,
@@ -197,10 +204,32 @@ object FeeValidation {
     FeeInfo(feeAssetInfo, extraRequirements ++ reqs, feeAmount + extraFee)
   }
 
+  private def feeAfterInvokeVersionStep(blockchain: Blockchain, tx: Transaction)(inputFee: FeeInfo): FeeInfo = {
+    val steps = tx match {
+      case itx: InvokeScriptTransaction => InvokeVersionGating.extraFeeSteps(blockchain, itx)
+      case _                            => 0
+    }
+
+    val extraFee = steps * InvokeExtraFeePerStep
+
+    val extraRequirements =
+      if (steps > 0)
+        Chain(
+          s"Transaction invokes a RIDE STDLIB V3/V4 dApp via InvokeScriptTransaction version 3. " +
+            s"Requires $extraFee extra fee ($steps step(s) at $InvokeExtraFeePerStep per step)"
+        )
+      else Chain.empty
+
+    val FeeInfo(feeAssetInfo, requirements, feeAmount) = inputFee
+
+    FeeInfo(feeAssetInfo, extraRequirements ++ requirements, feeAmount + extraFee)
+  }
+
   def getMinFee(blockchain: Blockchain, tx: Transaction): Either[ValidationError, FeeDetails] = {
     feeAfterSponsorship(tx.feeAssetId, blockchain, tx)
       .map(feeAfterSmartTokens(blockchain, tx))
       .map(feeAfterSmartAccounts(blockchain, tx))
+      .map(feeAfterInvokeVersionStep(blockchain, tx))
       .map {
         case FeeInfo(Some((assetId, assetInfo)), reqs, amountInDcc) =>
           FeeDetails(assetId, reqs, Sponsorship.fromDcc(amountInDcc, assetInfo.sponsorship), amountInDcc)

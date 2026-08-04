@@ -40,6 +40,14 @@ object BlockchainFeatures {
   // JNI symbol: Java_com_decentralchain_groth16_bls12_Groth16V2_verify
   val ModernGroth16Verifier = BlockchainFeature(28, "Modern Groth16 verifier (fastcrypto, arkworks format)")
 
+  // SC-695: gates (a) rejection of InvokeScriptTransaction version V1/V2 against a dApp whose
+  // deployed script is STDLIB V5+ (dApp-to-dApp sync calls require the V3 wire format) and
+  // (b) a static per-step extra fee required when an InvokeScriptTransaction V3 invokes a
+  // pre-V5 (V3/V4) dApp. Dormant until activated -- see
+  // node/src/main/scala/com/decentralchain/state/diffs/invoke/InvokeVersionGating.scala and
+  // docs/features/feature-30-sc695-spec.md.
+  val InvokeVersionGating = BlockchainFeature(30, "InvokeScriptTransaction version gating and per-step invocation fee")
+
   // When next fork-parameter is created, you must replace all uses of the DummyFeature with the new one.
   val Dummy = BlockchainFeature(-1, "Non Votable!")
 
@@ -69,7 +77,8 @@ object BlockchainFeatures {
     BoostBlockReward,
     EcrecoverFix,
     DeterministicFinality,
-    ModernGroth16Verifier
+    ModernGroth16Verifier,
+    InvokeVersionGating
   ).map(f => f.id -> f).toMap
 
   val implemented: Set[Short] = dict.keySet

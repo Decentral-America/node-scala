@@ -101,7 +101,12 @@ class InvokeScriptComplexitySpec extends FreeSpec with WithDomain with NTPTime {
           CONST_BYTESTR(ByteStr(dApp0KP.toAddress.bytes)).explicitGet(),
           CONST_BYTESTR(issueTx.id()).explicitGet()
         ),
-        invoker = invoker
+        invoker = invoker,
+        // This spec pre-activates BlockchainFeatures.implemented (every feature, incl. SC-695's
+        // InvokeVersionGating) at height 0. Under that gate, InvokeScriptTransaction V1/V2 can no
+        // longer invoke a STDLIB V5 dApp (dApp1 above is V5); bump to V3 since this test is about
+        // complexity accounting, not the version matrix.
+        version = TxVersion.V3
       )
 
       utx.putIfNew(invocation, forceValidate = true).resultE.explicitGet() shouldBe true
