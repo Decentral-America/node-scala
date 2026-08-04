@@ -1,9 +1,9 @@
 # DCC Consensus Upgrade Plan
 
-> Last updated: July 8, 2026 · **Updated 2026-08-03**: T2 status refreshed below — pacemaker rework complete and merged to `main`, testnet-only `authoritative` opt-in deployed live.  
+> Last updated: July 8, 2026 · **Updated 2026-08-03**: T2 status refreshed below — pacemaker rework complete and merged to `main`, testnet-only `authoritative` opt-in deployed live. · **Updated 2026-08-04**: T10 cross-committee-epoch-fork fix (+ its own follow-up liveness fix) landed and merged, SC-695 implemented separately, live testnet image bumped to `sha-9c49632`, `/blocks/height/finalized` re-verified genuinely advancing.  
 > **T0: ✅ Testnet active** — feature-25 Deterministic Finality live (single-round BLS, 2/3 committed-stake quorum); `finalizedHeight` advancing at the tip. Mainnet: ❌ not yet activated.  
 > **T1: ✅ Implemented** — FillReceipt code complete and deployed on testnet matcher.  
-> **T2: ✅ Rework complete, testnet-authoritative (mainnet still gated behind external audit)** — the pacemaker/single-active-view rework (view-change no longer conflated with block height, vote-pool bounding, `lockedQC` persistence across restarts, re-propose-locked-branch leader-timeout optimization) is merged to node-scala `main`. By explicit human decision, ahead of the external audit and scoped to testnet only, a new `dcc.hotstuff.authoritative` opt-in flag was added and deployed live to all 4 testnet nodes (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml` — `hotstuff.authoritative = true`). With that flag on, a genuine HotStuff commit now also raises the authoritative feature-25 `finalizedHeight` (monotonic max()-merge, never injects a block outside this node's own canonical chain). `GET /blocks/height/finalized`, previously stalled on testnet for an unrelated committee/peer issue, was confirmed advancing again via this mechanism once that unrelated issue was fixed. Mainnet: ❌ `authoritative` remains false — unaffected, still gated behind the external audit (see `docs/hotstuff-audit-readiness.md`).  
+> **T2: ✅ Rework complete, testnet-authoritative, T10 cross-epoch-fork fixed (mainnet still gated behind external audit)** — the pacemaker/single-active-view rework (view-change no longer conflated with block height, vote-pool bounding, `lockedQC` persistence across restarts, re-propose-locked-branch leader-timeout optimization) is merged to node-scala `main` (`9c49632398`). By explicit human decision, ahead of the external audit and scoped to testnet only, a `dcc.hotstuff.authoritative` opt-in flag was added and deployed live to all 4 testnet nodes (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml` — `hotstuff.authoritative = true`, current image `ghcr.io/decentral-america/node-scala@sha256:8a1c9d17e03a305ca763b0c53c1e2c080e891c64d8cd6946abd75507c8c1f69d`, i.e. `sha-9c49632`). With that flag on, a genuine HotStuff commit now also raises the authoritative feature-25 `finalizedHeight` (monotonic max()-merge, never injects a block outside this node's own canonical chain). **Re-verified live 2026-08-04:** `GET /blocks/height` → `107779`, `GET /blocks/height/finalized` → `107697` — advancing, healthy lag. Since the 2026-08-03 authoritative deployment, node-scala `main` also picked up **T10**: a cross-committee-epoch fork hazard (two disjoint committed-generator committees each forming an honest 2/3-stake QC for a *different* block at the identical view/height) found and fixed 2026-08-03 (wire-format `committeeEpoch` binding, schema 1.6.5, + `HotStuffQuorum.acceptableCommitteeEpoch` transition gate), plus a distinct liveness gap in that same fix's own wiring found and fixed 2026-08-04 (`committeeEpoch` now derived from the vote's target height, not the signer's live tip). See `docs/hotstuff-audit-readiness.md` T10 entry and `docs/hotstuff-integration-design.md` §6/§8 for full detail — narrowed, not fully closed (no live multi-node Docker evidence of an actual committee-epoch *transition* yet, unit/DST-simulation only). **Separately, SC-695** (RIDE InvokeScriptTransaction version-gating + `extraFeePerStep` fee) was implemented behind a new, unrelated `BlockchainFeature` id 30, dormant until governance activation — zero live effect today, not part of T0/T1/T2 finality. Mainnet: ❌ `authoritative` remains false — unaffected, still gated behind the external audit (see `docs/hotstuff-audit-readiness.md`).  
 > **Blockers before mainnet**: see Approval Checklist below.  
 > Covers: T0 activation → T1 matcher → T2 HotStuff
 
@@ -253,9 +253,21 @@ The generation period commitment IS the rotating committee. T2 builds directly o
    decision, ahead of the external audit and scoped to testnet only, `dcc.hotstuff.authoritative = true`
    is also live there (`../infra/node-config/testnet/dcc.conf`, `../infra/clusters/testnet/apps/nodes.yaml`).
    `GET /blocks/height/finalized` — previously stalled on a pre-existing, unrelated committee/peer issue —
-   was confirmed genuinely advancing again via this mechanism once that unrelated issue was fixed. A
-   formal multi-day soak record (crash/partition/equivocation scenarios) for this reworked model has not
-   been documented here; do not infer one beyond what's stated above.
+   was confirmed genuinely advancing again via this mechanism once that unrelated issue was fixed, and
+   **re-verified live again 2026-08-04** (`height=107779`, `finalized=107697`) after the live image was
+   bumped to `sha-9c49632`. A formal multi-day soak record (crash/partition/equivocation scenarios) for
+   this reworked/authoritative model has not been documented here; do not infer one beyond what's stated
+   above.
+
+6. **T10 fix (2026-08-03/04)** — a cross-committee-epoch fork hazard was found and closed at the unit
+   layer after this deployment: two disjoint committed-generator committees could each independently form
+   an honest 2/3-stake QC for a *different* block at the identical (view, height). Fixed via a
+   `committeeEpoch` field folded into the signed vote/QC bytes (schema 1.6.5) plus a transition-gating
+   rule (`HotStuffQuorum.acceptableCommitteeEpoch`). A follow-up adversarial review found and fixed a
+   distinct liveness gap in that fix's own wiring the next day (`committeeEpoch` now derived from the
+   vote's target height, not the signer's live tip). Both are merged to `main` @ `9c49632398` and live
+   on testnet via the `sha-9c49632` image. See `docs/hotstuff-audit-readiness.md` T10 for full detail —
+   narrowed, not fully closed (no live Docker evidence of an actual epoch transition yet).
 
 ### Codebase reference (actual — package `com.decentralchain.consensus.hotstuff` unless noted)
 
@@ -467,7 +479,7 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 | HotStuff engine | `node-scala/node/src/main/scala/com/decentralchain/consensus/hotstuff/` | ✅ Active on testnet |
 | Testnet config | `node-scala/node/decentralchain-testnet.conf` | ✅ `hotstuff.enabled=true`, feature 25 active |
 | Mainnet config | `node-scala/node/decentralchain-mainnet.conf` | ❌ Feature 25 not yet activated |
-| VPS dcc.conf | `/opt/dcc/config/node-testnet/dcc.conf` | ✅ `hotstuff.enabled=true`, `hotstuff.authoritative=true` (2026-08-03, testnet-only) live on the deployed `main` image; `round-timeout = 1200ms` |
+| VPS dcc.conf | `/opt/dcc/config/node-testnet/dcc.conf` | ✅ `hotstuff.enabled=true`, `hotstuff.authoritative=true` (2026-08-03, testnet-only) live on the deployed `main` image; `round-timeout = 1200ms`; image bumped 2026-08-04 to `sha-9c49632` (includes T10 cross-epoch-fork fix + liveness follow-up) |
 | Matcher FillReceipt | `Ecosystem/matcher/dex/src/main/scala/.../model/FillReceipt.scala` | ✅ Complete, deployed on testnet |
 | Block proto | `DecentralChain/packages/sdk/protobuf-schemas/proto/dcc/block.proto` | ✅ Field 14 `committed_generators_hash` added (1.6.3) |
 | BPS type-19 | `DecentralChain/apps/blockchain-postgres-sync/src/lib/consumer/` | ✅ Code fixed (`2f35c45a`) — deploy pending |
@@ -476,4 +488,4 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 
 ---
 
-*DCC Consensus Upgrade Plan · Last updated June 30, 2026 · T2 status updated 2026-08-03*
+*DCC Consensus Upgrade Plan · Last updated June 30, 2026 · T2 status updated 2026-08-03, 2026-08-04 (T10 cross-epoch-fork fix + liveness follow-up, live image bump to `sha-9c49632`, re-verified live finality)*

@@ -1,17 +1,50 @@
 # T2 HotStuff — Implementation & Integration Design (SSOT)
 
-> **Status:** ⚠️ **REWORK PENDING — do not treat as ship-ready.** Pure BFT core is complete + unit-tested
+> **Status (updated 2026-08-04):** ✅ **Rework complete, merged to `main` @ `9c49632398`, and
+> testnet-authoritative.** The `view=block-height` shell-model problem that the "REWORK PENDING" banner
+> below used to warn about (first found live, 2026-07-12) is resolved: the pacemaker rework (real
+> leader-timeout/view-change, decoupled `proposalValid`), `HotStuffVotePool` bounding, `lockedQC`
+> persistence across restarts, and the re-propose-locked-branch leader-timeout optimization are all merged.
+> By explicit human decision, ahead of the external audit and scoped to testnet only, a
+> `dcc.hotstuff.authoritative` opt-in flag is also live on all 4 testnet nodes — a genuine HotStuff commit
+> now raises the authoritative feature-25 `finalizedHeight` (monotonic max()-merge). `GET
+> /blocks/height/finalized` is confirmed advancing on live testnet via this mechanism (verified
+> 2026-08-04: `height=107779`, `height/finalized=107697`). Mainnet is completely unaffected —
+> `authoritative` stays `false` there, still gated behind the external audit.
+>
+> Since that rework landed, two more things happened and are both closed: (1) **T10** — a
+> cross-committee-epoch fork hazard (two disjoint committees each forming an honestly-signed 2/3 QC for a
+> different block at the identical view/height) was found and fixed 2026-08-03 (wire-format
+> `committeeEpoch` binding, schema 1.6.5, + `HotStuffQuorum.acceptableCommitteeEpoch` transition gate);
+> adversarial review then found the fix's OWN wiring introduced a distinct liveness gap (`committeeEpoch`
+> derived from the signer's live tip instead of the vote's target height), fixed 2026-08-04 by deriving it
+> as a pure function of target height. See §6 and `docs/hotstuff-audit-readiness.md` T10 entry for full
+> detail — **narrowed, not fully closed:** no live multi-node Docker evidence of an actual committee-epoch
+> *transition* exists yet, only unit/DST simulation. (2) **SC-695** (unrelated RIDE feature, not part of
+> HotStuff) was separately implemented behind feature id 30, dormant — irrelevant to this document beyond
+> noting node-scala `main` now also contains it.
+>
+> **Gated behind `dcc.hotstuff.enabled` (default `false` outside testnet) and `dcc.hotstuff.authoritative`
+> (default `false` everywhere except testnet) — zero behaviour change on mainnet today.**
+> **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
+> node-scala *implementation* of T2. Keep it updated as code lands.
+>
+> ⚠️ Making `authoritative = true` on **mainnet** remains gated on: the external audit signing off (see
+> `hotstuff-audit-readiness.md` and `hotstuff-security-review.md`), a formal multi-day testnet soak record
+> for the reworked/authoritative model (not yet documented), and equivocation→slashing wiring.
+>
+> <details><summary>Original "REWORK PENDING" banner (superseded 2026-08-04, kept for history)</summary>
+>
+> ⚠️ **REWORK PENDING — do not treat as ship-ready.** Pure BFT core is complete + unit-tested
 > and the CI simulation is green, BUT the first real multi-node run (step 5, live testnet, 2026-07-12)
 > showed the `view=block-height` shell model does not work on an NG chain: it took **four** fixes just to
 > get validators voting on the same block, and **QC formation is still unconfirmed live.** Full write-up
 > and the proposed rework (pacemaker/single-active-view, or lean on feature-25) are in
-> **[`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md)** — read that before
-> building further on §5. **Gated behind `dcc.hotstuff.enabled` (default `false`) — zero behaviour change today.**
-> **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
-> node-scala *implementation* of T2. Keep it updated as code lands.
+> **[`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md)**.
 >
 > ⚠️ Enabling on mainnet is gated on: schemas 1.6.4 published, step-5 multi-node + soak, and an
 > **external audit** (see `hotstuff-security-review.md`).
+> </details>
 
 ## 1. Protocol
 Basic 3-phase HotStuff (prepare → pre-commit → commit) over the **committed-generator committee**
@@ -158,6 +191,22 @@ Mirror the existing feature-25 endorsement path:
   Central (local-`.m2`-only today), and no live multi-node Docker run has exercised a real committee-epoch
   transition (only unit/DST simulation) — both need to happen (the latter on CI/testnet, given local
   `node-it` Docker's documented memory/flakiness constraints) before this can be called closed end-to-end.
+  **Update (2026-08-04): a follow-up adversarial review found the 2026-08-03 fix's OWN wiring introduced a
+  distinct, previously-uncharacterized LIVENESS gap** — `committeeEpoch` was derived from the signing
+  replica's own live chain tip (`blockchainUpdater.currentGenerationPeriod`) rather than the vote's TARGET
+  height, so two fully honest, synced replicas voting the identical `(view, phase, blockId, blockHeight)`
+  target could sign *different* epochs if their local tip crossed a generation-period boundary at slightly
+  different moments (ordinary propagation skew, not an attack), and `formQC`'s epoch-sensitive
+  `sameTarget` check then permanently stalled that target. Fixed the same day by deriving `committeeEpoch`
+  as a pure function of the target height (`HotStuffCoordinator.Enabled`'s `committeeEpochOf: Int => Int`
+  parameter, `blockchain.generationPeriodOf(targetHeight).index` in `Application.scala`) at every
+  vote-signing call site, plus an epoch-aware `(voterIndex, committeeEpoch)` dedup in
+  `HotStuffVotePool.onVote` as defense-in-depth. See `HotStuffCrossEpochLivenessSpecification` for the
+  reproduction and fix proof; also merged to `main` @ `9c49632398`. `protobuf-schemas` 1.6.5 is now
+  **published to Maven Central** (verified live at `repo1.maven.org/maven2/io/decentralchain/protobuf-schemas/1.6.5/`,
+  200 OK 2026-08-04) — no longer a CI-build blocker. The one still-open item from both the fork-hazard and
+  liveness fixes is unchanged: no live multi-node Docker evidence of an actual committee-epoch *transition*
+  yet, only unit/DST simulation.
   A genuine Twins-style equivocating-validator node-it test (one node double-
   voting into two live partitions) remains separate future work — needs a purpose-built
   fault-injection node image, per `FourNodeHotStuffTestSuite`'s own doc comment. BFT safety/liveness
@@ -190,14 +239,21 @@ branch can build in CI or merge.
 2. ✅ Step 4c shell landed + step-5 smoke **green on CI** (`FourNodeHotStuffTestSuite` passes on
    ubuntu-latest, PR #17: 4-node cluster finalizes with HotStuff enabled).
    ✅ Crashed-leader and static-committee partition scenarios (see §6, 2026-07-26 update).
-   ✅ Cross-committee-epoch fork hazard (T10) — **closed at the unit layer, 2026-08-03**: wire-format
-     `committeeEpoch` binding (schema 1.6.5) + `HotStuffQuorum.acceptableCommitteeEpoch`
-     transition-gating rule, proven by `HotStuffCrossEpochForkSpecification`'s fix-side tests and
-     `HotStuffEngine.onQC` end-to-end rejection; 114/114 HotStuff-area tests green. See
-     `docs/hotstuff-audit-readiness.md` T10 entry for full detail. **Not yet production-ready:**
-     `protobuf-schemas` 1.6.5 needs a Maven Central publish (blocks CI/merge of
-     `consensus/fix-cross-epoch-fork`); no live multi-node Docker evidence of an actual committee-epoch
-     transition yet (unit/DST-simulation only) — needs a `node-it` scenario on CI/testnet.
+   ✅ Cross-committee-epoch fork hazard (T10) — **closed at the unit layer, 2026-08-03; a related
+     liveness gap found in the same fix closed 2026-08-04** — wire-format `committeeEpoch` binding
+     (schema 1.6.5) + `HotStuffQuorum.acceptableCommitteeEpoch` transition-gating rule, proven by
+     `HotStuffCrossEpochForkSpecification`'s fix-side tests and `HotStuffEngine.onQC` end-to-end
+     rejection; the 2026-08-04 fix derives `committeeEpoch` from the vote's target height instead of the
+     signer's live tip (`HotStuffCrossEpochLivenessSpecification`). All merged to `main` @ `9c49632398`.
+     See `docs/hotstuff-audit-readiness.md` T10 entry for full detail. `protobuf-schemas` 1.6.5 is now
+     **published to Maven Central** (verified 2026-08-04) — no longer a CI-build blocker. **Still open:**
+     no live multi-node Docker evidence of an actual committee-epoch transition yet (unit/DST-simulation
+     only) — needs a `node-it` scenario on CI/testnet.
+   ✅ Testnet deployed, `dcc.hotstuff.enabled=true` + `dcc.hotstuff.authoritative=true` live on all 4
+     testnet nodes (2026-08-03/04, image `sha-9c49632`), by explicit human decision ahead of the audit,
+     scoped to testnet only. `GET /blocks/height/finalized` confirmed advancing via this mechanism.
    ◻ Remaining: Twins-style equivocating-validator node-it scenario (needs a fault-injection node
-     build), then testnet soak behind the flag.
-3. ◻ External audit before `hotstuff.enabled = true` on mainnet.
+     build); a formal multi-day soak record for the reworked/authoritative model (crash/partition/
+     equivocation) is not yet documented despite the live deployment above.
+3. ◻ External audit before `hotstuff.authoritative = true` is ever considered on mainnet (testnet-only
+   today, does not require audit sign-off per the explicit human decision that scoped it there).
