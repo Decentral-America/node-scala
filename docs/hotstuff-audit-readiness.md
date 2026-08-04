@@ -64,7 +64,25 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
 | T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 |
 | T9 | Crashed leader / partition (liveness + safety) | pacemaker + safety | unit + `FourNodeHotStuffTestSuite`; **needs live soak** |
-| T10 | Cross-committee-epoch fork — two disjoint committees (e.g. a full validator-set rotation between committed-generators periods) each independently form a valid, honestly-signed 2/3-stake QC for a *different* block at the identical (view, height), with zero shared signers | `HotStuffQuorum`/`HotStuffVotePool` — committee identity is not bound into the signed vote/QC bytes | **NOT stopped today** — proven reachable by `HotStuffCrossEpochForkSpecification` (unit-level, no coordinator/network needed); invisible to `HotStuffSafety.equivocators` (single-voter double-sign detector only, blind to disjoint-signer forks); full write-up in `docs/hotstuff-integration-design.md` §6 and §8 Open Gates item 2. **Bounded**: T2 commit is observational only (see §1) — this cannot fork, halt, or roll back the chain today. Closing it for real is a genuine protocol-design decision (bind committee identity into signed vote/QC bytes + a coordinator-level transition-gating rule, or a full joint-consensus two-phase membership-change protocol), comparable in scope to the pacemaker rework — deliberately left open for this audit to weigh in on rather than rushed |
+| T10 | Cross-committee-epoch fork — two disjoint committees (e.g. a full validator-set rotation between committed-generators periods) each independently form a valid, honestly-signed 2/3-stake QC for a *different* block at the identical (view, height), with zero shared signers | `HotStuffQuorum`/`HotStuffVotePool` — committee identity is now bound into the signed vote/QC bytes | **CLOSED at the unit layer (2026-08-03).** A `committeeEpoch: Int = 0` field (schema 1.6.5, `dcc/block.proto` field 7 `committee_epoch`, reusing the existing `state.GenerationPeriod.index` rotation identifier — no new committee-hash concept) is now folded into the canonical signed bytes in `HotStuffQuorum.voteMessage`, carried on the wire on `HotStuffVote`/`QuorumCertificate`, and gated by a new `HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch, currentEpoch)` transition rule (accepts the current epoch or the immediately-preceding one; rejects everything else) applied in `HotStuffEngine.onQC`/`onProposal` *before* cryptographic verification. `HotStuffCrossEpochForkSpecification` now additionally proves the fix: labeled votes from disjoint epochs can no longer be relabeled/merged into a cross-epoch QC, and `HotStuffEngine.onQC` demonstrably rejects a QC from an epoch outside the transition window end-to-end. Default `committeeEpoch = 0` is fully backward compatible — a pre-1.6.5 peer's messages simply omit the proto3 field and decode as `0`, matching every existing call site, so this closes cleanly with zero behaviour change for unlabeled traffic. All 114 HotStuff-area unit/DST tests green (`node-tests/testOnly com.decentralchain.consensus.hotstuff.* …`, 2026-08-03). **Real Docker evidence obtained (2026-08-03):** built the actual `node-it` Docker image off this
+branch (`sbt node-it/docker`, local-`.m2`-resolved 1.6.5 schema) and ran `FourNodeHotStuffTestSuite`
+against a real 4-node cluster — all 3 cases (plain finalization, crashed-generator recovery, network
+partition) pass with the `committeeEpoch`-carrying wire format live end-to-end
+(`node-tests`/`node-it` output archived at
+`t10_docker_build.log`/`t10_nodeit_run.log` in the session scratchpad). This proves the wire change is
+non-regressing on a real multi-node cluster (default `committeeEpoch = 0` throughout, since
+`Application.scala`'s `committeeEpoch` provider only returns non-zero once a real generation-period
+rotation occurs) — it does **not** yet prove an actual cross-epoch *transition* live (no scenario in
+this run drove a real committed-generators rotation mid-test). **Still open:** (1) `protobuf-schemas`
+1.6.5 is only installed to local Maven (`~/.m2`), built from `DecentralChain` repo branch
+`consensus/committee-epoch-wire-field` (commits `a5ea11594`, `50376fcef`) — **not yet published to
+Maven Central or merged**, so `node-scala`'s `consensus/fix-cross-epoch-fork` branch cannot build in CI
+until that publish happens (mirrors Open Gates item 1's 1.6.4 precedent); (2) no Docker evidence of an
+actual committee-epoch *transition* (two different committees, live rotation mid-cluster) exists yet —
+only unit/DST-level simulation (`DstCommitteeChangeScenarioSpecification`) plus the non-regression
+4-node run above; a dedicated `node-it` rotation scenario is still future work, best done on CI/testnet
+given local `node-it` Docker's documented memory/flakiness constraints on this laptop (see
+`docs/hotstuff-HANDOFF.md`) for anything longer/heavier than the single run just completed. |
 | T11 | Post-restart replay under a blank safety lock — a freshly-constructed `SafetyState` (`lockedQC = None`) admits ANY view-ordering-valid proposal, incl. a Byzantine leader's replay of an old-but-real block under an inflated view, until the replica re-accumulates its own lock | `HotStuffSafety.safeToVote`'s `None` branch / `HotStuffCoordinator.Enabled`'s `initialLockedQC` | **Narrowed, not fully closed** — `HotStuffLockedQCStore` persists a replica's real `lockedQC` to disk on every genuine advance and reloads it via `initialLockedQC` at coordinator construction, so a restart resumes from the replica's actual last lock instead of blank state. This closes the window on every restart from a replica's SECOND boot onward, adversarially tested against a fabricated-but-well-formed persisted QC (`HotStuffViewChangeSpecification`, "a fabricated-but-well-formed QC loaded as initialLockedQC" — proven to at worst self-DoS that one replica's voting, never corrupt consensus, since `HotStuffEngine.onQC` independently re-verifies BLS/quorum regardless of `lockedQC`). It does **not** close the window on a replica's very first-ever boot, when by definition nothing has been locked/persisted yet — that one-time gap still exists, bounded the same way as before (`HotStuffEngine.onQC`'s monotonic commit-height guard; see T4) |
 
 ## 5. Code surface (package `com.decentralchain.consensus.hotstuff` unless noted)
@@ -100,17 +118,24 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 3. **Equivocation → slashing** not wired to `conflictGenerators` (T5) — acceptable while observational;
    required before authoritative.
 4. **hotStuffFinalizedHeight is observational only** — no path raises the authoritative finalized height.
-5. **Cross-committee-epoch fork (T10)** — committee identity is not bound into the signed vote/QC bytes
-   in `HotStuffQuorum`, so two disjoint committees (e.g. a full validator-set rotation between committed-
-   generators periods) can each independently certify a valid, honest 2/3-stake QC for a *different* block
-   at the same (view, height) — zero shared signers, invisible to `HotStuffSafety.equivocators`. Proven
-   reachable by `HotStuffCrossEpochForkSpecification`; full write-up in `docs/hotstuff-integration-design.md`
-   §6 and §8 Open Gates item 2. This is a real gap in the production QC/committee-binding logic, but it is
-   bounded today: T2 stays strictly observational (§1) — it cannot fork, halt, or roll back the chain;
-   feature-25 remains sole authoritative finality. Closing it for real requires a genuine protocol-design
-   decision (binding committee identity into signed vote/QC bytes plus a coordinator-level transition-
-   gating rule, or a full joint-consensus membership-change protocol) — comparable in scope to the
-   pacemaker rework, and deliberately left for this audit to weigh in on rather than rushed.
+5. **Cross-committee-epoch fork (T10) — closed at the unit layer (2026-08-03).** Committee identity
+   (`committeeEpoch`, schema 1.6.5 `committee_epoch` field 7, = `GenerationPeriod.index`) is now bound
+   into the signed vote/QC bytes in `HotStuffQuorum.voteMessage`, and a new transition-gating rule
+   (`HotStuffQuorum.acceptableCommitteeEpoch`) — applied in `HotStuffEngine.onQC`/`onProposal` before
+   BLS verification — rejects any QC/justify whose epoch is not the current one or the immediately
+   preceding one. `HotStuffCrossEpochForkSpecification` proves both the original hazard (unlabeled
+   votes, unchanged/still-passing) and the fix (labeled votes from disjoint epochs can no longer be
+   merged or relabeled into a valid cross-epoch QC, and `HotStuffEngine.onQC` rejects an out-of-window
+   epoch end-to-end). Default `committeeEpoch = 0` keeps every pre-existing call site and wire peer
+   byte-for-byte backward compatible. 114/114 HotStuff-area tests green as of 2026-08-03. **Two items
+   remain before this can be considered fully closed for mainnet:** (a) the underlying `protobuf-schemas`
+   1.6.5 proto change (`DecentralChain` repo, branch `consensus/committee-epoch-wire-field`) is only
+   installed to local Maven today — it still needs a credentialed publish to Maven Central (same step
+   Open Gates item 1 required for 1.6.4) before `node-scala` CI can build against it; (b) no live
+   multi-node Docker evidence of an actual committee-epoch transition exists yet (only unit/DST-level
+   simulation) — needs a `node-it` scenario exercising a real generation-period rotation across a live
+   cluster, validated on CI/testnet given local `node-it` Docker's documented memory/flakiness
+   constraints on this laptop.
 6. **Post-restart `lockedQC` replay window (T11) — narrowed, not fully closed.** `HotStuffLockedQCStore`
    persists each replica's real `lockedQC` to disk on every genuine advance and reloads it as
    `initialLockedQC` at coordinator construction, so a restart resumes from the replica's last real lock

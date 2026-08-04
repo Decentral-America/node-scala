@@ -140,36 +140,64 @@ Mirror the existing feature-25 endorsement path:
   under a SINGLE FIXED committee: any two ≥2/3-stake quorums of the same committee must share ≥1/3 of
   it, so a static-committee partition can never yield two independent quorums for different blocks —
   ordinary BFT quorum-intersection math, not something a bigger seed sweep would add confidence to.
-  Remaining, precisely re-scoped by `HotStuffCrossEpochForkSpecification`
-  (`node/tests/.../consensus/hotstuff/HotStuffCrossEpochForkSpecification.scala`): that
-  quorum-intersection guarantee does NOT extend across two DIFFERENT committees (e.g. a full
-  validator-set rotation between committed-generators periods) — the spec exhibits two disjoint,
-  entirely honest 2/3-quorums independently certifying different blocks at an identical (view,
-  height), with zero shared signers, invisible to `HotStuffSafety.equivocators` (which only catches a
-  single voter double-signing). This is the concrete form of "follow-up (a)" below; closing it needs a
-  wire-format committee-identity binding plus a coordinator-level transition-gating rule, or a full
-  joint-consensus two-phase membership protocol — both real protocol-design decisions, not bounded
-  bugs, and deliberately not attempted without dedicated multi-round adversarial review (see that
-  spec's doc comment). A genuine Twins-style equivocating-validator node-it test (one node double-
+  That quorum-intersection guarantee does NOT extend across two DIFFERENT committees (e.g. a full
+  validator-set rotation between committed-generators periods) — `HotStuffCrossEpochForkSpecification`
+  (`node/tests/.../consensus/hotstuff/HotStuffCrossEpochForkSpecification.scala`) originally exhibited
+  two disjoint, entirely honest 2/3-quorums independently certifying different blocks at an identical
+  (view, height), with zero shared signers, invisible to `HotStuffSafety.equivocators` (which only
+  catches a single voter double-signing). **Update (2026-08-03): closed at the unit layer.** The chosen
+  design was the wire-format committee-identity binding + coordinator-level transition-gating rule
+  option (not the full joint-consensus two-phase membership protocol, judged disproportionate to the
+  hazard): a `committeeEpoch` field (schema 1.6.5, = `state.GenerationPeriod.index`) is now folded into
+  the signed vote/QC bytes (`HotStuffQuorum.voteMessage`), and `HotStuffQuorum.acceptableCommitteeEpoch`
+  gates `HotStuffEngine.onQC`/`onProposal` to only accept the current epoch or the immediately-preceding
+  one. The same spec file now also proves the fix (labeled-epoch votes can no longer be merged/relabeled
+  across epochs; `HotStuffEngine.onQC` rejects an out-of-window epoch end-to-end) alongside the original,
+  still-passing, unlabeled-vote hazard tests. 114/114 HotStuff-area tests green. Two things this unit-level
+  closure does **not** yet cover: the `protobuf-schemas` 1.6.5 change is not yet published to Maven
+  Central (local-`.m2`-only today), and no live multi-node Docker run has exercised a real committee-epoch
+  transition (only unit/DST simulation) — both need to happen (the latter on CI/testnet, given local
+  `node-it` Docker's documented memory/flakiness constraints) before this can be called closed end-to-end.
+  A genuine Twins-style equivocating-validator node-it test (one node double-
   voting into two live partitions) remains separate future work — needs a purpose-built
   fault-injection node image, per `FourNodeHotStuffTestSuite`'s own doc comment. BFT safety/liveness
   only manifest across ≥4 nodes; no unit test substitutes for the node-it layer, but the cross-epoch
-  hazard above is fully demonstrated at the unit layer and does not need one.
+  hazard above is fully demonstrated at the unit layer and does not need one for that part.
 
-## 7. Wire format (schemas 1.6.4, `dcc/block.proto`)
+## 7. Wire format (schemas 1.6.5, `dcc/block.proto`)
 `HotStuffPhase{UNSPECIFIED,PREPARE,PRE_COMMIT,COMMIT}`;
-`HotStuffVote{view, phase, block_id, block_height, voter_index, signature(BLS)}`;
-`QuorumCertificate{view, phase, block_id, block_height, signer_indexes[], aggregated_signature(BLS)}`;
+`HotStuffVote{view, phase, block_id, block_height, voter_index, signature(BLS), committee_epoch(7)}`;
+`QuorumCertificate{view, phase, block_id, block_height, signer_indexes[], aggregated_signature(BLS), committee_epoch(7)}`;
 `HotStuffProposal{view, block_id, justify:QuorumCertificate}`.
 **1.6.4 is published** — live on Maven Central (`io.decentralchain:protobuf-schemas:1.6.4`, autoPublish
 via central-publishing-maven-plugin); node-scala CI resolves it. (Was the last pre-merge blocker.)
+
+**1.6.5 (T10 fix, 2026-08-03) adds `uint32 committee_epoch = 7` to both `HotStuffVote` and
+`QuorumCertificate`** — see the T10 entry in `docs/hotstuff-audit-readiness.md` §4/§7 for the full
+design rationale (identifier reused from `state.GenerationPeriod.index`; transition-gating rule in
+`HotStuffQuorum.acceptableCommitteeEpoch`). proto3 field-7 addition is wire-backward-compatible by
+construction (older peers omit it, decoding as `0`, which is also this field's default everywhere in
+`node-scala`). **Not yet published**: the schema change is committed on the `DecentralChain` repo
+(`packages/sdk/protobuf-schemas`, branch `consensus/committee-epoch-wire-field`, commits `a5ea11594`
+"feat(hotstuff): add committee_epoch field to HotStuffVote/QuorumCertificate (schema 1.6.5)" and
+`50376fcef` "chore(hotstuff): regenerate TS protobuf stubs for committee_epoch field") but only
+installed to local Maven (`~/.m2`) so far — it needs the same credentialed Maven Central publish step
+that 1.6.4 required (§8 Open Gates item 1) before `node-scala`'s `consensus/fix-cross-epoch-fork`
+branch can build in CI or merge.
 
 ## 8. Open gates
 1. ✅ Publish `protobuf-schemas` 1.6.4 (credentialed release) — **done**, live on Maven Central.
 2. ✅ Step 4c shell landed + step-5 smoke **green on CI** (`FourNodeHotStuffTestSuite` passes on
    ubuntu-latest, PR #17: 4-node cluster finalizes with HotStuff enabled).
    ✅ Crashed-leader and static-committee partition scenarios (see §6, 2026-07-26 update).
-   ◻ Remaining: cross-committee-epoch fork hazard (`HotStuffCrossEpochForkSpecification` — needs a
-     protocol-design decision, see §6), Twins-style equivocating-validator node-it scenario
-     (needs a fault-injection node build), then testnet soak behind the flag.
+   ✅ Cross-committee-epoch fork hazard (T10) — **closed at the unit layer, 2026-08-03**: wire-format
+     `committeeEpoch` binding (schema 1.6.5) + `HotStuffQuorum.acceptableCommitteeEpoch`
+     transition-gating rule, proven by `HotStuffCrossEpochForkSpecification`'s fix-side tests and
+     `HotStuffEngine.onQC` end-to-end rejection; 114/114 HotStuff-area tests green. See
+     `docs/hotstuff-audit-readiness.md` T10 entry for full detail. **Not yet production-ready:**
+     `protobuf-schemas` 1.6.5 needs a Maven Central publish (blocks CI/merge of
+     `consensus/fix-cross-epoch-fork`); no live multi-node Docker evidence of an actual committee-epoch
+     transition yet (unit/DST-simulation only) — needs a `node-it` scenario on CI/testnet.
+   ◻ Remaining: Twins-style equivocating-validator node-it scenario (needs a fault-injection node
+     build), then testnet soak behind the flag.
 3. ◻ External audit before `hotstuff.enabled = true` on mainnet.
