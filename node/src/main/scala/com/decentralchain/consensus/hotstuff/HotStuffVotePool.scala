@@ -115,8 +115,21 @@ object HotStuffVotePool {
     if (!HotStuffQuorum.verifyVote(vote, liveCommittee)) (pool, None) // drop invalid — do not pool it
     else if (wouldExceedCap) (pool, None)                             // capped (Task 8 Step 3): fail closed, do not grow seenCommittees further
     else {
-      val bucket  = pool.pending.getOrElse(key, Vector.empty)
-      val withNew = if (bucket.exists(_.voterIndex == vote.voterIndex)) bucket else bucket :+ vote
+      val bucket = pool.pending.getOrElse(key, Vector.empty)
+      // T10-liveness defense-in-depth (2026-08-04): dedup is keyed on `(voterIndex, committeeEpoch)`,
+      // NOT `voterIndex` alone. Before this, a voter's genuine same-target vote cast under a NEWER
+      // epoch was silently dropped if that voter's FIRST vote for this target was already pooled under
+      // an OLDER epoch (`bucket.exists(_.voterIndex == vote.voterIndex)` matched regardless of epoch) --
+      // permanently stalling the bucket (the stale entry can never itself be replaced) until
+      // `pruneOlderThan`-by-view evicted it, even after the root-cause fix (deriving `committeeEpoch`
+      // from the vote's target height in `HotStuffCoordinator.castVotes`) made this scenario far less
+      // likely among honest replicas. This does not by itself let a mixed-epoch bucket form a QC --
+      // `HotStuffQuorum.formQC`'s `sameTarget` check still requires every vote in the bucket to agree on
+      // `committeeEpoch`, by design (T10 fork-hazard fix) -- it only ensures a voter's genuinely later,
+      // differently-epoched vote for the SAME target is never silently discarded, so it can still be
+      // counted (and, once resolved, reach quorum) rather than being permanently forgotten.
+      val withNew =
+        if (bucket.exists(v => v.voterIndex == vote.voterIndex && v.committeeEpoch == vote.committeeEpoch)) bucket else bucket :+ vote
       // Evict any pooled vote that no longer verifies against the CURRENT live committee — e.g. its
       // signer was dropped by a committed-generators/conflict-generators period rollover, or its
       // positional slot was reassigned to a different generator. This is REQUIRED for liveness, not

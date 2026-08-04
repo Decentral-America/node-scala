@@ -145,12 +145,39 @@ object HotStuffCoordinator {
       onLockedQCPersist: QuorumCertificate => Unit = _ => (),
       // T10 fix: the committee epoch (see `state.GenerationPeriod`) THIS replica currently believes is
       // active, re-read fresh alongside `committeeProvider` on every event (see `refreshCommittee`).
-      // Defaults to a constant `0`, matching the default `committeeEpoch` on `HotStuffVote`/
-      // `QuorumCertificate`/`EngineState` -- so every existing call site/test that doesn't pass this
-      // observes byte-for-byte the same behaviour as before this fix (0 always compares equal to 0 in
+      // Used ONLY for the transition-gating decision in `HotStuffEngine.onQC`/`onProposal`
+      // (`HotStuffQuorum.acceptableCommitteeEpoch`) -- i.e. "given what epoch I currently believe is
+      // active, is an INCOMING QC/proposal's claimed epoch one I should accept". It is deliberately
+      // NOT used to derive the epoch THIS replica signs into its own votes -- see `committeeEpochOf`
+      // below, which is the fix for that (root-cause-of-cross-epoch-liveness-stall) concern. Defaults
+      // to a constant `0`, matching the default `committeeEpoch` on `HotStuffVote`/`QuorumCertificate`/
+      // `EngineState` -- so every existing call site/test that doesn't pass this observes byte-for-byte
+      // the same behaviour as before this fix (0 always compares equal to 0 in
       // `HotStuffQuorum.acceptableCommitteeEpoch`). Production wiring supplies the real generation
-      // period (see `Application.scala`).
-      committeeEpochProvider: () => Int = () => 0
+      // period at the replica's live tip (see `Application.scala`).
+      committeeEpochProvider: () => Int = () => 0,
+      // ROOT-CAUSE FIX (2026-08-04, cross-committee-epoch LIVENESS stall -- distinct from the T10 FORK
+      // hazard `committeeEpochProvider` above helps gate): before this parameter existed, the epoch a
+      // vote was SIGNED under came from `committeeEpochProvider()` above -- i.e. the SIGNING REPLICA'S
+      // OWN LOCAL TIP at the moment it happened to cast the vote, not anything about the vote's target.
+      // Two fully honest, fully-synced replicas voting for the IDENTICAL `(view, phase, blockId,
+      // blockHeight)` target could therefore sign DIFFERENT `committeeEpoch` values if their local tip
+      // straddled a generation-period boundary at slightly different moments (ordinary propagation
+      // skew, not an attack) -- and `HotStuffQuorum.formQC`'s `sameTarget` check (correctly, per the
+      // T10 fix) then rejected that mixed bucket outright, permanently stalling QC formation at every
+      // committee-epoch rotation boundary. See `HotStuffCrossEpochLivenessSpecification`.
+      //
+      // The fix: derive the SIGNED `committeeEpoch` as a PURE function of the vote's TARGET height
+      // (`blockchain.generationPeriodOf(targetHeight).index` in production -- see `Application.scala`)
+      // instead of the signer's live tip. Since `generationPeriodOf` for a FIXED height always returns
+      // the same result no matter when it is computed, every honest replica voting on the SAME target
+      // now deterministically computes the SAME epoch, closing the stall at its root rather than merely
+      // bounding it. Applied at every vote-signing call site via `castVotes` (leader self-vote in
+      // `onLeaderTurn` -> `onProposal` -> `castVotes`, replica vote in `onProposal` -> `castVotes`, and
+      // phase-progression votes in `applyQC` -> `castVotes`) -- all of which already have the target
+      // height in hand. Defaults to a constant `0`, matching every existing call site/test that doesn't
+      // pass this and preserving byte-for-byte prior behaviour for them.
+      committeeEpochOf: Int => Int = _ => 0
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC), committeeEpoch = committeeEpochProvider())
@@ -194,20 +221,29 @@ object HotStuffCoordinator {
 
     private def bid(b: BlockId): String = b.toString.take(8)
 
-    /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool. */
+    /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool.
+      *
+      * `committeeEpoch` is derived from THIS TARGET's own `height` (`committeeEpochOf(height)`), NOT
+      * from `engine.committeeEpoch` (the signer's live-tip belief, used only for the transition-gating
+      * decision in `HotStuffEngine.onQC`/`onProposal`) -- see `committeeEpochOf`'s doc on the
+      * constructor for why: a pure function of the fixed target height is what makes every honest
+      * replica voting on the SAME target sign the SAME epoch, regardless of when each replica's own
+      * local tip happens to cross a generation-period boundary.
+      */
     private def castVotes(view: Int, phase: HotStuffPhase, blockId: BlockId, height: Int): Unit = {
       val key = (view, phase, blockId)
       if (!voted.contains(key)) {
         voted += key
-        val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, engine.committeeEpoch)
+        val epoch   = committeeEpochOf(height)
+        val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, epoch)
         val mine    = effects.myVoterIndexes
         logger.debug(
-          s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=${engine.committeeEpoch}"
+          s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=$epoch"
         )
         mine.foreach { idx =>
           effects.signVote(message, idx) match {
             case Some(sig) =>
-              val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr, engine.committeeEpoch)
+              val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr, epoch)
               effects.broadcast(vote)
               onVote(vote) // count our own vote locally
             case None => logger.warn(s"[HotStuff] signVote returned None for idx=$idx (no BLS key for this committee slot?)")

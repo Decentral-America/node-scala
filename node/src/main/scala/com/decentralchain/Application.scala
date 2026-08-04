@@ -229,13 +229,34 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       import com.decentralchain.state.GeneratorSet
 
       val committee: () => GeneratorSet = () => blockchainUpdater.currentGeneratorSet.getOrElse(Seq.empty)
-      // T10 fix (cross-committee-epoch fork, see docs/hotstuff-audit-readiness.md and
-      // HotStuffQuorum.acceptableCommitteeEpoch): the committee epoch this replica currently believes
-      // is active, reused directly from the existing generation-period rotation identifier
-      // (`GenerationPeriod.index` -- see that class's doc) rather than inventing a new committee-hash
-      // concept. `0` before/at feature activation (no generation period exists yet), matching the
-      // `committeeEpoch` default on `HotStuffVote`/`QuorumCertificate`/`EngineState`.
-      val committeeEpoch: () => Int                    = () => blockchainUpdater.currentGenerationPeriod.map(_.index).getOrElse(0)
+      // T10 fork-hazard fix (see docs/hotstuff-audit-readiness.md and
+      // HotStuffQuorum.acceptableCommitteeEpoch): the committee epoch THIS REPLICA'S OWN LIVE TIP
+      // currently believes is active, reused directly from the existing generation-period rotation
+      // identifier (`GenerationPeriod.index` -- see that class's doc) rather than inventing a new
+      // committee-hash concept. `0` before/at feature activation (no generation period exists yet),
+      // matching the `committeeEpoch` default on `HotStuffVote`/`QuorumCertificate`/`EngineState`. Used
+      // ONLY for the transition-gating decision (`HotStuffEngine.onQC`/`onProposal` deciding whether to
+      // accept an INCOMING QC/proposal's claimed epoch) -- deliberately NOT used to derive the epoch
+      // this replica signs into its OWN votes; see `committeeEpochOf` below for that.
+      val committeeEpoch: () => Int = () => blockchainUpdater.currentGenerationPeriod.map(_.index).getOrElse(0)
+      // T10-LIVENESS root-cause fix (cross-committee-epoch fork stall, see
+      // docs/hotstuff-audit-readiness.md T10 entry and HotStuffCrossEpochLivenessSpecification): the
+      // epoch a vote is SIGNED under must be a PURE function of the vote's TARGET height, not this
+      // replica's own live tip (`committeeEpoch` above) at the moment it happens to sign -- two honest,
+      // fully-synced replicas voting on the identical target must always compute the identical epoch,
+      // which only holds if the computation depends solely on the (fixed, agreed) target height, the
+      // feature activation height, and the generation-period length -- all fixed chain constants --
+      // rather than on which replica is computing it or when. `blockchain.generationPeriodOf(h)` is
+      // exactly that pure function (see `state.Blockchain.generationPeriodOf`'s doc): for a FIXED height
+      // it always returns the same `GenerationPeriod`/`.index` regardless of this replica's own current
+      // tip. Passed to `HotStuffCoordinator.Enabled`'s `committeeEpochOf` parameter, consumed at every
+      // vote-signing call site (`castVotes`, reached from the leader self-vote in `onLeaderTurn`, the
+      // replica vote in `onProposal`, and phase-progression votes in `applyQC`) via that target's own
+      // `height` argument, which is already independently derived from the target `blockId` at every
+      // one of those call sites (see the `heightOf`/`blockchainUpdater.heightOf(p.blockId)` derivations
+      // below) -- so this closes the liveness stall at its root rather than merely bounding it.
+      val committeeEpochOf: Int => Int =
+        h => blockchainUpdater.generationPeriodOf(com.decentralchain.state.Height(h)).map(_.index).getOrElse(0)
       val extendsBranch: (BlockId, BlockId) => Boolean = (child, ancestor) =>
         child == ancestor || (for {
           hc <- blockchainUpdater.heightOf(child)
@@ -318,7 +339,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           blockchainUpdater.heightOf,
           hsInitialLockedQC,
           qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc),
-          committeeEpoch
+          committeeEpoch,
+          committeeEpochOf
         )
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
