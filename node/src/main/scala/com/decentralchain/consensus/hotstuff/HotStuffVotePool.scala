@@ -149,11 +149,11 @@ object HotStuffVotePool {
             // quorum → emit + clear this target's bucket AND its observed-snapshot set
             (withObserved.copy(pending = withObserved.pending - key, seenCommittees = withObserved.seenCommittees - key), Some(qc))
           // Reachable: `hasQuorum` only counts voter indexes, but `formQC` additionally requires every
-          // vote in the bucket to share the SAME blockHeight (its `sameTarget` check). Bucketing by
-          // (view, phase, blockId) ignores blockHeight, so votes that agree on the block but disagree on
-          // height reach quorum yet fail to form a QC. The shell logs this discrepancy (see
-          // HotStuffCoordinator.onVote). Keep the bucket (and its observed snapshots) so a later
-          // matching-height vote can still form.
+          // vote in the bucket to share the SAME blockHeight AND the SAME committeeEpoch (T10 fix --
+          // its `sameTarget` check). Bucketing by (view, phase, blockId) ignores both, so votes that
+          // agree on the block but disagree on height or claimed committee epoch reach quorum yet fail
+          // to form a QC. The shell logs this discrepancy (see HotStuffCoordinator.onVote). Keep the
+          // bucket (and its observed snapshots) so a later matching vote can still form.
           case Left(_) => (withObserved.copy(pending = withObserved.pending.updated(key, updated)), None)
         }
       } else (withObserved.copy(pending = withObserved.pending.updated(key, updated)), None)

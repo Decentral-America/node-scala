@@ -21,15 +21,42 @@ import io.decentralchain.protobuf.block.HotStuffPhase
   */
 object HotStuffQuorum {
 
-  /** Canonical bytes a generator signs when voting for `blockId` in a given (`view`, `phase`).
-    * MUST be byte-identical on the signing and verifying sides.
-    * Layout: view (4, big-endian) ++ phase (1) ++ blockId ++ blockHeight (4, big-endian).
+  /** Canonical bytes a generator signs when voting for `blockId` in a given (`view`, `phase`), under
+    * committee epoch `committeeEpoch`. MUST be byte-identical on the signing and verifying sides.
+    * Layout: view (4, BE) ++ phase (1) ++ blockId ++ blockHeight (4, BE) ++ committeeEpoch (4, BE).
+    *
+    * `committeeEpoch` (T10 fix, schema 1.6.5) identifies which committed-generators committee
+    * (`state.GenerationPeriod` index — the period's already-existing rotation identifier, reused
+    * rather than inventing a new committee-hash scheme) this vote was cast under. Binding it into the
+    * signed bytes is what closes the cross-committee-epoch fork hazard `HotStuffCrossEpochForkSpecification`
+    * proves: two disjoint committees can no longer each independently produce a signature that
+    * verifies as "the same target," because the epoch each side actually signed is baked into what
+    * BLS verification checks — a receiver who insists on a specific expected epoch (the
+    * transition-gating rule, see `acceptableCommitteeEpoch` below) can reject a QC whose signed epoch
+    * doesn't match, and cannot be fooled by relabeling after the fact since that would invalidate the
+    * signature. Defaults to `0` (see `HotStuffVote`/`QuorumCertificate` scaladoc) for full backward
+    * compatibility with call sites/wire peers that predate this field.
     */
-  def voteMessage(view: Int, phase: HotStuffPhase, blockId: BlockId, blockHeight: Int): Array[Byte] =
-    Ints.toByteArray(view) ++ Array(phase.value.toByte) ++ blockId.arr ++ Ints.toByteArray(blockHeight)
+  def voteMessage(view: Int, phase: HotStuffPhase, blockId: BlockId, blockHeight: Int, committeeEpoch: Int = 0): Array[Byte] =
+    Ints.toByteArray(view) ++ Array(phase.value.toByte) ++ blockId.arr ++ Ints.toByteArray(blockHeight) ++ Ints.toByteArray(committeeEpoch)
 
   private def voteMessageOf(v: HotStuffVote): Array[Byte] =
-    voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt)
+    voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch)
+
+  /** The transition-gating rule (T10, design doc §6/§8 follow-up (a)): whether a QC/vote whose signed
+    * `committeeEpoch` is `qcEpoch` should be ACCEPTED by a replica that currently believes
+    * `currentEpoch` is the active committee epoch. Accepts the current epoch, or the immediately
+    * preceding one (a defined transition window — the exact single-committee-rotation-over-time case
+    * `HotStuffVotePoolCommitteeChangeSpecification` already proves is legitimate and must keep
+    * working), and rejects everything else, in particular any epoch further in the past or ANY epoch
+    * in the future (a replica that hasn't yet observed/finalized the transition to a future epoch has
+    * no basis to trust a QC claiming one — accepting it would reopen exactly the disjoint-committee
+    * hazard this fix closes). This is deliberately a NARROW, single-step transition window, not an
+    * open-ended one: widening it would let an increasingly-stale committee's QCs keep being honored
+    * indefinitely, eroding the guarantee back toward the original gap.
+    */
+  def acceptableCommitteeEpoch(qcEpoch: Int, currentEpoch: Int): Boolean =
+    qcEpoch == currentEpoch || qcEpoch == currentEpoch - 1
 
   /** True iff `vote.voterIndex` is a real committee member whose BLS signature over the canonical
     * vote message verifies.
@@ -60,8 +87,11 @@ object HotStuffQuorum {
       case Seq()     => Left("no votes")
       case head +: _ =>
         val sameTarget =
-          votes.forall(v => v.view == head.view && v.phase == head.phase && v.blockId == head.blockId && v.blockHeight == head.blockHeight)
-        if (!sameTarget) Left("votes target different (view, phase, block)")
+          votes.forall(v =>
+            v.view == head.view && v.phase == head.phase && v.blockId == head.blockId && v.blockHeight == head.blockHeight
+              && v.committeeEpoch == head.committeeEpoch
+          )
+        if (!sameTarget) Left("votes target different (view, phase, block, committeeEpoch)")
         else {
           val distinct = votes.groupBy(_.voterIndex).values.map(_.head).toSeq
           val invalid  = distinct.filterNot(v => verifyVote(v, committee))
@@ -71,7 +101,17 @@ object HotStuffQuorum {
             if (!hasQuorum(signerIndexes, committee)) Left("signing stake below 2/3 quorum")
             else {
               val aggregatedSignature = distinct.map(_.signature.arr).reduceLeft(BlsUtils.aggSign)
-              Right(QuorumCertificate(head.view, head.phase, head.blockId, head.blockHeight, signerIndexes, ByteStr(aggregatedSignature)))
+              Right(
+                QuorumCertificate(
+                  head.view,
+                  head.phase,
+                  head.blockId,
+                  head.blockHeight,
+                  signerIndexes,
+                  ByteStr(aggregatedSignature),
+                  head.committeeEpoch
+                )
+              )
             }
           }
         }
@@ -79,7 +119,13 @@ object HotStuffQuorum {
 
   /** Verify a QC: every signer must be a committee member, the signer set must reach the 2/3 stake
     * quorum, and the aggregated BLS signature must verify against the signers' public keys over the
-    * canonical vote message.
+    * canonical vote message (which now includes `qc.committeeEpoch` — see `voteMessage`'s doc).
+    *
+    * NOTE: this checks the QC is INTERNALLY self-consistent (the signatures genuinely correspond to
+    * `committee` under the epoch `qc` itself claims) — it does NOT by itself decide whether
+    * `qc.committeeEpoch` is the epoch a replica SHOULD currently be accepting; that transition-gating
+    * decision is `acceptableCommitteeEpoch` above, applied by the caller (`HotStuffEngine.onQC`/
+    * `onProposal`) which alone knows what epoch it currently believes is active.
     */
   def verifyQC(qc: QuorumCertificate, committee: GeneratorSet): Either[String, Boolean] = {
     val byIndex   = committee.iterator.map(g => g.index.toInt -> g).toMap
@@ -89,7 +135,7 @@ object HotStuffQuorum {
     else
       BlsUtils.verifyAgg(
         qc.aggregatedSignature.arr,
-        voteMessage(qc.view, qc.phase, qc.blockId, qc.blockHeight.toInt),
+        voteMessage(qc.view, qc.phase, qc.blockId, qc.blockHeight.toInt, qc.committeeEpoch),
         signerOpt.flatten.map(_.blsPublicKey.arr)
       )
   }
