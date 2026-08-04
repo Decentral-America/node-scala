@@ -151,22 +151,44 @@ object EndorseBlock {
 // wired in; defining the message types here does not by itself change any consensus behaviour.
 
 /** A committed generator's vote for `blockId` in the given `view` and `phase`.
-  * `signature` is a BLS signature over the canonical encoding of (view, phase, blockId, blockHeight).
+  * `signature` is a BLS signature over the canonical encoding of
+  * (view, phase, blockId, blockHeight, committeeEpoch).
+  *
+  * `committeeEpoch` (schema 1.6.5, `dcc/block.proto` field 7) closes threat T10 (cross-committee-
+  * epoch fork — see `HotStuffCrossEpochForkSpecification` and `docs/hotstuff-integration-design.md`
+  * §6/§8): it identifies WHICH committed-generators committee this vote was cast under (the natural,
+  * already-existing `GenerationPeriod` index — see `state.GenerationPeriod` — reused rather than
+  * inventing a new committee-hash concept). Folding it into the signed bytes means a vote/QC can
+  * never be verified as valid for a DIFFERENT committee epoch than the one it was actually signed
+  * under, even at an identical (view, blockHeight). Defaults to `0` everywhere it is not explicitly
+  * threaded through (pre-DeterministicFinality-activation / not-yet-epoch-aware call sites), which is
+  * backward compatible: a 1.6.4 peer's `PBHotStuffVote`/`PBQuorumCertificate` simply omit this proto3
+  * field and decode it as `0` on receipt, exactly matching the "no epoch binding" default here.
   */
-case class HotStuffVote(view: Int, phase: HotStuffPhase, blockId: BlockId, blockHeight: Height, voterIndex: Int, signature: ByteStr) extends Message {
+case class HotStuffVote(
+    view: Int,
+    phase: HotStuffPhase,
+    blockId: BlockId,
+    blockHeight: Height,
+    voterIndex: Int,
+    signature: ByteStr,
+    committeeEpoch: Int = 0
+) extends Message {
   def toProtobuf: PBHotStuffVote =
-    PBHotStuffVote(view, phase, blockId.toByteString, blockHeight.toInt, voterIndex, signature.toByteString)
+    PBHotStuffVote(view, phase, blockId.toByteString, blockHeight.toInt, voterIndex, signature.toByteString, committeeEpoch)
 
-  override def toString: String = s"HotStuffVote(view=$view, phase=$phase, block=$blockId, h=$blockHeight, voter=$voterIndex)"
+  override def toString: String =
+    s"HotStuffVote(view=$view, phase=$phase, block=$blockId, h=$blockHeight, voter=$voterIndex, epoch=$committeeEpoch)"
 }
 
 object HotStuffVote {
   def fromProtobuf(x: PBHotStuffVote): HotStuffVote =
-    HotStuffVote(x.view, x.phase, x.blockId.toByteStr, Height(x.blockHeight), x.voterIndex, x.signature.toByteStr)
+    HotStuffVote(x.view, x.phase, x.blockId.toByteStr, Height(x.blockHeight), x.voterIndex, x.signature.toByteStr, x.committeeEpoch)
 }
 
-/** Aggregated proof that ≥ 2/3 of committed stake voted for (`view`, `phase`, `blockId`).
-  * `aggregatedSignature` is the BLS aggregate of the votes from `signerIndexes`.
+/** Aggregated proof that ≥ 2/3 of committed stake, under committee epoch `committeeEpoch`, voted for
+  * (`view`, `phase`, `blockId`). `aggregatedSignature` is the BLS aggregate of the votes from
+  * `signerIndexes`. See `HotStuffVote.committeeEpoch` above for the field's purpose/compat story.
   */
 case class QuorumCertificate(
     view: Int,
@@ -174,17 +196,19 @@ case class QuorumCertificate(
     blockId: BlockId,
     blockHeight: Height,
     signerIndexes: Seq[Int],
-    aggregatedSignature: ByteStr
+    aggregatedSignature: ByteStr,
+    committeeEpoch: Int = 0
 ) extends Message {
   def toProtobuf: PBQuorumCertificate =
-    PBQuorumCertificate(view, phase, blockId.toByteString, blockHeight.toInt, signerIndexes, aggregatedSignature.toByteString)
+    PBQuorumCertificate(view, phase, blockId.toByteString, blockHeight.toInt, signerIndexes, aggregatedSignature.toByteString, committeeEpoch)
 
-  override def toString: String = s"QuorumCertificate(view=$view, phase=$phase, block=$blockId, h=$blockHeight, signers=${signerIndexes.size})"
+  override def toString: String =
+    s"QuorumCertificate(view=$view, phase=$phase, block=$blockId, h=$blockHeight, signers=${signerIndexes.size}, epoch=$committeeEpoch)"
 }
 
 object QuorumCertificate {
   def fromProtobuf(x: PBQuorumCertificate): QuorumCertificate =
-    QuorumCertificate(x.view, x.phase, x.blockId.toByteStr, Height(x.blockHeight), x.signerIndexes, x.aggregatedSignature.toByteStr)
+    QuorumCertificate(x.view, x.phase, x.blockId.toByteStr, Height(x.blockHeight), x.signerIndexes, x.aggregatedSignature.toByteStr, x.committeeEpoch)
 }
 
 /** A leader's HotStuff proposal: extend `blockId` at `view`, justified by `justify` (the highQC the
