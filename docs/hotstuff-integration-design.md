@@ -26,8 +26,8 @@
 >
 > **Gated behind `dcc.hotstuff.enabled` (default `false` outside testnet) and `dcc.hotstuff.authoritative`
 > (default `false` everywhere except testnet) — zero behaviour change on mainnet today.**
-> **Design authority:** the high-level spec is `Ecosystem/CONSENSUS.md`; this file is the SSOT for the
-> node-scala *implementation* of T2. Keep it updated as code lands.
+> **Design authority:** the high-level spec is `docs/consensus-upgrade-plan.md` (this same repo); this
+> file is the SSOT for the node-scala *implementation* of T2. Keep it updated as code lands.
 >
 > ⚠️ Making `authoritative = true` on **mainnet** remains gated on: the external audit signing off (see
 > `hotstuff-audit-readiness.md` and `hotstuff-security-review.md`), a formal multi-day testnet soak record
@@ -155,8 +155,9 @@ Mirror the existing feature-25 endorsement path:
 - **Pacemaker timer:** monix `Scheduler` task firing `onTimeout` at `hotStuffSettings.roundTimeout`,
   reset on each QC.
 - **Gate:** everything behind `settings.hotStuffSettings.enabled`.
-- **Open design point:** the HotStuff-view ↔ block-height/forger mapping (CONSENSUS.md: "forger =
-  leader"). First view of a height aligns with the FairPoS forger; timeouts rotate via `leaderFor`.
+- **Open design point:** the HotStuff-view ↔ block-height/forger mapping (`consensus-upgrade-plan.md`:
+  "block forger = HotStuff leader"). First view of a height aligns with the FairPoS forger; timeouts
+  rotate via `leaderFor`.
 
 ## 6. Testing strategy
 - **Unit (done):** 45 tests — the 7 core modules (adversarial: forged aggregate sig, below-quorum,
