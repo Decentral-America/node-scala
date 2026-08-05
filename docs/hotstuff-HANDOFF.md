@@ -1,5 +1,16 @@
 # T2 HotStuff — OWN-IT-TO-COMPLETION HANDOFF (SSOT)
 
+> **STATUS UPDATE (2026-08-04): the §5 decision below is RESOLVED — Option A (proper pacemaker/
+> single-active-view HotStuff) was chosen and is COMPLETE, merged to `main`. `dcc.hotstuff.authoritative`
+> is live on **testnet only** and confirmed genuinely advancing `GET /blocks/height/finalized`
+> (107779 → 107697, verified 2026-08-04). T10 (cross-committee-epoch-fork) is also fixed and merged.
+> The remaining open item is the **external consensus audit** before mainnet — see
+> [`hotstuff-audit-readiness.md`](./hotstuff-audit-readiness.md) for the current, actively-maintained
+> status banner and enable-gate checklist; that file is now the SSOT for "where things stand." This file
+> is kept for its execution playbook (§6), environment gotchas (§7), and key identifiers (§8), which remain
+> accurate, but its TL;DR/decision framing below (as of 2026-07-13) is historical — the decision it asks
+> you to make has already been made.**
+
 > **You are inheriting T2 HotStuff. This is the single entry point. Read it fully, then drive T2 to a
 > decision and to done.** It is written to be handed to an engineer or pasted as an agent prompt. It does
 > NOT duplicate the deep docs — it orients you, gives the exact playbook, and lists every gotcha already
@@ -15,7 +26,7 @@
 
 ---
 
-## 1. TL;DR state (as of 2026-07-13)
+## 1. TL;DR state (as of 2026-07-13 — historical, see status update above for current state)
 - **Works:** feature-25 Deterministic Finality (single-round BLS, 2/3 committed stake) is live, authoritative, healthy. HotStuff commit is **observational** → it can NOT harm the chain. `dcc.hotstuff.enabled` defaults **false**.
 - **HotStuff progress:** went from *silent on the wire* → *all validators converge voting the same (view, block)* → **committing across all nodes on the live testnet** via **five** fixes (transport, view-model, settled-depth, gossip, and the blockHeight-consistency fix that closed the QC blocker — see §3).
 - **BLOCKER CLOSED (2026-07-13):** the open QC-formation blocker is **resolved**. Root cause: the leader signed its vote over `blockHeight = s` (settled view) but a replica signed over its local tip (`blockchainUpdater.height ≈ s + settledDepth`); both votes shared the `(view,phase,blockId)` pool bucket and passed the voter-count quorum, but `formQC`'s `sameTarget` check requires an identical `blockHeight`, so it returned `Left` and the pool swallowed it in a branch mislabeled "unreachable". Fix: replicas vote over `p.view`. **Verified live:** all 3 testnet nodes (VPS + gen-0 + gen-1) report `hotStuffFinalizedHeight` advancing in lockstep, tracking tip at exactly `settled-depth = 3` behind (e.g. tip 44754 → finalized 44751 on every node). First-ever multi-node HotStuff commit on a real network.
@@ -45,7 +56,11 @@
 ## 4. ~~The open blocker~~ — RESOLVED 2026-07-13
 The QC-formation blocker is **closed** by fix §3-#5. It was a **local bug (vote-message height mismatch), not the architecture** — the votes DID co-reside in one pool bucket; `formQC` rejected them on a `blockHeight` field mismatch that the voter-count quorum check didn't catch, and the pool swallowed the rejection silently. Diagnosed by static analysis of the QC-formation path, then confirmed live: all 3 testnet nodes commit in lockstep (`hotStuffFinalizedHeight` = tip − settled-depth, advancing continuously). The pool-level instrumentation the previous handoff requested was added (`HotStuffCoordinator.onVote` logs accumulated signers + stake-quorum per target, plus a guarded WARN safety-net) and would have caught this class of bug directly. **Next: sustained multi-day soak (§9), then the §5 product decision, then external audit before any mainnet enable.**
 
-## 5. DECISION FIRST (don't code until this is made)
+## 5. DECISION FIRST (don't code until this is made) — RESOLVED 2026-08-04, Option A chosen
+**Resolved:** Option A (proper pacemaker/single-active-view rework) was chosen and is complete/merged to
+`main`. The framing below is kept as historical record of the decision criteria; see the status update
+banner at the top of this file and `hotstuff-audit-readiness.md` for current state.
+
 Per `hotstuff-step5-findings-and-rework.md §4`:
 - **Option A — proper HotStuff:** pacemaker + monotonic view counter + one rotating leader + single active view + pipelined 3-chain, decoupled from block height. Largest change; core modules mostly stay, shell rewritten. Delivers responsiveness + view-change liveness.
 - **Option B — extend feature-25 (evaluate first):** feature-25 already gives single-round 2/3 deterministic finality; its ~100-block lag is a *config* (`generation-period-length=100`), not a protocol limit. Tuning/extending it (shorter periods / per-block endorsement) may deliver "fast finality" with already-reviewed primitives and no second protocol/pacemaker/audit surface.
