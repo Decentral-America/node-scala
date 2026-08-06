@@ -140,14 +140,22 @@ object BlockDiffer {
         //
         // CommitToGenerationTransaction fees are excluded from the NG carry-over for the same
         // reason their commitment data is excluded from the state hash (see
-        // TxStateSnapshotHashBuilder.scala): the fee a committing validator pays is consumed
-        // entirely by the block that includes the commitment, with nothing carried forward.
-        // Letting it participate in the normal 60/40 split would make the amount carried into
-        // the NEXT block depend on which block position the commitment tx landed at -- the same
-        // position-dependent-state hazard Feature 21 guards against for the state hash itself.
-        // Confirmed against the real testnet chain's canonical history (height 1799, the block
-        // immediately after the chain's first CommitToGenerationTransaction commitments): the
-        // canonical carry is 0, not the generic 60% of the commitment fees.
+        // TxStateSnapshotHashBuilder.scala): letting the 60% carry-share participate in the
+        // normal split would make the amount carried into the NEXT block depend on which
+        // block position the commitment tx landed at -- the same position-dependent-state
+        // hazard Feature 21 guards against for the state hash itself.
+        //
+        // Precise effect (confirmed against canonical): the committing block's OWN miner still
+        // gets the normal 40% immediate cut (unchanged, via minerPortfolio in apply() below --
+        // this filter does not touch that); this exclusion only zeroes the OTHER 60% that would
+        // otherwise carry to the next block. Net result for a CommitToGenerationTransaction fee
+        // is 40% to the block that includes it, 0% to the next block -- the remaining 60% is not
+        // credited to anyone (removed from circulation for accounting purposes, though the fee
+        // itself was already debited from the sender by CommitToGenerationTransactionDiff, so no
+        // extra amount is actually burned beyond the fee itself). Verified against the real
+        // testnet chain's canonical history at height 1799 (the block immediately after the
+        // chain's first CommitToGenerationTransaction commitments) and confirmed by a fresh-
+        // genesis replay matching canonical stateHash through height ~3300.
         pb.transactionData
           .filterNot(_.isInstanceOf[CommitToGenerationTransaction])
           .map { t =>
@@ -240,9 +248,22 @@ object BlockDiffer {
   // Blocks mined before the committedGeneratorsHash feature existed have this field unset
   // (None) at period boundaries. Rejecting None as a mismatch would break sync for every
   // historic boundary block, so validation is deliberately asymmetric:
-  //   - None      => always accepted (backward-compatible with pre-feature blocks)
+  //   - None      => always accepted, UNCONDITIONALLY, forever (see caveat below)
   //   - Some(h)   => strictly validated: boundary blocks must carry the correct hash,
   //                  non-boundary blocks must not carry one at all.
+  //
+  // IMPORTANT CAVEAT (confirmed by adversarial review, not yet closed): because None is
+  // accepted at every height with no feature-activation cutover, this check currently
+  // provides NO real enforcement -- any producer (outdated, buggy, or malicious) can omit
+  // the field at a real boundary and every other node accepts the block regardless.
+  // Committee integrity at boundaries is therefore NOT yet actually guaranteed by this
+  // mechanism on its own. This is a known, pre-existing gap in the original (recovered)
+  // design, already flagged as deferred hardening ("make committedGeneratorsHash mandatory
+  // at period-boundary heights once all producers are upgraded" -- not a regression
+  // introduced here. Closing it requires a coordinated activation-height rollout (a None at
+  // a boundary should become a hard rejection once all producers are confirmed upgraded),
+  // which is a rollout/governance decision, not purely a code change -- tracked as a
+  // follow-up, intentionally not implemented in this change.
   private def checkCommittedGeneratorsHash(
       blockchain: Blockchain,
       height: Height,
@@ -548,9 +569,11 @@ object BlockDiffer {
     // carry is 60% of dcc fees the next miner will get. obviously carry fee only makes sense when both
     // NG and sponsorship is active. also if sponsorship is active, feeAsset can only be Dcc
     //
-    // CommitToGenerationTransaction is excluded from carrying a fee forward regardless of era,
-    // for the same position-dependent-state reason as the pre-sponsorship recompute path in
-    // feeFromPreviousBlockE above -- see the comment there.
+    // CommitToGenerationTransaction is excluded from carrying its 60% share forward regardless
+    // of era, for the same position-dependent-state reason as the pre-sponsorship recompute
+    // path in feeFromPreviousBlockE above -- see the detailed comment there (the committing
+    // block's own miner still gets the normal 40% cut via minerPortfolio; only the 60% that
+    // would otherwise carry to the next block is zeroed here).
     val carry  = if (hasNg && hasSponsorship && !tx.isInstanceOf[CommitToGenerationTransaction]) feeAmount - currentBlockFee else 0
     val dccFee = if (feeAsset == Dcc) feeAmount else 0L
 
