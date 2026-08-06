@@ -137,7 +137,19 @@ object BlockDiffer {
         // it's important to combine tx fee fractions (instead of getting a fraction of the combined tx fee)
         // so that we end up with the same value as when computing per-transaction fee part
         // during microblock processing below
+        //
+        // CommitToGenerationTransaction fees are excluded from the NG carry-over for the same
+        // reason their commitment data is excluded from the state hash (see
+        // TxStateSnapshotHashBuilder.scala): the fee a committing validator pays is consumed
+        // entirely by the block that includes the commitment, with nothing carried forward.
+        // Letting it participate in the normal 60/40 split would make the amount carried into
+        // the NEXT block depend on which block position the commitment tx landed at -- the same
+        // position-dependent-state hazard Feature 21 guards against for the state hash itself.
+        // Confirmed against the real testnet chain's canonical history (height 1799, the block
+        // immediately after the chain's first CommitToGenerationTransaction commitments): the
+        // canonical carry is 0, not the generic 60% of the commitment fees.
         pb.transactionData
+          .filterNot(_.isInstanceOf[CommitToGenerationTransaction])
           .map { t =>
             val pf = Portfolio.build(t.assetFee)
             pf.minus(pf.multiply(CurrentBlockFeePart))
@@ -535,7 +547,11 @@ object BlockDiffer {
 
     // carry is 60% of dcc fees the next miner will get. obviously carry fee only makes sense when both
     // NG and sponsorship is active. also if sponsorship is active, feeAsset can only be Dcc
-    val carry  = if (hasNg && hasSponsorship) feeAmount - currentBlockFee else 0
+    //
+    // CommitToGenerationTransaction is excluded from carrying a fee forward regardless of era,
+    // for the same position-dependent-state reason as the pre-sponsorship recompute path in
+    // feeFromPreviousBlockE above -- see the comment there.
+    val carry  = if (hasNg && hasSponsorship && !tx.isInstanceOf[CommitToGenerationTransaction]) feeAmount - currentBlockFee else 0
     val dccFee = if (feeAsset == Dcc) feeAmount else 0L
 
     TxFeeInfo(feeAsset, feeAmount, carry, dccFee)
