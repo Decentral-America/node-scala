@@ -197,7 +197,8 @@ object BlockSerializer {
         transactionsRoot,
         stateHash = None,
         challengedHeader = None,
-        finalizationVoting = None
+        finalizationVoting = None,
+        committedGeneratorsHash = None
       )
 
       Block(header, signature, transactionData)
