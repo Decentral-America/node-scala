@@ -115,10 +115,8 @@ class BlockChallengeTest
       )
       (1 to 998).foreach(_ => d.appendBlock(d.createBlock(Block.PlainBlockVersion, txs = Nil, strictTime = true)))
 
-      val commitTxs               = Seq(challengedMiner, challengingMiner).map(acc => TxHelpers.commitToGeneration(Height(1002), acc))
-      val commitTxsTotalFee       = commitTxs.map(_.fee.value).sum
-      val commitTxsFeeToNextMiner = commitTxsTotalFee - CurrentBlockFeePart.apply(commitTxsTotalFee)
-      val blockWithTxs            = d.createBlock(Block.PlainBlockVersion, commitTxs, strictTime = true)
+      val commitTxs    = Seq(challengedMiner, challengingMiner).map(acc => TxHelpers.commitToGeneration(Height(1002), acc))
+      val blockWithTxs = d.createBlock(Block.PlainBlockVersion, commitTxs, strictTime = true)
       d.appendBlock(blockWithTxs)
       d.blockchain.height shouldBe 1001
 
@@ -139,10 +137,14 @@ class BlockChallengeTest
       ) shouldBe challengingGenBalanceBefore + challengedGenBalanceBefore
 
       val minerReward = getLastBlockMinerReward(d)
+      // CommitToGenerationTransaction fees do not carry over to the next miner via the standard
+      // NG 60/40 split (see BlockDiffer.scala's feeFromPreviousBlockE/computeTxFeeInfo) -- the
+      // commitment fee is consumed entirely by the block that includes it, for the same
+      // position-dependent-state reason the commitment data is excluded from the state hash.
       d.blockchain.effectiveBalance(
         challengingMinerAddr,
         0
-      ) shouldBe challengingEffBalanceBefore + minerReward + commitTxsFeeToNextMiner
+      ) shouldBe challengingEffBalanceBefore + minerReward
 
       d.blockchain.generatingBalance(challengingMinerAddr, Some(challengingBlock.id())) shouldBe challengingGenBalanceBefore
 

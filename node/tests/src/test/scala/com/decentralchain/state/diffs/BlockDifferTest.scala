@@ -17,7 +17,7 @@ import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.diffs.BlockDiffer.Result
 import com.decentralchain.state.{Blockchain, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
 import com.decentralchain.test.*
-import com.decentralchain.test.DomainPresets.{TransactionStateSnapshot, DCCSettingsOps}
+import com.decentralchain.test.DomainPresets.{RideV4, TransactionStateSnapshot, DCCSettingsOps}
 import com.decentralchain.test.node.*
 import com.decentralchain.transaction.TxValidationError.InvalidStateHash
 import com.decentralchain.transaction.{TxHelpers, TxVersion}
@@ -86,13 +86,12 @@ class BlockDifferTest extends FreeSpec with WithDomain {
       |2  |10   |B       |0          |0          |10         |+10        |
       |3  |10   |A       |10         |+10        |0          |0          |
       |4  |10   |B       |0          |10         |+10        |10+10=20   |
-      |-------------------------- Enable NG -----------------------------|
-      |5  |10   |A       |4          |10+4=14    |0          |20         |
-      |6  |10   |B       |0          |14         |+4+6=10    |20+10=30   |
-      |7  |10   |A       |4+6=10     |14+10=24   |0          |30         |
-      |8  |10   |B       |0          |24         |+4+6=10    |30+10=40   |
-      |9  |10   |A       |4+6=10     |24+10=34   |0          |40         | <- 1st check
-      |10 |10   |B       |0          |34         |+4+6=10    |40+10=50   | <- 2nd check
+      |5  |10   |A       |10         |10+10=20   |0          |20         |
+      |6  |10   |B       |0          |20         |+10        |20+10=30   |
+      |7  |10   |A       |10         |20+10=30   |0          |30         |
+      |8  |10   |B       |0          |30         |+10        |30+10=40   |
+      |9  |10   |A       |10         |30+10=40   |0          |40         | <- 1st check
+      |10 |10   |B       |0          |40         |+10        |40+10=50   | <- 2nd check
        */
       "height > enableMicroblocksAfterHeight - a miner should receive 60% of previous block's fee and 40% of the current one" in {
         assertDiff(testChain.init, 4) { case (_, s) =>
@@ -333,6 +332,62 @@ class BlockDifferTest extends FreeSpec with WithDomain {
             wrongHeight5.header.generationSignature,
             verify = false
           ) shouldBe a[Left[?, ?]]
+        }
+      }
+
+      // Regression guard, found via a live fresh-genesis P2P replay of the real testnet chain
+      // diverging at the block immediately after its first-ever CommitToGenerationTransaction
+      // commitments (canonical height 1799): a CommitToGenerationTransaction's fee must NOT
+      // carry over into the next block's miner reward via the standard NG 60/40 split -- neither
+      // in the pre-sponsorship recompute-from-raw-block-data path (feeFromPreviousBlockE above)
+      // nor in the post-sponsorship persisted-carryFee path (computeTxFeeInfo below). The
+      // commitment fee is consumed entirely by the block that includes it, for the same
+      // position-dependent-state reason the commitment DATA is excluded from the state hash
+      // (see TxStateSnapshotHashBuilder.scala): letting it carry forward would make the amount
+      // credited to the NEXT miner depend on which block position the commitment landed at.
+      "CommitToGenerationTransaction fee does not carry over via the NG 60/40 split" - {
+        "pre-sponsorship" in {
+          // RideV4 gives BlockV5 (feature 15), required for CommitToGenerationTransaction's
+          // general tx-validation barrier, plus everything below it -- but FeeSponsorship is
+          // pushed far out so this matches the real testnet's pre-sponsorship condition.
+          val settings = RideV4
+            .addFeatures(BlockchainFeatures.DeterministicFinality)
+            .setFeaturesHeight(BlockchainFeatures.FeeSponsorship -> 1000000)
+          val committer = TxHelpers.signer(20)
+          val fee       = 1000000L
+
+          withDomain(settings, AddrWithBalance.enoughBalances(committer)) { d =>
+            (1 to 5).foreach(_ => d.appendBlock())
+            val next = d.blockchain.currentGenerationPeriod.get.next.start
+
+            val committerBalanceBefore = d.balance(committer.toAddress)
+            d.appendBlock(TxHelpers.commitToGeneration(next, committer, fee = fee))
+            val minerBeforeNextBlock = d.balance(d.lastBlock.sender.toAddress)
+
+            d.appendBlock() // empty block; its miner reward must be reward-only, no carry
+            d.balance(d.lastBlock.sender.toAddress) - minerBeforeNextBlock shouldBe d.blockchain.settings.rewardsSettings.initial
+
+            // sanity check: the committer really did pay the fee (proves the tx actually landed,
+            // rather than this test accidentally not exercising the commit path at all)
+            committerBalanceBefore - d.balance(committer.toAddress) shouldBe fee
+          }
+        }
+
+        "post-sponsorship" in {
+          val settings  = RideV4.addFeatures(BlockchainFeatures.DeterministicFinality)
+          val committer = TxHelpers.signer(21)
+          val fee       = 1000000L
+
+          withDomain(settings, AddrWithBalance.enoughBalances(committer)) { d =>
+            (1 to 5).foreach(_ => d.appendBlock())
+            val next = d.blockchain.currentGenerationPeriod.get.next.start
+
+            d.appendBlock(TxHelpers.commitToGeneration(next, committer, fee = fee))
+            val minerBeforeNextBlock = d.balance(d.lastBlock.sender.toAddress)
+
+            d.appendBlock()
+            d.balance(d.lastBlock.sender.toAddress) - minerBeforeNextBlock shouldBe d.blockchain.settings.rewardsSettings.initial
+          }
         }
       }
     }
