@@ -3,6 +3,7 @@ package com.decentralchain.state.diffs
 import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.decentralchain.account.Address
+import com.decentralchain.crypto
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
@@ -220,8 +221,41 @@ object BlockDiffer {
           )
       }
       _ <- checkStateHash(blockchainWithNewBlock, block.header.stateHash, r.computedStateHash)
+      _ <- checkCommittedGeneratorsHash(blockchain, heightWithNewBlock, block.header.committedGeneratorsHash)
     } yield r
   }
+
+  // Blocks mined before the committedGeneratorsHash feature existed have this field unset
+  // (None) at period boundaries. Rejecting None as a mismatch would break sync for every
+  // historic boundary block, so validation is deliberately asymmetric:
+  //   - None      => always accepted (backward-compatible with pre-feature blocks)
+  //   - Some(h)   => strictly validated: boundary blocks must carry the correct hash,
+  //                  non-boundary blocks must not carry one at all.
+  private def checkCommittedGeneratorsHash(
+      blockchain: Blockchain,
+      height: Height,
+      actual: Option[ByteStr]
+  ): TracedResult[ValidationError, Unit] =
+    actual match {
+      case None             => TracedResult(Right(()))
+      case Some(actualHash) =>
+        // A period boundary is the LAST height of a GenerationPeriod (period.end), not simply
+        // "height % generationPeriodLength == 0" -- see the matching comment in Miner.scala for
+        // why the naive modulo check is wrong on any chain where DeterministicFinality activates
+        // at a non-zero, non-period-aligned height.
+        val expected =
+          blockchain.generationPeriodOf(height).filter(_.end == height).map { period =>
+            val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
+            ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
+          }
+        TracedResult(
+          Either.cond(
+            expected.contains(actualHash),
+            (),
+            GenericError(s"committedGeneratorsHash mismatch at height $height: expected $expected, got $actual")
+          )
+        )
+    }
 
   def fromMicroBlock(
       blockchain: Blockchain,
