@@ -389,6 +389,31 @@ class BlockDifferTest extends FreeSpec with WithDomain {
             d.balance(d.lastBlock.sender.toAddress) - minerBeforeNextBlock shouldBe d.blockchain.settings.rewardsSettings.initial
           }
         }
+
+        // Regression guard for the OTHER half of this invariant: the committing block's own
+        // miner still gets the normal 40% immediate cut (unchanged by this fix, which only
+        // zeroes the 60% that would otherwise carry to the NEXT block -- it does not make the
+        // fee free, nor does it give the committing miner the full 100%). Without this test,
+        // a future change that "completed" a naive reading of this fix's commit message
+        // ("consumed entirely by the block that includes it") by also zeroing this 40% cut
+        // would pass every other test in this file while silently changing consensus behavior.
+        "committing block's own miner keeps the normal 40% cut, not 0% or 100%" in {
+          val settings  = RideV4.addFeatures(BlockchainFeatures.DeterministicFinality)
+          val committer = TxHelpers.signer(22)
+          val fee       = 1000000L
+
+          withDomain(settings, AddrWithBalance.enoughBalances(committer)) { d =>
+            (1 to 5).foreach(_ => d.appendBlock())
+            val next = d.blockchain.currentGenerationPeriod.get.next.start
+
+            val minerBefore = d.balance(TxHelpers.defaultSigner.toAddress)
+            d.appendBlock(TxHelpers.commitToGeneration(next, committer, fee = fee))
+            d.lastBlock.sender.toAddress shouldBe TxHelpers.defaultSigner.toAddress
+
+            val minerDelta = d.balance(TxHelpers.defaultSigner.toAddress) - minerBefore
+            minerDelta shouldBe d.blockchain.settings.rewardsSettings.initial + fee / 5 * 2 // reward + 40% of fee
+          }
+        }
       }
     }
 
