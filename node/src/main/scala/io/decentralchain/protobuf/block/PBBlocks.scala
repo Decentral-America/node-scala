@@ -38,7 +38,8 @@ object PBBlocks {
           ch.finalizationVoting.map(PBFinalizationVotings.vanilla(_).get)
         )
       },
-      header.finalizationVoting.map(PBFinalizationVotings.vanilla(_).get)
+      header.finalizationVoting.map(PBFinalizationVotings.vanilla(_).get),
+      Option.unless(header.committedGeneratorsHash.isEmpty)(header.committedGeneratorsHash.toByteStr)
     )
 
   def vanilla(block: PBBlock, unsafe: Boolean = false): Try[VanillaBlock] = Try {
@@ -72,7 +73,7 @@ object PBBlocks {
       )
     },
     header.finalizationVoting.map(PBFinalizationVotings.protobuf),
-    ByteString.EMPTY
+    header.committedGeneratorsHash.getOrElse(ByteStr.empty).toByteString
   )
 
   def protobuf(block: VanillaBlock): PBBlock = {

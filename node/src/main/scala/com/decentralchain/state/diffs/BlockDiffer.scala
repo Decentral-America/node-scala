@@ -3,6 +3,7 @@ package com.decentralchain.state.diffs
 import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.decentralchain.account.Address
+import com.decentralchain.crypto
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
@@ -136,7 +137,27 @@ object BlockDiffer {
         // it's important to combine tx fee fractions (instead of getting a fraction of the combined tx fee)
         // so that we end up with the same value as when computing per-transaction fee part
         // during microblock processing below
+        //
+        // CommitToGenerationTransaction fees are excluded from the NG carry-over for the same
+        // reason their commitment data is excluded from the state hash (see
+        // TxStateSnapshotHashBuilder.scala): letting the 60% carry-share participate in the
+        // normal split would make the amount carried into the NEXT block depend on which
+        // block position the commitment tx landed at -- the same position-dependent-state
+        // hazard Feature 21 guards against for the state hash itself.
+        //
+        // Precise effect (confirmed against canonical): the committing block's OWN miner still
+        // gets the normal 40% immediate cut (unchanged, via minerPortfolio in apply() below --
+        // this filter does not touch that); this exclusion only zeroes the OTHER 60% that would
+        // otherwise carry to the next block. Net result for a CommitToGenerationTransaction fee
+        // is 40% to the block that includes it, 0% to the next block -- the remaining 60% is not
+        // credited to anyone (removed from circulation for accounting purposes, though the fee
+        // itself was already debited from the sender by CommitToGenerationTransactionDiff, so no
+        // extra amount is actually burned beyond the fee itself). Verified against the real
+        // testnet chain's canonical history at height 1799 (the block immediately after the
+        // chain's first CommitToGenerationTransaction commitments) and confirmed by a fresh-
+        // genesis replay matching canonical stateHash through height ~3300.
         pb.transactionData
+          .filterNot(_.isInstanceOf[CommitToGenerationTransaction])
           .map { t =>
             val pf = Portfolio.build(t.assetFee)
             pf.minus(pf.multiply(CurrentBlockFeePart))
@@ -196,7 +217,14 @@ object BlockDiffer {
     for {
       _            <- TracedResult(Either.cond(!verify || block.signatureValid(), (), GenericError(s"Block $block has invalid signature")))
       initSnapshot <- TracedResult(initSnapshotE.leftMap(GenericError(_)))
-      prevStateHash = maybePrevBlock.flatMap(_.header.stateHash).getOrElse(blockchain.lastStateHash(None))
+      // Use the block's reference (last microblock ID, or the previous key block ID if no
+      // microblocks) to get the accumulated state hash -- this is what the miner itself
+      // computes when constructing this same block: blockchain.lastStateHash(Some(reference)).
+      // Using maybePrevBlock.header.stateHash (the key block's OWN stored hash) diverges
+      // whenever microblocks exist between the previous key block and this one, because the
+      // key block's stateHash does not include state changes from its own trailing
+      // microblocks -- only blockchain.lastStateHash(Some(reference)) does.
+      prevStateHash = blockchain.lastStateHash(Some(block.header.reference))
       hasChallenge  = block.header.challengedHeader.isDefined
       r <- snapshot match {
         case Some(BlockSnapshot(_, txSnapshots)) =>
@@ -220,8 +248,54 @@ object BlockDiffer {
           )
       }
       _ <- checkStateHash(blockchainWithNewBlock, block.header.stateHash, r.computedStateHash)
+      _ <- checkCommittedGeneratorsHash(blockchain, heightWithNewBlock, block.header.committedGeneratorsHash)
     } yield r
   }
+
+  // Blocks mined before the committedGeneratorsHash feature existed have this field unset
+  // (None) at period boundaries. Rejecting None as a mismatch would break sync for every
+  // historic boundary block, so validation is deliberately asymmetric:
+  //   - None      => always accepted, UNCONDITIONALLY, forever (see caveat below)
+  //   - Some(h)   => strictly validated: boundary blocks must carry the correct hash,
+  //                  non-boundary blocks must not carry one at all.
+  //
+  // IMPORTANT CAVEAT (confirmed by adversarial review, not yet closed): because None is
+  // accepted at every height with no feature-activation cutover, this check currently
+  // provides NO real enforcement -- any producer (outdated, buggy, or malicious) can omit
+  // the field at a real boundary and every other node accepts the block regardless.
+  // Committee integrity at boundaries is therefore NOT yet actually guaranteed by this
+  // mechanism on its own. This is a known, pre-existing gap in the original (recovered)
+  // design, already flagged as deferred hardening ("make committedGeneratorsHash mandatory
+  // at period-boundary heights once all producers are upgraded" -- not a regression
+  // introduced here. Closing it requires a coordinated activation-height rollout (a None at
+  // a boundary should become a hard rejection once all producers are confirmed upgraded),
+  // which is a rollout/governance decision, not purely a code change -- tracked as a
+  // follow-up, intentionally not implemented in this change.
+  private def checkCommittedGeneratorsHash(
+      blockchain: Blockchain,
+      height: Height,
+      actual: Option[ByteStr]
+  ): TracedResult[ValidationError, Unit] =
+    actual match {
+      case None             => TracedResult(Right(()))
+      case Some(actualHash) =>
+        // A period boundary is the LAST height of a GenerationPeriod (period.end), not simply
+        // "height % generationPeriodLength == 0" -- see the matching comment in Miner.scala for
+        // why the naive modulo check is wrong on any chain where DeterministicFinality activates
+        // at a non-zero, non-period-aligned height.
+        val expected =
+          blockchain.generationPeriodOf(height).filter(_.end == height).map { period =>
+            val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
+            ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
+          }
+        TracedResult(
+          Either.cond(
+            expected.contains(actualHash),
+            (),
+            GenericError(s"committedGeneratorsHash mismatch at height $height: expected $expected, got $actual")
+          )
+        )
+    }
 
   def fromMicroBlock(
       blockchain: Blockchain,
@@ -501,7 +575,13 @@ object BlockDiffer {
 
     // carry is 60% of dcc fees the next miner will get. obviously carry fee only makes sense when both
     // NG and sponsorship is active. also if sponsorship is active, feeAsset can only be Dcc
-    val carry  = if (hasNg && hasSponsorship) feeAmount - currentBlockFee else 0
+    //
+    // CommitToGenerationTransaction is excluded from carrying its 60% share forward regardless
+    // of era, for the same position-dependent-state reason as the pre-sponsorship recompute
+    // path in feeFromPreviousBlockE above -- see the detailed comment there (the committing
+    // block's own miner still gets the normal 40% cut via minerPortfolio; only the 60% that
+    // would otherwise carry to the next block is zeroed here).
+    val carry  = if (hasNg && hasSponsorship && !tx.isInstanceOf[CommitToGenerationTransaction]) feeAmount - currentBlockFee else 0
     val dccFee = if (feeAsset == Dcc) feeAmount else 0L
 
     TxFeeInfo(feeAsset, feeAmount, carry, dccFee)

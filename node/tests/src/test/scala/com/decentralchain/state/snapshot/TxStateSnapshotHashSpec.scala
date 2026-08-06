@@ -306,15 +306,15 @@ class TxStateSnapshotHashSpec extends PropSpec {
       "elQKIFDHWa9Cd6VU8M20LLFHzbBTveERf1sEOw19SUS40GBoEjCtMabxDUdbtJ7shen9xp6fdysl8gapeJylu5iJR4Jzxq24ikwORqZLNx+7yclBPNc=",
       ByteStr.empty,
       "58d597e570a9a06555d60f86cbecee11399829d0da879d4070ae9d1a336a56e4",
-      "3a02a5229f7af15a23b673ac130d5b2d51d97d5cee494dc9ea72a16cd47aa136"
+      "4f3d99e3fbfc41eb6f36cbd4570a4366500e2556237bce863b40ca913c680aa4"
     ),
     (
       "all together",
       all,
       "CkMKGgE/YP1Q7yDeRXEgffuciL58HC+KIsfiO6liEiUKIF5mn4IKZ9CIbYdHjPBDoqx4XMevVdwxzhB1OUvTUKJbEJBOCkQKGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EiYKIHidwBEj1TYPcIKv1LRquL/otRYLv7UmwEPl/Hg6T4lOEKCcAQokChoBP2D9UO8g3kVxIH37nIi+fBwviiLH4jupYhIGEICU69wDCiQKGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EgYQgKjWuQcSIgoaAT9g/VDvIN5FcSB9+5yIvnwcL4oix+I7qWIYgJri4RASIgoaAT9Cxcljc/UP2BNQYE8cFPKmySVq2tQdw/8QgK7NvhQSIgoaAT8wI8uotbzVfYC2BqPYrAX1CRomrp8yTCwYgKjWuQcSHAoaAT9hIl3y/Mj2ursZ0i4PLrkkxzzOLuwL7GsaZgoguIIzLIWCBbxl3Ysa38C0yvtZan6R9ZvOU33eldmrOo0SIFDHWa9Cd6VU8M20LLFHzbBTveERf1sEOw19SUS40GBoGhoBP0LFyWNz9Q/YE1BgTxwU8qbJJWra1B3D/yCA8ouoCSIiCiC4gjMshYIFvGXdixrfwLTK+1lqfpH1m85Tfd6V2as6jSpGCiBeZp+CCmfQiG2HR4zwQ6KseFzHr1XcMc4QdTlL01CiWxIg3GBhamPTKLR06Q6bJKMnDfzLetm2Xz8SAuH6VNGUwZ4gASpGCiB4ncARI9U2D3CCr9S0ari/6LUWC7+1JsBD5fx4Ok+JThIg3GBhamPTKLR06Q6bJKMnDfzLetm2Xz8SAuH6VNGUwZ4YCDIvCiB4ncARI9U2D3CCr9S0ari/6LUWC7+1JsBD5fx4Ok+JThABGgkE//////////YyJQogXmafggpn0Ihth0eM8EOirHhcx69V3DHOEHU5S9NQolsaAQEyKAogOG+NPdNOUn6/g2LbTm9xhzWb1ZaCdA8Wi+OYkjUfrbIaBDuaygA6QwogeJ3AESPVNg9wgq/UtGq4v+i1Fgu/tSbAQ+X8eDpPiU4SB25ld25hbWUaFnNvbWUgZmFuY3kgZGVzY3JpcHRpb25KJAoaAT9Cxcljc/UP2BNQYE8cFPKmySVq2tQdw/8SBmRjY2V2b1IrCiDJJJzvMh6TFE/1ypJHZa22AhtA7fqr1YKYX4LUW8kQzBCAlOvcAxjQD1IrCiCWfWMLyTm21iLRwA9s4W2hTkxcds0OKdF26PNRlxynhBCAlOvcAxjQD1ouCiBQx1mvQnelVPDNtCyxR82wU73hEX9bBDsNfUlEuNBgaBIHBgEGsNFPzxj6AWJaChoBP2D9UO8g3kVxIH37nIi+fBwviiLH4jupYhIFCgNmb28SEgoDYmFyagtTdHJpbmdWYWx1ZRIhCgNiYXpiGgE/YP1Q7yDeRXEgffuciL58HC+KIsfiO6liYi8KGgE/QsXJY3P1D9gTUGBPHBTypsklatrUHcP/EggKA2Zvb1CwCRIHCgNiYXJYAWolCiB4ncARI9U2D3CCr9S0ari/6LUWC7+1JsBD5fx4Ok+JThD8KnABelQKIFDHWa9Cd6VU8M20LLFHzbBTveERf1sEOw19SUS40GBoEjCtMabxDUdbtJ7shen9xp6fdysl8gapeJylu5iJR4Jzxq24ikwORqZLNx+7yclBPNc=",
       ByteStr(fastHash(Ints.toByteArray(0xaabbef50))),
-      "3a02a5229f7af15a23b673ac130d5b2d51d97d5cee494dc9ea72a16cd47aa136",
-      "2548e629cb3e3bcd53321619cf6f880de1c3b98fabebfe049a3134ac1cea7714"
+      "4f3d99e3fbfc41eb6f36cbd4570a4366500e2556237bce863b40ca913c680aa4",
+      "4cd8597554633813c65b9712c09a38dfb6d574db54405952f88255f9d77db9b5"
     )
   )
 
@@ -334,5 +334,45 @@ class TxStateSnapshotHashSpec extends PropSpec {
         raw shouldEqual expectedResult
       }
     }
+  }
+
+  // Regression guard for the fix in TxStateSnapshotHashBuilder: CommitToGenerationTransaction
+  // commitments must NOT influence the per-TX state hash. A validator's commitment can land in
+  // different block positions on competing chains (e.g. block N on chain A vs block N+1 on
+  // chain B); if the commitment content fed into the hash, the two chains would compute
+  // different cumulative state hashes at that height and Feature 21 would permanently reject
+  // one of them as an "invalid state hash" chain-switch candidate. This test proves the hash
+  // is identical with and without a generation commitment present in the snapshot (all other
+  // snapshot content held constant), i.e. the commitment is fully excluded from this hash.
+  property("generation commitment does not affect the per-TX state hash") {
+    val (snapshotWithCommitment, metaWithCommitment) = PBSnapshots.fromProtobuf(withCommitment, ByteStr.empty, Height(10))
+    val (snapshotNoCommitment, metaNoCommitment)     = PBSnapshots.fromProtobuf(TSS(), ByteStr.empty, Height(10))
+
+    val hashWithCommitment = TxStateSnapshotHashBuilder
+      .createHashFromSnapshot(snapshotWithCommitment, Some(TxStateSnapshotHashBuilder.TxStatusInfo(ByteStr.empty, metaWithCommitment)))
+      .txStateSnapshotHash
+
+    val hashNoCommitment = TxStateSnapshotHashBuilder
+      .createHashFromSnapshot(snapshotNoCommitment, Some(TxStateSnapshotHashBuilder.TxStatusInfo(ByteStr.empty, metaNoCommitment)))
+      .txStateSnapshotHash
+
+    hashWithCommitment shouldEqual hashNoCommitment
+
+    // Also prove it's independent of WHICH validator committed (position/content-independence,
+    // not just presence/absence) -- a different signer's commitment must hash identically too.
+    val otherCommitment = TSS(
+      generationCommitment = Some(
+        TSS.GenerationCommitment(
+          bs(signer102.publicKey.arr),
+          bs(BlsKeyPair(signer102.privateKey).publicKey.byteStr.arr)
+        )
+      )
+    )
+    val (snapshotOtherCommitment, metaOtherCommitment) = PBSnapshots.fromProtobuf(otherCommitment, ByteStr.empty, Height(10))
+    val hashOtherCommitment                            = TxStateSnapshotHashBuilder
+      .createHashFromSnapshot(snapshotOtherCommitment, Some(TxStateSnapshotHashBuilder.TxStatusInfo(ByteStr.empty, metaOtherCommitment)))
+      .txStateSnapshotHash
+
+    hashOtherCommitment shouldEqual hashNoCommitment
   }
 }
