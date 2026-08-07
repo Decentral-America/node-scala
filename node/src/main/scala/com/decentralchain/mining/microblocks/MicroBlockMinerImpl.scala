@@ -175,7 +175,8 @@ class MicroBlockMinerImpl(
             rewardVote = accumulatedBlock.header.rewardVote,
             stateHash = if (blockchainUpdater.supportsLightNodeBlockFields()) stateHash else None,
             challengedHeader = None,
-            finalizationVoting = FinalizationVoting.combine(accumulatedBlock.header.finalizationVoting, currentFinalizationVoting)
+            finalizationVoting = FinalizationVoting.combine(accumulatedBlock.header.finalizationVoting, currentFinalizationVoting),
+            committedGeneratorsHash = accumulatedBlock.header.committedGeneratorsHash
           )
           .leftMap(BlockBuildError.apply)
         microBlock <- MicroBlock

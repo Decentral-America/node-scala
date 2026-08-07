@@ -7,6 +7,7 @@ import com.decentralchain.block.{Block, BlockHeader, FinalizationVoting, SignedB
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
+import com.decentralchain.crypto
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.metrics.{BlockStats, Instrumented, *}
 import com.decentralchain.mining.Miner.*
@@ -219,6 +220,18 @@ class MinerImpl(
             Some(blockchainUpdater.lastStateHash(Some(reference)))
           else None
         (unconfirmed, totalConstraint, stateHash) = packTransactionsForKeyBlock(address, reference, prevStateHash)
+        committedGeneratorsHash                   = {
+          // A period boundary is the LAST height of a GenerationPeriod (period.end), not simply
+          // "height % generationPeriodLength == 0". Periods are anchored to the DeterministicFinality
+          // feature's ACTIVATION height (see GenerationPeriod.from), which is only guaranteed to be 0
+          // on testnet (pre-activated at genesis); on any chain where the feature activates at a
+          // non-zero, non-period-aligned height, plain modulo arithmetic checks the wrong heights
+          // entirely and this would silently never validate.
+          blockchainUpdater.generationPeriodOf(Height(height + 1)).filter(_.end == Height(height + 1)).map { period =>
+            val validators = blockchainUpdater.committedGenerators(period.next).sortBy(_._1.toString)
+            ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
+          }
+        }
         block <- Block
           .buildAndSign(
             version,
@@ -243,7 +256,8 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = tryCollectSelfWithGrace(reference)
+            finalizationVoting = tryCollectSelfWithGrace(reference),
+            committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
       } yield ForgeAttemptResult.Success(block, totalConstraint)
