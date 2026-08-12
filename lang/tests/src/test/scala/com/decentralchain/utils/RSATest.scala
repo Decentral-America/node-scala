@@ -329,13 +329,17 @@ class RSATest extends PropSpec with BeforeAndAfterAll {
     ) shouldBe Right(CONST_BOOLEAN(true))
   }
 
-  ignore("test all hashes") {
+  // Was `ignore`d with no assertions at all (just println'd sign/verify fixture values for manual
+  // use elsewhere) -- meaning every DigestAlgorithm except SHA3256 (the one hardcoded fixture used
+  // by "test from ride-js" above) had zero actual rsaVerify test coverage. Rebuilt as a real
+  // round-trip test: sign with each algorithm, then verify via the same rsaVerify RIDE script the
+  // other tests in this file use.
+  property("rsaVerify round-trips for every DigestAlgorithm") {
     val message = "hello world".getBytes()
     val keyPair = keyPairGenerator.sample.get
     val xpub    = keyPair.getPublic
     val xprv    = keyPair.getPrivate
-    println(s"PUB=${Base64.encode(xpub.getEncoded)}")
-    println(s"MSG=${Base64.encode(message)}")
+
     algs.foreach { alg =>
       val prefix = RSA.digestAlgorithmPrefix(alg)
 
@@ -344,7 +348,13 @@ class RSATest extends PropSpec with BeforeAndAfterAll {
       privateSignature.update(message)
 
       val signature = privateSignature.sign
-      println(s"$alg=${Base64.encode(signature)}")
+
+      withClue(s"alg=$alg: ") {
+        eval(
+          scriptSrc(alg, message, signature, xpub.getEncoded),
+          PureContext.build(V3, useNewPowPrecision = true) |+| CryptoContext.build(Global, V3, true)
+        ) shouldBe Right(CONST_BOOLEAN(true))
+      }
     }
   }
 

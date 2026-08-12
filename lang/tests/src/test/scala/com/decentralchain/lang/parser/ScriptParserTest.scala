@@ -820,15 +820,19 @@ class ScriptParserTest extends PropSpec with ScriptGenParser {
     )
   }
 
-  ignore("pattern matching with invalid case - expression in variable definition") {
+  // This was ignored under the (stale) assumption that `1 + 1` in a case pattern is invalid
+  // syntax. The grammar was deliberately extended to support ConstsPat (matching against
+  // constant-valued expressions, e.g. `case 1 | 2 => ...`), so `case 1 + 1 => 1` now parses as a
+  // valid ConstsPat containing that expression -- this test's expectation was never updated to
+  // match. Re-enabled with the current, correct parser output.
+  property("pattern matching with a constant expression case (ConstsPat)") {
     parse("match tx { case 1 + 1 => 1 } ") shouldBe MATCH(
       AnyPos,
       REF(AnyPos, PART.VALID(AnyPos, "tx")),
       List(
         MATCH_CASE(
           AnyPos,
-          Some(PART.INVALID(AnyPos, "invalid syntax, should be: `case varName: Type => expr` or `case _ => expr`")),
-          List.empty,
+          ConstsPat(List(BINARY_OP(AnyPos, CONST_LONG(AnyPos, 1), SUM_OP, CONST_LONG(AnyPos, 1))), AnyPos),
           CONST_LONG(AnyPos, 1)
         )
       )
