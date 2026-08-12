@@ -156,6 +156,14 @@ object BlockDiffer {
         // testnet chain's canonical history at height 1799 (the block immediately after the
         // chain's first CommitToGenerationTransaction commitments) and confirmed by a fresh-
         // genesis replay matching canonical stateHash through height ~3300.
+        //
+        // NOTE (investigated while chasing the height-3325 divergence): this branch cannot be
+        // simplified to read blockchain.carryFee(None) the way the sponsorship branch above does.
+        // computeTxFeeInfo's carry is gated on hasSponsorship, so rocksdb.carryFee is always 0
+        // pre-sponsorship by design -- it must keep recomputing from the previous block's own tx
+        // data instead. Confirmed empirically: height 3325 is past sponsorshipHeight (~2700 on
+        // testnet) and goes through the branch above, which was already correct; this branch was
+        // not the source of that bug.
         pb.transactionData
           .filterNot(_.isInstanceOf[CommitToGenerationTransaction])
           .map { t =>
