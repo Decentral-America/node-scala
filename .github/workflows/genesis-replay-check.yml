@@ -1,0 +1,148 @@
+name: Genesis replay regression check
+
+# Why this exists: a real consensus-safety fix (committed-generators-hash exclusion) was built,
+# tested, and even deployed to production at one point, then silently disappeared from dev/main
+# for weeks after a history rewrite -- discovered only by accident on 2026-08-06, when a fresh
+# node was found to be permanently unable to bootstrap from genesis on live testnet
+# (InvalidStateHash at height 1798). No test anywhere exercised a full fresh-genesis P2P replay,
+# so the regression went completely undetected. This workflow is that missing test: it builds
+# the current branch, syncs a brand-new node from genesis against the live testnet chain, and
+# fails loudly if it ever gets stuck with InvalidStateHash before a known-good height.
+#
+# MIN_HEIGHT is set comfortably past the two bugs already found and fixed (heights 1798/1799),
+# but before a third, still-unresolved divergence at height 3325 (see project history / node-scala
+# PRs #52, #53 for context) -- raise it once that one is fixed too, so this check keeps tightening
+# over time instead of permanently tolerating a known gap.
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'  # weekly, Monday 04:17 UTC -- this is a live-network check, not a unit
+                          # test; weekly avoids being noisy/flaky from transient network conditions
+                          # while still catching a silent regression within days, not months.
+  workflow_dispatch:
+    inputs:
+      min-height:
+        description: 'Minimum height the fresh replay must reach without InvalidStateHash'
+        required: false
+        default: '2500'
+      timeout-minutes:
+        description: 'How long to wait for the replay to reach min-height'
+        required: false
+        default: '10'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: genesis-replay-check
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    name: Fresh-genesis replay vs live testnet
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'sbt'
+
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-
+
+      - name: Build node tarball
+        run: sbt buildTarballsForDocker
+
+      - name: Prepare a fresh-genesis testnet config (miner disabled, no self-collision)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/replay-scratch
+          cp node-config/testnet/dcc.conf /tmp/replay-scratch/dcc.conf 2>/dev/null || \
+            curl -sf -o /tmp/replay-scratch/dcc.conf \
+              https://raw.githubusercontent.com/Decentral-America/infra/main/node-config/testnet/dcc.conf
+          python3 - <<'PYEOF'
+          p = "/tmp/replay-scratch/dcc.conf"
+          s = open(p).read()
+          # Disable mining, keep REST enabled, dial the real main node directly, and make sure our
+          # own declared-address does NOT equal the known-peer address -- if it does, the node
+          # treats it as itself and never dials out at all (a real gotcha hit once investigating
+          # this exact class of bug).
+          s = s.replace('declared-address = "66.228.55.154:6868"', 'declared-address = "127.0.0.1:16868"')
+          s = s.replace('known-peers = []', 'known-peers = ["66.228.55.154:6868"]')
+          import re
+          s = re.sub(r'miner \{\n(\s*)enable = yes', r'miner {\n\1enable = false', s)
+          open(p, "w").write(s)
+          PYEOF
+          cat >> /tmp/replay-scratch/dcc.conf <<'EOF'
+
+          dcc.wallet.seed = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uxUx"
+          dcc.wallet.password = "ci-scratch-only"
+          dcc.rest-api.bind-address = "0.0.0.0"
+          EOF
+
+      - name: Extract build
+        run: |
+          mkdir -p /tmp/replay-run
+          tar xzf docker/target/dcc.tgz -C /tmp/replay-run
+          echo "NODE_BIN=$(find /tmp/replay-run -maxdepth 2 -name node -path '*/bin/*')" >> "$GITHUB_ENV"
+
+      - name: Run fresh-genesis replay and watch for InvalidStateHash
+        env:
+          MIN_HEIGHT: ${{ inputs.min-height || '2500' }}
+        run: |
+          set -euo pipefail
+          "$NODE_BIN" /tmp/replay-scratch/dcc.conf > /tmp/replay.log 2>&1 &
+          NODE_PID=$!
+          trap 'kill $NODE_PID 2>/dev/null || true' EXIT
+
+          # IMPORTANT: check height reaching the target BEFORE checking for InvalidStateHash.
+          # The sync is fast enough that by the time any single poll runs, the log may already
+          # contain a LATER InvalidStateHash (from the known, still-open height-3325 issue) even
+          # though the height threshold was already crossed moments earlier in the same batch --
+          # a fresh node's height stays pinned at the last successfully-applied block once a
+          # later block in the same extension fails, so "height >= MIN_HEIGHT" and "the log
+          # mentions InvalidStateHash" can both be true simultaneously on the very same poll.
+          # Checking height first and exiting immediately on success avoids treating that known,
+          # tracked, later failure as a regression in this check.
+          DEADLINE=$((SECONDS + ${{ inputs.timeout-minutes || '10' }} * 60))
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            HEIGHT=$(curl -s --max-time 5 http://localhost:6869/blocks/height 2>/dev/null | grep -o '[0-9]*' || echo 0)
+            if [ "${HEIGHT:-0}" -ge "$MIN_HEIGHT" ]; then
+              echo "Reached height $HEIGHT (>= $MIN_HEIGHT). Genesis replay is healthy at least up to the known-good point."
+              exit 0
+            fi
+            if grep -q "InvalidStateHash" /tmp/replay.log; then
+              echo "::error::Fresh-genesis replay hit InvalidStateHash BEFORE reaching height $MIN_HEIGHT (last seen: ${HEIGHT:-0}) -- this is a real consensus-hash regression, not the known/tracked height-3325 issue (which only manifests after ~3300)."
+              echo "--- relevant log lines ---"
+              grep -B2 -A2 "InvalidStateHash" /tmp/replay.log
+              exit 1
+            fi
+            sleep 3
+          done
+
+          echo "::error::Timed out after ${{ inputs.timeout-minutes || '10' }} minutes without reaching height $MIN_HEIGHT (last seen: ${HEIGHT:-0}). This could be a real regression OR a network/CI environment issue -- check the log."
+          tail -100 /tmp/replay.log
+          exit 1
+
+      - name: Upload replay log on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: genesis-replay-log
+          path: /tmp/replay.log
+          retention-days: 14
