@@ -104,6 +104,7 @@ jobs:
       - name: Run fresh-genesis replay and watch for InvalidStateHash
         env:
           MIN_HEIGHT: ${{ inputs.min-height || '2500' }}
+          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes || '10' }}
         run: |
           set -euo pipefail
           "$NODE_BIN" /tmp/replay-scratch/dcc.conf > /tmp/replay.log 2>&1 &
@@ -119,7 +120,7 @@ jobs:
           # mentions InvalidStateHash" can both be true simultaneously on the very same poll.
           # Checking height first and exiting immediately on success avoids treating that known,
           # tracked, later failure as a regression in this check.
-          DEADLINE=$((SECONDS + ${{ inputs.timeout-minutes || '10' }} * 60))
+          DEADLINE=$((SECONDS + TIMEOUT_MINUTES * 60))
           while [ "$SECONDS" -lt "$DEADLINE" ]; do
             HEIGHT=$(curl -s --max-time 5 http://localhost:6869/blocks/height 2>/dev/null | grep -o '[0-9]*' || echo 0)
             if [ "${HEIGHT:-0}" -ge "$MIN_HEIGHT" ]; then
@@ -135,7 +136,7 @@ jobs:
             sleep 3
           done
 
-          echo "::error::Timed out after ${{ inputs.timeout-minutes || '10' }} minutes without reaching height $MIN_HEIGHT (last seen: ${HEIGHT:-0}). This could be a real regression OR a network/CI environment issue -- check the log."
+          echo "::error::Timed out after $TIMEOUT_MINUTES minutes without reaching height $MIN_HEIGHT (last seen: ${HEIGHT:-0}). This could be a real regression OR a network/CI environment issue -- check the log."
           tail -100 /tmp/replay.log
           exit 1
 
