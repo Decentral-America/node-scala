@@ -147,7 +147,6 @@ object NetworkServer extends ScorexLogging {
 
     def handleOutgoingChannelClosed(remoteAddress: InetSocketAddress)(closeFuture: ChannelFuture): Unit = {
       outgoingChannels.remove(remoteAddress, closeFuture.channel())
-      if (!shutdownInitiated) peerDatabase.suspend(remoteAddress)
 
       // Bumped from trace/debug to info (INCIDENT-GEN0-PEERS.md #11, 2026-07-07):
       // this is the only place that logs why an outbound peer connection
@@ -156,13 +155,30 @@ object NetworkServer extends ScorexLogging {
       // gen-0/gen-1/val-0 disconnects from main impossible without a rebuild.
       if (closeFuture.isSuccess)
         log.info(formatOutgoingChannelEvent(closeFuture.channel(), "Channel closed (expected)"))
-      else
+      else {
+        // Only suspend on a genuinely abnormal close. An "expected" (isSuccess)
+        // close is a graceful shutdown of this side of the socket -- most
+        // commonly the remote peer's own duplicate-connection dedup (same
+        // (host, nonce) PeerKey already has a live channel, see
+        // HandshakeHandler) closing OUR outgoing leg because it already has
+        // a connection to us via the other direction. That is completely
+        // benign, but suspending on it anyway meant gen-0/gen-1, whose only
+        // known-peer is main, got a fresh, successful handshake immediately
+        // suspended for 30s every single reconnect cycle -- a permanent
+        // connect/handshake-ok/suspend/retry loop that never let them stay
+        // caught up (confirmed live 2026-08-13: repeating "Connection
+        // established" -> "Accepted handshake" -> "Suspending ... for 30
+        // seconds" -> "Channel closed (expected)" on ~30s centers, exactly
+        // matching suspension-residence-time). Genuine failures (reset,
+        // timeout, I/O error) still suspend below.
+        if (!shutdownInitiated) peerDatabase.suspend(remoteAddress)
         log.info(
           formatOutgoingChannelEvent(
             closeFuture.channel(),
             s"Channel closed: ${Option(closeFuture.cause()).map(_.getMessage).getOrElse("no message")}"
           )
         )
+      }
 
       logConnections()
     }
