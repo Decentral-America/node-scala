@@ -142,7 +142,6 @@ object Dependencies {
     Seq(
       rocksdb,
       "commons-net"            % "commons-net"               % "3.13.0",
-      "commons-io"             % "commons-io"                % "2.22.0",
       "com.github.pureconfig" %% "pureconfig-core"           % "0.17.10",
       "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.10",
       "net.logstash.logback"   % "logstash-logback-encoder"  % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
@@ -151,7 +150,6 @@ object Dependencies {
       kamonModule("executors"),
       "org.influxdb" % "influxdb-java" % "2.25",
       googleGuava,
-      "com.google.code.findbugs" % "jsr305" % "3.0.2" % Compile, // javax.annotation stubs
       playJson,
       pekkoModule("actor"),
       pekkoModule("stream"),
