@@ -150,7 +150,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     "with insufficient balance" in {
       val newGenerator = TxHelpers.signer(1005)
       withDomain(
-        DeterministicFinality,
+        // GeneratingBalanceProvider.minMiningBalance (Task 20) is feature-gated on
+        // SmallerMinimalGeneratingBalance -- without it, the threshold is the larger
+        // MinimalEffectiveBalanceForGenerator1, not Generator2 as this test expects below.
+        DeterministicFinality.addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance),
         Seq(
           AddrWithBalance(sender.toAddress, 1000000.dcc),
           AddrWithBalance(
