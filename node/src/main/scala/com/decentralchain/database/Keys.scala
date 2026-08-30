@@ -250,18 +250,21 @@ object Keys {
   def maliciousMinerBanHeights(addressBytes: Array[Byte]): Key[Seq[Height]] =
     historyKey(MaliciousMinerBanHeights, addressBytes)
 
+  private def readFinalizedHeight(bytes: Array[Byte]): Option[Height] =
+    Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) }
+
   // Writes only after DeterministicFinality activation
   val finalizedHeight: Key[Option[Height]] = Key(
     FinalizedBlockHeight,
     Array.emptyByteArray,
-    bytes => Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) },
+    readFinalizedHeight,
     _.fold(Array.emptyByteArray)(_.toByteArray)
   )
 
   def finalizedHeightAt(at: Height): Key[Option[Height]] = Key(
     FinalizedBlockHeightAt,
     h(at),
-    bytes => Option(bytes).collect { case bs if bs.length == Ints.BYTES => com.decentralchain.state.Height(Ints.fromByteArray(bytes)) },
+    readFinalizedHeight,
     _.fold(Array.emptyByteArray)(_.toByteArray)
   )
 
