@@ -73,6 +73,7 @@ case class FunctionalitySettings(
     estimationOverflowFixHeight: Int = 0,
     estimatorSumOverflowFixHeight: Int = 0,
     enforceTransferValidationAfter: Int = 0,
+    enforceEthTxValidationAfter: Int = 0,
     ethInvokePaymentsCheckHeight: Int = 0,
     daoAddress: Option[String] = None,
     xtnBuybackAddress: Option[String] = None,

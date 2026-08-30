@@ -33,7 +33,18 @@ class EthereumInvokePaymentTest extends PropSpec with WithDomain with EthHelpers
     val issueTx       = issue(script = Some(paymentScript))
     val asset         = IssuedAsset(issueTx.id())
     def invoke        = EthTxGenerator.generateEthInvoke(defaultEthSigner, secondAddress, "default", Nil, Seq(Payment(1, asset)))
-    withDomain(RideV6, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthDccAddress)) { d =>
+    // This test is specifically about payment-script evaluation ORDER (before the dApp body runs),
+    // not fund sufficiency -- issueTx credits the asset to defaultSigner's NATIVE (ed25519-derived)
+    // address, never to the separate ETH-derived (keccak-based) address the Ethereum invoke actually
+    // spends from (see PublicKey.toAddress's EthereumKeyLength branch), and the asset's own
+    // always-throwing script makes it impossible to ever fund that address via a real transfer.
+    // Task 14 (upstream PR #4043) enables a real EthereumTransaction balance pre-check in
+    // CommonValidation.scala, gated behind functionalitySettings.enforceEthTxValidationAfter (default
+    // 0, i.e. active immediately) -- keep it disabled here so this test still reaches the payment
+    // script it's actually exercising, matching how it already configures other unrelated feature
+    // gates (e.g. the sibling test below sets ethInvokePaymentsCheckHeight).
+    val settings = RideV6.configure(_.copy(enforceEthTxValidationAfter = Int.MaxValue))
+    withDomain(settings, AddrWithBalance.enoughBalances(secondSigner) :+ AddrWithBalance(defaultSigner.toEthDccAddress)) { d =>
       d.appendBlock(issueTx)
 
       d.appendBlock(setScript(secondSigner, dApp(bigComplexity = false)))
