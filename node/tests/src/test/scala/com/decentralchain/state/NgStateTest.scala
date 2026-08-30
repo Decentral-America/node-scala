@@ -22,27 +22,60 @@ class NgStateTest extends PropSpec {
     val (genesis, payments)  = preconditionsAndPayments(10)
     val (block, microBlocks) = chainBaseAndMicro(randomSig, genesis, payments.map(t => Seq(t)))
 
-    var ng = NgState(block, StateSnapshot.empty, 0L, 0L, ByteStr.empty, Set.empty, None, block.header.generationSignature, Map.empty)
+    var ng = NgState(
+      block,
+      StateSnapshot.empty,
+      0L,
+      0L,
+      ByteStr.empty,
+      Set.empty,
+      None,
+      block.header.generationSignature,
+      Map.empty,
+      FinalizationState.notActivated(block)
+    )
     microBlocks.foreach(m => ng = ng.append(m, StateSnapshot.empty, 0L, 0L, 0L, ByteStr.empty, None, Seq.empty))
 
-    ng.snapshotOf(microBlocks.last.totalResBlockSig)
+    ng.liquidBlockOf(microBlocks.last.totalResBlockSig)
     microBlocks.foreach { m =>
-      val (forged, _, _, _, _, _) = ng.snapshotOf(m.totalResBlockSig).get
+      val forged = ng.liquidBlockOf(m.totalResBlockSig).get.block
       forged.signatureValid() shouldBe true
     }
-    Seq(microBlocks(4)).map(x => ng.snapshotOf(x.totalResBlockSig))
+    Seq(microBlocks(4)).map(x => ng.liquidBlockOf(x.totalResBlockSig))
   }
 
   property("can resolve best liquid block") {
     val (genesis, payments)  = preconditionsAndPayments(5)
     val (block, microBlocks) = chainBaseAndMicro(randomSig, genesis, payments.map(t => Seq(t)))
 
-    var ng = NgState(block, StateSnapshot.empty, 0L, 0L, ByteStr.empty, Set.empty, None, block.header.generationSignature, Map.empty)
+    var ng = NgState(
+      block,
+      StateSnapshot.empty,
+      0L,
+      0L,
+      ByteStr.empty,
+      Set.empty,
+      None,
+      block.header.generationSignature,
+      Map.empty,
+      FinalizationState.notActivated(block)
+    )
     microBlocks.foreach(m => ng = ng.append(m, StateSnapshot.empty, 0L, 0L, 0L, ByteStr.empty, None, Seq.empty))
 
     ng.bestLiquidBlock.id() shouldBe microBlocks.last.totalResBlockSig
 
-    new NgState(block, StateSnapshot.empty, 0L, 0L, ByteStr.empty, Set.empty, Some(0), block.header.generationSignature, Map.empty).bestLiquidBlock
+    new NgState(
+      block,
+      StateSnapshot.empty,
+      0L,
+      0L,
+      ByteStr.empty,
+      Set.empty,
+      Some(0),
+      block.header.generationSignature,
+      Map.empty,
+      FinalizationState.notActivated(block)
+    ).bestLiquidBlock
       .id() shouldBe block
       .id()
   }
@@ -51,7 +84,18 @@ class NgStateTest extends PropSpec {
     val (genesis, payments)  = preconditionsAndPayments(5)
     val (block, microBlocks) = chainBaseAndMicro(randomSig, genesis, payments.map(t => Seq(t)))
 
-    var ng = NgState(block, StateSnapshot.empty, 0L, 0L, ByteStr.empty, Set.empty, None, block.header.generationSignature, Map.empty)
+    var ng = NgState(
+      block,
+      StateSnapshot.empty,
+      0L,
+      0L,
+      ByteStr.empty,
+      Set.empty,
+      None,
+      block.header.generationSignature,
+      Map.empty,
+      FinalizationState.notActivated(block)
+    )
 
     microBlocks.foldLeft(1000) { case (thisTime, m) =>
       ng = ng.append(m, StateSnapshot.empty, 0L, 0L, thisTime, ByteStr.empty, None, Seq.empty)
@@ -63,7 +107,18 @@ class NgStateTest extends PropSpec {
     ng.bestLastBlockInfo(1051).blockId shouldBe microBlocks.tail.head.totalResBlockSig
     ng.bestLastBlockInfo(2000).blockId shouldBe microBlocks.last.totalResBlockSig
 
-    new NgState(block, StateSnapshot.empty, 0L, 0L, ByteStr.empty, Set.empty, Some(0), block.header.generationSignature, Map.empty).bestLiquidBlock
+    new NgState(
+      block,
+      StateSnapshot.empty,
+      0L,
+      0L,
+      ByteStr.empty,
+      Set.empty,
+      Some(0),
+      block.header.generationSignature,
+      Map.empty,
+      FinalizationState.notActivated(block)
+    ).bestLiquidBlock
       .id() shouldBe block
       .id()
   }
@@ -72,12 +127,23 @@ class NgStateTest extends PropSpec {
     val (genesis, payments)  = preconditionsAndPayments(5)
     val (block, microBlocks) = chainBaseAndMicro(randomSig, genesis, payments.map(t => Seq(t)))
 
-    var ng = NgState(block, StateSnapshot.empty, 0L, 0L, ByteStr.empty, Set.empty, None, block.header.generationSignature, Map.empty)
+    var ng = NgState(
+      block,
+      StateSnapshot.empty,
+      0L,
+      0L,
+      ByteStr.empty,
+      Set.empty,
+      None,
+      block.header.generationSignature,
+      Map.empty,
+      FinalizationState.notActivated(block)
+    )
     microBlocks.foreach(m => ng = ng.append(m, StateSnapshot.empty, 1L, 0L, 0L, ByteStr.empty, None, Seq.empty))
 
-    ng.snapshotOf(block.id()).map(_._3) shouldBe Some(0L)
+    ng.liquidBlockOf(block.id()).map(_.data.carryFee) shouldBe Some(0L)
     microBlocks.zipWithIndex.foreach { case (m, i) =>
-      val u = ng.snapshotOf(m.totalResBlockSig).map(_._3)
+      val u = ng.liquidBlockOf(m.totalResBlockSig).map(_.data.carryFee)
       u shouldBe Some(i + 1)
     }
     ng.carryFee shouldBe microBlocks.size

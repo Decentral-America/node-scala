@@ -197,7 +197,8 @@ class LightNodeTest extends PropSpec with WithDomain {
   }
 
   private def getTxSnapshots(d: Domain, block: Block): Seq[(StateSnapshot, TxMeta.Status)] = {
-    val (refBlock, refSnapshot, carry, _, prevStateHash, _) = d.liquidState.get.snapshotOf(block.header.reference).get
+    val lb                                                   = d.liquidState.get.liquidBlockOf(block.header.reference).get
+    val (refBlock, refSnapshot, carry, prevStateHash)        = (lb.block, lb.data.snapshot, lb.data.carryFee, lb.data.liquidStateHash)
 
     val hs = d.posSelector.validateGenerationSignature(block).explicitGet()
 

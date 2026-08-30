@@ -421,7 +421,8 @@ class BlockDifferTest extends FreeSpec with WithDomain {
       val sender = TxHelpers.signer(1)
       withDomain(DomainPresets.TransactionStateSnapshot, AddrWithBalance.enoughBalances(sender)) { d =>
         (1 to 5).map { idx =>
-          val (refBlock, refSnapshot, carry, _, refStateHash, _) = d.liquidState.get.snapshotOf(d.lastBlock.id()).get
+          val lb                                                  = d.liquidState.get.liquidBlockOf(d.lastBlock.id()).get
+          val (refBlock, refSnapshot, carry, refStateHash)        = (lb.block, lb.data.snapshot, lb.data.carryFee, lb.data.liquidStateHash)
           val refBlockchain                                      = SnapshotBlockchain(
             d.rocksDBWriter,
             refSnapshot,

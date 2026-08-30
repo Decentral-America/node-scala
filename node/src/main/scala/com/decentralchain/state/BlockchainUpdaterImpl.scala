@@ -77,12 +77,12 @@ class BlockchainUpdaterImpl(
 
   publishLastBlockInfo()
 
-  override def liquidBlock(id: ByteStr): Option[Block] = readLock(ngState.flatMap(_.snapshotOf(id).map(_._1)))
+  override def liquidBlock(id: ByteStr): Option[Block] = readLock(ngState.flatMap(_.liquidBlockOf(id).map(_.block)))
 
-  override def liquidBlockSnapshot(id: ByteStr): Option[StateSnapshot] = readLock(ngState.flatMap(_.snapshotOf(id).map(_._2)))
+  override def liquidBlockSnapshot(id: ByteStr): Option[StateSnapshot] = readLock(ngState.flatMap(_.liquidBlockOf(id).map(_.data.snapshot)))
 
   override def microBlockSnapshot(totalBlockId: ByteStr): Option[StateSnapshot] = readLock(
-    ngState.flatMap(_.microSnapshots.get(totalBlockId).map(_.snapshot))
+    ngState.flatMap(_.microSnapshots.get(totalBlockId).map(_.data.snapshot))
   )
 
   override def liquidTransactions(id: ByteStr): Option[Seq[(TxMeta, Transaction)]] =
@@ -206,16 +206,16 @@ class BlockchainUpdaterImpl(
         if (ng.base.header.reference == reference)
           Some(SnapshotBlockchain(rocksdb, ng.reward)) // Same reward for a competitor's block, because same height
         else
-          ng.snapshotOf(reference)
-            .map { case (forgedBlock, liquidSnapshot, carry, _, stateHash, _) =>
+          ng.liquidBlockOf(reference)
+            .map { lb =>
               SnapshotBlockchain(
                 rocksdb,
-                liquidSnapshot,
-                forgedBlock,
+                lb.data.snapshot,
+                lb.block,
                 ng.hitSource,
-                carry,
+                lb.data.carryFee,
                 computeNextReward,
-                Some(stateHash)
+                Some(lb.data.liquidStateHash)
               )
             }
       }
@@ -323,9 +323,13 @@ class BlockchainUpdaterImpl(
                     )
                   )
               } else
-                metrics.forgeBlockTimeStats.measureOptional(ng.snapshotOf(block.header.reference)) match {
+                metrics.forgeBlockTimeStats.measureOptional(ng.liquidBlockOf(block.header.reference)) match {
                   case None => Left(BlockAppendError(s"References incorrect or non-existing block", block))
-                  case Some((referencedForgedBlock, referencedLiquidSnapshot, carry, totalFee, referencedComputedStateHash, discarded)) =>
+                  case Some(NgState.LiquidBlock(referencedForgedBlock, discarded, referencedData)) =>
+                    val referencedLiquidSnapshot     = referencedData.snapshot
+                    val carry                        = referencedData.carryFee
+                    val totalFee                      = referencedData.totalFee
+                    val referencedComputedStateHash  = referencedData.liquidStateHash
                     // Block on a new height
                     if (!verify || referencedForgedBlock.signatureValid()) {
                       val referencedForgedBlockParentHeight = Height(rocksdb.heightOf(referencedForgedBlock.header.reference).getOrElse(0))
@@ -426,6 +430,7 @@ class BlockchainUpdaterImpl(
                 }
 
                 restTotalConstraint = updatedTotalConstraint
+                val blockchain = SnapshotBlockchain(rocksdb, newBlockSnapshot, block, hitSource, carry, reward, Some(computedStateHash))
                 ngState = Some(
                   new NgState(
                     block,
@@ -439,7 +444,7 @@ class BlockchainUpdaterImpl(
                     cancelLeases(collectLeasesToCancel(newHeight), newHeight),
                     finalizationState = FinalizationState.init(
                       generatorSet,
-                      conflictGenerators = this.generationPeriodOf(newHeight).fold(ConflictGenerators.empty)(this.conflictGenerators).upTo(newHeight),
+                      conflictGenerators = this.generationPeriodOf(newHeight).fold(ConflictGenerators.empty)(blockchain.conflictGenerators).upTo(newHeight),
                       block,
                       parentHeight = Height(rocksdb.height),
                       finalizedHeight = Blockchain.finalizedHeightOrFallback(
@@ -571,9 +576,10 @@ class BlockchainUpdaterImpl(
             for {
               _                                         <- microBlock.signaturesValid()
               (totalBlock, referencedComputedStateHash) <- ng
-                .snapshotOf(microBlock.reference)
+                .liquidBlockOf(microBlock.reference)
                 .toRight(GenericError(s"No referenced block exists: $microBlock"))
-                .map { case (accumulatedBlock, _, _, _, computedStateHash, _) =>
+                .map { lb =>
+                  val accumulatedBlock = lb.block
                   Block
                     .create(
                       accumulatedBlock,
@@ -581,7 +587,7 @@ class BlockchainUpdaterImpl(
                       microBlock.totalResBlockSig,
                       microBlock.stateHash,
                       FinalizationVoting.combine(accumulatedBlock.header.finalizationVoting, microBlock.finalizationVoting)
-                    ) -> computedStateHash
+                    ) -> lb.data.liquidStateHash
                 }
               _ <- Either.raiseUnless(totalBlock.signatureValid()) {
                 MicroBlockAppendError("Invalid total block signature", microBlock)
@@ -600,7 +606,7 @@ class BlockchainUpdaterImpl(
             } yield {
               val BlockDiffer.Result(snapshot, carry, totalFee, updatedMdConstraint, keyBlockSnapshot, computedStateHash) = blockDifferResult
               restTotalConstraint = updatedMdConstraint
-              val blockId = ng.createBlockId(microBlock)
+              val blockId = ng.createTotalBlockId(microBlock)
 
               val transactionsRoot = ng.createTransactionsRoot(microBlock)
               blockchainUpdateTriggers.onProcessMicroBlock(microBlock, keyBlockSnapshot, this, blockId, transactionsRoot)
@@ -832,14 +838,14 @@ class BlockchainUpdaterImpl(
   override def balanceSnapshots(address: Address, from: Int, to: Option[BlockId]): Seq[BalanceSnapshot] = readLock {
     val ngSnapshotOfTo = ngState.flatMap { ng =>
       to match {
-        case Some(id) => ng.snapshotOf(id)
-        case None     => ng.snapshotOf(ng.bestLiquidBlockId)
+        case Some(id) => ng.liquidBlockOf(id)
+        case None     => ng.liquidBlockOf(ng.bestLiquidBlockId)
       }
     }
 
     ngSnapshotOfTo
-      .fold[Blockchain](rocksdb) { case (block, diff, _, _, _, _) =>
-        SnapshotBlockchain(rocksdb, diff, block, ByteStr.empty, 0L, None, None)
+      .fold[Blockchain](rocksdb) { lb =>
+        SnapshotBlockchain(rocksdb, lb.data.snapshot, lb.block, ByteStr.empty, 0L, None, None)
       }
       .balanceSnapshots(address, from, to)
   }
