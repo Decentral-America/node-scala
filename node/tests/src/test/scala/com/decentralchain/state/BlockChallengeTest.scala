@@ -154,6 +154,7 @@ class BlockChallengeTest
           .collectFirst {
             case x if x.address == challengingMinerAddr => x.balance
           }
+          .flatten
           .value shouldBe challengingEffBalanceBefore
       }
     }
@@ -566,6 +567,7 @@ class BlockChallengeTest
           .collectFirst {
             case x if x.address == challengedMinerAddr => x.balance
           }
+          .flatten
           .value shouldBe effBalanceBefore
       }
 
@@ -589,6 +591,7 @@ class BlockChallengeTest
           .collectFirst {
             case x if x.address == challengedMinerAddr => x.balance
           }
+          .flatten
           .value shouldBe 0 // expectedEffectiveBalance // NOTE: Expected effective balance is 0 after challenge
       }
     }

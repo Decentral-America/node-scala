@@ -126,7 +126,11 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
     }
 
     log.debug("Request at future height")
-    Get(routePath(s"/at/${domain.blockchain.height + 1}")) ~> route ~> check {
+    // Upstream PR #4034 made this endpoint NG-aware: a request for a height within the current or
+    // next generation period now succeeds (fixing "doesn't work correctly for future heights") --
+    // so height + 1 alone no longer 404s. Use a height far enough ahead to still be genuinely
+    // out of range, to keep testing the real 404 case.
+    Get(routePath(s"/at/${domain.blockchain.height + 10000}")) ~> route ~> check {
       status shouldBe StatusCodes.NotFound
     }
 
@@ -147,7 +151,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
     }
 
     log.debug("After conflict endorsement, request at future height")
-    Get(routePath(s"/at/${domain.blockchain.height + 1}")) ~> route ~> check {
+    Get(routePath(s"/at/${domain.blockchain.height + 10000}")) ~> route ~> check {
       status shouldBe StatusCodes.NotFound
     }
   }

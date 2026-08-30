@@ -92,6 +92,7 @@ class ConflictEndorserBlocksBasicSuite extends BaseFinalizationSpec {
       d.generatorsApi
         .generators(Height(d.blockchain.height))
         .collectFirst { case x if x.address == conflictGeneratorAddr => x.balance }
+        .flatten
         .getOrElse(0L)
 
     override def after2WithCommitmentsCheck              = _ shouldBe 0
