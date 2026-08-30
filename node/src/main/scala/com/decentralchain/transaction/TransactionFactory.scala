@@ -24,6 +24,19 @@ import com.decentralchain.utils.Time
 import com.decentralchain.wallet.Wallet
 import play.api.libs.json.{JsObject, JsValue}
 
+/** Task 12 (upstream-sync-port plan) decision: upstream's PR #4037 collapsed this into a much smaller
+  * `object TransactionFactory` with one generic `parseRequestAndSign`/`parseRequest` dispatch, relying
+  * on every request type already implementing `TxBroadcastRequest[A]`'s `toTxFrom`/`toTx`. DCC's
+  * version below is more verbose (one explicit signAndFind-style method per transaction type) but is
+  * functionally equivalent -- confirmed by comparing every case: same wallet-lookup/signing sequence,
+  * same `parseRequestAndSign`/`fromSignedRequest` dispatch tables (including `commitToGeneration`,
+  * already confirmed in Task 6 to be behaviorally equivalent to upstream's `mkPopSignature`-based
+  * auto-signing, just structurally different). No missing case, no bug found relative to upstream.
+  * Given only 2 real call sites (`TransactionsApiRoute.scala`, `UtilApp.scala`) construct this class,
+  * a full architectural rewrite to the object-based form was judged not worth the risk/effort for a
+  * pure DRY cleanup with no functional or security change -- deliberately not done. Flagging per this
+  * plan's standing rule rather than silently skipping.
+  */
 class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[GenerationPeriod]) {
   def transferAsset(request: TransferRequest): Either[ValidationError, TransferTransaction] =
     for {
