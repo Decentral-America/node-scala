@@ -11,8 +11,8 @@ case class BlockEndorsement(
     endorsedId: BlockId,
     signature: BlsSignature
 ) {
-  def signatureValid(endorserPublicKey: BlsPublicKey): Boolean =
-    BlsUtils.verifyBasic(signature.byteStr.arr, BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId), endorserPublicKey.arr).isRight
+  def signatureValid(endorserPublicKey: BlsPublicKey): Either[String, Unit] =
+    BlsUtils.verifyBasic(signature.byteStr.arr, BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId), endorserPublicKey.arr)
 }
 
 object BlockEndorsement {

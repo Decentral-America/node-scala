@@ -89,11 +89,15 @@ package object appender {
       log: Logger,
       verify: Boolean,
       txSignParCheck: Boolean
-  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] =
+  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] = {
+    // The block can reference only one of the latest liquid blocks. We have to validate the new block
+    // against a state by this reference, not the live tip -- which may have moved on to a different
+    // liquid block since this one was received (upstream PR #4034).
+    val blockchain = blockchainUpdater.referencedBlockchain(block.header.reference) // Safe to use, see BlockAppender.apply
     for {
-      data                  <- findBlockAndGetGenerators(blockchainUpdater, block)
+      data                  <- findBlockAndGetGenerators(blockchain, block)
       (hitSource, balances) <-
-        if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(block, data.parentHeight)
+        if (verify) validateBlock(blockchain, pos, time, data.generatorSet)(block, data.parentHeight)
         else pos.validateGenerationSignature(block).map(_ -> Seq.empty)
       applyResult <-
         metrics.appendBlock
@@ -102,7 +106,7 @@ package object appender {
               .processBlock(
                 block,
                 hitSource,
-                snapshot.map(responseToSnapshot(block, Height(blockchainUpdater.height + 1))),
+                snapshot.map(responseToSnapshot(block, Height(blockchain.height + 1))),
                 balances,
                 challengedHitSource = None,
                 verify,
@@ -124,6 +128,7 @@ package object appender {
             case res => res
           }
     } yield applyResult
+  }
 
   private[appender] def appendExtensionBlock(
       blockchainUpdater: BlockchainUpdater & Blockchain,
@@ -313,6 +318,7 @@ package object appender {
   )(
       conflictingEndorsement: BlockEndorsement
   ): Either[String, Unit] = for {
+    _ <- Either.raiseWhen(commitedGenerators.isEmpty)("No one committed")
     (address, blsPublicKey) <- commitedGenerators
       .lift(conflictingEndorsement.endorserIndex.toInt)
       .toRight(s"Invalid conflicting endorser index ${conflictingEndorsement.endorserIndex}")
@@ -336,7 +342,7 @@ package object appender {
     _ <- Either.raiseWhen(conflictingEndorsement.finalizedId == finalizedBlock.id()) {
       s"Contains expected finalized block: ${conflictingEndorsement.finalizedId}"
     }
-    _ <- Either.raiseUnless(conflictingEndorsement.signatureValid(blsPublicKey))(s"Invalid conflicting endorsement signature from $address")
+    _ <- conflictingEndorsement.signatureValid(blsPublicKey).leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
   } yield ()
 
   def validateFinalizationVoting(block: Block, blockchain: Blockchain, generatorSet: GeneratorSet): Either[ValidationError, GeneratorSet] =
