@@ -36,7 +36,7 @@ class HotStuffQuorumSpecification extends FlatSpec {
   "formQC" should "build a verifiable QC at >= 2/3 stake" in {
     val qc = HotStuffQuorum.formQC(Seq(vote(0), vote(1), vote(2)), committee).toOption.get
     qc.signerIndexes should be(Seq(0, 1, 2))
-    HotStuffQuorum.verifyQC(qc, committee) should be(Right(true))
+    HotStuffQuorum.verifyQC(qc, committee) should be(Right(()))
   }
 
   it should "de-duplicate repeated voters" in {
@@ -56,11 +56,11 @@ class HotStuffQuorumSpecification extends FlatSpec {
   "verifyQC" should "reject a QC whose signer set is below quorum" in {
     val aggSig = Seq(vote(0), vote(1)).map(_.signature.arr).reduceLeft(BlsUtils.aggSign)
     val badQc  = QuorumCertificate(view, phase, blockId, height, Seq(0, 1), ByteStr(aggSig))
-    HotStuffQuorum.verifyQC(badQc, committee).getOrElse(false) should be(false)
+    HotStuffQuorum.verifyQC(badQc, committee).isLeft should be(true)
   }
 
   it should "reject a QC with a forged aggregate signature" in {
     val forged = QuorumCertificate(view, phase, blockId, height, Seq(0, 1, 2), ByteStr(Array.fill[Byte](96)(0)))
-    HotStuffQuorum.verifyQC(forged, committee).getOrElse(false) should be(false)
+    HotStuffQuorum.verifyQC(forged, committee).isLeft should be(true)
   }
 }

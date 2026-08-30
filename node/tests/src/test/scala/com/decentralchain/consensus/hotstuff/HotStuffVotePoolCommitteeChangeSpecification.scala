@@ -104,7 +104,7 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
       val (_, qcAfterThird) = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4)
       // {0,1,2} = 80 stake, clears the original committee's 67 threshold.
       qcAfterThird.isDefined should be(true)
-      HotStuffQuorum.verifyQC(qcAfterThird.get, committeeOf4) should be(Right(true))
+      HotStuffQuorum.verifyQC(qcAfterThird.get, committeeOf4) should be(Right(()))
     }
 
   "HotStuffVotePool.onVote, when the committee GROWS mid-accumulation before quorum is reached" should
@@ -150,7 +150,7 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
       val (afterV2, qc2) = HotStuffVotePool.onVote(afterV1, voteOf(2), equalC1)
       qc2.isDefined should be(true)                                 // stall is closed: a QC does form
       qc2.get.signerIndexes.sorted should be(Seq(0, 1, 2))          // and the removed signer 3 is NOT in it
-      HotStuffQuorum.verifyQC(qc2.get, equalC1) should be(Right(true))
+      HotStuffQuorum.verifyQC(qc2.get, equalC1) should be(Right(()))
       afterV2.pending should be(empty)                              // bucket cleared on emit
     }
 
@@ -165,6 +165,6 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
       val (_, qc)          = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4)
 
       qc.isDefined should be(true)
-      HotStuffQuorum.verifyQC(qc.get, committeeOf4) should be(Right(true))
+      HotStuffQuorum.verifyQC(qc.get, committeeOf4) should be(Right(()))
     }
 }

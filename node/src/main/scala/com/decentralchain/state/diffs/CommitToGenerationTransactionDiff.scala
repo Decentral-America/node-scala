@@ -19,8 +19,11 @@ object CommitToGenerationTransactionDiff {
         GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
       }
       _ <- Either.raiseUnless(
-        BlsUtils.verifyBasic(tx.commitmentSignature.arr, tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray, tx.endorserPublicKey.arr)
+        BlsUtils.verifyBasic(tx.commitmentSignature.arr, tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray, tx.endorserPublicKey.arr).isRight
       )(GenericError("Invalid commitment signature"))
+      // Full curve validation (in-group, not point-at-infinity) at the actual enforcement point: once,
+      // when the key is trusted going forward as a committed generator -- not on every deserialization.
+      _ <- tx.endorserPublicKey.validated.leftMap(GenericError(_))
       _ <- blockchain.committedGenerators(next).foldLeft(Either.unit[GenericError]) {
         case (r @ Left(_), _)          => r
         case (Right(_), (addr, blsPk)) =>
@@ -39,9 +42,10 @@ object CommitToGenerationTransactionDiff {
         nextCommittedGenerators = Seq(tx.sender -> tx.endorserPublicKey)
       )
       generatingBalanceAfterDeposit = SnapshotBlockchain(blockchain, snapshot).generatingBalance(sender)
-      _ <- Either.raiseUnless(generatingBalanceAfterDeposit >= GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2)(
+      minMiningBalance = GeneratingBalanceProvider.minMiningBalance(blockchain, Height(blockchain.height))
+      _ <- Either.raiseUnless(generatingBalanceAfterDeposit >= minMiningBalance)(
         GenericError(
-          s"Generating balance $generatingBalanceAfterDeposit is less than ${GeneratingBalanceProvider.MinimalEffectiveBalanceForGenerator2} required for block generation"
+          s"Generating balance $generatingBalanceAfterDeposit is less than $minMiningBalance required for block generation"
         )
       )
     } yield snapshot

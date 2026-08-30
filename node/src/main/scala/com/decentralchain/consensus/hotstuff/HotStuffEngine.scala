@@ -62,9 +62,8 @@ object HotStuffEngine {
       (state, Seq(HotStuffAction.Rejected(s"QC rejected: committee epoch ${qc.committeeEpoch} not acceptable (current=${state.committeeEpoch})")))
     else
       HotStuffQuorum.verifyQC(qc, state.committee) match {
-        case Left(err)    => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
-        case Right(false) => (state, Seq(HotStuffAction.Rejected("QC signature verification failed")))
-        case Right(true)  =>
+        case Left(err) => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
+        case Right(_)  =>
           val advanced = state.copy(
             safety = HotStuffSafety.update(qc, state.safety),
             pacemaker = HotStuffPacemaker.onQC(qc.view, state.pacemaker)
@@ -94,7 +93,7 @@ object HotStuffEngine {
       extendsBranch: (BlockId, BlockId) => Boolean
   ): (EngineState, Boolean) = {
     val justifyEpochOk = proposal.justify.forall(qc => HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
-    val justifyValid   = justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).contains(true))
+    val justifyValid   = justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).isRight)
     if (!justifyValid) (state, false)
     else {
       val caughtUp   = proposal.justify.fold(state)(qc => state.copy(safety = HotStuffSafety.update(qc, state.safety)))

@@ -63,7 +63,7 @@ object HotStuffQuorum {
     */
   def verifyVote(vote: HotStuffVote, committee: GeneratorSet): Boolean =
     committee.find(_.index.toInt == vote.voterIndex).exists { gi =>
-      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr)
+      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr).isRight
     }
 
   private def stakeOf(indexes: Set[Int], committee: GeneratorSet): BigInt = {
@@ -99,9 +99,8 @@ object HotStuffQuorum {
           else {
             val signerIndexes = distinct.map(_.voterIndex).sorted
             if (!hasQuorum(signerIndexes, committee)) Left("signing stake below 2/3 quorum")
-            else {
-              val aggregatedSignature = distinct.map(_.signature.arr).reduceLeft(BlsUtils.aggSign)
-              Right(
+            else
+              BlsUtils.aggSig(distinct.map(_.signature.arr)).map { aggregatedSignature =>
                 QuorumCertificate(
                   head.view,
                   head.phase,
@@ -111,8 +110,7 @@ object HotStuffQuorum {
                   ByteStr(aggregatedSignature),
                   head.committeeEpoch
                 )
-              )
-            }
+              }
           }
         }
     }
@@ -127,7 +125,7 @@ object HotStuffQuorum {
     * decision is `acceptableCommitteeEpoch` above, applied by the caller (`HotStuffEngine.onQC`/
     * `onProposal`) which alone knows what epoch it currently believes is active.
     */
-  def verifyQC(qc: QuorumCertificate, committee: GeneratorSet): Either[String, Boolean] = {
+  def verifyQC(qc: QuorumCertificate, committee: GeneratorSet): Either[String, Unit] = {
     val byIndex   = committee.iterator.map(g => g.index.toInt -> g).toMap
     val signerOpt = qc.signerIndexes.map(byIndex.get)
     if (signerOpt.exists(_.isEmpty)) Left("QC references unknown committee member")

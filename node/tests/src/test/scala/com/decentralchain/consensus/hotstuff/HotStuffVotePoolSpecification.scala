@@ -42,7 +42,7 @@ class HotStuffVotePoolSpecification extends FlatSpec {
     val (p2, _)  = HotStuffVotePool.onVote(p1, vote(1), committee)
     val (p3, qc) = HotStuffVotePool.onVote(p2, vote(2), committee) // 3/4 = 75% >= 2/3
     qc.isDefined should be(true)
-    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(true))
+    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(()))
     p3.pending should be(empty) // bucket cleared on emit
   }
 
@@ -77,7 +77,7 @@ class HotStuffVotePoolSpecification extends FlatSpec {
     val (p2, _) = HotStuffVotePool.onVote(p1, voteAtHeight(1, 103), committee)
     val (_, qc) = HotStuffVotePool.onVote(p2, voteAtHeight(2, 103), committee)
     qc.isDefined should be(true)
-    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(true))
+    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(()))
   }
 
   it should "pool distinct targets separately" in {
@@ -118,6 +118,6 @@ class HotStuffVotePoolSpecification extends FlatSpec {
     val (q2, _) = HotStuffVotePool.onVote(q1, voteAtView(1, 7), committee)
     val (_, qc) = HotStuffVotePool.onVote(q2, voteAtView(2, 7), committee)
     qc.isDefined should be(true)
-    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(true))
+    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(()))
   }
 }

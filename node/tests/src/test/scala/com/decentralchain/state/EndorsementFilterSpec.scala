@@ -10,7 +10,8 @@ class EndorsementFilterSpec extends FreeSpec {
   "takes with higher balance first" in {
     val filter = EndorsementFilter(
       maxValidEndorsers = 10,
-      miner = Some(GeneratorIndex(15)),
+      miner = GeneratorIndex(15),
+      isMiner = true,
       finalizedId = TxHelpers.randomBlockId,
       finalizedHeight = Height(1),
       endorsedId = TxHelpers.randomBlockId,
@@ -45,7 +46,8 @@ class EndorsementFilterSpec extends FreeSpec {
   "takes only maxValidEndorsers" in {
     val filter = EndorsementFilter(
       maxValidEndorsers = 5,
-      miner = Some(GeneratorIndex(1)),
+      miner = GeneratorIndex(1),
+      isMiner = true,
       finalizedId = TxHelpers.randomBlockId,
       finalizedHeight = Height(1),
       endorsedId = TxHelpers.randomBlockId,

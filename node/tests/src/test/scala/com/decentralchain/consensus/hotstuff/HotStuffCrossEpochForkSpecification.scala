@@ -99,8 +99,8 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
       // Both QCs independently pass verification against the committee that (honestly) produced
       // them -- exactly what a receiving replica would do if it accepted "the committee for this
       // QC's view" from whichever committee snapshot it happened to have on hand.
-      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(true))
-      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(true))
+      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(()))
 
       // The fork condition itself: same view, same height, different blockId.
       qcA.view should be(qcB.view)
@@ -159,14 +159,14 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
       qcB.committeeEpoch should be(epochB)
 
       // Each QC still verifies fine against its OWN committee (no regression to the happy path).
-      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(true))
-      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(true))
+      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(()))
 
       // The tamper-evidence property: relabeling qcA's committeeEpoch to claim it was epochB does NOT
       // make it pass as an epochB QC -- the aggregated BLS signature was computed over bytes that
       // included epochA, so re-verifying against the relabeled epoch's canonical bytes fails.
       val relabeled = qcA.copy(committeeEpoch = epochB)
-      HotStuffQuorum.verifyQC(relabeled, committeeEpochA) should be(Right(false))
+      HotStuffQuorum.verifyQC(relabeled, committeeEpochA) shouldBe a[Left[?, ?]]
     }
 
   "formQC" should

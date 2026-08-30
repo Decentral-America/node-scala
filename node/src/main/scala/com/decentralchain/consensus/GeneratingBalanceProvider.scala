@@ -18,6 +18,15 @@ object GeneratingBalanceProvider {
         .get(BlockchainFeatures.SmallerMinimalGeneratingBalance.id)
         .exists(height >= _) && generatingBalance >= MinimalEffectiveBalanceForGenerator2
 
+  /** The minimal generating balance required for block generation at `height`, feature-gated the same
+    * way [[isMiningAllowed]] is -- used at points (like registering a committed generator) that need
+    * the threshold itself, not just a yes/no check against an already-known balance.
+    */
+  def minMiningBalance(blockchain: Blockchain, height: Height): Long =
+    if (blockchain.activatedFeatures.get(BlockchainFeatures.SmallerMinimalGeneratingBalance.id).exists(height >= _))
+      MinimalEffectiveBalanceForGenerator2
+    else MinimalEffectiveBalanceForGenerator1
+
   def isGeneratingBalanceValid(blockchain: Blockchain, height: Height, timestampMs: Long, balance: Long): Boolean =
     timestampMs < blockchain.settings.functionalitySettings.minimalGeneratingBalanceAfter
       || isMiningAllowed(blockchain, height, balance)
