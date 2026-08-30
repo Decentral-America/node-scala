@@ -187,7 +187,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
             settings,
             time,
             pos,
-            appendBlock = BlockAppender(blockchainUpdater, time, utxStorage, pos, blockEndorser, appenderScheduler)(_, None)
+            // BlockEndorser is disabled, because the challenging block doesn't contain finalization
+            // voting header (upstream PR #4034).
+            appendBlock = BlockAppender(blockchainUpdater, time, utxStorage, pos, BlockEndorser.Disabled, appenderScheduler)(_, None)
           )
         )
       } else None
