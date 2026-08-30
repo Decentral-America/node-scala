@@ -404,7 +404,7 @@ class ProtoVersionTransactionsSpec
         .create(
           TxVersion.V1,
           account.publicKey,
-          asset.id,
+          asset,
           "Test",
           "Test",
           ntpNow,

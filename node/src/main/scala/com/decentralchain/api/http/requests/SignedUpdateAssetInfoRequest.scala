@@ -29,7 +29,7 @@ case class SignedUpdateAssetInfoRequest(
         .traverse(parseBase58(_, "invalid.assetId", AssetIdStringLength).map(IssuedAsset(_)))
         .map(_ getOrElse Dcc)
       tx <- UpdateAssetInfoTransaction
-        .create(version, _sender, assetId.id, name, description, timestamp, fee, _feeAssetId, proofs, chainId)
+        .create(version, _sender, assetId, name, description, timestamp, fee, _feeAssetId, proofs, chainId)
     } yield tx
 
 }

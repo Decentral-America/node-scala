@@ -316,7 +316,7 @@ object PBTransactions {
         UpdateAssetInfoTransaction.create(
           version.toByte,
           sender.toPublicKey,
-          assetId.toByteStr,
+          IssuedAsset(assetId.toByteStr),
           name,
           description,
           timestamp,
@@ -328,11 +328,12 @@ object PBTransactions {
 
       case Data.CommitToGeneration(CommitToGenerationTransactionData(generationPeriodStart, endorserPublicKey, commitmentSignature, `empty`)) =>
         for {
-          sig <- BlsSignature(commitmentSignature.toByteArray)
-          tx  <- CommitToGenerationTransaction.create(
+          sig   <- BlsSignature(commitmentSignature.toByteArray)
+          blsPk <- BlsPublicKey(endorserPublicKey.toByteStr)
+          tx    <- CommitToGenerationTransaction.create(
             version.toByte,
             sender.toPublicKey,
-            BlsPublicKey(endorserPublicKey.toByteStr).explicitGet(),
+            blsPk,
             Height(generationPeriodStart),
             timestamp,
             feeAmount,
@@ -424,7 +425,7 @@ object PBTransactions {
           alias,
           TxPositiveAmount.unsafeFrom(feeAmount),
           timestamp,
-          Proofs(signature),
+          proofs,
           chainId
         )
 

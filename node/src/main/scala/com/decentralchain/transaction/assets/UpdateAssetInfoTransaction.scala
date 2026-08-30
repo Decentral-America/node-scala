@@ -59,7 +59,7 @@ object UpdateAssetInfoTransaction extends TransactionParser {
   def create(
       version: Byte,
       sender: PublicKey,
-      assetId: ByteStr,
+      assetId: IssuedAsset,
       name: String,
       description: String,
       timestamp: TxTimestamp,
@@ -73,7 +73,7 @@ object UpdateAssetInfoTransaction extends TransactionParser {
       tx  <- UpdateAssetInfoTransaction(
         version,
         sender,
-        IssuedAsset(assetId),
+        assetId,
         name,
         description,
         timestamp,
@@ -95,7 +95,7 @@ object UpdateAssetInfoTransaction extends TransactionParser {
       feeAsset: Asset,
       chainId: Byte = AddressScheme.current.chainId
   ): Either[ValidationError, UpdateAssetInfoTransaction] =
-    create(version, sender.publicKey, assetId, name, description, timestamp, feeAmount, feeAsset, Proofs.empty, chainId)
+    create(version, sender.publicKey, IssuedAsset(assetId), name, description, timestamp, feeAmount, feeAsset, Proofs.empty, chainId)
       .map(_.signWith(sender.privateKey))
 
   override def parseBytes(bytes: Array[Byte]): Try[UpdateAssetInfoTransaction] =

@@ -6,7 +6,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.DigestLength
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.test.PropSpec
-import com.decentralchain.transaction.Asset.Dcc
+import com.decentralchain.transaction.Asset.{Dcc, IssuedAsset}
 import com.decentralchain.transaction.TxValidationError.{InvalidName, TooBigArray}
 import com.decentralchain.transaction.assets.IssueTransaction.{MaxAssetDescriptionLength, MaxAssetNameLength, MinAssetNameLength}
 import com.decentralchain.transaction.assets.UpdateAssetInfoTransaction
@@ -51,7 +51,7 @@ class UpdateAssetInfoTransactionSpecification extends PropSpec {
     UpdateAssetInfoTransaction.create(
       version = TxVersion.V1,
       sender = TxHelpers.signer(1).publicKey,
-      assetId = ByteStr.fill(DigestLength)(1),
+      assetId = IssuedAsset(ByteStr.fill(DigestLength)(1)),
       name = name,
       description = description,
       timestamp = System.currentTimeMillis(),
