@@ -387,6 +387,17 @@ class BlockchainUpdaterImpl(
                           metrics.microBlockForkHeightStats.record(discarded.size)
                         }
 
+                        // Task D fix: read the FinalizationState AS OF the block actually being
+                        // persisted (block.header.reference, i.e. referencedForgedBlock's own total
+                        // block id) rather than ng.finalizationState -- which is the LATEST across
+                        // every microblock ever appended to this liquid period, including ones that
+                        // turned out to be discarded (a later key block referencing an earlier
+                        // microblock instead). Using the latest unconditionally lets a discarded
+                        // microblock's finalizedHeight/generatorSet/conflictGenerators advance leak
+                        // into a chain that no longer contains it -- a real, confirmed cross-node
+                        // finalization divergence.
+                        val referencedFinalizationState = ng.finalizationStateFor(block.header.reference)
+
                         // Careful! This affects referencedBlockchain and extendedBlockchain, e.g. height
                         rocksdb.append(
                           liquidSnapshotWithCancelledLeases,
@@ -396,8 +407,8 @@ class BlockchainUpdaterImpl(
                           prevHitSource,
                           referencedComputedStateHash,
                           referencedForgedBlock, // It writes the referencedForgedBlock, not a block!
-                          ng.finalizationState.finalizedHeight,
-                          ng.finalizationState.generatorSet
+                          referencedFinalizationState.finalizedHeight,
+                          referencedFinalizationState.generatorSet
                         )
                         BlockStats.appended(referencedForgedBlock, referencedLiquidSnapshot.scriptsComplexity)
                         TxsInBlockchainStats.record(ng.transactions.size)

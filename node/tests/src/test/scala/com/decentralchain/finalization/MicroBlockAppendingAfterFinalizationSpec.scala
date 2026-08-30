@@ -148,7 +148,7 @@ class MicroBlockAppendingAfterFinalizationSpec extends BaseFinalizationSpec {
         signer = Some(generator2),
         finalizationVoting = Some(
           mkFinalizationVoting(valid = Seq(generator1Idx))
-            .signed(endorsedId = block3.id(), finalizedId = genesisBlockId, validEndorsers = generator1)
+            .signed(endorsedId = block3.header.reference, finalizedId = genesisBlockId, validEndorsers = generator1)
         )
       )(TxHelpers.transfer(generator1, generator2Addr))
       d.appendMicroBlockE(microBlockWithTxn1) should beRight
@@ -165,7 +165,7 @@ class MicroBlockAppendingAfterFinalizationSpec extends BaseFinalizationSpec {
         signer = Some(generator2),
         finalizationVoting = Some(
           mkFinalizationVoting(valid = Seq(generator3Idx))
-            .signed(endorsedId = block3.id(), finalizedId = genesisBlockId, validEndorsers = generator3)
+            .signed(endorsedId = block3.header.reference, finalizedId = genesisBlockId, validEndorsers = generator3)
         )
       )(TxHelpers.transfer(generator1, generator2Addr))
       d.appendMicroBlockE(microBlockWithTxn3) should beRight

@@ -73,7 +73,14 @@ case class NgState(
     leasesToCancel: Map[ByteStr, StateSnapshot],
     finalizationState: FinalizationState,
     microSnapshots: VectorMap[BlockId, (microBlock: MicroBlock, data: BlockData, receivedTimestampMs: Long)] = VectorMap.empty,
-    internalCaches: NgStateCaches = new NgStateCaches
+    internalCaches: NgStateCaches = new NgStateCaches,
+    // Task D fix (finalization-state rollback bug): a per-totalBlockId snapshot of FinalizationState,
+    // taken AT append time for each microblock (plus the base block, captured lazily on the first
+    // append). Without this, referencing an EARLIER microblock (the next key block discarding a later,
+    // already-appended one) has no way to recover finalizedHeight/generatorSet/conflictGenerators AS OF
+    // that earlier point -- only "the latest", which silently includes the discarded microblock's
+    // effects. See BlockchainUpdaterImpl.scala's use of `finalizationStateFor`.
+    finalizationSnapshots: Map[BlockId, FinalizationState] = Map.empty
 ) {
   def cancelExpiredLeases(snapshot: StateSnapshot): StateSnapshot =
     leasesToCancel
@@ -175,12 +182,28 @@ case class NgState(
       )
     )
 
+    // Capture the base block's own pre-append FinalizationState the first time anything is appended
+    // (before this call, `this.finalizationState` still IS that original value -- once we `.copy` it
+    // below it would otherwise be lost for good, since nothing else remembers "as of the base block").
+    val baseSnapshot          = if (this.microSnapshots.isEmpty) Map(base.id() -> this.finalizationState) else Map.empty
+    val finalizationSnapshots = (this.finalizationSnapshots ++ baseSnapshot).updated(fixedTotalBlockId, finalization.updatedState)
+
     internalCaches.invalidate(fixedTotalBlockId)
     this.copy(
       microSnapshots = microSnapshots,
-      finalizationState = finalization.updatedState
+      finalizationState = finalization.updatedState,
+      finalizationSnapshots = finalizationSnapshots
     )
   }
+
+  /** The FinalizationState as of `totalBlockId` (base block or a specific microblock) -- NOT
+    * necessarily the latest/current one. Use this (not the bare `finalizationState` field) whenever
+    * persisting or validating something tied to a specific referenced block, so a since-discarded
+    * microblock's effects (e.g. a finalizedHeight advance) can never leak into a chain that no longer
+    * contains it. See Task D (finalization-state rollback bug).
+    */
+  def finalizationStateFor(totalBlockId: BlockId): FinalizationState =
+    finalizationSnapshots.getOrElse(totalBlockId, finalizationState)
 
   def carryFee: Long = baseBlockCarry + microSnapshots.valuesIterator.map(_.data.carryFee).sum
 
