@@ -74,6 +74,7 @@ class ConflictEndorserRecommitmentSuite extends BaseFinalizationSpec {
       d.generatorsApi
         .generators(Height(d.blockchain.height))
         .collectFirst { case x if x.address == conflictGeneratorAddr => x.balance }
+        .flatten
         .getOrElse(0L) shouldBe balanceAfter4 - DepositInDcclets
     }
 

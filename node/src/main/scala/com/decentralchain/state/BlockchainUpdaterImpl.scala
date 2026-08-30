@@ -629,7 +629,7 @@ class BlockchainUpdaterImpl(
                 LastBlockInfo(blockId, Height(height), score, this.finalizedHeightOrFallback(maxSyncRollbackLength), ready = true)
               )
 
-              miner.scheduleMining(blockchain = None, cancelMicroBlockMining = false)
+              miner.scheduleMining(baseBlockchain = None, cancelMicroBlockMining = false)
               blockId
             }
         }

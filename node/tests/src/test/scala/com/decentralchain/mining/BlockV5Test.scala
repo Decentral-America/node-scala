@@ -446,6 +446,19 @@ class BlockV5Test extends FlatSpec with WithMiner with OptionValues with EitherV
       val bcu: BlockchainUpdaterImpl =
         new BlockchainUpdaterImpl(blockchain, settings, time, ignoreBlockchainUpdateTriggers, (_, _) => Map.empty) {
           override def activatedFeatures: Map[Short, Height] = super.activatedFeatures -- disabledFeatures.get()
+
+          // Miner.forgeBlock (upstream PR #4034's referencedBlockchain refactor) now reads feature
+          // activation off a pinned snapshot (this method's result) instead of the live blockchainUpdater,
+          // so the activatedFeatures override above alone no longer reaches it -- the snapshot is built
+          // from `rocksdb` directly, not `this`. Apply the same disabledFeatures filter to whatever
+          // Blockchain the pinned snapshot resolves to, so this test's feature-toggling still works.
+          override def referencedBlockchain(reference: ByteStr): Blockchain = {
+            val inner = super.referencedBlockchain(reference)
+            new Blockchain {
+              export inner.{activatedFeatures => _, *}
+              override def activatedFeatures: Map[Short, Height] = inner.activatedFeatures -- disabledFeatures.get()
+            }
+          }
         }
       try f(bcu)
       finally bcu.shutdown()
