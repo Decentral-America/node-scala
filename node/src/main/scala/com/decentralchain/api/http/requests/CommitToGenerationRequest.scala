@@ -57,6 +57,21 @@ case class CommitToGenerationRequest(
   }
 }
 
+/** Upstream PR #4037 collapsed the sign-path and broadcast-path request shapes for this transaction
+  * into one `TxBroadcastRequest[CommitToGenerationTransaction]`, removing the equivalent of this class
+  * and the node-side auto-signing path (`mkPopSignature` from a local `BlsKeyPair`, see
+  * `CommitToGenerationRequest.toTxFrom` above).
+  *
+  * DCC deliberately keeps both: confirmed via `git grep -rn "SignedCommitToGenerationRequest\|mkPopSignature"`
+  * that `TransactionFactory.scala` has two live call sites -- one for `/transactions/sign` (uses the
+  * auto-sign `CommitToGenerationRequest` above, letting a node fill in its own BLS PoP signature from
+  * a wallet-held key rather than requiring the caller to pre-sign) and one for `/transactions/broadcast`
+  * (uses this fully-pre-signed `SignedCommitToGenerationRequest`). Removing the auto-sign path would
+  * break the sign endpoint; this class already provides the equivalent of upstream's consolidated
+  * shape's *required* fields (senderPublicKey/endorserPublicKey/generationPeriodStart/
+  * commitmentSignature, no auto-fill) for the broadcast path. This is an intentional, permanent DCC
+  * divergence, not a remaining upstream-sync gap -- see Task 6 of the upstream-sync-port plan.
+  */
 case class SignedCommitToGenerationRequest(
     version: Option[TxVersion],
     senderPublicKey: String,
