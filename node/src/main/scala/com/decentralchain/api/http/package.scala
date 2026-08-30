@@ -18,6 +18,7 @@ import com.decentralchain.crypto
 import com.decentralchain.transaction.*
 import com.decentralchain.transaction.Asset.IssuedAsset
 import com.decentralchain.transaction.TxValidationError.GenericError
+import monix.eval.Coeval
 import monix.execution.Scheduler
 import org.slf4j.LoggerFactory
 import play.api.libs.json.*
@@ -112,21 +113,26 @@ package object http {
     }
   }
 
-  private def idOrHash(error: String => ApiError): PathMatcher1[ByteStr] = Segment.map { str =>
-    ByteStr.decodeBase58(str) match {
-      case Success(value) =>
-        if (value.arr.length == crypto.DigestLength || value.arr.length == crypto.SignatureLength) value
-        else
-          throw ApiException(
-            error(s"$str has invalid length ${value.arr.length}. Length can either be ${crypto.DigestLength} or ${crypto.SignatureLength}")
-          )
-      case Failure(exception) =>
-        throw ApiException(error(exception.getMessage))
+  private def idOrHash(error: String => ApiError): PathMatcher1[Coeval[ByteStr]] = Segment.map { str =>
+    // Throwing exceptions during route parsing can prevent the default fallback to 404, see
+    // BlocksApiRoute -- parse the Base58 segment only when the value is actually needed (upstream
+    // PR #4034).
+    Coeval.evalOnce {
+      ByteStr.decodeBase58(str) match {
+        case Success(value) =>
+          if (value.arr.length == crypto.DigestLength || value.arr.length == crypto.SignatureLength) value
+          else
+            throw ApiException(
+              error(s"$str has invalid length ${value.arr.length}. Length can either be ${crypto.DigestLength} or ${crypto.SignatureLength}")
+            )
+        case Failure(exception) =>
+          throw ApiException(error(exception.getMessage))
+      }
     }
   }
 
-  val TransactionId: PathMatcher1[ByteStr] = idOrHash(InvalidTransactionId.apply)
-  val BlockId: PathMatcher1[ByteStr]       = idOrHash(InvalidBlockId.apply)
+  val TransactionId: PathMatcher1[Coeval[ByteStr]] = idOrHash(InvalidTransactionId.apply)
+  val BlockId: PathMatcher1[Coeval[ByteStr]]       = idOrHash(InvalidBlockId.apply)
 
   val AssetId: PathMatcher1[IssuedAsset] = base58Segment(Some(crypto.DigestLength), _ => InvalidAssetId).map(IssuedAsset(_))
 

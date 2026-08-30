@@ -7,6 +7,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
 import com.decentralchain.common.utils.{Base58, Base64, FastBase58}
 import com.decentralchain.crypto.{P256Curve, Sha256}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.lang.script.{Script, ScriptReader}
@@ -25,6 +26,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.util
 import scala.annotation.nowarn
+import scala.util.Random
 
 //noinspection ScalaStyle
 // NOTE: REST API methods retained for backward compatibility
@@ -362,6 +364,22 @@ object UtilApp {
       val publicKey = Base64.decode("KdU/1vG5aM0TC1WRHYmV8ByD6oabSRj7vHVvqIWYn0h60Ihc/FT/NvVgBTMG8rnVnEF+AeojruMo22LjhGDo7A==")
       require(util.Arrays.equals(hash, Sha256.hash(message)), "hash mismatch")
       require(P256Curve.verify(message, signature, publicKey).explicitGet(), "invalid signature")
+
+      // BLS aggregation smoke test (upstream PR #4034) -- DCC's finality/HotStuff path depends on this
+      // exact primitive (BlockEndorsement aggregate signatures), so exercise it here too, not just P-256.
+      val blsSK1bs = new Array[Byte](32)
+      Random.nextBytes(blsSK1bs)
+      val blsSK1  = BlsKeyPair(PrivateKey(blsSK1bs))
+      val blsSig1 = blsSK1.sign(message)
+
+      val blsSK2bs = new Array[Byte](32)
+      Random.nextBytes(blsSK2bs)
+      val blsSK2  = BlsKeyPair(PrivateKey(blsSK2bs))
+      val blsSig2 = blsSK2.sign(message)
+
+      val aggSig = BlsSignature.agg(Seq(blsSig1, blsSig2)).explicitGet()
+      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey)).explicitGet()
+
       Right(Array.emptyByteArray)
     }
   }
