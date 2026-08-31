@@ -44,17 +44,17 @@ object CryptoContext {
   private def digestAlgValue(tpe: CASETYPEREF): ContextfulVal[NoContext] =
     ContextfulVal.pure(CaseObj(tpe, Map.empty))
 
-  def build(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean, fixGroth16: Boolean = false): CTX[NoContext] =
+  def build(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean): CTX[NoContext] =
     ctxCache.getOrElse(
-      (global, version, fixEcrecover, fixGroth16),
+      (global, version, fixEcrecover),
       ctxCache.synchronized {
-        ctxCache.getOrElseUpdate((global, version, fixEcrecover, fixGroth16), buildNew(global, version, fixEcrecover, fixGroth16))
+        ctxCache.getOrElseUpdate((global, version, fixEcrecover), buildNew(global, version, fixEcrecover))
       }
     )
 
-  private val ctxCache = mutable.HashMap.empty[(BaseGlobal, StdLibVersion, Boolean, Boolean), CTX[NoContext]]
+  private val ctxCache = mutable.HashMap.empty[(BaseGlobal, StdLibVersion, Boolean), CTX[NoContext]]
 
-  private def buildNew(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean, fixGroth16: Boolean): CTX[NoContext] = {
+  private def buildNew(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean): CTX[NoContext] = {
     def functionFamily(
         startId: Short,
         nameByLimit: Int => String,
@@ -510,26 +510,6 @@ object CryptoContext {
           notImplemented[Id, EVALUATED]("groth16Verify(vk:ByteVector, proof:ByteVector, inputs:ByteVector)", xs)
       }
 
-    // Feature-28: modern BLS12-381 verifier (fastcrypto-zkp, arkworks wire format).
-    // Activated at BlockchainFeature(28). VK/proof use arkworks compressed serialization
-    // (native snarkjs/circom output). Inputs are little-endian field scalars.
-    // Only present in context when fixGroth16 = true (i.e. Feature 28 is active).
-    val bls12Groth16VerifyV2F: BaseFunction[NoContext] =
-      NativeFunction(
-        "groth16Verify_v2",
-        2700,
-        BLS12_GROTH16_VERIFY_V2,
-        BOOLEAN,
-        ("verifying key", BYTESTR),
-        ("proof", BYTESTR),
-        ("inputs", BYTESTR)
-      ) {
-        case CONST_BYTESTR(vk) :: CONST_BYTESTR(proof) :: CONST_BYTESTR(inputs) :: Nil =>
-          Right(CONST_BOOLEAN(global.groth16VerifyV2(vk.arr, proof.arr, inputs.arr)))
-        case xs =>
-          notImplemented[Id, EVALUATED]("groth16Verify_v2(vk:ByteVector, proof:ByteVector, inputs:ByteVector)", xs)
-      }
-
     val bn256Groth16VerifyF: BaseFunction[NoContext] =
       NativeFunction(
         "bn256Groth16Verify",
@@ -667,9 +647,6 @@ object CryptoContext {
         fromBase16String(checkLength = false)
       )
 
-    // Feature-28 V2 opcode: only exposed in context when fixGroth16 is active.
-    val groth16V2Functions = if (fixGroth16) Array(bls12Groth16VerifyV2F) else Array.empty[BaseFunction[NoContext]]
-
     def fromV4Functions(version: StdLibVersion) =
       Array(
         bls12Groth16VerifyF,
@@ -681,7 +658,7 @@ object CryptoContext {
         fromBase16String(checkLength = true) // from V3
       ) ++ sigVerifyL ++ rsaVerifyL(
         version
-      ) ++ keccak256F_lim ++ blake2b256F_lim ++ sha256F_lim ++ bls12Groth16VerifyL ++ bn256Groth16VerifyL ++ groth16V2Functions
+      ) ++ keccak256F_lim ++ blake2b256F_lim ++ sha256F_lim ++ bls12Groth16VerifyL ++ bn256Groth16VerifyL
 
     val fromV9Functions = fromV4Functions(V9) ++ Array(
       fromBase64String_1C,
@@ -710,11 +687,10 @@ object CryptoContext {
   def evalContext[F[_]: Monad](
       global: BaseGlobal,
       version: StdLibVersion,
-      fixEcrecover: Boolean,
-      fixGroth16: Boolean = false
+      fixEcrecover: Boolean
   ): EvaluationContext[NoContext, F] =
-    build(global, version, fixEcrecover, fixGroth16).evaluationContext[F]
+    build(global, version, fixEcrecover).evaluationContext[F]
 
-  def compilerContext(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean, fixGroth16: Boolean = false): CompilerContext =
-    build(global, version, fixEcrecover, fixGroth16).compilerContext
+  def compilerContext(global: BaseGlobal, version: StdLibVersion, fixEcrecover: Boolean): CompilerContext =
+    build(global, version, fixEcrecover).compilerContext
 }

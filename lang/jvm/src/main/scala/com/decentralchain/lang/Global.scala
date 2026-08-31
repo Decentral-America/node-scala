@@ -11,7 +11,6 @@ import com.decentralchain.lang.v1.evaluator.ctx.impl.Rounding
 import com.decentralchain.lang.v1.evaluator.ctx.impl.crypto.RSA
 import com.decentralchain.lang.v1.evaluator.ctx.impl.crypto.RSA.DigestAlgorithm
 import com.decentralchain.groth16.bls12.Groth16 as Bls12Groth16
-import com.decentralchain.groth16.bls12.Groth16V2 as Bls12Groth16V2
 import com.decentralchain.groth16.bn256.Groth16 as Bn256Groth16
 import org.web3j.crypto.Sign
 import org.web3j.crypto.Sign.SignatureData
@@ -171,9 +170,6 @@ object Global extends BaseGlobal {
 
   override def bn256Groth16Verify(verifyingKey: Array[Byte], proof: Array[Byte], inputs: Array[Byte]): Boolean =
     Bn256Groth16.verify(verifyingKey, proof, inputs)
-
-  override def groth16VerifyV2(verifyingKey: Array[Byte], proof: Array[Byte], inputs: Array[Byte]): Boolean =
-    Bls12Groth16V2.verify(verifyingKey, proof, inputs)
 
   override def ecrecover(messageHash: Array[Byte], signature: Array[Byte], handleLeadingZerosInPublicKey: Boolean): Array[Byte] = {
     // https://github.com/web3j/web3j/blob/master/crypto/src/test/java/org/web3j/crypto/ECRecoverTest.java#L43

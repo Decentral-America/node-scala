@@ -126,8 +126,6 @@ object FunctionIds {
 
   val BLS12_GROTH16_VERIFY: Short = 800
   val BN256_GROTH16_VERIFY: Short = 801
-  // Feature-28: modern BLS12-381 verifier (fastcrypto-zkp, arkworks wire format)
-  val BLS12_GROTH16_VERIFY_V2: Short = 802
 
   val ECRECOVER: Short           = 900
   val CALCULATE_DELAY: Short     = 901

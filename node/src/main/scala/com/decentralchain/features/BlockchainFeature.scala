@@ -34,12 +34,6 @@ object BlockchainFeatures {
   val ContinuationTransaction = BlockchainFeature(26, "Continuation Transaction")
   val LeaseExpiration         = BlockchainFeature(27, "Lease Expiration")
 
-  // Modern Groth16 verifier: activates fastcrypto-zkp (arkworks/blst backed) for
-  // groth16Verify_v2 RIDE opcode. Uses arkworks compressed wire format (snarkjs/circom
-  // compatible). Requires coordinated all-node upgrade before activation height.
-  // JNI symbol: Java_com_decentralchain_groth16_bls12_Groth16V2_verify
-  val ModernGroth16Verifier = BlockchainFeature(28, "Modern Groth16 verifier (fastcrypto, arkworks format)")
-
   // SC-695: gates (a) rejection of InvokeScriptTransaction version V1/V2 against a dApp whose
   // deployed script is STDLIB V5+ (dApp-to-dApp sync calls require the V3 wire format) and
   // (b) a static per-step extra fee required when an InvokeScriptTransaction V3 invokes a
@@ -77,7 +71,6 @@ object BlockchainFeatures {
     BoostBlockReward,
     EcrecoverFix,
     DeterministicFinality,
-    ModernGroth16Verifier,
     InvokeVersionGating
   ).map(f => f.id -> f).toMap
 

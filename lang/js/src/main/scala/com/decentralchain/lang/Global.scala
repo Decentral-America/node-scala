@@ -138,9 +138,6 @@ object Global extends BaseGlobal {
 
   override def bn256Groth16Verify(verifyingKey: Array[Byte], proof: Array[Byte], inputs: Array[Byte]): Boolean = ???
 
-  // Feature-28: JS compile target has no native verifier; not callable in browser context.
-  override def groth16VerifyV2(verifyingKey: Array[Byte], proof: Array[Byte], inputs: Array[Byte]): Boolean = ???
-
   override def ecrecover(messageHash: Array[Byte], signature: Array[Byte], handleLeadingZerosInPublicKey: Boolean): Array[Byte] = ???
 
   override def p256verify(
