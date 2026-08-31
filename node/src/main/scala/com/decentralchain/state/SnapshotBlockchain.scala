@@ -258,26 +258,47 @@ case class SnapshotBlockchain(
     if (atNext) base ++ liveNextCommittedGenerators.map { case (pk, blsPk) => pk.toAddress -> blsPk } else base
   }
 
-  /** `nextCommittedGenerators` entries whose originating commitment was NOT elided.
+  /** `nextCommittedGenerators` entries actually backed by a non-elided `CommitToGenerationTransaction`
+    * in this same snapshot.
     *
-    * An elided transaction's effects are discarded by definition, so its generator entry must never
-    * become visible -- not once persisted (`Caches` applies the same filter) and not during the
-    * liquid-state window either, which this covers. Without it an elided commitment's key would still
-    * be readable here while the block is liquid, and this path feeds endorsement validation and the
-    * `committedGeneratorsHash` computation. The snapshot fold merges an elided transaction's
-    * peer-supplied snapshot data unconditionally (only its fee is skipped), so the entry really can be
-    * present.
+    * This is an ALLOWLIST, deliberately, not a filter that subtracts bad entries. `nextCommittedGenerators`
+    * is a peer-supplied snapshot field that the fold merges unconditionally
+    * ([[StateSnapshot.monoid]]), and it is a SEPARATE source from the transaction bodies that
+    * `BlockDiffer`'s commitment guard validates. Keying on anything less than "a matching, non-elided
+    * commitment transaction is present here" leaves two holes:
+    *
+    *   - an ELIDED commitment's entry (its effects are discarded by definition), and
+    *   - a PHANTOM entry with no backing transaction at all -- a peer can attach one to any other
+    *     transaction's snapshot, in a block containing no commitment, so the guard's work list is
+    *     empty and it never runs. A subtract-the-elided filter cannot see this case, because there is
+    *     no backing transaction of any status to subtract.
+    *
+    * Requiring positive backing closes both with one rule. The exposure is bounded to the liquid
+    * window -- `Caches.append` persists from `txn.endorserPublicKey` on real transaction bodies, so a
+    * phantom never reaches persisted state -- but this path feeds endorsement validation and the
+    * `committedGeneratorsHash` computation while the block is liquid.
     */
   private def liveNextCommittedGenerators: Seq[(PublicKey, BlsPublicKey)] = {
-    val elidedCommitters = snapshot.transactions.values
-      .collect {
-        case nti if nti.status == TxMeta.Status.Elided => nti.transaction
-      }
-      .collect { case tx: CommitToGenerationTransaction => tx.sender }
-      .toSet
+    // An in-progress snapshot built by a transaction differ carries `nextCommittedGenerators` before
+    // any transaction has been attached to it (see `CommitToGenerationTransactionDiff`, which then
+    // reads `generatingBalance` back through this class to size the deposit). Such a snapshot has no
+    // transactions at all, so there is nothing to reconcile against and nothing peer-supplied to
+    // distrust -- reconciliation applies only once the snapshot actually carries transactions.
+    if (snapshot.transactions.isEmpty) snapshot.nextCommittedGenerators
+    else {
+      val backed: Set[(PublicKey, BlsPublicKey)] = snapshot.transactions.values
+        .collect {
+          case nti if nti.status != TxMeta.Status.Elided =>
+            nti.transaction match {
+              case tx: CommitToGenerationTransaction => Some(tx.sender -> tx.endorserPublicKey)
+              case _                                 => None
+            }
+        }
+        .flatten
+        .toSet
 
-    if (elidedCommitters.isEmpty) snapshot.nextCommittedGenerators
-    else snapshot.nextCommittedGenerators.filterNot { case (pk, _) => elidedCommitters.contains(pk) }
+      snapshot.nextCommittedGenerators.filter(backed.contains)
+    }
   }
 
   override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = {

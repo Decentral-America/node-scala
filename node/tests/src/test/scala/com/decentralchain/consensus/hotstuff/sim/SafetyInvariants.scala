@@ -38,8 +38,10 @@ object SafetyInvariants {
     *
     * Audit F-2 (HIGH, 2026-08-31): `checkAll` previously inspected only committed heights, so it could
     * not have detected an equivocation even in a scenario that produced one -- and the watchdog's own
-    * `resetLocalSafetyState()` recovery path DID produce one, by clearing `lastVotedView` (the sole
-    * anti-double-vote bound) along with the lock. Every node in these simulations is honest by
+    * `resetLocalSafetyState()` recovery path DID produce one, by clearing `lastVotedView` (the
+    * anti-double-vote bound on the PREPARE-phase path specifically; phase-progression votes are
+    * guarded separately by the coordinator's `voted` set, which that reset does not clear) along with
+    * the lock. Every node in these simulations is honest by
     * construction (they all run unmodified production `HotStuffCoordinator.Enabled` code), so ANY
     * equivocation signature here is by definition a self-inflicted protocol violation, not Byzantine
     * behaviour the harness injected. Delegates to the production detector

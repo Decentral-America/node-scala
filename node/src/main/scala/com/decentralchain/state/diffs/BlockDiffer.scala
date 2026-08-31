@@ -622,8 +622,6 @@ object BlockDiffer {
         .toRight(ActivationError("DeterministicFinality is not yet activated"))
         .flatMap { current =>
           val next = current.next
-          // Keys already committed for the next period, plus the ones seen earlier in THIS block:
-          // a duplicate within a single block must be rejected too.
           // `seen` starts from the keys already committed for the next period and grows as we walk
           // this block, so a duplicate *within* a single block is rejected too. The fold stops at
           // the first failure: PoP verification is a pairing check, and a rejected block must not

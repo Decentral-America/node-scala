@@ -440,6 +440,35 @@ class LightNodeTest extends PropSpec with WithDomain {
     }
   }
 
+  // Phantom entry: the guard derives its work list from block.transactionData (actual transaction
+  // bodies), but SnapshotBlockchain.committedGenerators reads snapshot.nextCommittedGenerators -- a
+  // separate, peer-supplied field the fold merges unconditionally. A peer can therefore send a block
+  // with NO CommitToGenerationTransaction at all and attach a generator entry to some other
+  // transaction's snapshot: commitments.isEmpty is true, the guard returns immediately, and nothing
+  // ties the entry to a validated transaction. liveNextCommittedGenerators does not catch it either --
+  // it only filters entries backed by an ELIDED commitment, and a phantom entry has no backing
+  // transaction of any status.
+  property("C1. A phantom nextCommittedGenerators entry with no backing transaction is not visible") {
+    val sender   = TxHelpers.signer(1)
+    val attacker = TxHelpers.signer(7)
+    val rogueKey = BlsKeyPair(TxHelpers.signer(8).privateKey).publicKey
+
+    withDomain(finalitySettings, Seq(AddrWithBalance(sender.toAddress, 100_000.dcc))) { d =>
+      // A block whose only transaction is a plain transfer -- no commitment anywhere -- yet whose
+      // snapshot smuggles a generator entry.
+      val transfer = TxHelpers.transfer(sender, TxHelpers.address(2), amount = 1.dcc)
+
+      val phantomSnapshot = StateSnapshot(
+        nextCommittedGenerators = Seq(attacker.publicKey -> rogueKey)
+      ).withTransaction(NewTransactionInfo.create(transfer, TxMeta.Status.Succeeded, StateSnapshot.empty, d.blockchain))
+
+      val sb = SnapshotBlockchain(d.blockchain, phantomSnapshot)
+
+      sb.currentGenerationPeriod.map(p => sb.committedGenerators(p.next).map(_._2)) shouldBe
+        Some(IndexedSeq.empty[BlsPublicKey])
+    }
+  }
+
   // Full-node parity for the one case where it is meaningful: a GENUINELY challenged block, proven by
   // constructing a real challenging block over an invalid-state-hash original. The full node elides the
   // failing transaction and accepts the block; a light node must not be stricter. Crucially the elided
