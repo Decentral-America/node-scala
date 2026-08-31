@@ -15,34 +15,48 @@ import scala.util.control.NonFatal
   * zero `Committed`/accepted-QC `EnteredView` action for N consecutive ticks, DESPITE a non-empty current
   * committee. This is fed by two independent inputs, both read fresh on every `check()` call:
   *
-  *   - `committeeProvider: () => GeneratorSet` -- the SAME committee source the coordinator itself reads
-  *     (`Application.scala` wires both to `blockchainUpdater.currentCommittedGeneratorSet`). If this is
-  *     EMPTY, the stall is a data-availability gap (no `CommitToGenerationTransaction` landed yet for
-  *     this period), NOT a wedge -- see `DstEmptyCommitteeSourceScenarioSpecification` step 2: an empty
-  *     committee cannot even accumulate a valid vote (`HotStuffQuorum`/`HotStuffVotePool.onVote` require
-  *     the voter to be found in the LIVE committee), so "no progress" here is the CORRECT, safe outcome,
-  *     not a bug -- and Task 1's `dcc_hotstuff_lag`/absence alerting already covers this case separately.
-  *     Wiping the lock file or resetting local safety state would do NOTHING to fix an empty committee
-  *     (there is no committee to vote with) and would be actively harmful once a real committee DOES
-  *     return, by discarding a lock that might otherwise still be safely reusable. So: empty committee =>
-  *     the stall counter is reset to zero and the watchdog stays silent, every single tick, for as long as
-  *     the committee stays empty. It only starts counting once the committee is genuinely non-empty.
+  *   - `committeeNonEmpty: () => Boolean` -- reports whether the SAME committee source the coordinator
+  *     itself reads (`Application.scala` wires both to `blockchainUpdater.currentCommittedGeneratorSet`,
+  *     via a thin `.nonEmpty` projection) is currently non-empty. If it reports `false`, the stall is a
+  *     data-availability gap (no `CommitToGenerationTransaction` landed yet for this period), NOT a wedge
+  *     -- see `DstEmptyCommitteeSourceScenarioSpecification` step 2: an empty committee cannot even
+  *     accumulate a valid vote (`HotStuffQuorum`/`HotStuffVotePool.onVote` require the voter to be found
+  *     in the LIVE committee), so "no progress" here is the CORRECT, safe outcome, not a bug -- and Task
+  *     1's `dcc_hotstuff_lag`/absence alerting already covers this case separately. Wiping the lock file
+  *     or resetting local safety state would do NOTHING to fix an empty committee (there is no committee
+  *     to vote with) and would be actively harmful once a real committee DOES return, by discarding a
+  *     lock that might otherwise still be safely reusable. So: empty committee => the stall counter is
+  *     reset to zero and the watchdog stays silent, every single tick, for as long as the committee stays
+  *     empty. It only starts counting once the committee is genuinely non-empty.
+  *
+  *     DELIBERATELY typed as `() => Boolean`, NOT `() => GeneratorSet`/`() => Seq[?]` (see the review fix
+  *     this narrowing addresses, below): the watchdog has no legitimate use for the committee's actual
+  *     contents, only whether it is empty, so the constructor accepts exactly that -- nothing wider.
   *
   *   - a progress signal wired to `HotStuffCoordinator.Enabled`'s additive `onAction` hook (see that
   *     class's doc for exactly which actions count as "progress" and why the bare-timeout `EnteredView`
-  *     that fires on every stalled tick deliberately does NOT). `recordProgress()` is called from that
-  *     hook; `wasProgressSinceLastCheck()` reports (and resets) whether any progress happened since the
-  *     watchdog last checked.
+  *     that fires on every stalled tick, AND a `Rejected` action, deliberately do NOT count -- the latter
+  *     was a review-caught bug: an unfiltered `onAction = _ => recordProgress()` would let a
+  *     perpetually-rejected QC stream, e.g. one signed under a stale committee epoch, mask a genuine
+  *     wedge forever; see `HotStuffWatchdogRejectedStreamSpecification`). `recordProgress()` is called
+  *     from that hook; `check()` consumes and resets that flag on every call.
   *
   * SAFETY BY CONSTRUCTION -- the hard, non-negotiable constraint (task brief, "the hard safety
   * constraint"): this class holds no reference of any kind to `finalizedHeight`, `BlockchainUpdaterImpl`,
-  * feature-25's finality path, or any component that could reach them. Its constructor accepts exactly
-  * four collaborators -- a committee accessor, a progress accessor/reset, a `clearLock: () => Unit`
-  * action, and a `path: Path` to the on-disk lock file -- none of which is, wraps, or can reach the
-  * authoritative finality machinery. `HotStuffWatchdogFinalizedHeightIsolationSpecification` asserts this
-  * property directly (not just by comment) by constructing a `finalizedHeight` variable that ONLY a
-  * distinct, never-invoked function could mutate, and proving the watchdog's full recovery action leaves
-  * it untouched.
+  * feature-25's finality path, or any component that could reach them -- and, following a review finding,
+  * this is now enforced by the TYPE SIGNATURE itself, not merely by this class's code happening not to
+  * call anything else on a wider object it was handed. Its constructor accepts exactly four collaborators
+  * -- a `() => Boolean` committee-non-emptiness check, a progress accessor/reset, a `clearLock: Path =>
+  * Unit` action, and a `path: Path` to the on-disk lock file. `Boolean`, `Unit`, and `Path` are the ENTIRE
+  * capability surface available to this class; even a maximally buggy implementation of `check()` could
+  * not synthesize a `BlockchainUpdaterImpl`/`finalizedHeight` reference out of a `Boolean` and a `Path`,
+  * because none was ever received. (Earlier revision: the committee parameter was `() => Seq[?]` /
+  * `() => GeneratorSet`, which in PRODUCTION closes over `blockchainUpdater` to compute -- the closure
+  * itself could reach `blockchainUpdater`'s other methods even though this class's code never called
+  * them. The type is now narrowed so that possibility doesn't exist at all, not just "isn't exercised".)
+  * `HotStuffWatchdogFinalizedHeightIsolationSpecification` asserts this property directly (not just by
+  * comment) by constructing a `finalizedHeight` variable that ONLY a distinct, never-invoked function
+  * could mutate, and proving the watchdog's full recovery action leaves it untouched.
   *
   * N SIZING (do not guess -- see the task's real numbers):
   *   - `round-timeout = 1200ms` (`node-config/testnet/dcc.conf`).
@@ -80,10 +94,10 @@ import scala.util.control.NonFatal
   * `onRoundTimerTick()` invocation, in that same scheduled callback.
   */
 final class HotStuffWatchdog(
-    committeeProvider: () => Seq[?],
-    clearLock: Path => Unit = HotStuffWatchdog.deleteQuietly,
+    committeeNonEmpty: () => Boolean,
     lockPath: Path,
     resetInMemoryState: () => Unit,
+    clearLock: Path => Unit = HotStuffWatchdog.deleteQuietly,
     stallThreshold: Int = HotStuffWatchdog.DefaultStallThreshold
 ) extends StrictLogging {
   require(stallThreshold > 0, "HotStuffWatchdog stallThreshold must be positive")
@@ -107,8 +121,7 @@ final class HotStuffWatchdog(
     * action fired this call (test/observability convenience).
     */
   def check(): Boolean = {
-    val committee = committeeProvider()
-    if (committee.isEmpty) {
+    if (!committeeNonEmpty()) {
       // Data-availability gap, not a wedge (see class doc). Do not accumulate stall count against it,
       // and do not let a progress flag earned just before the committee emptied leak into a later,
       // unrelated non-empty-committee stall window.

@@ -226,7 +226,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     // enabled on mainnet before step 5 + an external audit. Commit is observational only (feature-25
     // stays authoritative).
     if (settings.hotStuffSettings.enabled) {
-      import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, NodeHotStuffEffects}
+      import com.decentralchain.consensus.hotstuff.{HotStuffAction, HotStuffCoordinator, NodeHotStuffEffects}
       import com.decentralchain.block.Block.BlockId
       import com.decentralchain.state.GeneratorSet
 
@@ -339,15 +339,33 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // `resetLocalSafetyState()`'s recovery action), so one forward-reference var is unavoidable to
       // break the construction cycle; it is assigned exactly once, immediately below, before either
       // object's methods can be invoked (`hotStuffScheduler` hasn't started yet at this point in
-      // `Application` construction). The watchdog itself still has NO reference to
-      // `blockchainUpdater`/`finalizedHeight`/anything beyond the committee accessor, the lock-file path,
-      // and this one coordinator's own `resetLocalSafetyState()` -- by construction it cannot touch T0.
+      // `Application` construction).
+      //
+      // SAFETY (review fix, post-initial-landing): `HotStuffWatchdog`'s committee-check parameter is
+      // narrowly typed as `() => Boolean` (see that class's updated doc), NOT `() => GeneratorSet`/
+      // `() => Seq[?]`. `committee` itself (`() => blockchainUpdater.currentCommittedGeneratorSet`) DOES
+      // transitively close over `blockchainUpdater` -- but that full closure is never hand to the
+      // watchdog; only the one-way `.nonEmpty` projection below is. The watchdog's constructor therefore
+      // cannot receive a `blockchainUpdater` reference even in principle, by TYPE, not merely because its
+      // own code happens not to call anything else on one. See `HotStuffWatchdog`'s doc and
+      // `HotStuffWatchdogFinalizedHeightIsolationSpecification` for the precise claim and its proof.
       var hsCoordinatorRef: HotStuffCoordinator.Enabled = null
       val hsWatchdog                                    = new com.decentralchain.consensus.hotstuff.HotStuffWatchdog(
-        committeeProvider = committee,
+        committeeNonEmpty = () => committee().nonEmpty,
         lockPath = hsLockedQCPath,
         resetInMemoryState = () => hsCoordinatorRef.resetLocalSafetyState()
       )
+      // Review fix (Critical): `onAction` must NOT count a `Rejected` action as progress -- a wedged
+      // replica that keeps receiving/self-forming QCs that fail epoch/crypto verification (stale
+      // committee epoch, the self-verification race noted at `onVote`'s doc, etc.) would otherwise reset
+      // the watchdog's stall counter every tick on `Rejected` alone and NEVER fire, despite genuinely zero
+      // real progress -- exactly the failure mode this watchdog exists to catch. Only `Committed`/
+      // `EnteredView` (both of which `applyQC` only ever includes alongside a QC that PASSED verification
+      // -- see `HotStuffEngine.onQC`) count.
+      val hsOnAction: HotStuffAction => Unit = {
+        case _: HotStuffAction.Rejected => ()
+        case _                          => hsWatchdog.recordProgress()
+      }
 
       val hsCoordinator =
         new HotStuffCoordinator.Enabled(
@@ -361,7 +379,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc),
           committeeEpoch,
           committeeEpochOf,
-          onAction = _ => hsWatchdog.recordProgress()
+          onAction = hsOnAction
         )
       hsCoordinatorRef = hsCoordinator
 

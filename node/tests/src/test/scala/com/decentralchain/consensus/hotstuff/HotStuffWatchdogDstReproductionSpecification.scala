@@ -59,7 +59,7 @@ class HotStuffWatchdogDstReproductionSpecification extends FlatSpec {
       // .currentCommittedGeneratorSet`.
       val watchdogs = (0 until 4).map { i =>
         new HotStuffWatchdog(
-          committeeProvider = () => harness.currentCommittee(),
+          committeeNonEmpty = () => harness.currentCommittee().nonEmpty,
           lockPath = tempLockPath(i),
           resetInMemoryState = () => harness.resetLocalSafetyState(i),
           stallThreshold = 5
@@ -69,7 +69,14 @@ class HotStuffWatchdogDstReproductionSpecification extends FlatSpec {
         seed = 1L,
         nodeCount = 4,
         FaultProfile(minDelayMillis = 1, maxDelayMillis = 3),
-        onAction = (node, _) => watchdogs(node).recordProgress()
+        // Review fix (Critical): a `Rejected` action must NOT count as progress -- see
+        // `Application.scala`'s `hsOnAction` for the production wiring this mirrors, and
+        // `HotStuffWatchdogRejectedStreamSpecification` for the dedicated regression test.
+        onAction = (node, action) =>
+          action match {
+            case _: HotStuffAction.Rejected => ()
+            case _                          => watchdogs(node).recordProgress()
+          }
       )
 
       // Step 1: healthy round (committee non-empty).
@@ -101,7 +108,7 @@ class HotStuffWatchdogDstReproductionSpecification extends FlatSpec {
     "reproduce the exact 2026-08-30/31 wedge signature (ticking, non-empty committee, zero progress) and be recovered by the watchdog" in {
       var harness: DstHarness = null
       val watchdog            = new HotStuffWatchdog(
-        committeeProvider = () => harness.currentCommittee(),
+        committeeNonEmpty = () => harness.currentCommittee().nonEmpty,
         lockPath = tempLockPath(0),
         resetInMemoryState = () => harness.resetLocalSafetyState(0),
         stallThreshold = 5
@@ -110,7 +117,12 @@ class HotStuffWatchdogDstReproductionSpecification extends FlatSpec {
         seed = 2L,
         nodeCount = 4,
         FaultProfile(minDelayMillis = 1, maxDelayMillis = 3),
-        onAction = (node, _) => if (node == 0) watchdog.recordProgress()
+        // Review fix (Critical): same `Rejected`-excluding filter as the production wiring.
+        onAction = (node, action) =>
+          if (node == 0) action match {
+            case _: HotStuffAction.Rejected => ()
+            case _                          => watchdog.recordProgress()
+          }
       )
 
       // Establish a healthy committed round first, confirming the cluster (and node 0 in particular) is

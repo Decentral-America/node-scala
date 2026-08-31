@@ -34,8 +34,13 @@ class HotStuffWatchdogSpecification extends FlatSpec {
       lockPath: java.nio.file.Path = tempLockPath()
   ): (HotStuffWatchdog, () => Int) = {
     var resetCount = 0
-    val watchdog   = new HotStuffWatchdog(
-      committeeProvider = committeeProvider,
+    // `HotStuffWatchdog` accepts only `() => Boolean` (review fix: narrowed from `() => GeneratorSet` so
+    // the type itself proves the watchdog cannot reach a wider committee-producing closure) -- this
+    // helper keeps `committeeProvider: () => GeneratorSet` as ITS OWN parameter (so every existing call
+    // site below reads naturally as "here's the committee"), and adapts it to the watchdog's narrower
+    // `.nonEmpty` projection at construction.
+    val watchdog = new HotStuffWatchdog(
+      committeeNonEmpty = () => committeeProvider().nonEmpty,
       lockPath = lockPath,
       resetInMemoryState = () => resetCount += 1,
       stallThreshold = threshold
@@ -189,7 +194,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
       votesCast.toList should not contain b2 // locked -> rejected, no vote cast for the conflicting block
 
       val watchdog = new HotStuffWatchdog(
-        committeeProvider = () => committee,
+        committeeNonEmpty = () => committee.nonEmpty,
         lockPath = tempLockPath(),
         resetInMemoryState = () => coordinator.resetLocalSafetyState(),
         stallThreshold = 1

@@ -74,9 +74,11 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
     )
 
     // Construct the watchdog with the SAME constructor Application.scala uses -- no parameter here is,
-    // wraps, or can reach `finalizedHeightCanary`/`mutateFinalizedHeight`.
+    // wraps, or can reach `finalizedHeightCanary`/`mutateFinalizedHeight`. `committeeNonEmpty` is a bare
+    // `() => Boolean` (review-fix narrowing: the watchdog no longer even receives a committee-producing
+    // closure, only its `.nonEmpty` projection), reinforcing the isolation claim this spec proves.
     val watchdog = new HotStuffWatchdog(
-      committeeProvider = () => committee,
+      committeeNonEmpty = () => committee.nonEmpty,
       lockPath = lockPath,
       resetInMemoryState = () => { coordinator.resetLocalSafetyState(); resetCount += 1 },
       stallThreshold = 3
