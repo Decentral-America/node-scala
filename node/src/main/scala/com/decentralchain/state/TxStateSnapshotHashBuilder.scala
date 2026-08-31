@@ -102,7 +102,8 @@ object TxStateSnapshotHashBuilder {
     // (e.g. block N on chain A vs block N+1 on chain B), making the cumulative state hash
     // diverge at those heights. Feature 21 then prevents chain switches permanently.
     // The validator set is still committed cryptographically at period boundaries via the
-    // period-boundary committedGeneratorsHash in the block header (see docs/mainnet-upgrade-validation.md).
+    // period-boundary committedGeneratorsHash in the block header (see
+    // docs/consensus-divergences-from-upstream.md §3).
     // See: TxStateSnapshotHashBuilder — per-TX hash for financial state only.
 
     txStatusOpt.foreach(txInfo =>

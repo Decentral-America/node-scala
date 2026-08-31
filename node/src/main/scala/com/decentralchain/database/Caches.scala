@@ -475,12 +475,19 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     for ((alias, address) <- snapshot.aliases) stateHash.addAlias(address, alias.name)
     // NOTE: nextCommittedGenerators and CommittedGeneratorBalances intentionally excluded
     // from the block-level state hash. These are validator-governance state, not financial state.
-    // Including them causes state hash divergence during chain switches when:
-    // - Validators have different indices (non-deterministic in fallback mode)
-    // - CommitToGenerationTXs land at different block heights on competing chains
+    // Including them causes state hash divergence during chain switches: this is upstream
+    // Waves' own committed-generators mechanism (Caches.scala's addCommittedGeneratorBalances/
+    // addNextCommittedGenerator, from Waves' c26947df1a/a6a7877def, unmodified there today) --
+    // the in-memory committed-generators list does not roll back when a microblock is orphaned,
+    // so two nodes that agree on the final chain can each be carrying a different version of
+    // that list depending on which now-discarded microblock they happened to observe, which
+    // then diverges their computed hash for the same block if included. (GeneratorIndex
+    // assignment itself, via .zipWithIndex over an ordered list, cannot diverge -- that is not
+    // the mechanism; see docs/consensus-divergences-from-upstream.md §3 for the corrected
+    // explanation and CONSENSUS-BUG-INVESTIGATION-REFERENCE.md §4 for the full evidence trail.)
     // The per-block committedGeneratorsHash in the block header (Step B in protocol fix)
     // provides the security guarantee instead.
-    // See: docs/mainnet-upgrade-validation.md and TxStateSnapshotHashBuilder.scala
+    // See: docs/consensus-divergences-from-upstream.md §3 and TxStateSnapshotHashBuilder.scala
 
     doAppend(
       newMeta,
