@@ -163,7 +163,7 @@ class DstEmptyCommitteeSourceScenarioSpecification extends FlatSpec {
         s"self-resume count = $resumedCount / $SeedCount seeds (expected roughly 40-60, matching the " +
           "49/100 measured when this scenario was written). A count near 0 across the whole band would " +
           "mean self-resumption is now reliably ABSENT (matching the live incident more strongly than " +
-          "measured here); a count near $SeedCount would mean it is now reliably PRESENT (the bug would " +
+          s"measured here); a count near $SeedCount would mean it is now reliably PRESENT (the bug would " +
           "be fixed). Either is a real, reportable change from what this test currently documents -- " +
           "update this file's docstring and the task report, do not just widen the band silently."
       ) {
