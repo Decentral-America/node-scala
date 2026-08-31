@@ -261,12 +261,12 @@ object HotStuffWatchdog extends StrictLogging {
   /** Review-fix default: after this many consecutive recoveries have EACH failed to produce progress
     * before the next (exponentially-backed-off) full stall, auto-recovery suspends itself (this run)
     * rather than resetting local safety state on an unbounded cadence forever against a wedge it
-    * provably cannot fix (e.g. a correlated multi-replica fault). 5 was chosen so that the cumulative
-    * elapsed time across the backed-off attempts (60+120+240+480+960 = 1860 ticks x 1200ms = 37.2
-    * minutes) lands just past Task 1's `HotStuffLagGrowing` alert window (30m), so a human is already
-    * being paged well before auto-recovery gives up -- the watchdog hands off to the alert rather than
-    * either giving up long before an alert would fire or continuing to act long after a human should
-    * have taken over.
+    * provably cannot fix (e.g. a correlated multi-replica fault). 5 was chosen so that suspension
+    * itself lands at the 5th fire's tick (60+120+240+480+960 = 1920 ticks x 1200ms = 38.4 minutes,
+    * since each gap between fires equals the current backed-off threshold) -- just past Task 1's
+    * `HotStuffLagGrowing` alert window (30m), so a human is already being paged well before
+    * auto-recovery gives up -- the watchdog hands off to the alert rather than either giving up long
+    * before an alert would fire or continuing to act long after a human should have taken over.
     */
   val MaxConsecutiveRecoveries: Int = 5
 
