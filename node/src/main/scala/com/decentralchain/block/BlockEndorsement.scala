@@ -1,7 +1,7 @@
 package com.decentralchain.block
 
 import com.decentralchain.block.Block.BlockId
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey, BlsSignature, BlsUtils}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey, BlsSignature}
 import com.decentralchain.state.{GeneratorIndex, Height}
 
 case class BlockEndorsement(
@@ -12,7 +12,7 @@ case class BlockEndorsement(
     signature: BlsSignature
 ) {
   def signatureValid(endorserPublicKey: BlsPublicKey): Either[String, Unit] =
-    BlsUtils.verifyBasic(signature.byteStr.arr, BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId), endorserPublicKey.arr)
+    signature.verifyBasic(BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId), endorserPublicKey)
 }
 
 object BlockEndorsement {

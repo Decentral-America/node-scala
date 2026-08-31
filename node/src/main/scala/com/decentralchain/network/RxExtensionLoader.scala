@@ -7,7 +7,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.BlockStats
 import com.decentralchain.network.RxExtensionLoader.ApplierState.Buffer
-import com.decentralchain.network.RxExtensionLoader.LoaderState.WithPeer
+import com.decentralchain.network.RxExtensionLoader.LoaderState.{Idle, WithPeer}
 import com.decentralchain.network.RxScoreObserver.{ChannelClosedAndSyncWith, SyncWith}
 import com.decentralchain.state.ParSignatureChecker
 import com.decentralchain.transaction.TxValidationError.GenericError
@@ -37,6 +37,7 @@ object RxExtensionLoader extends ScorexLogging {
       syncTimeOut: FiniteDuration,
       processedBlocksCacheTimeout: FiniteDuration,
       isLightMode: Boolean,
+      blacklistOnScoreMismatch: Boolean,
       lastBlockIds: Coeval[Seq[ByteStr]],
       peerDatabase: PeerDatabase,
       invalidBlocks: InvalidBlockStorage,
@@ -287,7 +288,7 @@ object RxExtensionLoader extends ScorexLogging {
       }
     }
 
-    def onExtensionApplied(state: State, extension: ExtensionBlocks, applicationResult: ApplyExtensionResult): State = {
+    def onExtensionApplied(state: State, ch: Channel, extension: ExtensionBlocks, applicationResult: ApplyExtensionResult): State = {
       log.trace(s"Applying $extension finished with $applicationResult")
       state.applierState match {
         case ApplierState.Idle =>
@@ -296,7 +297,18 @@ object RxExtensionLoader extends ScorexLogging {
         case ApplierState.Applying(maybeBuffer, applying) =>
           if (applying != extension) log.warn(s"Applied $extension doesn't match expected $applying")
           maybeBuffer match {
-            case None                                     => state.copy(applierState = ApplierState.Idle)
+            case None =>
+              applicationResult match {
+                case Right(Some(newLocalScore)) if newLocalScore != applying.remoteScore && state.loaderState == Idle =>
+                  val reason = s"New local score $newLocalScore does not match declared remote score ${applying.remoteScore}"
+                  log.warn(reason)
+                  if (blacklistOnScoreMismatch) {
+                    peerDatabase.blacklistAndClose(ch, reason)
+                  }
+                case _ => // either extension contains invalid blocks, or score has not changed
+              }
+
+              state.copy(applierState = ApplierState.Idle)
             case Some(Buffer(nextChannel, nextExtension)) =>
               applicationResult match {
                 case Left(_) =>
@@ -332,7 +344,7 @@ object RxExtensionLoader extends ScorexLogging {
       syncWithChannelClosed.observeOn(scheduler).map { ch =>
         stateValue = onNewSyncWithChannelClosed(stateValue, ch)
       },
-      appliedExtensions.map { case (_, extensionBlocks, ar) => stateValue = onExtensionApplied(stateValue, extensionBlocks, ar) }
+      appliedExtensions.map { case (ch, extensionBlocks, ar) => stateValue = onExtensionApplied(stateValue, ch, extensionBlocks, ar) }
     ).mergeMap(identity)
       .map { _ =>
         log.trace(s"Current state: $stateValue")

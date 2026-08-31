@@ -593,6 +593,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       settings.synchronizationSettings.synchronizationTimeout,
       settings.synchronizationSettings.processedBlocksCacheTimeout,
       settings.enableLightMode,
+      settings.synchronizationSettings.blacklistOnScoreMismatch,
       Coeval(blockchainUpdater.lastBlockIds(settings.synchronizationSettings.maxRollback)),
       peerDatabase,
       knownInvalidBlocks,
