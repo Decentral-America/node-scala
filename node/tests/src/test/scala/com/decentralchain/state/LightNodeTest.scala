@@ -15,7 +15,10 @@ import com.decentralchain.state.appender.{BlockAppender, ExtensionAppender}
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
-import com.decentralchain.transaction.TxHelpers
+import com.decentralchain.account.{AddressScheme, KeyPair}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey}
+import com.decentralchain.TestValues
+import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers, TxVersion}
 import com.decentralchain.transaction.TxValidationError.InvalidStateHash
 import io.netty.channel.embedded.EmbeddedChannel
 import monix.execution.Scheduler
@@ -196,9 +199,121 @@ class LightNodeTest extends PropSpec with WithDomain {
     }
   }
 
+  // C1 (BLS crypto audit): the light-node snapshot path must not accept a CommitToGenerationTransaction
+  // whose BLS proof-of-possession is invalid, or whose endorser key is not a valid curve point.
+  //
+  // The snapshot branch of BlockDiffer.fromBlock runs no TransactionDiffer, and TransactionDiffer is the
+  // only caller of CommitToGenerationTransactionDiff -- where PoP verification and BlsPublicKey.validated
+  // live. Nothing downstream compensates: the state hash is computed over the peer's own snapshot (and
+  // excludes nextCommittedGenerators outright), committedGeneratorsHash accepts None unconditionally, and
+  // persistence reads the key straight off the unvalidated transaction. So without the explicit
+  // re-validation in BlockDiffer.validateCommitmentsOnSnapshotPath, every case below is ACCEPTED, seating
+  // an attacker-chosen BLS key as a committed generator on the light node.
+  private val finalitySettings: DCCSettings =
+    DomainPresets.DeterministicFinality
+      .copy(enableLightMode = true)
+      .configure(_.copy(generationPeriodLength = 3, lightNodeBlockFieldsAbsenceInterval = 0))
+
+  // Compressed G1 point at infinity: high (compressed) bit + infinity bit set, rest zero.
+  private val pointAtInfinityKey: BlsPublicKey = {
+    val bytes = new Array[Byte](BlsPublicKey.SizeInBytes)
+    bytes(0) = 0xc0.toByte
+    BlsPublicKey(bytes).explicitGet()
+  }
+
+  private def commitmentAttackCases(sender: KeyPair, periodStart: Height): Seq[(String, CommitToGenerationTransaction)] = {
+    val honestKp = BlsKeyPair(sender.privateKey)
+    val otherKp  = BlsKeyPair(TxHelpers.signer(9).privateKey)
+
+    Seq(
+      // PoP signed by a DIFFERENT key than the one being registered: the rogue-key attack proper.
+      "invalid proof-of-possession (signature from another key)" ->
+        CommitToGenerationTransaction
+          .selfSigned(
+            TxVersion.V1,
+            sender,
+            honestKp.publicKey,
+            periodStart,
+            TxHelpers.timestamp,
+            TestValues.commitToGenerationFee,
+            CommitToGenerationTransaction.mkPopSignature(otherKp, periodStart),
+            AddressScheme.current.chainId
+          )
+          .explicitGet(),
+      // Point at infinity passes the 48-byte sanity check in BlsPublicKey.apply but is rejected by
+      // .validated. Admitting it corrupts additive key aggregation in BlsUtils.verifyAgg.
+      "endorser key is the point at infinity" ->
+        CommitToGenerationTransaction
+          .selfSigned(
+            TxVersion.V1,
+            sender,
+            pointAtInfinityKey,
+            periodStart,
+            TxHelpers.timestamp,
+            TestValues.commitToGenerationFee,
+            CommitToGenerationTransaction.mkPopSignature(honestKp, periodStart),
+            AddressScheme.current.chainId
+          )
+          .explicitGet()
+    )
+  }
+
+  property("C1. Light node must reject snapshot-path blocks committing a BLS key with invalid PoP or bad curve point") {
+    val sender      = TxHelpers.signer(1)
+    val periodStart = Height(4)
+
+    commitmentAttackCases(sender, periodStart).foreach { case (label, maliciousTx) =>
+      withClue(s"$label: ") {
+        withDomain(
+          finalitySettings,
+          Seq(AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee))
+        ) { d =>
+          val prevBlock = d.lastBlock
+
+          // A well-formed commitment from the same sender, used only to obtain a structurally valid
+          // set of per-transaction snapshots -- i.e. exactly what a malicious peer would serve.
+          val honestTx    = TxHelpers.commitToGeneration(periodStart, sender)
+          val honestBlock = d.createBlock(Block.ProtoBlockVersion, Seq(honestTx))
+          val txSnapshots = getTxSnapshots(d, honestBlock)
+
+          val maliciousBlock = d.createBlock(Block.ProtoBlockVersion, Seq(maliciousTx), stateHash = Some(honestBlock.header.stateHash))
+
+          val result = d.appendBlockE(maliciousBlock, Some(BlockSnapshot(maliciousBlock.id(), txSnapshots)))
+
+          result should beLeft
+          d.lastBlock shouldBe prevBlock
+          // And the attacker's key never became a committed generator.
+          d.blockchain
+            .committedGenerators(d.blockchain.currentGenerationPeriod.get.next)
+            .map(_._2) should not contain maliciousTx.endorserPublicKey
+        }
+      }
+    }
+  }
+
+  property("C1. Light node still accepts a snapshot-path block with a valid commitment") {
+    val sender      = TxHelpers.signer(1)
+    val periodStart = Height(4)
+
+    withDomain(
+      finalitySettings,
+      Seq(AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee))
+    ) { d =>
+      val tx          = TxHelpers.commitToGeneration(periodStart, sender)
+      val block       = d.createBlock(Block.ProtoBlockVersion, Seq(tx))
+      val txSnapshots = getTxSnapshots(d, block)
+
+      d.appendBlockE(block, Some(BlockSnapshot(block.id(), txSnapshots))) should beRight
+      d.lastBlock shouldBe block
+      d.blockchain
+        .committedGenerators(d.blockchain.currentGenerationPeriod.get.next)
+        .map(_._2) should contain(tx.endorserPublicKey)
+    }
+  }
+
   private def getTxSnapshots(d: Domain, block: Block): Seq[(StateSnapshot, TxMeta.Status)] = {
-    val lb                                                   = d.liquidState.get.liquidBlockOf(block.header.reference).get
-    val (refBlock, refSnapshot, carry, prevStateHash)        = (lb.block, lb.data.snapshot, lb.data.carryFee, lb.data.liquidStateHash)
+    val lb                                            = d.liquidState.get.liquidBlockOf(block.header.reference).get
+    val (refBlock, refSnapshot, carry, prevStateHash) = (lb.block, lb.data.snapshot, lb.data.carryFee, lb.data.liquidStateHash)
 
     val hs = d.posSelector.validateGenerationSignature(block).explicitGet()
 
