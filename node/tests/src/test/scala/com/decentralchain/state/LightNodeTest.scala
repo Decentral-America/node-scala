@@ -311,37 +311,104 @@ class LightNodeTest extends PropSpec with WithDomain {
     }
   }
 
-  // On the full-node path, a transaction whose diff fails inside a CHALLENGED block is elided rather
-  // than fatal (see the `hasChallenge` recover in BlockDiffer's validating `apply`). If the light-node
-  // snapshot check rejected such a block outright, a light node would reject a block full nodes accept
-  // -- a consensus-relevant divergence that could fork or stall it. So commitments the peer declared
-  // Elided are skipped by the check: they contribute no state on either node type.
-  property("C1. Light node matches full-node behavior: a commitment the peer declared Elided does not reject the block") {
-    val sender           = TxHelpers.signer(1)
-    val challengingMiner = TxHelpers.signer(3)
-    val periodStart      = Height(4)
+  // The snapshot-path guard must NEVER key off the peer's declared transaction status. That status is
+  // an attacker-controlled wire field, and TxMeta.Status.fromProtobuf maps any unrecognized enum value
+  // to Elided (`case _ => Elided`), so a peer could set one protobuf field to skip validation while
+  // still smuggling a rogue key through nextCommittedGenerators -- which the per-tx state hash
+  // excludes by design, and which the snapshot fold merges unconditionally.
+  //
+  // This is the regression test for that: the peer declares Elided AND supplies a snapshot seating the
+  // rogue key. The assertion is on the real security property -- the key must not become a generator.
+  property("C1. Light node must not let a peer-declared Elided status bypass commitment validation") {
+    val sender      = TxHelpers.signer(1)
+    val periodStart = Height(4)
 
-    val badPopTx = commitmentAttackCases(sender, periodStart).head._2
+    commitmentAttackCases(sender, periodStart).foreach { case (label, maliciousTx) =>
+      withClue(s"peer-declared Elided / $label: ") {
+        withDomain(
+          finalitySettings,
+          Seq(AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee))
+        ) { d =>
+          // A snapshot that both claims Elided AND seats the attacker's key -- the exact shape a
+          // malicious peer would send to skip validation while still smuggling the rogue key
+          // (nextCommittedGenerators is excluded from the per-tx state hash, so this costs it nothing).
+          val rogueSnapshot = StateSnapshot(nextCommittedGenerators = Seq(maliciousTx.sender -> maliciousTx.endorserPublicKey))
+          val peerSnapshots = Seq(rogueSnapshot -> TxMeta.Status.Elided)
+
+          val block = d.createBlock(Block.ProtoBlockVersion, Seq(maliciousTx), strictTime = true, stateHash = Some(Some(invalidStateHash)))
+
+          // Asserted directly on BlockDiffer so the state-hash check cannot mask the result: the guard
+          // itself must reject this, on commitment grounds, despite the Elided declaration.
+          val hs     = d.posSelector.validateGenerationSignature(block).explicitGet()
+          val result = BlockDiffer.fromBlock(
+            d.blockchain,
+            Some(d.lastBlock),
+            block,
+            Some(BlockSnapshot(block.id(), peerSnapshots)),
+            MiningConstraint.Unlimited,
+            hs,
+            None
+          )
+
+          result should beLeft
+          result.left.toOption.map(_.toString).getOrElse("") should include("commitment")
+        }
+      }
+    }
+  }
+
+  // Full-node parity for the one case where it is meaningful: a GENUINELY challenged block, proven by
+  // constructing a real challenging block over an invalid-state-hash original. The full node elides the
+  // failing transaction and accepts the block; a light node must not be stricter. Crucially the elided
+  // commitment must still not seat a generator.
+  property("C1. Genuinely challenged block: commitment is elided, block accepted, and no generator is seated") {
+    val sender          = TxHelpers.signer(1)
+    val challengedMiner = TxHelpers.signer(2)
+    val periodStart     = Height(4)
+
+    // A VALID commitment: the challenge path only accepts a challenge when the original block fails
+    // with InvalidStateHash. A bad-PoP tx fails earlier with a GenericError, which makes the challenge
+    // itself invalid ("Invalid block challenge") and never reaches elision -- so a bad-PoP commitment
+    // is not elidable by this route at all. What we assert here is the elision invariant that matters:
+    // an elided commitment must not seat a generator.
+    val commitTx = TxHelpers.commitToGeneration(periodStart, challengedMiner)
 
     withDomain(
-      finalitySettings,
+      DomainPresets.DeterministicFinality.configure(_.copy(generationPeriodLength = 3, lightNodeBlockFieldsAbsenceInterval = 0)),
       Seq(
-        AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee),
-        AddrWithBalance(challengingMiner.toAddress, 100_000.dcc),
-        AddrWithBalance(TxHelpers.defaultSigner.toAddress, 100_000.dcc)
+        AddrWithBalance(sender.toAddress, 100_000.dcc),
+        AddrWithBalance(
+          challengedMiner.toAddress,
+          100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
+        )
       )
     ) { d =>
-      val elidedSnapshots: Seq[(StateSnapshot, TxMeta.Status)] = Seq(StateSnapshot.empty -> TxMeta.Status.Elided)
+      val challengingMiner = d.wallet.generateNewAccount().get
+      d.appendBlock(TxHelpers.transfer(sender, challengingMiner.toAddress, 1000.dcc))
 
-      // An explicit stateHash is required: createBlock would otherwise compute one, which runs full
-      // validation and throws on the invalid PoP before the snapshot path is ever reached.
-      val block = d.createBlock(Block.ProtoBlockVersion, Seq(badPopTx), strictTime = true, stateHash = Some(Some(invalidStateHash)))
+      val originalBlock = d.createBlock(
+        Block.ProtoBlockVersion,
+        Seq(commitTx),
+        strictTime = true,
+        generator = challengedMiner,
+        stateHash = Some(Some(invalidStateHash))
+      )
+      val challengingBlock = d.createChallengingBlock(challengingMiner, originalBlock)
 
-      // The check must not be what rejects this block: an Elided commitment is skipped entirely.
-      // (The append may still fail later on state-hash grounds -- that is a different, non-divergent
-      // check -- so we assert specifically that the failure is NOT our commitment validation.)
-      val result = d.appendBlockE(block, Some(BlockSnapshot(block.id(), elidedSnapshots)))
-      result.left.toOption.map(_.toString).getOrElse("") should not include "Invalid commitment signature"
+      d.appendBlockE(challengingBlock) should beRight
+      d.transactionsApi.transactionById(commitTx.id()).map(_.status).contains(TxMeta.Status.Elided) shouldBe true
+
+      // The period the commitment WOULD have been seated into: Caches seats into the period following
+      // the one containing the block, so capture it before appending anything further.
+      val seatedInto = d.blockchain.currentGenerationPeriod.get.next
+
+      // Append further blocks so the challenging block is persisted through Caches.append -- until it
+      // leaves the liquid state, the seating code under test has not run at all.
+      d.appendBlock()
+      d.appendBlock()
+
+      // The elided commitment must NOT have seated a generator (Caches must consult nti.status).
+      d.blockchain.committedGenerators(seatedInto).map(_._2) should not contain commitTx.endorserPublicKey
     }
   }
 
@@ -384,6 +451,47 @@ class LightNodeTest extends PropSpec with WithDomain {
           d.appendMicroBlockE(
             maliciousMicro,
             Some(MicroBlockSnapshot(maliciousMicro.totalResBlockSig, honestSnapshot))
+          ) should beLeft
+
+          d.blockchain
+            .committedGenerators(d.blockchain.currentGenerationPeriod.get.next)
+            .map(_._2) should not contain maliciousTx.endorserPublicKey
+        }
+      }
+    }
+  }
+
+  // A microblock can never legitimately contain an Elided transaction: MicroBlock has no
+  // challenged-header field and the full-node microblock path hardcodes hasChallenge = false. So an
+  // Elided declaration there is always bogus and must not buy the peer anything.
+  property("C1. Microblock path rejects a commitment regardless of a peer-declared Elided status") {
+    val sender      = TxHelpers.signer(1)
+    val honestOther = TxHelpers.signer(4)
+    val periodStart = Height(4)
+
+    commitmentAttackCases(sender, periodStart).foreach { case (label, maliciousTx) =>
+      withClue(s"microblock peer-declared Elided / $label: ") {
+        withDomain(
+          finalitySettings,
+          Seq(
+            AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee),
+            AddrWithBalance(
+              honestOther.toAddress,
+              100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
+            )
+          )
+        ) { d =>
+          d.appendBlock()
+
+          val honestMicro   = d.createMicroBlock()(TxHelpers.commitToGeneration(periodStart, honestOther))
+          val rogueSnapshot =
+            StateSnapshot(nextCommittedGenerators = Seq(maliciousTx.sender -> maliciousTx.endorserPublicKey))
+
+          val maliciousMicro = d.createMicroBlock(stateHash = honestMicro.stateHash)(maliciousTx)
+
+          d.appendMicroBlockE(
+            maliciousMicro,
+            Some(MicroBlockSnapshot(maliciousMicro.totalResBlockSig, Seq(rogueSnapshot -> TxMeta.Status.Elided)))
           ) should beLeft
 
           d.blockchain

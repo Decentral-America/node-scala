@@ -238,7 +238,7 @@ object BlockDiffer {
       r <- snapshot match {
         case Some(BlockSnapshot(_, txSnapshots)) =>
           for {
-            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData, txSnapshots))
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData, hasChallenge))
           } yield apply(blockchainWithNewBlock, prevStateHash, initSnapshot, stateHeight >= ngHeight, block.transactionData, txSnapshots)
         case None =>
           apply(
@@ -353,9 +353,11 @@ object BlockDiffer {
       r <- snapshot match {
         case Some(MicroBlockSnapshot(_, txSnapshots)) =>
           // Same rogue-key exposure as the key-block snapshot branch in fromBlock, reachable by the
-          // same light-node population -- see validateCommitmentsOnSnapshotPath.
+          // same light-node population -- see validateCommitmentsOnSnapshotPath. Microblocks cannot
+          // be challenged (no challenged-header field; the full-node path hardcodes hasChallenge =
+          // false), so the guard always runs here, unconditionally.
           for {
-            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchain, micro.transactionData, txSnapshots))
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchain, micro.transactionData, hasChallenge = false))
           } yield apply(blockchain, prevStateHash, StateSnapshot.empty, hasNg = true, micro.transactionData, txSnapshots)
         case None =>
           apply(
@@ -586,21 +588,36 @@ object BlockDiffer {
     * packed into a microblock, and `Caches` seats the generator from a microblock snapshot the same
     * way it does from a block snapshot. Guarding only the key-block path would just move the attack.
     *
-    * Transactions the peer declared `Elided` are skipped: an elided transaction contributes no state
-    * on the full-node path (see the `hasChallenge` recover in the validating `apply`), so rejecting
-    * the whole block over one would make light nodes stricter than full nodes on challenged blocks
-    * and risk a fork/stall on a block full nodes accept. NOTE: elided commitments are nonetheless
-    * still seated by `Caches.scala` (which matches on transaction type without consulting status) --
-    * that is a separate, adjacent finding, tracked in the C1 report, deliberately NOT fixed here.
+    * ==Why this does NOT consult the peer's declared transaction status==
+    *
+    * An earlier version of this check skipped transactions the peer marked `Elided`, to mirror the
+    * full-node `hasChallenge` elision. That was a critical mistake and is deliberately not done here:
+    * the status arrives on the wire in the peer's snapshot, `TxMeta.Status.fromProtobuf` maps ANY
+    * unrecognized enum value to `Elided` (`case _ => Elided`), and nothing ties that declaration to a
+    * real challenge. A peer could therefore set one protobuf field to skip validation entirely while
+    * still smuggling a rogue key through `nextCommittedGenerators` -- which the state hash cannot
+    * catch, because `TxStateSnapshotHashBuilder` excludes `nextCommittedGenerators` by design, and
+    * which is still seated, because the snapshot-path `apply` merges `txSnapshot` unconditionally
+    * (only the FEE is skipped for `Elided`) and `Caches` matches on transaction type alone.
+    *
+    * The skip is therefore gated on `hasChallenge`, which is derived LOCALLY from the block header we
+    * are validating, never from peer-supplied data. Full-node parity is preserved exactly where it is
+    * meaningful (a genuinely challenged key block, where a full node would have elided the failing
+    * transaction) and nowhere else.
+    *
+    * For microblocks `hasChallenge` is always false: `MicroBlock` has no challenged-header field and
+    * the full-node microblock path hardcodes `hasChallenge = false`, so a correct node can never
+    * elide inside a microblock. The guard consequently always runs there, unconditionally.
     */
   private def validateCommitmentsOnSnapshotPath(
       blockchain: Blockchain,
       txs: Seq[Transaction],
-      txSnapshots: Seq[(StateSnapshot, TxMeta.Status)]
+      hasChallenge: Boolean
   ): Either[ValidationError, Unit] = {
-    val commitments = txs
-      .zip(txSnapshots)
-      .collect { case (tx: CommitToGenerationTransaction, (_, status)) if status != TxMeta.Status.Elided => tx }
+    // No peer-supplied input participates in this decision.
+    val commitments =
+      if (hasChallenge) Seq.empty[CommitToGenerationTransaction]
+      else txs.collect { case tx: CommitToGenerationTransaction => tx }
     if (commitments.isEmpty) Either.unit
     else
       blockchain.currentGenerationPeriod
