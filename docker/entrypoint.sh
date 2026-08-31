@@ -6,6 +6,7 @@ JAVA_OPTS="-XX:+ExitOnOutOfMemoryError
   --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
   --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
   -Dlogback.stdout.level=${DCC_LOG_LEVEL}
+  -Dlogback.root.level=${DCC_LOG_LEVEL}
   -Dlogback.file.directory=${WVLOG}
   -Dlogback.file.level=TRACE
   -Ddcc.config.directory=/etc/dcc

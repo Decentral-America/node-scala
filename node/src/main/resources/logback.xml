@@ -19,7 +19,14 @@
 
     <logger name="scorex.crypto.signatures.Curve25519" level="INFO"/>
 
-    <root level="INFO"/>
+    <!-- The root logger's own level gates EVERY appender before any appender-level filter (e.g. the
+         STDOUT appender's ThresholdFilter below) ever sees the event: confirmed live 2026-08-31 that
+         setting -Dlogback.stdout.level=DEBUG had zero effect on console output because this was
+         hardcoded to INFO, silently suppressing DEBUG events at the source regardless of the STDOUT
+         filter's own threshold (and equally silently capping the file appender, configured via
+         logback.file.level=TRACE in docker/entrypoint.sh, at INFO too). Made configurable so
+         DCC_LOG_LEVEL genuinely propagates end to end. -->
+    <root level="${logback.root.level:-INFO}"/>
 
     <property name="logback.file.enabled" value="false"/>
 
