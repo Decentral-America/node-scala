@@ -175,8 +175,8 @@ the original 5-call-site estimate suggested it needed to be — that estimate
 predates this session's `Application.scala` fix, which already removed
 HotStuff's own (unsafe) consumption of the field, so the real, current count
 of *consumers* (excluding the accessor's own trait/impl definitions and the
-doc-comment) is smaller: 4 real consumer call sites, 2 correctly left as-is
-and 2 already safe. No new test was added because no new fix was applied;
+doc-comment) is smaller: 5 real consumer call sites, 2 correctly left as-is
+and 3 already safe. No new test was added because no new fix was applied;
 `GeneratorsApiRouteSpec` remains the regression guard for the one invariant
 (balance stability) an incorrect future "fix" here would most likely break.
 
