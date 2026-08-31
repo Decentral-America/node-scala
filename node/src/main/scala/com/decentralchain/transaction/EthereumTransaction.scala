@@ -26,6 +26,7 @@ import org.web3j.abi.datatypes.Address as EthAddress
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.crypto.*
 import org.web3j.crypto.Sign.SignatureData
+import org.web3j.crypto.transaction.`type`.{Transaction1559, Transaction4844, LegacyTransaction}
 import org.web3j.utils.Convert
 import play.api.libs.json.*
 
@@ -52,13 +53,17 @@ final case class EthereumTransaction(
 
   override val timestamp: TxTimestamp = underlying.getNonce.longValueExact()
 
+  val ecdsaSignature: Coeval[ECDSASignature] = Coeval.evalOnce {
+    require(signatureData != null, "empty signature data")
+    new ECDSASignature(new BigInteger(1, signatureData.getR), new BigInteger(1, signatureData.getS))
+  }
+
   val signerKeyBigInt: Coeval[BigInteger] = Coeval.evalOnce {
     require(signatureData != null, "empty signature data")
     val v          = BigInt(1, signatureData.getV)
     val recoveryId = if (v > 28) v - chainId * 2 - 35 else v - 27
-    val sig        = new ECDSASignature(new BigInteger(1, signatureData.getR), new BigInteger(1, signatureData.getS))
 
-    Sign.recoverFromSignature(recoveryId.intValue, sig, Hash.sha3(this.bodyBytes()))
+    Sign.recoverFromSignature(recoveryId.intValue, ecdsaSignature(), Hash.sha3(this.bodyBytes()))
   }
 
   val signerPublicKey: Coeval[PublicKey] = Coeval.evalOnce {
@@ -72,6 +77,18 @@ final case class EthereumTransaction(
   }
 
   val senderAddress: Coeval[Address] = Coeval.evalOnce(signerPublicKey().toAddress(chainId))
+
+  // The (truncated, single-byte) `chainId` field above is always populated (falls back to
+  // AddressScheme.current.chainId for legacy transactions), but a real EIP-1559/4844 chain ID can
+  // exceed a byte's range -- this preserves the full, untruncated value so cross-chain-ID validation
+  // (checkCommonFields) isn't silently comparing against a lossy truncation. None for legacy
+  // transactions, which don't carry a chain ID at all.
+  val longChainId: Coeval[Option[Long]] = Coeval.evalOnce {
+    underlying.getTransaction match {
+      case x: (Transaction1559 | Transaction4844) => Some(x.getChainId)
+      case _: LegacyTransaction                   => None
+    }
+  }
 
   override val json: Coeval[JsObject] = Coeval.evalOnce(
     BaseTxJson.toJson(this) ++ Json.obj(
