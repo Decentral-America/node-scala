@@ -19,6 +19,7 @@ class SynchronizationSettingsSpecification extends FlatSpec {
                      |    synchronization-timeout = 30s
                      |    processed-blocks-cache-timeout = 3m
                      |    score-ttl = 90s
+                     |    blacklist-on-score-mismatch = false
                      |
                      |    max-base-target = 130
                      |
@@ -54,6 +55,7 @@ class SynchronizationSettingsSpecification extends FlatSpec {
     settings.synchronizationTimeout should be(30.seconds)
     settings.processedBlocksCacheTimeout should be(3.minutes)
     settings.scoreTTL should be(90.seconds)
+    settings.blacklistOnScoreMismatch should be(false)
     settings.invalidBlocksStorage shouldBe InvalidBlockStorageSettings(
       maxSize = 40000,
       timeout = 2.days
