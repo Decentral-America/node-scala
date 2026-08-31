@@ -109,3 +109,24 @@ fee-carry exclusion needed an activation-height gate (a would-be "feature
 - **Decision:** documented, not fixed, matching
   `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §6's feature table ("29 — Not
   built — superseded by wipe-testnet conclusion").
+
+## 5. `CancelLeasesToDisabledAliases` network-filter inversion (`95fc1cd4f8`) — fixed, not a divergence
+
+Not a deliberate divergence — recorded here because the fix touches the
+shared `PatchOnFeature` base class. `95fc1cd4f8` ("purge Waves chain
+bytes") changed `CancelLeasesToDisabledAliases`'s network set from `Set('W')`
+(Waves-mainnet-only) to `Set.empty`, intending to disable this
+Waves-mainnet-specific historical lease cleanup entirely for DCC (a clean
+chain with no such historical leases to clean up). `PatchOnFeature`'s old
+`networks.isEmpty || networks.contains(...)` guard meant an empty set
+inverted that intent to "applies to every network" instead of "applies to
+none" — this would throw the first time any node crossed the
+SynchronousCalls (feature 16) activation height on stagenet (`'S'`) or
+testnet (`'!'`), since no `CancelLeasesToDisabledAliases-S.json`/`-!.json`
+patch-data resource exists for those chain IDs. Fixed in
+`DiffPatchFactory.scala`: `PatchOnFeature.isDefinedAt` now treats an empty
+`networks` set as "applies to no network." Verified this is the only
+`PatchOnFeature` consumer in the codebase (`CancelAllLeases`/
+`CancelInvalidLeaseIn`/`CancelLeaseOverflow` all extend the differently-
+shaped `PatchAtHeight`, unaffected), so the semantic change is safe.
+See `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §5.
