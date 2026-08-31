@@ -333,6 +333,22 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // from its blockId, the same defense-in-depth the receive path below already applies via
       // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
       // literally.
+      // Task 4: automated recovery from a wedged committee (see `HotStuffWatchdog`'s doc for the full
+      // detection/safety/N-sizing design). `hsCoordinator` and `hsWatchdog` are mutually wired
+      // (coordinator -> watchdog via `onAction`'s progress signal, watchdog -> coordinator via
+      // `resetLocalSafetyState()`'s recovery action), so one forward-reference var is unavoidable to
+      // break the construction cycle; it is assigned exactly once, immediately below, before either
+      // object's methods can be invoked (`hotStuffScheduler` hasn't started yet at this point in
+      // `Application` construction). The watchdog itself still has NO reference to
+      // `blockchainUpdater`/`finalizedHeight`/anything beyond the committee accessor, the lock-file path,
+      // and this one coordinator's own `resetLocalSafetyState()` -- by construction it cannot touch T0.
+      var hsCoordinatorRef: HotStuffCoordinator.Enabled = null
+      val hsWatchdog                                    = new com.decentralchain.consensus.hotstuff.HotStuffWatchdog(
+        committeeProvider = committee,
+        lockPath = hsLockedQCPath,
+        resetInMemoryState = () => hsCoordinatorRef.resetLocalSafetyState()
+      )
+
       val hsCoordinator =
         new HotStuffCoordinator.Enabled(
           committee,
@@ -344,8 +360,10 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           hsInitialLockedQC,
           qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc),
           committeeEpoch,
-          committeeEpochOf
+          committeeEpochOf,
+          onAction = _ => hsWatchdog.recordProgress()
         )
+      hsCoordinatorRef = hsCoordinator
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
@@ -455,7 +473,18 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // today. It cannot fabricate a commit, and cannot regress feature-25. This must still be re-audited
       // (docs/hotstuff-audit-readiness.md) before HotStuff is ever made mainnet-authoritative.
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
-      hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onRoundTimerTick())
+      // Task 4: `hsWatchdog.check()` runs on the SAME scheduled callback, immediately after
+      // `onRoundTimerTick()`, on the SAME single `hotStuffScheduler` thread the coordinator itself is
+      // confined to -- satisfying `HotStuffWatchdog`'s threading contract without a second scheduler.
+      hotStuffScheduler.scheduleWithFixedDelay(
+        rt,
+        rt,
+        java.util.concurrent.TimeUnit.MILLISECONDS,
+        () => {
+          hsCoordinator.onRoundTimerTick()
+          hsWatchdog.check()
+        }
+      )
       val hsModeLabel = if (settings.hotStuffSettings.authoritative) "AUTHORITATIVE" else "observational"
       log.info(
         s"T2 HotStuff coordinator ENABLED ($hsModeLabel; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."

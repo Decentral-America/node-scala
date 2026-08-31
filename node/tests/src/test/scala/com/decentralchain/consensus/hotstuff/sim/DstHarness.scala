@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff.sim
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, HotStuffEffects}
+import com.decentralchain.consensus.hotstuff.{HotStuffAction, HotStuffCoordinator, HotStuffEffects}
 import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
@@ -29,7 +29,15 @@ final class DstHarness(
     // behaviour byte-for-byte. See `DstCommitteeEpochRotationScenarioSpecification` for a scenario that
     // exercises a real, height-driven committee-epoch rotation with this wired to a genuinely
     // height-varying function.
-    committeeEpochOf: Int => Int = _ => 0
+    committeeEpochOf: Int => Int = _ => 0,
+    // Task 4 (wedged-committee watchdog) additive hook: fired as `(node, action)` for every action
+    // reported by that node's `HotStuffCoordinator.Enabled.onAction` (see that class's doc for exactly
+    // what counts). Defaults to a no-op so every existing scenario spec that doesn't pass this (all of
+    // them as of this change -- see the call sites above) observes byte-for-byte the same behaviour as
+    // before this parameter existed. `HotStuffWatchdogDstReproductionSpecification` is the one scenario
+    // that supplies a real function here, wiring each node's progress signal to its own per-node
+    // `HotStuffWatchdog` instance.
+    onAction: (Int, HotStuffAction) => Unit = (_, _) => ()
 ) {
   val clock: SimClock                                = new SimClock(seed)
   val commits: mutable.ListBuffer[CommitObservation] = mutable.ListBuffer.empty
@@ -77,7 +85,8 @@ final class DstHarness(
           // falls back to ITS OWN last-committed tip, exactly as production's `blockSource` would.
           blockSource = () => committedTip.get(i),
           committeeEpochProvider = () => epochBelief,
-          committeeEpochOf = committeeEpochOf
+          committeeEpochOf = committeeEpochOf,
+          onAction = action => onAction(i, action)
         )
       )
       .toMap
@@ -116,6 +125,19 @@ final class DstHarness(
     * running the same wall-clock-driven timer.
     */
   def tickTimeoutAll(): Unit = live.toSeq.sorted.foreach(tickTimeout)
+
+  /** Task 4 additive accessor: the recovery half of a per-node `HotStuffWatchdog` needs to call
+    * `resetLocalSafetyState()` on THAT node's own coordinator. Exposed narrowly (one method, one node's
+    * own reset) rather than leaking the `nodes` map itself, so a scenario wiring a watchdog per node
+    * still cannot reach anything beyond what `HotStuffCoordinator`'s public interface already allows.
+    */
+  def resetLocalSafetyState(node: Int): Unit = nodes(node).resetLocalSafetyState()
+
+  /** Task 4 additive accessor: the CURRENT committee, exactly as every node's own `committeeProvider`
+    * reads it. Lets a per-node `HotStuffWatchdog` in a scenario spec observe the same committee data a
+    * production watchdog would (`committee` var is private; scenarios must go through this, not reach in).
+    */
+  def currentCommittee(): GeneratorSet = committee
 
   def crash(node: Int): Unit     = live -= node
   def restart(node: Int): Unit   = live += node

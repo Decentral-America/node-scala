@@ -54,6 +54,21 @@ sealed trait HotStuffCoordinator {
     * supplied at construction, or it has nothing to propose right now.
     */
   def onRoundTimerTick(): Unit
+
+  /** Task 4 (wedged-committee watchdog) additive recovery hook: clear this replica's in-memory HotStuff
+    * safety lock (`SafetyState.lockedQC`/`prepareQC`) so the NEXT event/tick starts from a blank safety
+    * slate, same as a fresh process boot with no persisted lock. `refreshCommittee()` already runs at
+    * the top of every existing entry point (including `onRoundTimerTick`), so no separate "refresh
+    * committee" call is needed here -- clearing the lock is the only additional state mutation required
+    * to reproduce the manual `rm locked-qc.dat` + restart's IN-PROCESS effect. Does NOT touch the
+    * on-disk `locked-qc.dat` file itself (the watchdog deletes that separately -- see
+    * `HotStuffWatchdog` -- since this coordinator has no filesystem path of its own) and, critically,
+    * has NO reference to `finalizedHeight`/`BlockchainUpdaterImpl`/feature-25 at all: this method's
+    * entire blast radius is the private `var`s it touches. Default no-op on `Disabled` (HotStuff gated
+    * off -- there is no lock to clear) and on any existing test/call site that never invokes it,
+    * preserving byte-for-byte prior behaviour everywhere this isn't explicitly called.
+    */
+  def resetLocalSafetyState(): Unit = ()
 }
 
 object HotStuffCoordinator {
@@ -177,7 +192,20 @@ object HotStuffCoordinator {
       // phase-progression votes in `applyQC` -> `castVotes`) -- all of which already have the target
       // height in hand. Defaults to a constant `0`, matching every existing call site/test that doesn't
       // pass this and preserving byte-for-byte prior behaviour for them.
-      committeeEpochOf: Int => Int = _ => 0
+      committeeEpochOf: Int => Int = _ => 0,
+      // Task 4 (wedged-committee watchdog) additive hook: fires exactly once per action emitted by a
+      // GENUINELY VERIFIED, ACCEPTED QC (`HotStuffEngine.onQC`'s `Committed`/`EnteredView` -- see
+      // `applyQC` below), i.e. real quorum-backed progress. Deliberately NOT fired for the `EnteredView`
+      // that `HotStuffEngine.onTimeout` (via this class's private `onTimeout()`, called from
+      // `onRoundTimerTick` on every stalled tick) unconditionally emits on a BARE pacemaker view-bump --
+      // that action shares the same case class but means the opposite thing here: "no QC formed, the
+      // round stalled, the view was bumped anyway so the next leader gets a turn". A wedged committee
+      // ticks that bare-timeout path forever, bumping the view every single tick, so treating IT as
+      // "progress" would make a stall-detector that never fires -- defeating the whole point of the
+      // signal this hook exists to provide (see `HotStuffWatchdog`). Defaults to a no-op so every
+      // existing call site/test that doesn't pass this observes byte-for-byte the same behaviour as
+      // before this hook existed. Does NOT change any existing method signature.
+      onAction: HotStuffAction => Unit = _ => ()
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC), committeeEpoch = committeeEpochProvider())
@@ -330,9 +358,19 @@ object HotStuffCoordinator {
       // healthy QC is per-view chatter => DEBUG. The commit itself is logged by NodeHotStuffEffects.onCommit.
       if (rejected) logger.warn(line) else logger.debug(line)
       if (!rejected) onAccepted // e.g. broadcast a self-formed QC — only now that WE accept it
-      actions.foreach {
-        case HotStuffAction.Committed(blockId, height) => effects.onCommit(blockId, height)
-        case _                                         => ()
+      // Task 4 watchdog hook: report every action from a QC that reached HERE (i.e. survived the
+      // epoch/crypto verification `HotStuffEngine.onQC` applies) -- `Committed`, and the `EnteredView`
+      // that specifically accompanies a verified QC (NOT the bare-timeout one; that path never calls
+      // `applyQC`/reaches this line). A `Rejected` action never appears in `actions` alongside advanced
+      // state (see `HotStuffEngine.onQC`: a rejected QC returns `(state, Seq(Rejected(...)))` with
+      // `state` UNCHANGED), so reporting every element of `actions` here is exactly "real progress
+      // happened", matching this hook's contract.
+      actions.foreach { action =>
+        onAction(action)
+        action match {
+          case HotStuffAction.Committed(blockId, height) => effects.onCommit(blockId, height)
+          case _                                         => ()
+        }
       }
       // Phase progression: on a verified QC, vote the next phase for the same block (guarded by `voted`).
       if (!rejected) {
@@ -366,6 +404,23 @@ object HotStuffCoordinator {
     }
 
     def currentView: Int = engine.pacemaker.view
+
+    /** Task 4 watchdog override: replace `engine.safety` with a blank `SafetyState()` -- clearing
+      * `lockedQC`, `prepareQC`, and `lastVotedView` -- exactly what a fresh process boot with
+      * `initialLockedQC = None` starts from (see this class's `engine` initializer above). Deliberately
+      * touches ONLY `engine` (a private `var` of THIS class); there is no `finalizedHeight`,
+      * `BlockchainUpdaterImpl`, or any other component reachable from here to touch even if this method
+      * had a bug -- see `HotStuffWatchdogFinalizedHeightIsolationSpecification` for the test that
+      * verifies this directly rather than merely asserting it in a comment. Also resets the bounded
+      * in-flight-repropose tracker (`lastReproposedBlockId`/`reproposeAttempts`) so a stale branch
+      * abandoned before the reset doesn't count against the fresh attempt budget after it.
+      */
+    override def resetLocalSafetyState(): Unit = {
+      engine = engine.copy(safety = SafetyState())
+      lastReproposedBlockId = None
+      reproposeAttempts = 0
+      logger.warn("[HotStuff] resetLocalSafetyState: cleared in-memory lockedQC/prepareQC (watchdog-driven recovery)")
+    }
 
     // The classic HotStuff pacemaker liveness optimization (deferred at `blockSource`'s doc comment
     // above and its twin in Application.scala): if this replica already holds a real, quorum-backed QC
