@@ -13,6 +13,12 @@ import scala.collection.mutable
 /** One committed-block observation, recorded for later invariant checking by [[SafetyInvariants]]. */
 final case class CommitObservation(node: Int, blockId: BlockId, height: Int, at: SimTime)
 
+/** One vote-cast observation: every `HotStuffVote` a node actually broadcast, captured off the wire.
+  * Feeds [[SafetyInvariants.noEquivocation]] (audit F-2) -- the harness previously recorded only
+  * commits, so no DST scenario could ever have observed a double-signed `(view, phase)`.
+  */
+final case class VoteObservation(node: Int, vote: HotStuffVote, at: SimTime)
+
 /** Deterministic in-process HotStuff cluster simulation: `nodeCount` real `HotStuffCoordinator.Enabled`
   * instances (unmodified production consensus code) wired over a fault-injecting [[SimNetwork]] and
   * driven by a [[SimClock]]. No threads, no wall clock, no real networking — everything is reproducible
@@ -37,10 +43,21 @@ final class DstHarness(
     // before this parameter existed. `HotStuffWatchdogDstReproductionSpecification` is the one scenario
     // that supplies a real function here, wiring each node's progress signal to its own per-node
     // `HotStuffWatchdog` instance.
-    onAction: (Int, HotStuffAction) => Unit = (_, _) => ()
+    onAction: (Int, HotStuffAction) => Unit = (_, _) => (),
+    // Audit F-2 additive hook: the per-node `proposalValid` chain-membership guard, mirroring
+    // production's `Application.scala` wiring (`blockchainUpdater.heightOf(blockId).isDefined` --
+    // "is this a real block on MY OWN chain?"). Called as `(node, blockId)`. Defaults to the harness's
+    // historical `_ => true`, so every pre-existing scenario keeps byte-for-byte prior behaviour; the
+    // audit's point is precisely that a permissive default cannot exercise the realistic case, so
+    // `HotStuffWatchdogInFlightResetScenarioSpecification` supplies a genuinely chain-backed one.
+    proposalValid: (Int, BlockId) => Boolean = (_, _) => true
 ) {
   val clock: SimClock                                = new SimClock(seed)
   val commits: mutable.ListBuffer[CommitObservation] = mutable.ListBuffer.empty
+  // Audit F-2: every vote every node broadcasts, in delivery order. Recorded unconditionally for ALL
+  // scenarios (the append is O(1) per vote and nothing reads it unless a spec asks), so any scenario
+  // can run `SafetyInvariants.noEquivocation` without opting in to extra harness wiring.
+  val votes: mutable.ListBuffer[VoteObservation] = mutable.ListBuffer.empty
 
   private val network                 = new SimNetwork[Message](clock, nodeCount, faultProfile)
   private val kps                     = (0 until nodeCount).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
@@ -63,8 +80,16 @@ final class DstHarness(
   private val committedTip = mutable.Map.empty[Int, (BlockId, Int)]
 
   private class SimEffects(self: Int) extends HotStuffEffects {
-    def broadcast(m: Message): Unit =
+    def broadcast(m: Message): Unit = {
+      // Capture the vote BEFORE handing it to the network: a vote this replica signed is an
+      // equivocation signature regardless of whether a partition/drop stops it being delivered
+      // (audit F-2 -- the double-signature is the violation, not its delivery).
+      m match {
+        case v: HotStuffVote => votes += VoteObservation(self, v, clock.currentTime)
+        case _               => ()
+      }
       network.send(from = self, to = live.toSet)(m) { case (to, msg) => deliver(to, msg) }
+    }
     def myVoterIndexes: Set[Int]                                   = Set(self)
     def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
     def onCommit(blockId: BlockId, height: Int): Unit              = {
@@ -83,6 +108,7 @@ final class DstHarness(
           // Wires the real `onRoundTimerTick` leader-timeout re-propose path (including its
           // `inFlightBranch`/bounded-retry logic) into the simulation: on a genuine stall, node `i`
           // falls back to ITS OWN last-committed tip, exactly as production's `blockSource` would.
+          proposalValid = (blockId: BlockId) => proposalValid(i, blockId),
           blockSource = () => committedTip.get(i),
           committeeEpochProvider = () => epochBelief,
           committeeEpochOf = committeeEpochOf,

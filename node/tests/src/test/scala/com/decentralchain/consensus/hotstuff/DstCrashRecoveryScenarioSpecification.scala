@@ -27,7 +27,7 @@ class DstCrashRecoveryScenarioSpecification extends FlatSpec {
         harness.run()
 
         withClue(s"seed=$seed: ") {
-          SafetyInvariants.checkAll(harness.commits.toSeq) should be(Right(()))
+          SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) should be(Right(()))
         }
       }
     }
