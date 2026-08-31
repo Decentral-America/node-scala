@@ -99,7 +99,13 @@ jobs:
         run: |
           mkdir -p /tmp/replay-run
           tar xzf docker/target/dcc.tgz -C /tmp/replay-run
-          echo "NODE_BIN=$(find /tmp/replay-run -maxdepth 2 -name node -path '*/bin/*')" >> "$GITHUB_ENV"
+          NODE_BIN=$(find /tmp/replay-run -maxdepth 3 -name node -path '*/bin/*')
+          if [ -z "$NODE_BIN" ]; then
+            echo "::error::Could not locate the node launcher script under /tmp/replay-run (tarball layout changed?). Refusing to continue with an empty binary path."
+            find /tmp/replay-run -maxdepth 3
+            exit 1
+          fi
+          echo "NODE_BIN=$NODE_BIN" >> "$GITHUB_ENV"
 
       - name: Run fresh-genesis replay and watch for InvalidStateHash
         env:
