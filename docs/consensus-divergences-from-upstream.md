@@ -187,3 +187,8 @@ re-flag them: `appender/package.scala`'s `data.generatorSet` /
 value computed fresh from PoS-selector `validGenerators` logic
 (`package.scala:47-72`), not a read of the live finalization-state cache at
 all — different data source, same field name.
+
+Also checked: `node/testkit/.../ForwardingBlockchainUpdaterImpl.scala:68`
+forwards `currentGeneratorSet` to a wrapped `delegate` as part of a bulk,
+mechanical forwarding-method list (a test-fixture wrapper) — it has no logic
+of its own and isn't a real consumer.
