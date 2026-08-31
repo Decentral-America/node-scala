@@ -1,6 +1,6 @@
 package com.decentralchain.state
 
-import com.decentralchain.block.{Block, BlockSnapshot}
+import com.decentralchain.block.{Block, BlockSnapshot, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
@@ -310,6 +310,127 @@ class LightNodeTest extends PropSpec with WithDomain {
         .map(_._2) should contain(tx.endorserPublicKey)
     }
   }
+
+  // On the full-node path, a transaction whose diff fails inside a CHALLENGED block is elided rather
+  // than fatal (see the `hasChallenge` recover in BlockDiffer's validating `apply`). If the light-node
+  // snapshot check rejected such a block outright, a light node would reject a block full nodes accept
+  // -- a consensus-relevant divergence that could fork or stall it. So commitments the peer declared
+  // Elided are skipped by the check: they contribute no state on either node type.
+  property("C1. Light node matches full-node behavior: a commitment the peer declared Elided does not reject the block") {
+    val sender           = TxHelpers.signer(1)
+    val challengingMiner = TxHelpers.signer(3)
+    val periodStart      = Height(4)
+
+    val badPopTx = commitmentAttackCases(sender, periodStart).head._2
+
+    withDomain(
+      finalitySettings,
+      Seq(
+        AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee),
+        AddrWithBalance(challengingMiner.toAddress, 100_000.dcc),
+        AddrWithBalance(TxHelpers.defaultSigner.toAddress, 100_000.dcc)
+      )
+    ) { d =>
+      val elidedSnapshots: Seq[(StateSnapshot, TxMeta.Status)] = Seq(StateSnapshot.empty -> TxMeta.Status.Elided)
+
+      // An explicit stateHash is required: createBlock would otherwise compute one, which runs full
+      // validation and throws on the invalid PoP before the snapshot path is ever reached.
+      val block = d.createBlock(Block.ProtoBlockVersion, Seq(badPopTx), strictTime = true, stateHash = Some(Some(invalidStateHash)))
+
+      // The check must not be what rejects this block: an Elided commitment is skipped entirely.
+      // (The append may still fail later on state-hash grounds -- that is a different, non-divergent
+      // check -- so we assert specifically that the failure is NOT our commitment validation.)
+      val result = d.appendBlockE(block, Some(BlockSnapshot(block.id(), elidedSnapshots)))
+      result.left.toOption.map(_.toString).getOrElse("") should not include "Invalid commitment signature"
+    }
+  }
+
+  // The microblock snapshot path (BlockDiffer.fromMicroBlockTraced) is structurally identical to the
+  // key-block one and reachable by the same light-node population: MicroBlockSynchronizer requests
+  // snapshots only when isLightMode, nothing stops a CommitToGenerationTransaction from being packed
+  // into a microblock, and Caches seats the generator from a microblock snapshot the same way.
+  // Without the shared guard, an attacker blocked at the key-block path just moves here.
+  property("C1. Light node must reject microblock-snapshot-path blocks committing a BLS key with invalid PoP or bad curve point") {
+    val sender      = TxHelpers.signer(1)
+    val honestOther = TxHelpers.signer(4)
+    val periodStart = Height(4)
+
+    commitmentAttackCases(sender, periodStart).foreach { case (label, maliciousTx) =>
+      withClue(s"microblock / $label: ") {
+        withDomain(
+          finalitySettings,
+          Seq(
+            AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee),
+            AddrWithBalance(
+              honestOther.toAddress,
+              100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee
+            )
+          )
+        ) { d =>
+          d.appendBlock()
+
+          // Structurally valid snapshots, derived from an honest commitment by a DIFFERENT sender --
+          // what a malicious peer would serve alongside a microblock whose transaction actually
+          // carries the forged endorser key. A different sender keeps this derivation independent of
+          // the attack key (the infinity case reuses `sender`'s own BLS key).
+          val honestMicro    = d.createMicroBlock()(TxHelpers.commitToGeneration(periodStart, honestOther))
+          val honestSnapshot = getMicroBlockTxSnapshots(d, honestMicro)
+
+          // The malicious microblock must reuse the honest state hash: createMicroBlock would
+          // otherwise compute one itself, which runs full validation and rejects the tx before we
+          // ever reach the snapshot path under test.
+          val maliciousMicro = d.createMicroBlock(stateHash = honestMicro.stateHash)(maliciousTx)
+
+          d.appendMicroBlockE(
+            maliciousMicro,
+            Some(MicroBlockSnapshot(maliciousMicro.totalResBlockSig, honestSnapshot))
+          ) should beLeft
+
+          d.blockchain
+            .committedGenerators(d.blockchain.currentGenerationPeriod.get.next)
+            .map(_._2) should not contain maliciousTx.endorserPublicKey
+        }
+      }
+    }
+  }
+
+  property("C1. Light node still accepts a microblock-snapshot-path block with a valid commitment") {
+    val sender      = TxHelpers.signer(1)
+    val periodStart = Height(4)
+
+    withDomain(
+      finalitySettings,
+      Seq(AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee))
+    ) { d =>
+      d.appendBlock()
+
+      val tx        = TxHelpers.commitToGeneration(periodStart, sender)
+      val micro     = d.createMicroBlock()(tx)
+      val snapshots = getMicroBlockTxSnapshots(d, micro)
+
+      d.appendMicroBlockE(micro, Some(MicroBlockSnapshot(micro.totalResBlockSig, snapshots))) should beRight
+      d.blockchain
+        .committedGenerators(d.blockchain.currentGenerationPeriod.get.next)
+        .map(_._2) should contain(tx.endorserPublicKey)
+    }
+  }
+
+  private def getMicroBlockTxSnapshots(d: Domain, micro: MicroBlock): Seq[(StateSnapshot, TxMeta.Status)] =
+    BlockDiffer
+      .fromMicroBlock(
+        d.blockchain,
+        d.blockchain.lastBlockTimestamp,
+        d.blockchain.lastStateHash(Some(micro.reference)),
+        micro,
+        None,
+        MiningConstraint.Unlimited
+      )
+      .explicitGet()
+      .snapshot
+      .transactions
+      .values
+      .toSeq
+      .map(txInfo => txInfo.snapshot -> txInfo.status)
 
   private def getTxSnapshots(d: Domain, block: Block): Seq[(StateSnapshot, TxMeta.Status)] = {
     val lb                                            = d.liquidState.get.liquidBlockOf(block.header.reference).get

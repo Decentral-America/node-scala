@@ -238,7 +238,7 @@ object BlockDiffer {
       r <- snapshot match {
         case Some(BlockSnapshot(_, txSnapshots)) =>
           for {
-            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData))
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData, txSnapshots))
           } yield apply(blockchainWithNewBlock, prevStateHash, initSnapshot, stateHeight >= ngHeight, block.transactionData, txSnapshots)
         case None =>
           apply(
@@ -352,7 +352,11 @@ object BlockDiffer {
       _ <- TracedResult(micro.signaturesValid())
       r <- snapshot match {
         case Some(MicroBlockSnapshot(_, txSnapshots)) =>
-          TracedResult.wrapValue(apply(blockchain, prevStateHash, StateSnapshot.empty, hasNg = true, micro.transactionData, txSnapshots))
+          // Same rogue-key exposure as the key-block snapshot branch in fromBlock, reachable by the
+          // same light-node population -- see validateCommitmentsOnSnapshotPath.
+          for {
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchain, micro.transactionData, txSnapshots))
+          } yield apply(blockchain, prevStateHash, StateSnapshot.empty, hasNg = true, micro.transactionData, txSnapshots)
         case None =>
           apply(
             blockchain,
@@ -575,12 +579,28 @@ object BlockDiffer {
     * PoP, curve validation, period-start binding, and duplicate rejection. Balance/deposit
     * conditions are consensus-visible through the state hash and are intentionally left to the
     * normal snapshot fold.
+    *
+    * Shared by BOTH snapshot paths -- [[fromBlock]] and [[fromMicroBlockTraced]]. The microblock
+    * path is reachable by exactly the same light-node population (MicroBlockSynchronizer requests
+    * snapshots only when `isLightMode`), nothing stops a CommitToGenerationTransaction from being
+    * packed into a microblock, and `Caches` seats the generator from a microblock snapshot the same
+    * way it does from a block snapshot. Guarding only the key-block path would just move the attack.
+    *
+    * Transactions the peer declared `Elided` are skipped: an elided transaction contributes no state
+    * on the full-node path (see the `hasChallenge` recover in the validating `apply`), so rejecting
+    * the whole block over one would make light nodes stricter than full nodes on challenged blocks
+    * and risk a fork/stall on a block full nodes accept. NOTE: elided commitments are nonetheless
+    * still seated by `Caches.scala` (which matches on transaction type without consulting status) --
+    * that is a separate, adjacent finding, tracked in the C1 report, deliberately NOT fixed here.
     */
   private def validateCommitmentsOnSnapshotPath(
       blockchain: Blockchain,
-      txs: Seq[Transaction]
+      txs: Seq[Transaction],
+      txSnapshots: Seq[(StateSnapshot, TxMeta.Status)]
   ): Either[ValidationError, Unit] = {
-    val commitments = txs.collect { case tx: CommitToGenerationTransaction => tx }
+    val commitments = txs
+      .zip(txSnapshots)
+      .collect { case (tx: CommitToGenerationTransaction, (_, status)) if status != TxMeta.Status.Elided => tx }
     if (commitments.isEmpty) Either.unit
     else
       blockchain.currentGenerationPeriod
