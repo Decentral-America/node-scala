@@ -92,7 +92,7 @@ class DstCommitteeEpochRotationScenarioSpecification extends FlatSpec {
             )
         }
 
-        SafetyInvariants.checkAll(harness.commits.toSeq) match {
+        SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
           case Left(reason) if firstFailure.isEmpty => firstFailure = Some((seed, reason))
           case _                                    => ()
         }

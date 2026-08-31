@@ -95,7 +95,7 @@ class DstCommitteeChangeScenarioSpecification extends FlatSpec {
         harness.setCommittee(committeeOf(Seq(25L, 25L, 25L, 100L)))  // stake redistribution mid-round
         harness.run()
 
-        SafetyInvariants.checkAll(harness.commits.toSeq) match {
+        SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
           case Left(reason) if firstFailure.isEmpty => firstFailure = Some((seed, reason))
           case _                                     => ()
         }

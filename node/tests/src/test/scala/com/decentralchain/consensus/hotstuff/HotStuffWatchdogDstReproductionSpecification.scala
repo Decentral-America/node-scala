@@ -192,7 +192,7 @@ class HotStuffWatchdogDstReproductionSpecification extends FlatSpec {
         nodesCommittedAfterRecovery should contain(0) // node 0 specifically resumed after the watchdog's reset
       }
 
-      SafetyInvariants.checkAll(harness.commits.toSeq) match {
+      SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
         case Left(reason) => fail(s"safety violation after watchdog-driven recovery: $reason")
         case Right(())    => succeed
       }

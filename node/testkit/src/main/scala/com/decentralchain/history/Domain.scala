@@ -6,7 +6,7 @@ import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.api.BlockMeta
 import com.decentralchain.api.common.*
 import com.decentralchain.block.Block.BlockId
-import com.decentralchain.block.{Block, BlockSnapshot, ChallengedHeader, FinalizationVoting, MicroBlock}
+import com.decentralchain.block.{Block, BlockSnapshot, ChallengedHeader, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
@@ -224,6 +224,12 @@ case class Domain(
   def appendMicroBlock(b: MicroBlock): BlockId = blockchainUpdater.processMicroBlock(b, None).explicitGet()
 
   def appendMicroBlockE(b: MicroBlock): Either[ValidationError, BlockId] = blockchainUpdater.processMicroBlock(b, None)
+
+  /** Snapshot-carrying variant: exercises the light-node microblock snapshot path, which the
+    * `snapshot = None` overloads above cannot reach.
+    */
+  def appendMicroBlockE(b: MicroBlock, snapshot: Option[MicroBlockSnapshot]): Either[ValidationError, BlockId] =
+    blockchainUpdater.processMicroBlock(b, snapshot)
 
   def lastBlockId: ByteStr = blockchainUpdater.lastBlockId.getOrElse(randomSig)
 

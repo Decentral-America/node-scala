@@ -117,7 +117,7 @@ class DstEmptyCommitteeSourceScenarioSpecification extends FlatSpec {
         if (nodesCommittedAfterRecovery == Set(0, 1, 2, 3)) resumedCount += 1
 
         withClue(s"seed=$seed (committedBeforeFault=$committedBeforeFault): ") {
-          SafetyInvariants.checkAll(harness.commits.toSeq) match {
+          SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
             case Left(reason) if firstSafetyFailure.isEmpty => firstSafetyFailure = Some((seed, reason))
             case _                                          => ()
           }

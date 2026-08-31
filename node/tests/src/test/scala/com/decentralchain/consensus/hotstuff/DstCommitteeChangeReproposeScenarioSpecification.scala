@@ -68,7 +68,7 @@ class DstCommitteeChangeReproposeScenarioSpecification extends FlatSpec {
 
         if (harness.commits.nonEmpty) anyCommitObserved = true
 
-        SafetyInvariants.checkAll(harness.commits.toSeq) match {
+        SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
           case Left(reason) if firstFailure.isEmpty => firstFailure = Some((seed, reason))
           case _                                     => ()
         }

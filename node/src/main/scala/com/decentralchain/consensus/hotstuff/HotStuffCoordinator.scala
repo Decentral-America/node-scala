@@ -56,8 +56,11 @@ sealed trait HotStuffCoordinator {
   def onRoundTimerTick(): Unit
 
   /** Task 4 (wedged-committee watchdog) additive recovery hook: clear this replica's in-memory HotStuff
-    * safety lock (`SafetyState.lockedQC`/`prepareQC`) so the NEXT event/tick starts from a blank safety
-    * slate, same as a fresh process boot with no persisted lock. `refreshCommittee()` already runs at
+    * safety lock (`SafetyState.lockedQC`/`prepareQC`) so the NEXT event/tick starts from a blank lock,
+    * same as a fresh process boot with no persisted lock. `SafetyState.lastVotedView` is deliberately
+    * PRESERVED across this reset -- it is the only anti-double-vote bound and has no equivalent in the
+    * manual `rm locked-qc.dat` procedure this reproduces (audit F-2; see the override's doc for the
+    * full rationale and the exploit it closes). `refreshCommittee()` already runs at
     * the top of every existing entry point (including `onRoundTimerTick`), so no separate "refresh
     * committee" call is needed here -- clearing the lock is the only additional state mutation required
     * to reproduce the manual `rm locked-qc.dat` + restart's IN-PROCESS effect. Does NOT touch the
@@ -210,7 +213,13 @@ object HotStuffCoordinator {
       with StrictLogging {
     private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC), committeeEpoch = committeeEpochProvider())
     private var pool   = VotePool()
-    private var voted  = Set.empty[(Int, HotStuffPhase, BlockId)] // per-target vote guard (prevents storms/loops)
+    // Per-target vote guard (prevents storms/loops), keyed (view, phase, blockId).
+    // SAFETY-LOAD-BEARING across `resetLocalSafetyState`: this is the anti-double-vote guard for
+    // phase-progression votes (PRE_COMMIT/COMMIT), the counterpart to `lastVotedView` on the
+    // PREPARE path. `resetLocalSafetyState` must NEVER clear it -- doing so would let a
+    // watchdog-driven recovery re-emit phase votes this replica has already signed. See the audit
+    // F-2 note on `resetLocalSafetyState`.
+    private var voted = Set.empty[(Int, HotStuffPhase, BlockId)]
     // Baseline for stall detection in `onRoundTimerTick`: the pacemaker view as of the PREVIOUS tick,
     // or `None` before the first tick. `None` ensures the very first tick only establishes the
     // baseline and never mistakes "no ticks have happened yet" for "the leader stalled".
@@ -405,21 +414,60 @@ object HotStuffCoordinator {
 
     def currentView: Int = engine.pacemaker.view
 
-    /** Task 4 watchdog override: replace `engine.safety` with a blank `SafetyState()` -- clearing
-      * `lockedQC`, `prepareQC`, and `lastVotedView` -- exactly what a fresh process boot with
-      * `initialLockedQC = None` starts from (see this class's `engine` initializer above). Deliberately
-      * touches ONLY `engine` (a private `var` of THIS class); there is no `finalizedHeight`,
-      * `BlockchainUpdaterImpl`, or any other component reachable from here to touch even if this method
-      * had a bug -- see `HotStuffWatchdogFinalizedHeightIsolationSpecification` for the test that
-      * verifies this directly rather than merely asserting it in a comment. Also resets the bounded
-      * in-flight-repropose tracker (`lastReproposedBlockId`/`reproposeAttempts`) so a stale branch
-      * abandoned before the reset doesn't count against the fresh attempt budget after it.
+    /** Task 4 watchdog override: clear this replica's in-memory HotStuff lock (`lockedQC`/`prepareQC`)
+      * while PRESERVING `lastVotedView`. Deliberately touches ONLY `engine` (a private `var` of THIS
+      * class); there is no `finalizedHeight`, `BlockchainUpdaterImpl`, or any other component reachable
+      * from here to touch even if this method had a bug -- see
+      * `HotStuffWatchdogFinalizedHeightIsolationSpecification` for the test that verifies this directly
+      * rather than merely asserting it in a comment. Also resets the bounded in-flight-repropose tracker
+      * (`lastReproposedBlockId`/`reproposeAttempts`) so a stale branch abandoned before the reset
+      * doesn't count against the fresh attempt budget after it. Left deliberately UNTOUCHED, completing
+      * the enumeration: `voted` (see its declaration -- safety-load-bearing) and `pool`, the vote pool,
+      * whose accumulated votes remain valid across the reset and are pruned on their own schedule by
+      * `prunePool()` as views advance.
+      *
+      * AUDIT F-2 (HIGH, 2026-08-31) -- why this is NOT a blanket `SafetyState()`: this used to be
+      * `engine.copy(safety = SafetyState())`, whose no-arg defaults also reset `lastVotedView` to `-1`.
+      * That field is the only thing in `HotStuffSafety.safeToVote` -- i.e. on the PREPARE-phase path --
+      * stopping this replica from voting twice in the same view for two DIFFERENT blocks. Scope note:
+      * it is NOT the whole anti-double-vote story for the coordinator. Phase-progression votes
+      * (PRE_COMMIT/COMMIT) are guarded separately by the `voted` set, which this reset deliberately
+      * does NOT clear. `voted` is keyed `(view, phase, blockId)`, so it only blocks re-voting the SAME
+      * target and cannot substitute for `lastVotedView` on a conflicting one -- the two are
+      * complementary, and both must survive the reset.
+      * With `lastVotedView = -1` and `lockedQC = None`, EVERY proposal at any view >= 0 was admissible
+      * again. Concretely: the watchdog fires while this replica's own PREPARE votes for view `v` are
+      * genuinely in flight (no QC back yet, so `recordProgress()` never fired); a proposal for a
+      * different block still at view `v` then passes `v > -1` and gets voted for, leaving two
+      * conflicting signed PREPARE votes at the same `(view, phase)` on the wire -- precisely what
+      * `HotStuffSafety.equivocators` exists to detect, emitted by an HONEST node's own recovery path.
+      *
+      * Preserving it costs the recovery nothing. This method automates the manual `rm locked-qc.dat` +
+      * restart procedure, and `lastVotedView` is not persisted to disk at all, so it has NO equivalent
+      * in the manual procedure being reproduced. Nor does keeping it block legitimate post-recovery
+      * voting: the pacemaker's view lives in a SEPARATE `EngineState` field (`pacemaker`, untouched
+      * here) and `HotStuffPacemaker.onTimeout` bumps it unconditionally on every stalled
+      * `onRoundTimerTick`, so genuine post-recovery traffic always arrives at a view strictly above
+      * `lastVotedView`. The only thing this bound now rejects is a re-vote at a view this replica has
+      * already voted in -- which is never legitimate progress, only the double-vote above. See
+      * `HotStuffResetDoubleVoteSpecification`.
+      *
+      * RESIDUAL GAP (deferred, stated plainly rather than left implicit): because `lastVotedView` is
+      * in-memory only, a process RESTART still resets it to `-1` and reopens exactly the double-vote
+      * window this fix closes for the watchdog path. A restart is slower than a watchdog reset, so
+      * genuinely in-flight votes are less likely to still be outstanding, but the window is real and
+      * this fix does not close it. Closing it properly requires persisting `lastVotedView` alongside
+      * `locked-qc.dat` and restoring it on startup -- a durability change with its own crash-safety
+      * and format-migration considerations, deliberately out of scope here.
       */
     override def resetLocalSafetyState(): Unit = {
-      engine = engine.copy(safety = SafetyState())
+      engine = engine.copy(safety = SafetyState(lastVotedView = engine.safety.lastVotedView))
       lastReproposedBlockId = None
       reproposeAttempts = 0
-      logger.warn("[HotStuff] resetLocalSafetyState: cleared in-memory lockedQC/prepareQC (watchdog-driven recovery)")
+      logger.warn(
+        s"[HotStuff] resetLocalSafetyState: cleared in-memory lockedQC/prepareQC (watchdog-driven recovery); " +
+          s"lastVotedView=${engine.safety.lastVotedView} PRESERVED (anti-double-vote bound, audit F-2)"
+      )
     }
 
     // The classic HotStuff pacemaker liveness optimization (deferred at `blockSource`'s doc comment

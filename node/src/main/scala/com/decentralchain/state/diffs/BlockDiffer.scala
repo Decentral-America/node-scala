@@ -4,6 +4,7 @@ import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.decentralchain.account.Address
 import com.decentralchain.crypto
+import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
@@ -236,9 +237,9 @@ object BlockDiffer {
       hasChallenge  = block.header.challengedHeader.isDefined
       r <- snapshot match {
         case Some(BlockSnapshot(_, txSnapshots)) =>
-          TracedResult.wrapValue(
-            apply(blockchainWithNewBlock, prevStateHash, initSnapshot, stateHeight >= ngHeight, block.transactionData, txSnapshots)
-          )
+          for {
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData))
+          } yield apply(blockchainWithNewBlock, prevStateHash, initSnapshot, stateHeight >= ngHeight, block.transactionData, txSnapshots)
         case None =>
           apply(
             blockchainWithNewBlock,
@@ -351,7 +352,11 @@ object BlockDiffer {
       _ <- TracedResult(micro.signaturesValid())
       r <- snapshot match {
         case Some(MicroBlockSnapshot(_, txSnapshots)) =>
-          TracedResult.wrapValue(apply(blockchain, prevStateHash, StateSnapshot.empty, hasNg = true, micro.transactionData, txSnapshots))
+          // Same rogue-key exposure as the key-block snapshot branch in fromBlock, reachable by the
+          // same light-node population -- see validateCommitmentsOnSnapshotPath.
+          for {
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchain, micro.transactionData))
+          } yield apply(blockchain, prevStateHash, StateSnapshot.empty, hasNg = true, micro.transactionData, txSnapshots)
         case None =>
           apply(
             blockchain,
@@ -547,6 +552,112 @@ object BlockDiffer {
               )
           })
       }
+  }
+
+  /** Security-critical re-validation for the light-node (peer-supplied snapshot) path.
+    *
+    * The snapshot branch of [[fromBlock]] folds a serving peer's per-transaction snapshots straight
+    * into state without running [[TransactionDiffer]], which is the ONLY caller of
+    * [[CommitToGenerationTransactionDiff]]. That diff is where BLS proof-of-possession verification
+    * and full public-key curve validation live, so on the snapshot path a malicious serving peer
+    * could otherwise seat an arbitrary BLS key -- a rogue key, or the point at infinity -- as a
+    * committed generator.
+    *
+    * That is not caught by any downstream check:
+    *   - the state hash is computed OVER the peer's own snapshot, so it matches whatever the peer
+    *     sent (and `nextCommittedGenerators` is excluded from the per-tx hash entirely);
+    *   - `committedGeneratorsHash` is optional (`None` is accepted unconditionally at every
+    *     height), so it provides no enforcement of its own;
+    *   - persistence reads the key from `txn.endorserPublicKey` (see `Caches.scala`), i.e. straight
+    *     off the unvalidated transaction.
+    *
+    * Because [[BlsUtils.verifyAgg]] aggregates public keys additively, a rogue key admitted here
+    * would let its holder forge aggregate endorsement signatures on behalf of the whole committee,
+    * which is exactly what proof-of-possession exists to prevent.
+    *
+    * We deliberately re-run only the checks that the state-hash comparison cannot substitute for:
+    * PoP, curve validation, period-start binding, and duplicate rejection. Balance/deposit
+    * conditions are consensus-visible through the state hash and are intentionally left to the
+    * normal snapshot fold.
+    *
+    * Shared by BOTH snapshot paths -- [[fromBlock]] and [[fromMicroBlockTraced]]. The microblock
+    * path is reachable by exactly the same light-node population (MicroBlockSynchronizer requests
+    * snapshots only when `isLightMode`), nothing stops a CommitToGenerationTransaction from being
+    * packed into a microblock, and `Caches` seats the generator from a microblock snapshot the same
+    * way it does from a block snapshot. Guarding only the key-block path would just move the attack.
+    *
+    * ==Why this validates UNCONDITIONALLY, with no skip of any kind==
+    *
+    * Two earlier versions of this check tried to skip validation to mirror the full-node
+    * `hasChallenge` elision, and both were exploitable, because on this path every candidate signal
+    * turns out to be attacker-controlled:
+    *
+    *   - keying off the peer's declared transaction status failed because the status rides in the
+    *     peer's snapshot and `TxMeta.Status.fromProtobuf` maps ANY unrecognized value to `Elided`
+    *     (`case _ => Elided`);
+    *   - keying off `hasChallenge` (`block.header.challengedHeader.isDefined`) failed too: the block
+    *     header is peer-supplied, and the challenge-legitimacy re-derivation in [[fromBlock]] is
+    *     gated on `snapshot.isEmpty`, so on the snapshot path a declared challenge is NEVER verified.
+    *     A peer that wins a normal PoS slot can simply set `challengedHeader` to disable the check.
+    *
+    * Neither is caught downstream: `TxStateSnapshotHashBuilder` excludes `nextCommittedGenerators`
+    * from the per-tx hash by design, and the snapshot fold merges `txSnapshot` unconditionally (only
+    * the FEE is skipped for `Elided`).
+    *
+    * Crucially, the skip was never buying anything for this transaction type. A
+    * `CommitToGenerationTransaction` that fails validation yields `GenericError`, while a challenge is
+    * only accepted when the original block fails with `InvalidStateHash` -- so a correct challenging
+    * block can never legitimately contain an elided commitment. There is no full-node divergence to
+    * reconcile, and therefore no reason to skip. Validating unconditionally closes the hole at zero
+    * parity cost, on both the block and microblock snapshot paths.
+    */
+  private def validateCommitmentsOnSnapshotPath(
+      blockchain: Blockchain,
+      txs: Seq[Transaction]
+  ): Either[ValidationError, Unit] = {
+    val commitments = txs.collect { case tx: CommitToGenerationTransaction => tx }
+    if (commitments.isEmpty) Either.unit
+    else
+      blockchain.currentGenerationPeriod
+        .toRight(ActivationError("DeterministicFinality is not yet activated"))
+        .flatMap { current =>
+          val next = current.next
+          // `seen` starts from the keys already committed for the next period and grows as we walk
+          // this block, so a duplicate *within* a single block is rejected too. The fold stops at
+          // the first failure: PoP verification is a pairing check, and a rejected block must not
+          // let a peer make us run one per transaction.
+          def loop(remaining: List[CommitToGenerationTransaction], seen: Seq[(Address, BlsPublicKey)]): Either[ValidationError, Unit] =
+            remaining match {
+              case Nil      => Either.unit
+              case tx :: ts =>
+                val checked = for {
+                  _ <- Either.raiseUnless(tx.generationPeriodStart == next.start) {
+                    GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
+                  }
+                  _ <- Either.raiseUnless(
+                    BlsUtils
+                      .verifyBasic(
+                        tx.commitmentSignature.arr,
+                        tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray,
+                        tx.endorserPublicKey.arr
+                      )
+                      .isRight
+                  )(GenericError("Invalid commitment signature"))
+                  _ <- tx.endorserPublicKey.validated.leftMap(GenericError(_))
+                  _ <- seen.foldLeft(Either.unit[ValidationError]) {
+                    case (r @ Left(_), _)          => r
+                    case (Right(_), (addr, blsPk)) =>
+                      if (addr == tx.sender.toAddress) GenericError(s"${tx.sender.toAddress} is already committed").asLeft
+                      else if (blsPk == tx.endorserPublicKey)
+                        GenericError(s"BLS key ${tx.endorserPublicKey} is already committed, try another key").asLeft
+                      else Either.unit
+                  }
+                } yield ()
+                checked.flatMap(_ => loop(ts, seen :+ (tx.sender.toAddress -> tx.endorserPublicKey)))
+            }
+
+          loop(commitments.toList, blockchain.committedGenerators(next))
+        }
   }
 
   private def apply(
