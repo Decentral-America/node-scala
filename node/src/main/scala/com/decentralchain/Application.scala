@@ -228,27 +228,11 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     if (settings.hotStuffSettings.enabled) {
       import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, NodeHotStuffEffects}
       import com.decentralchain.block.Block.BlockId
-      import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
+      import com.decentralchain.state.GeneratorSet
 
-      // NOT blockchainUpdater.currentGeneratorSet: that reads ngState.finalizationState.generatorSet,
-      // the same LIVE, in-memory, microblock-discard-vulnerable value the investigation into the
-      // committee-list-doesn't-roll-back-on-discard bug (CONSENSUS-BUG-INVESTIGATION-REFERENCE.md §9
-      // Bug 1) flagged as an open, unchecked risk for "any future piece of DCC code that reads the live
-      // list for a new purpose" -- this IS that piece of code, confirmed live 2026-08-30/31 (T2 HotStuff
-      // committed a QC referencing an empty committee snapshot sampled during exactly such a discard
-      // window, after which `state.committee` stayed empty and every subsequent QC/proposal failed
-      // `verifyQC`'s "QC references unknown committee member" check forever, since nothing ever forces
-      // a fresh, correct resample once wedged). T0/DeterministicFinality already avoids this exact trap
-      // by reading the committee from a period-keyed, persisted checkpoint instead of the live value
-      // (see `CommonGeneratorsApi`, `committedGenerators`) -- mirror that safe pattern here: addresses
-      // and BLS keys come from the persisted `committedGenerators(period)`, and balance is a plain,
-      // always-consistent direct state read, never the live finalization-state cache.
-      val committee: () => GeneratorSet = () =>
-        blockchainUpdater.currentGenerationPeriod.fold(Seq.empty[GeneratorInfo]) { period =>
-          blockchainUpdater.committedGenerators(period).zipWithIndex.map { case ((address, blsPk), idx) =>
-            GeneratorInfo(GeneratorIndex(idx), address, blsPk, blockchainUpdater.balance(address))
-          }
-        }
+      // NOT blockchainUpdater.currentGeneratorSet -- see Blockchain.BlockchainExt.currentCommittedGeneratorSet's
+      // doc for why (confirmed-live T2 HotStuff wedge, 2026-08-30/31).
+      val committee: () => GeneratorSet = () => blockchainUpdater.currentCommittedGeneratorSet
       // T10 fork-hazard fix (see docs/hotstuff-audit-readiness.md and
       // HotStuffQuorum.acceptableCommitteeEpoch): the committee epoch THIS REPLICA'S OWN LIVE TIP
       // currently believes is active, reused directly from the existing generation-period rotation

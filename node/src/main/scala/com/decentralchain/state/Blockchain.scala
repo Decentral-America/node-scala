@@ -289,6 +289,23 @@ object Blockchain {
 
     def currentGenerationPeriod: Option[GenerationPeriod] = this.generationPeriodOf(Height(blockchain.height))
 
+    /** The current period's committed-generators committee, safely reconstructed from the persisted,
+      * period-keyed `committedGenerators` checkpoint plus a plain direct balance read -- NOT from
+      * `currentGeneratorSet` (which reads the live, in-memory `NgState.finalizationState.generatorSet`,
+      * vulnerable to the microblock-discard staleness class described in
+      * CONSENSUS-BUG-INVESTIGATION-REFERENCE.md §9 Bug 1; confirmed live 2026-08-30/31 when T2 HotStuff's
+      * committee provider used exactly this unsafe read and got permanently wedged on a stale/empty
+      * snapshot). Every consumer that needs "who's currently committed" for anything beyond a
+      * single synchronous use within the same block-processing call (where the live value legitimately
+      * reflects "right now") should prefer this over `currentGeneratorSet`.
+      */
+    def currentCommittedGeneratorSet: GeneratorSet =
+      this.currentGenerationPeriod.fold(Seq.empty[GeneratorInfo]) { period =>
+        blockchain.committedGenerators(period).zipWithIndex.map { case ((address, blsPk), idx) =>
+          GeneratorInfo(GeneratorIndex(idx), address, blsPk, blockchain.balance(address))
+        }
+      }
+
     def supportsFinalizationVoting(height: Int = blockchain.height): Boolean =
       blockchain.featureActivationHeight(BlockchainFeatures.DeterministicFinality).exists(Height(height) >= _)
   }
