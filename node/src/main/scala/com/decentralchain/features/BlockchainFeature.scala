@@ -34,14 +34,6 @@ object BlockchainFeatures {
   val ContinuationTransaction = BlockchainFeature(26, "Continuation Transaction")
   val LeaseExpiration         = BlockchainFeature(27, "Lease Expiration")
 
-  // SC-695: gates (a) rejection of InvokeScriptTransaction version V1/V2 against a dApp whose
-  // deployed script is STDLIB V5+ (dApp-to-dApp sync calls require the V3 wire format) and
-  // (b) a static per-step extra fee required when an InvokeScriptTransaction V3 invokes a
-  // pre-V5 (V3/V4) dApp. Dormant until activated -- see
-  // node/src/main/scala/com/decentralchain/state/diffs/invoke/InvokeVersionGating.scala and
-  // docs/features/feature-30-sc695-spec.md.
-  val InvokeVersionGating = BlockchainFeature(30, "InvokeScriptTransaction version gating and per-step invocation fee")
-
   // When next fork-parameter is created, you must replace all uses of the DummyFeature with the new one.
   val Dummy = BlockchainFeature(-1, "Non Votable!")
 
@@ -70,8 +62,7 @@ object BlockchainFeatures {
     LightNode,
     BoostBlockReward,
     EcrecoverFix,
-    DeterministicFinality,
-    InvokeVersionGating
+    DeterministicFinality
   ).map(f => f.id -> f).toMap
 
   val implemented: Set[Short] = dict.keySet

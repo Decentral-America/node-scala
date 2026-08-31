@@ -117,12 +117,6 @@ object DomainPresets {
 
   val DeterministicFinality: DCCSettings = TransactionStateSnapshot.addFeatures(BlockchainFeatures.DeterministicFinality)
 
-  // SC-695 (feature id 30). Built on RideV5 (not RideV6/later presets) because the ignored
-  // node-it suite this feature targets (InvokeScriptTransactionRideV5Suite) only pre-activates
-  // Ride4DApps/BlockV5/SynchronousCalls, not RideV6 -- keep the node-tests preset aligned with
-  // that suite's real activation set.
-  val InvokeVersionGating: DCCSettings = RideV5.addFeatures(BlockchainFeatures.InvokeVersionGating)
-
   def settingsForRide(version: StdLibVersion): DCCSettings =
     version match {
       case V1 => RideV3
