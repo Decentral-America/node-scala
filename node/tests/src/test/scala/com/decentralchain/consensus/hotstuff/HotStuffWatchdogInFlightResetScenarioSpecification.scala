@@ -124,11 +124,24 @@ class HotStuffWatchdogInFlightResetScenarioSpecification extends FlatSpec {
       SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) should be(Right(()))
     }
 
-  it should "still let the recovered replica vote again once the pacemaker advances past lastVotedView" in {
+  it should "not freeze the recovered replica out of a later view -- the preserved lastVotedView is a bound, not a halt" in {
     // Guards against over-correcting: the fix must not freeze a recovered node out of future rounds.
     // The pacemaker's view (`PacemakerState`) is a SEPARATE `EngineState` field that
     // `resetLocalSafetyState` never touches, and `HotStuffPacemaker.onTimeout` bumps it on every
     // stalled tick -- so genuine post-recovery traffic always arrives above `lastVotedView`.
+    //
+    // SCOPE, STATED HONESTLY (mutation-tested post-review): what this test genuinely establishes is the
+    // `lastVotedView` half -- that preserving the bound does not freeze the replica out of a later,
+    // higher view. It does NOT establish the "lockedQC was actually cleared" half, and would still pass
+    // against a `resetLocalSafetyState` that cleared nothing at all. The reason is structural to this
+    // harness, not fixable by reordering this test: `DstHarness` hardcodes `extendsBranch = (_, _) =>
+    // true`, so `HotStuffSafety.safeToVote`'s lock branch is satisfied by the `safety` (extends-the-
+    // locked-branch) clause for ANY block, meaning a held lock never blocks anything here and its
+    // clearing is unobservable. The lock-clearing property is covered behaviourally instead by
+    // `HotStuffResetDoubleVoteSpecification`'s "should still clear lockedQC/prepareQC..." case (which
+    // builds a real PRE_COMMIT-derived lock under `extendsBranch = false` and fails if the reset stops
+    // clearing it) and by `HotStuffWatchdogSpecification`'s "should actually clear the coordinator's
+    // in-memory lockedQC ... proven BEHAVIORALLY" case. Both catch the no-op mutation this one cannot.
     val blockA       = blockAt(1)
     val blockB       = blockAt(2)
     val chainHeights = Map(blockA -> 100, blockB -> 101)
