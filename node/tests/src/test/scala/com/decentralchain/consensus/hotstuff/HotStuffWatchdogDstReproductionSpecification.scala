@@ -159,8 +159,19 @@ class HotStuffWatchdogDstReproductionSpecification extends FlatSpec {
       // `stallThreshold` consecutive ticks. The counter resets after each firing (see
       // `HotStuffWatchdog.check()`), so over 10 ticks at threshold=5 it fires TWICE (ticks 5 and 10) --
       // the stall never actually clears within this window since the partition is still up.
+      //
+      // Review fix (Important #2, post-initial-landing): `HotStuffWatchdog` now backs off after each
+      // recovery that doesn't resolve the stall (the effective threshold doubles) and suspends
+      // auto-recovery entirely after `maxConsecutiveRecoveries` (default 5) recoveries in a row have all
+      // failed to help -- see that class's doc. At only 2 firings within this 10-tick window (well under
+      // the default cap of 5), neither the doubled threshold nor the suspension has kicked in yet, so
+      // `totalRecoveries == 2` here is still the correct, EXPECTED count for this scenario -- not evidence
+      // that unbounded re-firing was left unaddressed. `HotStuffWatchdogBackoffSpecification` covers the
+      // backoff/suspension behavior itself directly (a wedge that genuinely never resolves, driven far
+      // enough to exhaust the cap).
       firedAtTick should be(Some(5))
       watchdog.totalRecoveries should be(2L)
+      watchdog.isAutoRecoverySuspended should be(false) // 2 of 5 allowed consecutive failures -- not yet suspended
 
       // Heal the partition -- this is the point in the real incident where a human would restart the
       // node after the manual `rm locked-qc.dat`. Here, the watchdog already did the in-memory half

@@ -8,18 +8,20 @@ import com.decentralchain.network.Message
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 
 /** THE MOST IMPORTANT TEST IN TASK 4 (per the task brief's hard safety constraint): `HotStuffWatchdog`'s
   * blast radius must be HotStuff's own local state ONLY -- it must be STRUCTURALLY INCAPABLE of touching
   * T0/`finalizedHeight`, not merely "well-behaved" by convention.
   *
   * How this is proven, not just asserted:
-  *   1. `HotStuffWatchdog`'s constructor signature (see that class) takes exactly: a committee accessor
-  *      (`() => Seq[?]`), a lock-file path, a `clearLock: Path => Unit` action, and a
-  *      `resetInMemoryState: () => Unit` action. None of these types is, wraps, or exposes anything
-  *      resembling `BlockchainUpdaterImpl`/a finality path -- there is no parameter through which a
-  *      reference to `finalizedHeight` COULD be threaded even if this test didn't exist.
+  *   1. `HotStuffWatchdog`'s constructor signature (see that class) takes exactly: a
+  *      `committeeNonEmpty: () => Boolean` check (narrowed by a prior review fix from `() => Seq[?]`/
+  *      `() => GeneratorSet` specifically so the type itself cannot express a committee-producing
+  *      closure), a lock-file path, a `resetInMemoryState: () => Unit` action, and a `clearLock: Path =>
+  *      Unit` action. None of these types is, wraps, or exposes anything resembling
+  *      `BlockchainUpdaterImpl`/a finality path -- there is no parameter through which a reference to
+  *      `finalizedHeight` COULD be threaded even if this test didn't exist.
   *   2. This test goes further than a type-signature argument: it builds a `finalizedHeightCanary` var
   *      that only a SEPARATE, NEVER-INVOKED function (`mutateFinalizedHeight`) could change, wires a
   *      real `HotStuffCoordinator.Enabled` + `HotStuffWatchdog` pair with NO reference to that function
@@ -113,18 +115,17 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
     // in actual CODE (not merely in a doc comment explaining the design, which legitimately needs to name
     // what this class deliberately does NOT touch) to reach finality state -- and this test fails the
     // instant that happens, before it could ever be wired to anything live.
-    val sourcePath = Paths.get(
-      "node",
-      "src",
-      "main",
-      "scala",
-      "com",
-      "decentralchain",
-      "consensus",
-      "hotstuff",
-      "HotStuffWatchdog.scala"
-    )
-    val rawSrc = new String(Files.readAllBytes(sourcePath))
+    //
+    // Review fix (Minor, post-final-review): the original version of this test hardcoded a
+    // working-directory-RELATIVE path (`Paths.get("node", "src", "main", ...)`), which only resolves
+    // correctly when sbt happens to be invoked from the repo root -- a different CWD would make the file
+    // simply not be found, surfacing as a spurious test failure that LOOKS like a safety violation rather
+    // than what it actually is (a path problem). Made CWD-independent instead: this spec's own `.class`
+    // file's location (via `getClass.getProtectionDomain.getCodeSource.getLocation`, i.e. the
+    // `node/tests/target/.../classes` directory sbt always compiles into) is used to walk up to the repo
+    // root, from which the real source path is always resolvable regardless of the invoking CWD.
+    val sourcePath = HotStuffWatchdogFinalizedHeightIsolationSpecification.resolveHotStuffWatchdogSource()
+    val rawSrc      = new String(Files.readAllBytes(sourcePath))
     // Strip ScalaDoc/block comments (/** ... */ and /* ... */) and line comments (// ...) before scanning,
     // so this check inspects only actual compiled code, not prose that explains the safety property.
     val codeOnly = rawSrc
@@ -136,6 +137,40 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
       withClue(s"HotStuffWatchdog.scala's CODE (comments excluded) must never reference '$token': ") {
         codeOnly should not include token
       }
+    }
+  }
+}
+
+object HotStuffWatchdogFinalizedHeightIsolationSpecification {
+  private val RelativeSourcePathParts =
+    Seq("node", "src", "main", "scala", "com", "decentralchain", "consensus", "hotstuff", "HotStuffWatchdog.scala")
+
+  /** CWD-independent resolution of `HotStuffWatchdog.scala`'s source file (review fix, Minor). Walks up
+    * from this spec's own compiled-class location -- always `<repoRoot>/node/tests/target/.../classes`
+    * under sbt, regardless of the invoking working directory -- looking for a `node/src/main/scala/...`
+    * path relative to each ancestor, and returns the first one found. Falls back to resolving the same
+    * relative path against the process's actual working directory (the ORIGINAL behavior) if the
+    * classpath-walk approach doesn't find it for any reason (e.g. a non-sbt test runner with a different
+    * layout) -- so this degrades to the prior behavior rather than failing in a new, confusing way.
+    */
+  def resolveHotStuffWatchdogSource(): Path = {
+    val codeSourceUrl =
+      Option(classOf[HotStuffWatchdogFinalizedHeightIsolationSpecification].getProtectionDomain.getCodeSource).map(_.getLocation)
+    val startDir = codeSourceUrl.flatMap(url => scala.util.Try(Paths.get(url.toURI)).toOption)
+
+    val fromClasspathWalk = startDir.flatMap { start =>
+      Iterator
+        .iterate(Option(start))(_.flatMap(p => Option(p.getParent)))
+        .takeWhile(_.isDefined)
+        .map(_.get)
+        .map(ancestor => RelativeSourcePathParts.foldLeft(ancestor)((p, part) => p.resolve(part)))
+        .find(Files.exists(_))
+    }
+
+    fromClasspathWalk.getOrElse {
+      // Fallback: the original CWD-relative behavior, kept so this never regresses below what existed
+      // before this fix -- just no longer the ONLY path tried.
+      Paths.get(RelativeSourcePathParts.head, RelativeSourcePathParts.tail*)
     }
   }
 }
