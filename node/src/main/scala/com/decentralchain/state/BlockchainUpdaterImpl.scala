@@ -469,7 +469,7 @@ class BlockchainUpdaterImpl(
 
                 if (
                   (block.header.timestamp > time
-                    .getTimestamp() - dccSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis) || (newHeight.toInt % 100 == 0)
+                    .correctedTime() - dccSettings.minerSettings.intervalAfterLastBlockThenGenerationIsAllowed.toMillis) || (newHeight.toInt % 100 == 0)
                 ) {
                   log.info(s"New height: $newHeight")
                 }

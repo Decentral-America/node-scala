@@ -1338,7 +1338,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
             pair,
             1L,
             1_0000_0000L,
-            ntpTime.correctedTime(),
+            ntpTime.getTimestamp(),
             ntpTime.getTimestamp() + 1000,
             TestValues.fee,
             priceMode = mode
@@ -1353,7 +1353,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
             pair,
             1L,
             1L,
-            ntpTime.correctedTime(),
+            ntpTime.getTimestamp(),
             ntpTime.getTimestamp() + 1000,
             TestValues.fee,
             priceMode = mode
@@ -1371,7 +1371,7 @@ class ExchangeTransactionDiffTest extends PropSpec with Inside with WithDomain w
           TestValues.fee,
           TestValues.fee,
           TestValues.fee,
-          ntpTime.correctedTime()
+          ntpTime.getTimestamp()
         )
         .explicitGet()
     }

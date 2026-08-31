@@ -50,8 +50,6 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
   private val utilsApi: UtilsApiRoute = UtilsApiRoute(
     new Time {
       def correctedTime(): Long = System.currentTimeMillis()
-
-      def getTimestamp(): Long = System.currentTimeMillis()
     },
     restAPISettings,
     Int.MaxValue,

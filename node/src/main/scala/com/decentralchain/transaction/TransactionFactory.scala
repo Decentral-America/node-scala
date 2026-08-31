@@ -48,7 +48,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -67,7 +67,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         Asset.fromCompatId(request.assetId.map(s => ByteStr.decodeBase58(s).get)),
         transfers,
         request.fee,
-        request.timestamp.getOrElse(time.getTimestamp()),
+        request.timestamp.getOrElse(time.correctedTime()),
         request.attachment.getOrElse(ByteStr.empty),
         signer.privateKey
       )
@@ -88,7 +88,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         sender.publicKey,
         script,
         request.fee,
-        request.timestamp.getOrElse(time.getTimestamp()),
+        request.timestamp.getOrElse(time.correctedTime()),
         signer.privateKey
       )
     } yield tx
@@ -107,7 +107,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         IssuedAsset(ByteStr.decodeBase58(request.assetId).get),
         script,
         request.fee,
-        request.timestamp.getOrElse(time.getTimestamp()),
+        request.timestamp.getOrElse(time.correctedTime()),
         signer.privateKey
       )
     } yield tx
@@ -122,7 +122,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -137,7 +137,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -152,7 +152,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -167,7 +167,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -182,7 +182,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -197,7 +197,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -212,7 +212,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
     for {
       _      <- Either.cond(request.sender.isDefined, (), GenericError("invalid.sender"))
       sender <- wallet.findPrivateKey(request.sender.get)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
       signer <- if (request.sender.get == signerAddress) Right(sender) else wallet.findPrivateKey(signerAddress)
       signedTx = tx.signWith(signer.privateKey)
     } yield signedTx
@@ -228,7 +228,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         sender.publicKey,
         request.data,
         request.fee,
-        request.timestamp.getOrElse(time.getTimestamp()),
+        request.timestamp.getOrElse(time.correctedTime()),
         signer.privateKey
       )
     } yield tx
@@ -251,7 +251,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
           request.payment,
           request.fee,
           Asset.fromCompatId(request.feeAssetId.map(s => ByteStr.decodeBase58(s).get)),
-          request.timestamp.getOrElse(time.getTimestamp()),
+          request.timestamp.getOrElse(time.correctedTime()),
           Proofs.empty,
           request.chainId.getOrElse(AddressScheme.current.chainId)
         )
@@ -276,7 +276,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         assetId,
         request.minSponsoredAssetFee,
         request.fee,
-        request.timestamp.getOrElse(time.getTimestamp()),
+        request.timestamp.getOrElse(time.correctedTime()),
         signer.privateKey
       )
     } yield tx
@@ -288,7 +288,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         case None         => Left(GenericError("invalid.sender"))
       }
       signer <- if (request.sender.contains(signerAddress)) Right(sender) else wallet.findPrivateKey(signerAddress)
-      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.getTimestamp()))).toTxFrom(sender.publicKey)
+      tx     <- request.copy(timestamp = request.timestamp.orElse(Some(time.correctedTime()))).toTxFrom(sender.publicKey)
     } yield {
       tx.signWith(signer.privateKey)
     }
@@ -302,7 +302,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         case None         => Left(GenericError("invalid.sender"))
       }
       signer <- wallet.findPrivateKey(signerAddress)
-      tx     <- request.toTxFrom(sender.publicKey, BlsKeyPair(signer.privateKey), defaultPeriod.start, time.getTimestamp())
+      tx     <- request.toTxFrom(sender.publicKey, BlsKeyPair(signer.privateKey), defaultPeriod.start, time.correctedTime())
     } yield tx.signWith(signer.privateKey)
   }
 

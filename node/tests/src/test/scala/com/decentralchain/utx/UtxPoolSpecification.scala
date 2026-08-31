@@ -114,13 +114,13 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       recipient <- accountGen
       fee       <- chooseNum(extraFee, (maxAmount * 0.1).toLong)
     } yield TransferTransaction
-      .selfSigned(1.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, fee, ByteStr.empty, time.getTimestamp())
+      .selfSigned(1.toByte, sender, recipient.toAddress, Dcc, amount, Dcc, fee, ByteStr.empty, time.correctedTime())
       .explicitGet())
       .label("transferTransaction")
 
   private def invokeScript(sender: KeyPair, dApp: Address, time: Time) =
     Gen.choose(500000L, 600000L).map { fee =>
-      Signed.invokeScript(TxVersion.V1, sender, dApp, None, Seq.empty, fee, Dcc, time.getTimestamp())
+      Signed.invokeScript(TxVersion.V1, sender, dApp, None, Seq.empty, fee, Dcc, time.correctedTime())
     }
 
   private def dAppSetScript(sender: KeyPair, time: Time) = {
@@ -133,7 +133,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
         |func default() = { WriteSet([DataEntry("0", true)]) }
         |""".stripMargin
     val script = ScriptCompiler.compile(scriptText, ScriptEstimatorV1).explicitGet()._1
-    SetScriptTransaction.selfSigned(TxVersion.V1, sender, Some(script), extraFee, time.getTimestamp()).explicitGet()
+    SetScriptTransaction.selfSigned(TxVersion.V1, sender, Some(script), extraFee, time.correctedTime()).explicitGet()
   }
 
   private def withState[A](test: (KeyPair, Long, BlockchainUpdaterImpl) => A): A = {
@@ -189,6 +189,9 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
           isMiningEnabled = true
         )
       val amountPart = (senderBalance - extraFee) / 2 - extraFee
+      // NOTE: monotonic getTimestamp(), not correctedTime() -- every field but the timestamp is
+      // fixed here, so distinct timestamps are what makes each of the 10 generated transactions
+      // distinct (see the comment above transfer/transferWithRecipient/massTransferWithRecipients).
       val txs = for (_ <- 1 to 10) yield createDccTransfer(sender, recipient.toAddress, amountPart, extraFee, time.getTimestamp()).explicitGet()
       test(utx, time, txs, 2000.millis)
     }
@@ -341,17 +344,22 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
       test(sender, senderBalance, utx, bcu.lastBlockTimestamp.getOrElse(0L))
     }
 
-  private def transfer(sender: KeyPair, time: Time) =
+  // NOTE: these three helpers take TestTime (not the abstract Time trait) and use its
+  // monotonically-increasing getTimestamp(), not correctedTime() -- every field but the
+  // timestamp is fixed across the (1 to N).map(_ => ...) call sites that use them, so distinct,
+  // strictly-increasing timestamps are what makes each generated transaction distinct (and thus
+  // not deduplicated by the UTX pool on identical txId). Do not swap these to correctedTime().
+  private def transfer(sender: KeyPair, time: TestTime) =
     TransferTransaction
       .selfSigned(1.toByte, sender, TxHelpers.address(2), Dcc, 1, Dcc, extraFee, ByteStr.empty, time.getTimestamp())
       .explicitGet()
 
-  private def transferWithRecipient(sender: KeyPair, recipient: PublicKey, time: Time) =
+  private def transferWithRecipient(sender: KeyPair, recipient: PublicKey, time: TestTime) =
     TransferTransaction
       .selfSigned(1.toByte, sender, recipient.toAddress, Dcc, 1, Dcc, extraFee, ByteStr.empty, time.getTimestamp())
       .explicitGet()
 
-  private def massTransferWithRecipients(sender: KeyPair, recipients: Seq[PublicKey], maxAmount: Long, time: Time) = {
+  private def massTransferWithRecipients(sender: KeyPair, recipients: Seq[PublicKey], maxAmount: Long, time: TestTime) = {
     val amount    = maxAmount / (recipients.size + 1)
     val transfers = recipients.map(r => ParsedTransfer(r.toAddress, TxNonNegativeAmount.unsafeFrom(amount)))
     val minFee    = FeeValidation.FeeConstants(TransactionType.Transfer) + FeeValidation.FeeConstants(TransactionType.MassTransfer) * transfers.size
@@ -377,7 +385,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
   }
 
   private def preconditionBlocks(lastBlockId: ByteStr, master: KeyPair, time: Time): Seq[Block] = {
-    val ts     = time.getTimestamp()
+    val ts     = time.correctedTime()
     val script = TestCompiler(V3).compileExpression(
       """
         |let x = 1
@@ -467,7 +475,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
 
         val precondition = TestBlock
           .create(
-            time.getTimestamp(),
+            time.correctedTime(),
             bcu.lastBlockId.get,
             Seq(dAppSetScript(sender3, time)),
             sender1
@@ -543,7 +551,7 @@ class UtxPoolSpecification extends FreeSpec, BlocksTransactionsHelpers, WithDoma
 
         val precondition = TestBlock
           .create(
-            time.getTimestamp(),
+            time.correctedTime(),
             bcu.lastBlockId.get,
             Seq(dAppSetScript(sender3, time)),
             sender1

@@ -231,7 +231,7 @@ object UtilApp {
   private final class NodeState(c: Command) {
     lazy val settings = Application.loadApplicationConfig(c.configFile.map(new File(_)))
     lazy val wallet   = Wallet(settings.walletSettings)
-    lazy val time     = new NTP(settings.ntpServer)
+    lazy val time     = Time(settings.ntpServer)
   }
 
   private object Actions {
