@@ -357,6 +357,89 @@ class LightNodeTest extends PropSpec with WithDomain {
     }
   }
 
+  // The combination none of the earlier tests covered: challengedHeader set on a block that is served
+  // TOGETHER WITH a snapshot. `challengedHeader` is an ordinary block-header field, so a peer sets it
+  // freely; and BlockDiffer's challenge-legitimacy re-derivation is gated on `snapshot.isEmpty`, so on
+  // the light-node snapshot path the challenge is never verified. Any gate keyed on "is this block
+  // challenged?" is therefore attacker-controlled here, exactly like the Elided status field was.
+  // Validation must run regardless of the challenge declaration.
+  property("C1. Light node must validate commitments even when the served block declares a challenge") {
+    val sender          = TxHelpers.signer(1)
+    val challengedMiner = TxHelpers.signer(2)
+    val periodStart     = Height(4)
+
+    commitmentAttackCases(sender, periodStart).foreach { case (label, maliciousTx) =>
+      withClue(s"challengedHeader + snapshot / $label: ") {
+        withDomain(
+          finalitySettings,
+          Seq(
+            AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee),
+            AddrWithBalance(challengedMiner.toAddress, 100_000.dcc),
+            AddrWithBalance(TxHelpers.defaultSigner.toAddress, 100_000.dcc)
+          )
+        ) { d =>
+          // The peer claims Succeeded -- with a challenge-based bypass it does not even need Elided,
+          // because the guard is skipped before any status is consulted.
+          val rogueSnapshot = StateSnapshot(nextCommittedGenerators = Seq(maliciousTx.sender -> maliciousTx.endorserPublicKey))
+          val peerSnapshots = Seq(rogueSnapshot -> TxMeta.Status.Succeeded)
+
+          val original = d.createBlock(
+            Block.ProtoBlockVersion,
+            Seq(maliciousTx),
+            strictTime = true,
+            generator = challengedMiner,
+            stateHash = Some(Some(invalidStateHash))
+          )
+          val challengingBlock = d.createChallengingBlock(TxHelpers.defaultSigner, original, strictTime = true)
+          challengingBlock.header.challengedHeader shouldBe defined
+
+          val hs     = d.posSelector.validateGenerationSignature(challengingBlock).explicitGet()
+          val result = BlockDiffer.fromBlock(
+            d.blockchain,
+            Some(d.lastBlock),
+            challengingBlock,
+            Some(BlockSnapshot(challengingBlock.id(), peerSnapshots)),
+            MiningConstraint.Unlimited,
+            hs,
+            None
+          )
+
+          result should beLeft
+          result.left.toOption.map(_.toString).getOrElse("") should include("commitment")
+        }
+      }
+    }
+  }
+
+  // The Caches fix closes the PERSISTENCE path. This covers the liquid-state window before it:
+  // SnapshotBlockchain.committedGenerators reads snapshot.nextCommittedGenerators, and the snapshot
+  // fold merges an elided transaction's peer-supplied snapshot data unconditionally (only its fee is
+  // skipped). Without a status filter there, an elided commitment's key is readable as a committed
+  // generator for as long as the block is liquid -- and this path feeds endorsement validation and the
+  // committedGeneratorsHash computation.
+  property("C1. An elided commitment's generator is not visible during the liquid-state window") {
+    val sender      = TxHelpers.signer(1)
+    val periodStart = Height(4)
+
+    withDomain(
+      finalitySettings,
+      Seq(AddrWithBalance(sender.toAddress, 100_000.dcc + CommitToGenerationTransaction.DepositInDcclets + TestValues.commitToGenerationFee))
+    ) { d =>
+      val commitTx = TxHelpers.commitToGeneration(periodStart, sender)
+
+      // Exactly what the snapshot fold produces for an elided commitment: the generator entry is
+      // present in the merged snapshot, while the transaction itself is marked Elided.
+      val elidedSnapshot = StateSnapshot(
+        nextCommittedGenerators = Seq(commitTx.sender -> commitTx.endorserPublicKey)
+      ).withTransaction(NewTransactionInfo.create(commitTx, TxMeta.Status.Elided, StateSnapshot.empty, d.blockchain))
+
+      val sb = SnapshotBlockchain(d.blockchain, elidedSnapshot)
+
+      sb.currentGenerationPeriod.map(p => sb.committedGenerators(p.next).map(_._2)) shouldBe
+        Some(IndexedSeq.empty[BlsPublicKey])
+    }
+  }
+
   // Full-node parity for the one case where it is meaningful: a GENUINELY challenged block, proven by
   // constructing a real challenging block over an invalid-state-hash original. The full node elides the
   // failing transaction and accepts the block; a light node must not be stricter. Crucially the elided

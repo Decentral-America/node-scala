@@ -238,7 +238,7 @@ object BlockDiffer {
       r <- snapshot match {
         case Some(BlockSnapshot(_, txSnapshots)) =>
           for {
-            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData, hasChallenge))
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchainWithNewBlock, block.transactionData))
           } yield apply(blockchainWithNewBlock, prevStateHash, initSnapshot, stateHeight >= ngHeight, block.transactionData, txSnapshots)
         case None =>
           apply(
@@ -353,11 +353,9 @@ object BlockDiffer {
       r <- snapshot match {
         case Some(MicroBlockSnapshot(_, txSnapshots)) =>
           // Same rogue-key exposure as the key-block snapshot branch in fromBlock, reachable by the
-          // same light-node population -- see validateCommitmentsOnSnapshotPath. Microblocks cannot
-          // be challenged (no challenged-header field; the full-node path hardcodes hasChallenge =
-          // false), so the guard always runs here, unconditionally.
+          // same light-node population -- see validateCommitmentsOnSnapshotPath.
           for {
-            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchain, micro.transactionData, hasChallenge = false))
+            _ <- TracedResult(validateCommitmentsOnSnapshotPath(blockchain, micro.transactionData))
           } yield apply(blockchain, prevStateHash, StateSnapshot.empty, hasNg = true, micro.transactionData, txSnapshots)
         case None =>
           apply(
@@ -588,36 +586,36 @@ object BlockDiffer {
     * packed into a microblock, and `Caches` seats the generator from a microblock snapshot the same
     * way it does from a block snapshot. Guarding only the key-block path would just move the attack.
     *
-    * ==Why this does NOT consult the peer's declared transaction status==
+    * ==Why this validates UNCONDITIONALLY, with no skip of any kind==
     *
-    * An earlier version of this check skipped transactions the peer marked `Elided`, to mirror the
-    * full-node `hasChallenge` elision. That was a critical mistake and is deliberately not done here:
-    * the status arrives on the wire in the peer's snapshot, `TxMeta.Status.fromProtobuf` maps ANY
-    * unrecognized enum value to `Elided` (`case _ => Elided`), and nothing ties that declaration to a
-    * real challenge. A peer could therefore set one protobuf field to skip validation entirely while
-    * still smuggling a rogue key through `nextCommittedGenerators` -- which the state hash cannot
-    * catch, because `TxStateSnapshotHashBuilder` excludes `nextCommittedGenerators` by design, and
-    * which is still seated, because the snapshot-path `apply` merges `txSnapshot` unconditionally
-    * (only the FEE is skipped for `Elided`) and `Caches` matches on transaction type alone.
+    * Two earlier versions of this check tried to skip validation to mirror the full-node
+    * `hasChallenge` elision, and both were exploitable, because on this path every candidate signal
+    * turns out to be attacker-controlled:
     *
-    * The skip is therefore gated on `hasChallenge`, which is derived LOCALLY from the block header we
-    * are validating, never from peer-supplied data. Full-node parity is preserved exactly where it is
-    * meaningful (a genuinely challenged key block, where a full node would have elided the failing
-    * transaction) and nowhere else.
+    *   - keying off the peer's declared transaction status failed because the status rides in the
+    *     peer's snapshot and `TxMeta.Status.fromProtobuf` maps ANY unrecognized value to `Elided`
+    *     (`case _ => Elided`);
+    *   - keying off `hasChallenge` (`block.header.challengedHeader.isDefined`) failed too: the block
+    *     header is peer-supplied, and the challenge-legitimacy re-derivation in [[fromBlock]] is
+    *     gated on `snapshot.isEmpty`, so on the snapshot path a declared challenge is NEVER verified.
+    *     A peer that wins a normal PoS slot can simply set `challengedHeader` to disable the check.
     *
-    * For microblocks `hasChallenge` is always false: `MicroBlock` has no challenged-header field and
-    * the full-node microblock path hardcodes `hasChallenge = false`, so a correct node can never
-    * elide inside a microblock. The guard consequently always runs there, unconditionally.
+    * Neither is caught downstream: `TxStateSnapshotHashBuilder` excludes `nextCommittedGenerators`
+    * from the per-tx hash by design, and the snapshot fold merges `txSnapshot` unconditionally (only
+    * the FEE is skipped for `Elided`).
+    *
+    * Crucially, the skip was never buying anything for this transaction type. A
+    * `CommitToGenerationTransaction` that fails validation yields `GenericError`, while a challenge is
+    * only accepted when the original block fails with `InvalidStateHash` -- so a correct challenging
+    * block can never legitimately contain an elided commitment. There is no full-node divergence to
+    * reconcile, and therefore no reason to skip. Validating unconditionally closes the hole at zero
+    * parity cost, on both the block and microblock snapshot paths.
     */
   private def validateCommitmentsOnSnapshotPath(
       blockchain: Blockchain,
-      txs: Seq[Transaction],
-      hasChallenge: Boolean
+      txs: Seq[Transaction]
   ): Either[ValidationError, Unit] = {
-    // No peer-supplied input participates in this decision.
-    val commitments =
-      if (hasChallenge) Seq.empty[CommitToGenerationTransaction]
-      else txs.collect { case tx: CommitToGenerationTransaction => tx }
+    val commitments = txs.collect { case tx: CommitToGenerationTransaction => tx }
     if (commitments.isEmpty) Either.unit
     else
       blockchain.currentGenerationPeriod

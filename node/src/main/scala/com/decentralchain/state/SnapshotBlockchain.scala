@@ -255,7 +255,29 @@ case class SnapshotBlockchain(
   override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = {
     val base   = inner.committedGenerators(at)
     val atNext = this.currentGenerationPeriod.exists(_.next == at)
-    if (atNext) base ++ snapshot.nextCommittedGenerators.map { case (pk, blsPk) => pk.toAddress -> blsPk } else base
+    if (atNext) base ++ liveNextCommittedGenerators.map { case (pk, blsPk) => pk.toAddress -> blsPk } else base
+  }
+
+  /** `nextCommittedGenerators` entries whose originating commitment was NOT elided.
+    *
+    * An elided transaction's effects are discarded by definition, so its generator entry must never
+    * become visible -- not once persisted (`Caches` applies the same filter) and not during the
+    * liquid-state window either, which this covers. Without it an elided commitment's key would still
+    * be readable here while the block is liquid, and this path feeds endorsement validation and the
+    * `committedGeneratorsHash` computation. The snapshot fold merges an elided transaction's
+    * peer-supplied snapshot data unconditionally (only its fee is skipped), so the entry really can be
+    * present.
+    */
+  private def liveNextCommittedGenerators: Seq[(PublicKey, BlsPublicKey)] = {
+    val elidedCommitters = snapshot.transactions.values
+      .collect {
+        case nti if nti.status == TxMeta.Status.Elided => nti.transaction
+      }
+      .collect { case tx: CommitToGenerationTransaction => tx.sender }
+      .toSet
+
+    if (elidedCommitters.isEmpty) snapshot.nextCommittedGenerators
+    else snapshot.nextCommittedGenerators.filterNot { case (pk, _) => elidedCommitters.contains(pk) }
   }
 
   override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = {
