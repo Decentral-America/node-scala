@@ -27,7 +27,7 @@
 - Test: `node/tests/src/test/scala/com/decentralchain/state/EquivocationTrackerSpecification.scala`
 
 **Interfaces:**
-- Produces: `EquivocationTracker` (mutable class), constructor `new EquivocationTracker()`, methods:
+- Produces: `EquivocationTracker` (mutable class), constructor `new EquivocationTracker(detectEquivocators: Iterable[HotStuffVote] => Set[Int])` — the detection function is INJECTED, not imported directly (`state` must never import `consensus.hotstuff`; callers pass `HotStuffSafety.equivocators`), methods:
   - `def recordVote(vote: HotStuffVote): Set[Int]` — records the vote, returns the set of NEWLY-detected equivocators as of this call (empty if none, or if all detected equivocators were already reported on a prior call — see Step 3's dedup logic).
   - `def pruneOlderThan(minView: Int): Unit` — evicts recorded votes for views strictly below `minView`, mirroring `HotStuffVotePool.pruneOlderThan`'s existing signature/semantics exactly (same name, same parameter meaning) for consistency with the established pruning pattern in this codebase.
 
@@ -38,6 +38,7 @@
 ```scala
 package com.decentralchain.state
 
+import com.decentralchain.consensus.hotstuff.HotStuffSafety
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.common.state.ByteStr
 import io.decentralchain.protobuf.block.HotStuffPhase
@@ -59,20 +60,20 @@ class EquivocationTrackerSpecification extends AnyFreeSpec with Matchers {
   "EquivocationTracker" - {
 
     "recordVote returns empty when no equivocation exists" in {
-      val tracker = new EquivocationTracker()
+      val tracker = new EquivocationTracker(HotStuffSafety.equivocators)
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1)) shouldBe Set.empty
       tracker.recordVote(vote(1, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1)) shouldBe Set.empty
     }
 
     "recordVote detects a voter signing two different blocks at the same (view, phase)" in {
-      val tracker = new EquivocationTracker()
+      val tracker = new EquivocationTracker(HotStuffSafety.equivocators)
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1)) shouldBe Set.empty
       val detected = tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 2))
       detected shouldBe Set(0)
     }
 
     "recordVote does not re-report an already-detected equivocator on a later, unrelated vote" in {
-      val tracker = new EquivocationTracker()
+      val tracker = new EquivocationTracker(HotStuffSafety.equivocators)
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1))
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 2)) shouldBe Set(0)
       // A later, unrelated vote from the SAME already-reported equivocator must not re-trigger.
@@ -81,19 +82,19 @@ class EquivocationTrackerSpecification extends AnyFreeSpec with Matchers {
     }
 
     "recordVote does not flag a voter re-voting the SAME target twice" in {
-      val tracker = new EquivocationTracker()
+      val tracker = new EquivocationTracker(HotStuffSafety.equivocators)
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1))
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1)) shouldBe Set.empty
     }
 
     "recordVote does not flag a voter voting at DIFFERENT views" in {
-      val tracker = new EquivocationTracker()
+      val tracker = new EquivocationTracker(HotStuffSafety.equivocators)
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1))
       tracker.recordVote(vote(0, view = 2, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 2)) shouldBe Set.empty
     }
 
     "pruneOlderThan evicts votes for views below minView, and pruned votes can no longer contribute to a detection" in {
-      val tracker = new EquivocationTracker()
+      val tracker = new EquivocationTracker(HotStuffSafety.equivocators)
       tracker.recordVote(vote(0, view = 1, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockIdByte = 1))
       tracker.pruneOlderThan(minView = 2)
       // The view-1 vote is now pruned; a new view-1 vote for a DIFFERENT block must not be flagged,
@@ -182,7 +183,7 @@ dead code, never called against real traffic)."
 - Test: `node/tests/src/test/scala/com/decentralchain/consensus/hotstuff/HotStuffEquivocationDetectionSpecification.scala`
 
 **Interfaces:**
-- Consumes: `EquivocationTracker` from Task 1 (`new EquivocationTracker()`, `.recordVote(vote): Set[Int]`, `.pruneOlderThan(minView: Int): Unit`).
+- Consumes: `EquivocationTracker` from Task 1 (`new EquivocationTracker(detectEquivocators: Iterable[HotStuffVote] => Set[Int])`, `.recordVote(vote): Set[Int]`, `.pruneOlderThan(minView: Int): Unit`). Construct with `new EquivocationTracker(HotStuffSafety.equivocators)`.
 - Produces: `HotStuffEffects` trait gains one new method:
   ```scala
   /** A real production equivocation was detected: `voterIndex` signed conflicting votes at
@@ -288,7 +289,7 @@ In `HotStuffCoordinator.scala`, inside `trait HotStuffEffects`:
 Find the existing `private var pool = VotePool()` field (around line 215) inside `HotStuffCoordinator.Enabled`, and add a sibling field plus a new method. Add, near the existing `pool`/`prunePool()` fields and methods:
 
 ```scala
-  private val equivocationTracker = new com.decentralchain.state.EquivocationTracker()
+  private val equivocationTracker = new com.decentralchain.state.EquivocationTracker(HotStuffSafety.equivocators)
 
   /** Record a vote already accepted as cryptographically valid by `HotStuffVotePool.onVote` (called
     * from `onVote` below, after the pool's own `verifyVote` gate — an unverified/invalid vote must
