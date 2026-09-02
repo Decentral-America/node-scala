@@ -15,6 +15,17 @@ sealed trait BlsKeyPair {
 
 object BlsKeyPair {
   def apply(dccPrivateKey: DccPrivateKey): BlsKeyPair = new BlsSeedKeyPair(dccPrivateKey.arr)
+
+  /** Test-only escape hatch: builds a `BlsKeyPair` directly from an already-derived `blst.SecretKey`,
+    * bypassing `BlsUtils.mkBlsSecretKey`'s seed validation (audit M3) entirely. Needed so tests can
+    * still construct a deliberately degenerate key (e.g. the zero secret key) to exercise the
+    * on-chain defenses against it, independent of whether `mkBlsSecretKey`'s own guard would also
+    * catch it.
+    */
+  private[bls] def unsafeFromSecretKey(sk: blst.SecretKey): BlsKeyPair = new BlsKeyPair {
+    val publicKey: BlsPublicKey                  = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
+    def sign(message: Array[Byte]): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message)))
+  }
 }
 
 private final class BlsSeedKeyPair(private val dccPrivateKey: Array[Byte]) extends BlsKeyPair {

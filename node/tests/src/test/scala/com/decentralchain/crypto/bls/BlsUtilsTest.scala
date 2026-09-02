@@ -1,6 +1,7 @@
 package com.decentralchain.crypto.bls
 
 import com.decentralchain.account.KeyPair
+import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base64
 import com.decentralchain.crypto.bls.BlsUtils.*
 import com.decentralchain.test.FreeSpec
@@ -28,30 +29,46 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
   private val sig3 = signBasic(privateKey3, message)
 
   "aggregation in verifyAgg" - {
-    "aggregation of two same signatures" in {
-      val aggSig = BlsUtils.aggSign(BlsUtils.aggSign(sig1, sig2), sig1)
+    "rejects a duplicated public key even when the signature aggregate matches it (audit M4)" in {
+      // Before M4, this multiset (pk1, pk2, pk1) against sig1+sig2+sig1 used to VERIFY -- proving
+      // verifyAgg silently double-counted pk1. FastAggregateVerify aggregates public keys, so a
+      // repeated key changes what's actually being asserted; every legitimate caller in this
+      // codebase already guarantees distinctness by construction (see BlsUtils.verifyAgg's
+      // scaladoc), so a duplicate here is always a caller bug or an attacker-supplied multiset, and
+      // must be rejected rather than silently accepted or de-duplicated.
+      val aggSig = BlsUtils.aggSign(BlsUtils.aggSign(sig1, sig2).value, sig1).value
 
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1)) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1)) shouldBe a[Left[?, ?]]
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Left[?, ?]]
     }
 
     "different order of signatures and keys" in {
-      val aggSig = BlsUtils.aggSign(sig1, sig2)
+      val aggSig = BlsUtils.aggSign(sig1, sig2).value
 
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1)) shouldBe a[Right[?, ?]]
     }
 
     "associativity" in {
-      val aggSig = Seq(sig1, sig2, sig3).reduceLeft(BlsUtils.aggSign)
+      val aggSig = Seq(sig1, sig2, sig3).reduceLeft((a, b) => BlsUtils.aggSign(a, b).value)
 
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1, publicKey3)) shouldBe a[Right[?, ?]]
+    }
+
+    // audit L1: aggSign must fail closed (Left), never throw, on malformed input.
+    "rejects malformed input instead of throwing" in {
+      BlsUtils.aggSign(Array.fill[Byte](10)(0), sig2) shouldBe a[Left[?, ?]]
+      BlsUtils.aggSign(sig1, Array.emptyByteArray) shouldBe a[Left[?, ?]]
     }
   }
 
   "zero secret/public keys and signatures" - {
     val message = "test".getBytes()
 
-    val zeroSk  = BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1))
+    // A 31-byte (under the IETF minimum) seed is documented to make keygen_v5 return the zero
+    // secret key -- exactly the degenerate case mkBlsSecretKey now rejects (audit M3). This section
+    // still needs to construct that degenerate key to test downstream behavior against it, so it
+    // uses mkDegenerateSecretKey (raw blst calls) rather than the now-guarded mkBlsSecretKey.
+    val zeroSk  = mkDegenerateSecretKey()
     val zeroPk  = new blst.P1(zeroSk)
     val zeroSig = new blst.P2()
       .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
@@ -158,32 +175,35 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     pkRestored2 shouldBe pk
   }
 
-  // --- Task 20 adversarial tests (TDD, security-relevant): written before BlsUtils/BlsPublicKey/
-  // BlsSignature are hardened, to prove each gap is real against the CURRENT code, not theoretical.
-  //
-  // Note on the first case: the real upstream fix (confirmed by pulling BlsPublicKey.scala from
-  // c1fcc5e0b58cba6743e2d636da81574291c8068c) does NOT reject a point-at-infinity key in the plain
-  // `BlsPublicKey(bytes)` constructor -- that constructor only sanity-checks length, by design,
-  // because it's used on every deserialization (e.g. from the wire) where a full curve check would
-  // be wasteful. The actual enforcement point is the new `.validated` extension, called once, only
-  // when registering a new committed generator (CommitToGenerationTransactionDiff). So the
-  // adversarial assertion below targets `.validated`, not `apply` -- targeting `apply` would not
-  // match the real upstream contract and would be testing for a fix that was never intended to
-  // live there.
-  "registering a point-at-infinity BLS public key" - {
-    // zeroSk (a secret key derived from an under-length/all-same-byte seed, per mkBlsSecretKey's own
-    // doc: "otherwise returns a zero secret key") produces a public key that IS the point at
-    // infinity -- reusing the exact fixture already proven as such above ("zeroPk in group":
-    // zeroPk.is_inf() shouldBe true).
-    val infinityKeyBytes = new blst.P1(BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1))).compress()
+  // A degenerate (all-zero-scalar) secret key, constructed via raw blst calls rather than
+  // BlsUtils.mkBlsSecretKey: that entry point now rejects the under-length seed which used to
+  // produce this key (audit M3), so tests that need the degenerate key itself as a fixture -- to
+  // exercise downstream defenses against it -- build it directly instead.
+  private def mkDegenerateSecretKey(): blst.SecretKey = {
+    val sk = new blst.SecretKey()
+    sk.keygen_v5(Array.fill[Byte](31)(1), "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8))
+    sk
+  }
 
-    "is currently NOT rejected by plain construction (by design -- apply only checks length)" in {
+  // --- Task 20 / audit regression tests: a point-at-infinity BLS public key must be rejected at
+  // registration time, and the underlying pairing verification must not silently ignore blst's
+  // error code for it. Both fixes are live in current code (see BlsPublicKey.validated and
+  // BlsUtils.verify's aggResult check below) -- these assert the invariant they protect, not that
+  // the fix is merely absent.
+  "registering a point-at-infinity BLS public key" - {
+    // mkDegenerateSecretKey's public key IS the point at infinity -- reusing the exact fixture
+    // already proven as such above ("zeroPk in group": zeroPk.is_inf() shouldBe true).
+    val infinityKeyBytes = new blst.P1(mkDegenerateSecretKey()).compress()
+
+    "is accepted by plain construction (by design -- apply only checks length, not curve validity)" in {
+      // BlsPublicKey.apply is used on every deserialization (e.g. from the wire), where a full
+      // curve check would be wasteful; it intentionally only sanity-checks length.
       BlsPublicKey(infinityKeyBytes) shouldBe a[Right[?, ?]]
     }
 
-    "should be rejected by the registration-time `.validated` check (currently does not exist -- RED)" in {
-      // This line does not compile against current BlsPublicKey.scala: `.validated` is added by
-      // Task 20 Step 2. Confirms the enforcement point is genuinely missing, not just untested.
+    "is rejected by the registration-time `.validated` check" in {
+      // The actual enforcement point: called once, only when registering a new committed generator
+      // (CommitToGenerationTransactionDiff), not on every deserialization.
       BlsPublicKey(infinityKeyBytes).value.validated shouldBe a[Left[?, ?]]
     }
   }
@@ -193,9 +213,9 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       // Proves the gap is reachable through real blst behavior, not a hypothetical: blst's native
       // Pairing.aggregate() specifically returns BLST_PK_IS_INFINITY (not BLST_SUCCESS) when the
       // public key is the point at infinity.
-      val infinityPk = new blst.P1(BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1)))
+      val infinityPk = new blst.P1(mkDegenerateSecretKey())
       val ctx        = new blst.Pairing(true, BlsDomainSeparationTag)
-      val aggResult = ctx.aggregate(
+      val aggResult  = ctx.aggregate(
         new blst.P1_Affine(infinityPk.compress()),
         new blst.P2_Affine(sig1),
         message,
@@ -204,16 +224,80 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       aggResult shouldBe BLST_ERROR.BLST_PK_IS_INFINITY
     }
 
-    "should reject when the underlying pairing aggregate does not return BLST_SUCCESS (currently ignores the return code entirely -- RED)" in {
-      // Current BlsUtils.verifyBasic calls ctx.aggregate(...) and discards its BLST_ERROR return
-      // value outright (see the production code: the call's result is never bound to anything),
-      // then unconditionally proceeds to ctx.commit()/ctx.finalverify() regardless of what
-      // aggregate() reported. It also returns a bare Boolean, so there is no way to observe the
-      // discarded error at all. This assertion does not compile against current code (verifyBasic
-      // returns Boolean, not Either) -- confirms the fix (checking the return code, changing the
-      // return type to Either[String, Unit]) is genuinely missing.
-      val infinityPk = new blst.P1(BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1)))
+    "rejects when the underlying pairing aggregate does not return BLST_SUCCESS" in {
+      // BlsUtils.verifyBasic binds ctx.aggregate(...)'s BLST_ERROR return value and short-circuits
+      // to Left before ever reaching ctx.commit()/ctx.finalverify() -- the discarded-error-code /
+      // bare-Boolean-return gap this section originally targeted is closed.
+      val infinityPk = new blst.P1(mkDegenerateSecretKey())
       BlsUtils.verifyBasic(sig1, message, infinityPk.compress()) shouldBe a[Left[?, ?]]
+    }
+  }
+
+  // --- H1 (audit): verifyAgg must defend itself against a non-subgroup / infinity aggregate,
+  // rather than relying solely on the "callers only ever pass validated keys" contract -- a contract
+  // that C1 shows does not hold on every path (e.g. a light-node snapshot path). These probe the
+  // production entry point (BlsUtils.verifyAgg), not blst internals directly.
+  "verifyAgg defense-in-depth (audit H1)" - {
+    "rejects an aggregate that sums to the point at infinity (pk + (-pk))" in {
+      // publicKey1's negation, compressed: on-curve, in-group, but pk1 + (-pk1) == infinity.
+      val negPk1 = new blst.P1(publicKey1).neg().compress()
+      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, negPk1)) shouldBe a[Left[?, ?]]
+    }
+
+    "rejects a public key that is on-curve but not in the correct subgroup" in {
+      // A hand-picked BLS12-381 G1 point (x=4, smallest x with a valid y on E(Fp): y^2 = x^3 + 4)
+      // that is on-curve (blst's decompression itself enforces that) but, verified independently via
+      // plain-Python double-and-add, NOT a member of the prime-order-r subgroup: r*(x,y) != infinity.
+      // This is exactly the "on curve, wrong subgroup" shape H1 targets -- blst's decompression alone
+      // does not run the (separate, expensive) in_group() check.
+      val notInGroupPkBytes =
+        "800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004"
+          .grouped(2)
+          .map(Integer.parseInt(_, 16).toByte)
+          .toArray
+      val candidate = new blst.P1_Affine(notInGroupPkBytes)
+      assume(candidate.on_curve(), "test fixture must be on-curve to be a meaningful probe")
+      assume(!candidate.in_group(), "test fixture must actually be outside the subgroup to be meaningful")
+      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, notInGroupPkBytes)) shouldBe a[Left[?, ?]]
+    }
+
+    "still verifies an honest aggregate (no regression)" in {
+      val aggSig = BlsUtils.aggSig(Seq(sig1, sig2)).value
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Right[?, ?]]
+    }
+  }
+
+  // --- M3 (audit): mkBlsSecretKey must fail closed on degenerate/too-short seeds instead of
+  // silently deriving the zero scalar (whose public key is the point at infinity -- a node
+  // "configured" this way would silently sign nothing verifiable). IETF BLS keygen requires >= 32
+  // bytes of IKM; the production caller (BlsKeyPair) always supplies a 32-byte Curve25519 key, so
+  // this is unreachable today, but mkBlsSecretKey is a public method taking arbitrary bytes.
+  "mkBlsSecretKey degenerate-seed rejection (audit M3)" - {
+    "rejects an empty seed" in {
+      intercept[IllegalArgumentException](BlsUtils.mkBlsSecretKey(Array.emptyByteArray))
+    }
+
+    "rejects a 31-byte seed (one short of the IETF minimum)" in {
+      intercept[IllegalArgumentException](BlsUtils.mkBlsSecretKey(Array.fill[Byte](31)(1)))
+    }
+
+    "accepts a 32-byte seed (the production shape) and derives a non-degenerate key" in {
+      val sk = BlsUtils.mkBlsSecretKey(Array.fill[Byte](32)(1))
+      new blst.P1(sk).is_inf() shouldBe false
+    }
+  }
+
+  // --- L2 (audit): BlsPublicKey.unsafe used to be a bare cast with no check at all, unlike
+  // BlsSignature.unsafe (which routes through apply's length sanity check and throws on a bad
+  // length). Both are private[bls]/test-package-visible only, so the blast radius was always small,
+  // but the asymmetry was a footgun for any future same-package caller.
+  "BlsPublicKey.unsafe validation symmetry (audit L2)" - {
+    "throws on a bad-length byte string, like BlsSignature.unsafe does" in {
+      intercept[IllegalArgumentException](BlsPublicKey.unsafe(ByteStr(Array.fill[Byte](10)(0))))
+    }
+
+    "accepts a correctly-sized byte string, like a freshly-derived public key" in {
+      BlsPublicKey.unsafe(ByteStr(publicKey1)).arr shouldBe publicKey1
     }
   }
 
