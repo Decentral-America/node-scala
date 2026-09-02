@@ -1,5 +1,6 @@
 package com.decentralchain.block
 
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.crypto.bls.BlsSignature
 import com.decentralchain.state.{GeneratorIndex, Height}
 import com.decentralchain.transaction.TxValidationError.GenericError
@@ -10,7 +11,8 @@ case class FinalizationVoting(
     valid: Seq[GeneratorIndex],
     finalizedHeight: Height,
     aggregatedEndorsement: Option[BlsSignature],
-    conflict: Seq[BlockEndorsement]
+    conflict: Seq[BlockEndorsement],
+    hotstuffConflicts: Seq[HotStuffEquivocationProof] = Seq.empty
 ) {
   def withValid(endorserIdxs: Iterable[GeneratorIndex], endorserSigs: Iterable[BlsSignature]): Either[GenericError, FinalizationVoting] =
     BlsSignature.agg(Iterable.concat(aggregatedEndorsement, endorserSigs)).map { agg =>
@@ -20,10 +22,11 @@ case class FinalizationVoting(
       )
     }
 
-  def nonEmpty: Boolean = valid.nonEmpty || conflict.nonEmpty
+  def nonEmpty: Boolean = valid.nonEmpty || conflict.nonEmpty || hotstuffConflicts.nonEmpty
 
   override def toString: String =
-    s"Voting(v=[${valid.mkString(",")}], h=$finalizedHeight, c=[${conflict.mkString(", ")}], s=$aggregatedEndorsement)"
+    s"Voting(v=[${valid.mkString(",")}], h=$finalizedHeight, c=[${conflict.mkString(", ")}], " +
+      s"hsc=[${hotstuffConflicts.mkString(", ")}], s=$aggregatedEndorsement)"
 }
 
 object FinalizationVoting {
@@ -35,7 +38,7 @@ object FinalizationVoting {
     }
 
   def combine(old: FinalizationVoting, recent: FinalizationVoting): FinalizationVoting =
-    recent.copy(conflict = old.conflict ++ recent.conflict)
+    recent.copy(conflict = old.conflict ++ recent.conflict, hotstuffConflicts = old.hotstuffConflicts ++ recent.hotstuffConflicts)
 
   def isFinalized(endorsedBalance: BigInt, totalBalance: BigInt): Boolean = {
     // Same as: endorsedBalance >= totalBalance * 2/3

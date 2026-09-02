@@ -30,4 +30,7 @@ package object block {
 
   type PBFinalizationVoting = io.decentralchain.protobuf.block.FinalizationVoting
   val PBFinalizationVoting = io.decentralchain.protobuf.block.FinalizationVoting
+
+  type PBHotStuffEquivocationProof = io.decentralchain.protobuf.block.HotStuffEquivocationProof
+  val PBHotStuffEquivocationProof = io.decentralchain.protobuf.block.HotStuffEquivocationProof
 }

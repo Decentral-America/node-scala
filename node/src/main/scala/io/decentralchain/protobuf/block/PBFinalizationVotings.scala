@@ -23,7 +23,8 @@ object PBFinalizationVotings {
           case Left(e)  => throw new IllegalArgumentException(s"Error during parsing conflict endorsement #$i: $e")
           case Right(r) => r
         }
-      }.toVector
+      }.toVector,
+      pb.hotstuffConflicts.map(PBHotStuffEquivocationProofs.vanilla).toVector
     )
   }
 
@@ -32,6 +33,6 @@ object PBFinalizationVotings {
     v.finalizedHeight.toInt,
     v.aggregatedEndorsement.fold(ByteString.EMPTY)(_.byteStr.toByteString),
     v.conflict.map(PBEndorseBlocks.protobuf),
-    Seq.empty // hotstuffConflicts: wired in a later task (HotStuffEquivocationProof carriage in FinalizationVoting)
+    v.hotstuffConflicts.map(PBHotStuffEquivocationProofs.protobuf)
   )
 }
