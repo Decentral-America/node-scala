@@ -95,5 +95,23 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
 
       updatedState.conflictGenerators should contain allOf (GeneratorIndex(1), GeneratorIndex(2))
     }
+
+    "4. a proofs-only voting (no T0 conflict) still excludes the proof voter from THIS append's isParentFinalized denominator" in {
+      // Same boundary-quorum fixture as case 2, but the exclusion is carried solely via
+      // hotstuffConflicts -- no fv.conflict entries at all -- isolating isParentFinalized's own
+      // internal re-derivation of allConflictIndexes (FinalizationState.scala:106) from the
+      // append-level `knownConflict` plumbing that case 2 also exercises.
+      // Four generators: miner(idx0)=1, voter1(idx1)=1, voter2(idx2)=1, voter3(idx3)=3, total=6.
+      // Miner + voter1 endorse => endorsed=2. Without exclusion: 2/6 = 33% < 2/3 => NOT finalized.
+      // With voter3 excluded via a proofs-only hotstuff equivocation proof (no T0 conflict at all),
+      // the denominator drops to 3: 2/3 exactly => finalized, in this same append.
+      val generatorSet = Seq(mkGenerator(0, 1L), mkGenerator(1, 1L), mkGenerator(2, 1L), mkGenerator(3, 3L))
+      val state         = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
+
+      val fvProofsOnly = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
+      val (updatedState, _, _) = state.append(TxHelpers.randomBlockId, Some(fvProofsOnly), generatorSet)
+
+      updatedState.parentFinalized shouldBe true
+    }
   }
 }

@@ -542,6 +542,11 @@ object Miner {
       alreadyExcluded: Int => Boolean,
       fallbackFinalizedHeight: () => Height
   ): Option[FinalizationVoting] = {
+    // No voterIndex-vs-committee-size bounds filter here (appender/package.scala:376-378, rule 4):
+    // unnecessary today because the coordinator that ultimately appends this block re-validates
+    // every folded proof against that same period's committee anyway, and committees never shrink
+    // within a period (Caches.committedGenerators only grows a period's generator set), so a
+    // voterIndex in-bounds now stays in-bounds through append.
     val usable =
       if (!slashingEnabled) Seq.empty
       else
