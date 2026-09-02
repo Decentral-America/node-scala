@@ -297,7 +297,8 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
         expectedFinalizedHeight,
         expectedEndorsedId,
         normalizedGeneratorSet.map(x => (x.addr, x.blsKp.publicKey, x.balance)),
-        conflict
+        conflict,
+        cryptoV2 = false
       )
     ) shouldBe true
     new ExtendedEndorsementStorage(r, normalizedGeneratorSet)

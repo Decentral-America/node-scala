@@ -35,7 +35,8 @@ class EndorsementFilterSpec extends FreeSpec {
         mkItem(16, 11257534317006L),
         mkItem(17, 8125473001579L)
       ),
-      conflict = Set.empty
+      conflict = Set.empty,
+      cryptoV2 = false
     )
 
     val r = filter.simulate(0 to 17, Set.empty)
@@ -52,7 +53,8 @@ class EndorsementFilterSpec extends FreeSpec {
       finalizedHeight = Height(1),
       endorsedId = TxHelpers.randomBlockId,
       normalizedGeneratorSet = (0 to 7).map(mkItem(_, 125000000000L)).toVector,
-      conflict = Set.empty
+      conflict = Set.empty,
+      cryptoV2 = false
     )
 
     val r = filter.simulate(0 to 7, Set.empty)
