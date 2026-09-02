@@ -15,13 +15,21 @@ import com.decentralchain.state.GeneratorSet
   * `HotStuffVote`/`QuorumCertificate`, so every existing call site/test that never sets an epoch keeps
   * comparing 0 == 0 and observes byte-for-byte the same behaviour as before this fix.
   */
+/** `cryptoV2` (Task 7, audit H2 hard switch): whether QC verification uses the v2 `_HSVOTE_` domain-
+  * separation tag (`true`) or the legacy shared tag (`false`) -- see `HotStuffQuorum.voteDst`. Votes/
+  * QCs are ephemeral (never block-carried), so this is an ambient coordinator-level "is v2 active"
+  * flag, the same kind of parameter `committee`/`committeeEpoch` already are, NOT a per-message height
+  * check like PoP/aggregated-endorsement verification. Defaults to `false` so every existing call
+  * site/test that doesn't set it observes byte-for-byte the same behaviour as before this fix.
+  */
 case class EngineState(
     committee: GeneratorSet,
     safety: SafetyState = SafetyState(),
     pacemaker: PacemakerState = PacemakerState(),
     committedBlockId: Option[BlockId] = None,
     committedHeight: Int = 0,
-    committeeEpoch: Int = 0
+    committeeEpoch: Int = 0,
+    cryptoV2: Boolean = false
 )
 
 sealed trait HotStuffAction
@@ -61,7 +69,7 @@ object HotStuffEngine {
     if (!HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
       (state, Seq(HotStuffAction.Rejected(s"QC rejected: committee epoch ${qc.committeeEpoch} not acceptable (current=${state.committeeEpoch})")))
     else
-      HotStuffQuorum.verifyQC(qc, state.committee) match {
+      HotStuffQuorum.verifyQC(qc, state.committee, state.cryptoV2) match {
         case Left(err) => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
         case Right(_)  =>
           val advanced = state.copy(
@@ -93,7 +101,7 @@ object HotStuffEngine {
       extendsBranch: (BlockId, BlockId) => Boolean
   ): (EngineState, Boolean) = {
     val justifyEpochOk = proposal.justify.forall(qc => HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
-    val justifyValid   = justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).isRight)
+    val justifyValid   = justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee, state.cryptoV2).isRight)
     if (!justifyValid) (state, false)
     else {
       val caughtUp   = proposal.justify.fold(state)(qc => state.copy(safety = HotStuffSafety.update(qc, state.safety)))

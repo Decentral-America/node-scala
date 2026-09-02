@@ -80,7 +80,7 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
     val fx = new HotStuffEffects {
       def broadcast(m: Message): Unit                                = sent += m
       def myVoterIndexes: Set[Int]                                   = Set(voterIdx)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == voterIdx) Some(kps(voterIdx).sign(msg, BlsUtils.BlsDomainSeparationTag)) else None
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == voterIdx) Some(kps(voterIdx).sign(msg, dst)) else None
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }
@@ -138,7 +138,7 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
       // `formQC` rejection test proves the genuinely-different-epoch/Byzantine case is still correctly
       // enforced -- this fix narrows WHEN two honest votes can legitimately differ in epoch at all, it
       // does not weaken `sameTarget`'s check itself.)
-      HotStuffQuorum.formQC(Seq(voteA, voteB, voteC), committee) shouldBe a[Right[?, ?]]
+      HotStuffQuorum.formQC(Seq(voteA, voteB, voteC), committee, cryptoV2 = false) shouldBe a[Right[?, ?]]
     }
 
   "HotStuffVotePool.onVote's per-voter dedup" should
@@ -154,10 +154,10 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
       // Voter 0's FIRST vote for this target lands under a stale epoch (e.g. a genuinely Byzantine
       // relabeled-epoch vote, or any other remaining edge case the root-cause fix doesn't itself rule
       // out at the pool layer).
-      val (afterStale, _) = HotStuffVotePool.onVote(VotePool(), voteFor(0, oldEpoch), committee)
+      val (afterStale, _) = HotStuffVotePool.onVote(VotePool(), voteFor(0, oldEpoch), committee, cryptoV2 = false)
 
       // Voter 0 later casts a GENUINE vote for the SAME target under the current epoch.
-      val (afterGenuine, _) = HotStuffVotePool.onVote(afterStale, voteFor(0, newEpoch), committee)
+      val (afterGenuine, _) = HotStuffVotePool.onVote(afterStale, voteFor(0, newEpoch), committee, cryptoV2 = false)
 
       val key    = (view, PREPARE, blockId)
       val bucket = afterGenuine.pending.getOrElse(key, Vector.empty)

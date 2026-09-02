@@ -81,7 +81,7 @@ class HotStuffEquivocationEvidenceE2ESpecification extends BaseFinalizationSpec 
     var equivocations: Vector[HotStuffEquivocationProof]                = Vector.empty
     def broadcast(m: Message): Unit                                     = ()
     def myVoterIndexes: Set[Int]                                        = Set.empty
-    def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature]      = None
+    def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature]      = None
     def onCommit(blockId: Block.BlockId, height: Int): Unit             = ()
     override def onEquivocation(proof: HotStuffEquivocationProof): Unit = equivocations :+= proof
   }

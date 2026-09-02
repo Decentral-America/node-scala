@@ -162,7 +162,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
           case _                                          => ()
         }
         def myVoterIndexes: Set[Int]                                   = Set(0, 1, 2)
-        def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(idx).sign(msg, BlsUtils.BlsDomainSeparationTag))
+        def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = Some(kps(idx).sign(msg, dst))
         def onCommit(blockId: BlockId, height: Int): Unit              = ()
         def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
       }

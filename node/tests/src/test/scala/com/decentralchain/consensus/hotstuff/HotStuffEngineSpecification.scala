@@ -24,7 +24,7 @@ class HotStuffEngineSpecification extends FlatSpec {
   private def realQC(view: Int, phase: HotStuffPhase, block: BlockId, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, phase, block, height)
     val votes = Seq(0, 1, 2).map(i => HotStuffVote(view, phase, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
-    HotStuffQuorum.formQC(votes, committee).toOption.get
+    HotStuffQuorum.formQC(votes, committee, cryptoV2 = false).toOption.get
   }
 
   private def forgedQC(view: Int, phase: HotStuffPhase, block: BlockId, height: Int): QuorumCertificate =

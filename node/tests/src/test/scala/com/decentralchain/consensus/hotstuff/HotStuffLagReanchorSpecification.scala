@@ -31,7 +31,7 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
     val sent: mutable.ListBuffer[Message]                          = mutable.ListBuffer.empty
     def broadcast(m: Message): Unit                                = sent += m
     def myVoterIndexes: Set[Int]                                   = Set(self)
-    def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, BlsUtils.BlsDomainSeparationTag)) else None
+    def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
     def onCommit(blockId: BlockId, height: Int): Unit              = ()
     def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
   }

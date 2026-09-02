@@ -4,7 +4,7 @@ import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.hotstuff.sim.{DstHarness, FaultProfile, SafetyInvariants}
-import com.decentralchain.crypto.bls.{BlsSignature, BlsUtils, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
@@ -377,7 +377,7 @@ class DstStaleTargetSelfSealScenarioSpecification extends FlatSpec {
         case _               => ()
       }
       def myVoterIndexes: Set[Int]                                   = Set(0)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg, BlsUtils.BlsDomainSeparationTag)) else None
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg, dst)) else None
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }

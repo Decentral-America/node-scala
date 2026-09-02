@@ -31,31 +31,31 @@ class HotStuffVotePoolSpecification extends FlatSpec {
   }
 
   "onVote" should "accumulate below quorum without emitting a QC" in {
-    val (p1, qc1) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
+    val (p1, qc1) = HotStuffVotePool.onVote(VotePool(), vote(0), committee, cryptoV2 = false)
     qc1 should be(None)
-    val (_, qc2) = HotStuffVotePool.onVote(p1, vote(1), committee) // 2/4 = 50% < 2/3
+    val (_, qc2) = HotStuffVotePool.onVote(p1, vote(1), committee, cryptoV2 = false) // 2/4 = 50% < 2/3
     qc2 should be(None)
   }
 
   it should "emit a verifiable QC once 2/3 stake is reached, and clear the bucket" in {
-    val (p1, _)  = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
-    val (p2, _)  = HotStuffVotePool.onVote(p1, vote(1), committee)
-    val (p3, qc) = HotStuffVotePool.onVote(p2, vote(2), committee) // 3/4 = 75% >= 2/3
+    val (p1, _)  = HotStuffVotePool.onVote(VotePool(), vote(0), committee, cryptoV2 = false)
+    val (p2, _)  = HotStuffVotePool.onVote(p1, vote(1), committee, cryptoV2 = false)
+    val (p3, qc) = HotStuffVotePool.onVote(p2, vote(2), committee, cryptoV2 = false) // 3/4 = 75% >= 2/3
     qc.isDefined should be(true)
-    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(()))
+    HotStuffQuorum.verifyQC(qc.get, committee, cryptoV2 = false) should be(Right(()))
     p3.pending should be(empty) // bucket cleared on emit
   }
 
   it should "drop an invalid (forged) vote without pooling it" in {
     val forged  = vote(0).copy(signature = ByteStr(Array.fill[Byte](96)(0)))
-    val (p, qc) = HotStuffVotePool.onVote(VotePool(), forged, committee)
+    val (p, qc) = HotStuffVotePool.onVote(VotePool(), forged, committee, cryptoV2 = false)
     qc should be(None)
     p.pending should be(empty)
   }
 
   it should "not double-count a repeated voter" in {
-    val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
-    val (p2, _) = HotStuffVotePool.onVote(p1, vote(0), committee) // same voter again
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee, cryptoV2 = false)
+    val (p2, _) = HotStuffVotePool.onVote(p1, vote(0), committee, cryptoV2 = false) // same voter again
     p2.pending.values.flatten.map(_.voterIndex).toList should be(List(0))
   }
 
@@ -65,19 +65,19 @@ class HotStuffVotePoolSpecification extends FlatSpec {
   // fix makes every replica vote over the settled-view height so this cannot happen in production; this
   // test pins the pool contract so a future regression is caught here instead of on a live network.
   it should "NOT form a QC when quorum-many voters disagree on blockHeight" in {
-    val (p1, _)  = HotStuffVotePool.onVote(VotePool(), voteAtHeight(0, 100), committee)
-    val (p2, _)  = HotStuffVotePool.onVote(p1, voteAtHeight(1, 103), committee)
-    val (p3, qc) = HotStuffVotePool.onVote(p2, voteAtHeight(2, 103), committee) // 3/4 voters, but mixed heights
+    val (p1, _)  = HotStuffVotePool.onVote(VotePool(), voteAtHeight(0, 100), committee, cryptoV2 = false)
+    val (p2, _)  = HotStuffVotePool.onVote(p1, voteAtHeight(1, 103), committee, cryptoV2 = false)
+    val (p3, qc) = HotStuffVotePool.onVote(p2, voteAtHeight(2, 103), committee, cryptoV2 = false) // 3/4 voters, but mixed heights
     qc should be(None)
     p3.pending.values.flatten.map(_.voterIndex).toSet should be(Set(0, 1, 2)) // all pooled, none dropped
   }
 
   it should "form a QC once quorum-many voters agree on the SAME blockHeight" in {
-    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtHeight(0, 103), committee)
-    val (p2, _) = HotStuffVotePool.onVote(p1, voteAtHeight(1, 103), committee)
-    val (_, qc) = HotStuffVotePool.onVote(p2, voteAtHeight(2, 103), committee)
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtHeight(0, 103), committee, cryptoV2 = false)
+    val (p2, _) = HotStuffVotePool.onVote(p1, voteAtHeight(1, 103), committee, cryptoV2 = false)
+    val (_, qc) = HotStuffVotePool.onVote(p2, voteAtHeight(2, 103), committee, cryptoV2 = false)
     qc.isDefined should be(true)
-    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(()))
+    HotStuffQuorum.verifyQC(qc.get, committee, cryptoV2 = false) should be(Right(()))
   }
 
   it should "pool distinct targets separately" in {
@@ -86,8 +86,8 @@ class HotStuffVotePoolSpecification extends FlatSpec {
       val msg = HotStuffQuorum.voteMessage(5, PREPARE, other, height)
       HotStuffVote(5, PREPARE, other, Height(height), 1, kps(1).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
     }
-    val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
-    val (p2, _) = HotStuffVotePool.onVote(p1, voteOther, committee)
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee, cryptoV2 = false)
+    val (p2, _) = HotStuffVotePool.onVote(p1, voteOther, committee, cryptoV2 = false)
     p2.pending.keySet.size should be(2)
   }
 
@@ -97,9 +97,9 @@ class HotStuffVotePoolSpecification extends FlatSpec {
   // newer targets or the ability to still form a QC for them.
   "pruneOlderThan" should "evict targets older than minView from pending AND seenCommittees, keeping newer ones" in {
     // Two unresolved old-view targets (views 3 and 4) and one current-view target (view 6).
-    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtView(0, 3), committee)
-    val (p2, _) = HotStuffVotePool.onVote(p1, voteAtView(0, 4), committee)
-    val (p3, _) = HotStuffVotePool.onVote(p2, voteAtView(0, 6), committee)
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtView(0, 3), committee, cryptoV2 = false)
+    val (p2, _) = HotStuffVotePool.onVote(p1, voteAtView(0, 4), committee, cryptoV2 = false)
+    val (p3, _) = HotStuffVotePool.onVote(p2, voteAtView(0, 6), committee, cryptoV2 = false)
     p3.pending.keySet.map(_._1) should be(Set(3, 4, 6))
     p3.seenCommittees.keySet.map(_._1) should be(Set(3, 4, 6))
 
@@ -109,15 +109,15 @@ class HotStuffVotePoolSpecification extends FlatSpec {
   }
 
   it should "not affect a newer target's ability to still reach quorum after older ones are pruned" in {
-    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtView(0, 3), committee) // stale target, view 3
+    val (p1, _) = HotStuffVotePool.onVote(VotePool(), voteAtView(0, 3), committee, cryptoV2 = false) // stale target, view 3
     val pruned  = HotStuffVotePool.pruneOlderThan(p1, minView = 6)
     pruned.pending should be(empty)
 
     // A fresh view-7 target accumulates to quorum unaffected by the prune.
-    val (q1, _) = HotStuffVotePool.onVote(pruned, voteAtView(0, 7), committee)
-    val (q2, _) = HotStuffVotePool.onVote(q1, voteAtView(1, 7), committee)
-    val (_, qc) = HotStuffVotePool.onVote(q2, voteAtView(2, 7), committee)
+    val (q1, _) = HotStuffVotePool.onVote(pruned, voteAtView(0, 7), committee, cryptoV2 = false)
+    val (q2, _) = HotStuffVotePool.onVote(q1, voteAtView(1, 7), committee, cryptoV2 = false)
+    val (_, qc) = HotStuffVotePool.onVote(q2, voteAtView(2, 7), committee, cryptoV2 = false)
     qc.isDefined should be(true)
-    HotStuffQuorum.verifyQC(qc.get, committee) should be(Right(()))
+    HotStuffQuorum.verifyQC(qc.get, committee, cryptoV2 = false) should be(Right(()))
   }
 }

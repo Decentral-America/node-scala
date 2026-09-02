@@ -53,9 +53,9 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
         case _               => ()
       }
       def myVoterIndexes: Set[Int]                                   = if (multiKey) Set(0, 1, 2) else Set(0)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] =
-        if (multiKey) Some(kps(idx).sign(msg, BlsUtils.BlsDomainSeparationTag))
-        else Option.when(idx == 0)(kps(0).sign(msg, BlsUtils.BlsDomainSeparationTag))
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] =
+        if (multiKey) Some(kps(idx).sign(msg, dst))
+        else Option.when(idx == 0)(kps(0).sign(msg, dst))
       def onCommit(blockId: BlockId, height: Int): Unit = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit = ()
     }
