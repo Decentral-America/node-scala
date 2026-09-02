@@ -5,6 +5,7 @@ import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block.*
 import com.decentralchain.block.{Block, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
 import com.decentralchain.crypto
@@ -64,7 +65,8 @@ class MinerImpl(
     val minerScheduler: Scheduler,
     val appenderScheduler: Scheduler,
     transactionAdded: Observable[Unit],
-    maxTimeDrift: Long = appender.MaxTimeDrift
+    maxTimeDrift: Long = appender.MaxTimeDrift,
+    hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
 ) extends Miner
     with MinerDebugInfo
     with ScorexLogging {
@@ -272,7 +274,7 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = tryCollectSelfWithGrace(reference),
+            finalizationVoting = withHotStuffConflicts(tryCollectSelfWithGrace(reference)),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
@@ -331,6 +333,26 @@ class MinerImpl(
     }
     log.debug(s"tryCollectSelfWithGrace($endorsedId): attempts=$attempts result=$result")
     result
+  }
+
+  // T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md §5):
+  // production-side slashingEnabled gate. Folds pending HotStuff equivocation proofs detected by
+  // this replica's coordinator into the key block's FinalizationVoting, so they get union'd into
+  // committedGenerators/conflictGenerators on append (validation/union elsewhere are unconditional).
+  private def withHotStuffConflicts(voting: Option[FinalizationVoting]): Option[FinalizationVoting] = {
+    val forgeHeight = Height(blockchainUpdater.height + 1)
+    blockchainUpdater.generationPeriodOf(forgeHeight) match {
+      case None         => voting // pre-activation: no periods, no committee, nothing to fold
+      case Some(period) =>
+        Miner.foldHotStuffConflicts(
+          settings.hotStuffSettings.slashingEnabled,
+          hotStuffEquivocations(),
+          voting,
+          period.index,
+          idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
+          () => blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight)
+        )
+    }
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =
@@ -497,4 +519,32 @@ object Miner {
       (),
       s"Account($address) is scripted and not allowed to forge blocks"
     )
+
+  /** T5 rev.2: fold pending verified equivocation proofs into the key block's FinalizationVoting.
+    * PRODUCTION-side gate only (spec §5): validation/union on receipt are unconditional elsewhere.
+    * Filters: epoch must equal the forge height's generation-period index (validation would reject
+    * anything else -- rule 3), voter not already excluded on-chain (validation rule 5), dedup by voter.
+    * `fallbackFinalizedHeight` is evaluated only when synthesizing an FV from nothing.
+    */
+  private[mining] def foldHotStuffConflicts(
+      slashingEnabled: Boolean,
+      pending: Seq[HotStuffEquivocationProof],
+      voting: Option[FinalizationVoting],
+      forgeHeightPeriodIndex: Int,
+      alreadyExcluded: Int => Boolean,
+      fallbackFinalizedHeight: () => Height
+  ): Option[FinalizationVoting] = {
+    val usable =
+      if (!slashingEnabled) Seq.empty
+      else
+        pending
+          .filter(p => p.committeeEpoch == forgeHeightPeriodIndex && !alreadyExcluded(p.voterIndex))
+          .distinctBy(_.voterIndex)
+    if (usable.isEmpty) voting
+    else
+      voting match {
+        case Some(fv) => Some(fv.copy(hotstuffConflicts = (fv.hotstuffConflicts ++ usable).distinctBy(_.voterIndex)))
+        case None     => Some(FinalizationVoting(Seq.empty, fallbackFinalizedHeight(), None, Seq.empty, usable))
+      }
+  }
 }
