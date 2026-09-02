@@ -209,13 +209,21 @@ final class DstHarness(
     * back) one this replica currently accepts.
     *
     * F-6 fix: `epochBelief` is now a per-node map (was a single shared `var`); this method is kept as a
-    * thin shim that sets EVERY live node's entry to the same `next`, so every existing scenario spec
-    * that calls this (all of them as of this change) observes byte-for-byte identical behaviour to the
-    * old shared-`var` semantics. It does NOT touch `simulatedTip` -- that is a separate, F-6-only
-    * concept (see `simulatedTip`'s doc and `advanceTip` below); no pre-existing scenario spec wires a
-    * finite `maxTargetLag`, so `tipHeight`/`simulatedTip` remain a no-op for all of them regardless.
+    * thin shim that sets EVERY node's entry to the same `next`, so every existing scenario spec that
+    * calls this (all of them as of this change) observes byte-for-byte identical behaviour to the old
+    * shared-`var` semantics. Deliberately writes ALL nodes, INCLUDING CRASHED ones (`0 until nodeCount`,
+    * not `live`): the old shared `var` was a single value every node read through its own
+    * `committeeEpochProvider` closure, so a crashed node that later `restart`ed read the CURRENT value,
+    * not a stale pre-crash one. Filtering to `live` here would silently diverge from that on any
+    * scenario that crashes a node, advances the epoch, then restarts it -- the restarted node would
+    * wake with a stale belief the old harness never gave it. Faithfulness to the replaced semantics is
+    * the whole point of this shim, so it writes the full node set.
+    *
+    * It does NOT touch `simulatedTip` -- that is a separate, F-6-only concept (see `simulatedTip`'s doc
+    * and `advanceTip` below); no pre-existing scenario spec wires a finite `maxTargetLag`, so
+    * `tipHeight`/`simulatedTip` remain a no-op for all of them regardless.
     */
-  def advanceEpochBelief(next: Int): Unit = live.foreach(i => epochBelief(i) = next)
+  def advanceEpochBelief(next: Int): Unit = (0 until nodeCount).foreach(i => epochBelief(i) = next)
 
   /** F-6 fix: push ONE node's own simulated live chain tip to `height`, independent of every other
     * node's tip and independent of `epochBelief` (see `simulatedTip`'s doc for why the two are kept
@@ -224,6 +232,25 @@ final class DstHarness(
     * epoch-gating belief exercised by `advanceEpochBelief`/`DstCommitteeEpochRotationScenarioSpecification`.
     */
   def advanceTip(node: Int, height: Int): Unit = simulatedTip(node) = height
+
+  /** F-6 fix: push EVERY node's own simulated live tip to `height` at once -- the REALISTIC F-6 shape,
+    * as opposed to `advanceTip`'s single-node divergence. The audit's finding is about the whole
+    * cluster's T2 consensus lagging behind a chain that keeps advancing underneath it (feature-25
+    * finality never halts the chain, so every replica's `blockchainUpdater.height` marches on while a
+    * T2 round is stuck): in that case EVERY replica's own honest QCs for the stale target are
+    * self-rejected, so no quorum of accepting replicas exists anywhere and ONLY re-anchoring can
+    * restore commits. Writes all nodes including crashed ones, same rationale as `advanceEpochBelief`.
+    */
+  def advanceTipAll(height: Int): Unit = (0 until nodeCount).foreach(i => simulatedTip(i) = height)
+
+  /** F-6 fix: push EVERY node's own `committeeEpoch` gating belief AND its own simulated tip to match
+    * `height`, exactly as production wires them (both are read from the SAME live tip in
+    * `Application.scala`). The cluster-wide companion to `advanceTip` + `advanceEpochBeliefForNode`.
+    */
+  def advanceTipAndEpochAll(height: Int, epochOf: Int => Int): Unit = {
+    advanceTipAll(height)
+    (0 until nodeCount).foreach(i => epochBelief(i) = epochOf(height))
+  }
 
   /** F-6 fix: push ONE node's own `committeeEpoch` gating belief independently of every other node's,
     * unlike `advanceEpochBelief` above (which deliberately moves every live node in lockstep, matching

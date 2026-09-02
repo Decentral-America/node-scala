@@ -703,19 +703,27 @@ object HotStuffCoordinator {
         // `lastReproposedBlockId`/`reproposeAttempts`, same rationale as the existing reset: a
         // genuinely-abandoned branch must not leave a stale attempt count to penalize whatever this
         // replica re-anchors to next.
-        .filterNot { case (blockId, height) =>
-          val stale = tooStale(height)
-          if (stale) {
+        .filter { case (blockId, height) =>
+          // Explicit if/else rather than a side-effecting `filterNot` predicate: the WARN, the counters
+          // and the tracker reset are real effects, and burying them in a boolean predicate makes the
+          // control flow read as pure when it is not.
+          if (tooStale(height)) {
             staleTargetAbandonedCounter.increment()
             _staleTargetsAbandoned += 1
             logger.warn(
               s"[HotStuff] stale in-flight branch abandoned, re-anchoring: b=${bid(blockId)} height=$height " +
                 s"tip=${tipHeight()} maxTargetLag=${maxTargetLag()} (audit F-6)"
             )
+            // NOT redundant with `onRoundTimerTick`'s else-branch reset, despite appearances: that reset
+            // only runs when `effectiveInFlight.orElse(blockSource())` yields `Some`. When `blockSource()`
+            // also returns `None` (this replica has nothing settled to re-anchor TO yet), the `case None`
+            // branch runs instead and never touches the tracker -- so without this reset an abandoned
+            // branch's stale attempt count would survive to penalize whatever the replica re-anchors to
+            // later. Verified by reading both paths, not assumed.
             lastReproposedBlockId = None
             reproposeAttempts = 0
-          }
-          stale
+            false // stale -> drop the in-flight branch, fall through to blockSource()'s fresh tip
+          } else true
         }
 
     def onRoundTimerTick(): Unit = {
