@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -23,7 +23,7 @@ class HotStuffEngineSpecification extends FlatSpec {
   // A real, BLS-valid QC signed by members 0,1,2 (75/100 stake >= 2/3).
   private def realQC(view: Int, phase: HotStuffPhase, block: BlockId, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, phase, block, height)
-    val votes = Seq(0, 1, 2).map(i => HotStuffVote(view, phase, block, Height(height), i, kps(i).sign(msg).byteStr))
+    val votes = Seq(0, 1, 2).map(i => HotStuffVote(view, phase, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
     HotStuffQuorum.formQC(votes, committee).toOption.get
   }
 

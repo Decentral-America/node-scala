@@ -2,7 +2,7 @@ package com.decentralchain.transaction
 
 import com.decentralchain.account.*
 import com.decentralchain.crypto
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsPublicKey, BlsSignature, BlsUtils}
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.Height
 import com.decentralchain.transaction.serialization.impl.{BaseTxJson, PBTransactionSerializer}
@@ -49,7 +49,7 @@ object CommitToGenerationTransaction {
 
   def mkPopSignature(blsKeyPair: BlsKeyPair, generationPeriodStart: Height): BlsSignature = {
     val blsMessage = blsKeyPair.publicKey.arr ++ generationPeriodStart.toByteArray
-    blsKeyPair.sign(blsMessage)
+    blsKeyPair.sign(blsMessage, BlsUtils.BlsDomainSeparationTag)
   }
 
   def create(

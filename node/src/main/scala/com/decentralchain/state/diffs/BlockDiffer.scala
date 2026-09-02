@@ -639,7 +639,8 @@ object BlockDiffer {
                       .verifyBasic(
                         tx.commitmentSignature.arr,
                         tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray,
-                        tx.endorserPublicKey.arr
+                        tx.endorserPublicKey.arr,
+                        BlsUtils.BlsDomainSeparationTag
                       )
                       .isRight
                   )(GenericError("Invalid commitment signature"))

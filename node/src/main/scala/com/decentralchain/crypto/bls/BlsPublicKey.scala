@@ -12,7 +12,8 @@ object BlsPublicKey {
     def byteStr: ByteStr = self
     def arr: Array[Byte] = byteStr.arr
 
-    def verify(message: Array[Byte], signature: BlsSignature): Boolean = BlsUtils.verifyBasic(signature.arr, message, arr).isRight
+    def verify(message: Array[Byte], signature: BlsSignature, dst: String): Boolean =
+      BlsUtils.verifyBasic(signature.arr, message, arr, dst).isRight
 
     def base58: String = byteStr.toString
 

@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsSignature, BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -53,7 +53,7 @@ class HotStuffWatchdogRejectedStreamSpecification extends FlatSpec {
   private def perpetuallyRejectedQC(view: Int, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, height, committeeEpoch = 99)
     val votes = (0 to 2).map(i =>
-      HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, Height(height), i, kps(i).sign(msg).byteStr, committeeEpoch = 99)
+      HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr, committeeEpoch = 99)
     )
     HotStuffQuorum.formQC(votes, committee).toOption.get
   }

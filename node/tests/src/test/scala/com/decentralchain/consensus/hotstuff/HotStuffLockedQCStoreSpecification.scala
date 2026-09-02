@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffVote, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -25,7 +25,7 @@ class HotStuffLockedQCStoreSpecification extends FlatSpec {
 
   private def realLockQC(view: Int, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, height)
-    val votes = (0 to 2).map(i => HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, Height(height), i, kps(i).sign(msg).byteStr))
+    val votes = (0 to 2).map(i => HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
     HotStuffQuorum.formQC(votes, committee).toOption.get
   }
 

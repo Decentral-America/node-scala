@@ -1,7 +1,7 @@
 package com.decentralchain.consensus.hotstuff
 
 import com.decentralchain.block.Block.BlockId
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
 import com.decentralchain.network.{ChannelGroupExt, Message}
 import com.decentralchain.state.GeneratorSet
 import com.decentralchain.wallet.Wallet
@@ -58,7 +58,7 @@ final class NodeHotStuffEffects(
     committeeProvider()
       .find(_.index.toInt == voterIndex)
       .flatMap(gi => wallet.privateKeyAccount(gi.address).toOption)
-      .map(account => BlsKeyPair(account.privateKey).sign(voteMessage))
+      .map(account => BlsKeyPair(account.privateKey).sign(voteMessage, BlsUtils.BlsDomainSeparationTag))
 
   override def onCommit(blockId: BlockId, height: Int): Unit = {
     hotStuffFinalized.updateAndGet(prev => math.max(prev, height))

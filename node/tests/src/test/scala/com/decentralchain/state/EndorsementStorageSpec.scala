@@ -5,7 +5,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
 import com.decentralchain.network.EndorseBlock
 import com.decentralchain.state.{EndorsementFilter, EndorsementStorage, GeneratorIndex, Height}
 import com.decentralchain.test.{FreeSpec, NumericExt, produce}
@@ -337,7 +337,8 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
                 else
                   aggEnd.verifyAgg(
                     BlockEndorsement.mkMessage(expectedFinalizedId, expectedFinalizedHeight, endorsedId),
-                    valid.map(generators(_).blsKp.publicKey)
+                    valid.map(generators(_).blsKp.publicKey),
+                    BlsUtils.BlsDomainSeparationTag
                   ) should beRight
             }
           }

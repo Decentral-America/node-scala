@@ -24,7 +24,7 @@ class HotStuffQuorumSpecification extends FlatSpec {
 
   private def vote(i: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, phase, blockId, height.toInt)
-    HotStuffVote(view, phase, blockId, height, i, kps(i).sign(msg).byteStr)
+    HotStuffVote(view, phase, blockId, height, i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
   }
 
   "verifyVote" should "accept a valid vote and reject tampering / unknown voters" in {

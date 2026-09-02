@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -65,7 +65,7 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
 
   private def voteOf(i: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(5, PREPARE, block, height)
-    HotStuffVote(5, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr)
+    HotStuffVote(5, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
   }
 
   "the ORIGINAL committee" should "confirm 60-of-100 stake does NOT reach its own 2/3 quorum (sanity check on the numbers)" in {

@@ -7,7 +7,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
 import com.decentralchain.common.utils.{Base58, Base64, FastBase58}
 import com.decentralchain.crypto.{P256Curve, Sha256}
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.lang.script.{Script, ScriptReader}
@@ -370,15 +370,15 @@ object UtilApp {
       val blsSK1bs = new Array[Byte](32)
       Random.nextBytes(blsSK1bs)
       val blsSK1  = BlsKeyPair(PrivateKey(blsSK1bs))
-      val blsSig1 = blsSK1.sign(message)
+      val blsSig1 = blsSK1.sign(message, BlsUtils.BlsDomainSeparationTag)
 
       val blsSK2bs = new Array[Byte](32)
       Random.nextBytes(blsSK2bs)
       val blsSK2  = BlsKeyPair(PrivateKey(blsSK2bs))
-      val blsSig2 = blsSK2.sign(message)
+      val blsSig2 = blsSK2.sign(message, BlsUtils.BlsDomainSeparationTag)
 
       val aggSig = BlsSignature.agg(Seq(blsSig1, blsSig2)).explicitGet()
-      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey)).explicitGet()
+      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey), BlsUtils.BlsDomainSeparationTag).explicitGet()
 
       Right(Array.emptyByteArray)
     }

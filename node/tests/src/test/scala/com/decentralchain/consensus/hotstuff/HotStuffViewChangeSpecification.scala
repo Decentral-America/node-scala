@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsSignature, BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
@@ -41,7 +41,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
     val sent: mutable.ListBuffer[Message]                          = mutable.ListBuffer.empty
     def broadcast(m: Message): Unit                                = sent += m
     def myVoterIndexes: Set[Int]                                   = Set(self)
-    def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
+    def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, BlsUtils.BlsDomainSeparationTag)) else None
     def onCommit(blockId: BlockId, height: Int): Unit              = ()
     def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
   }
@@ -100,7 +100,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
         proposal.blockId,
         com.decentralchain.state.Height(H),
         i,
-        kps(i).sign(msg).byteStr
+        kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr
       )
       node0.onVote(vote)
     }
@@ -202,7 +202,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
 
   private def committeeVoteFor(view: Int, phase: HotStuffPhase, blockId: BlockId, height: Int, voterIndex: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, phase, blockId, height)
-    HotStuffVote(view, phase, blockId, com.decentralchain.state.Height(height), voterIndex, kps(voterIndex).sign(msg).byteStr)
+    HotStuffVote(view, phase, blockId, com.decentralchain.state.Height(height), voterIndex, kps(voterIndex).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
   }
 
   "HotStuffSafety.safeToVote's lockedQC=None branch (fresh post-restart SafetyState)" should
@@ -407,7 +407,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
       node2.onProposal(HotStuffProposal(0, B, justify = None), H)
       Seq(0, 1).foreach { i =>
         val msg = HotStuffQuorum.voteMessage(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, H)
-        node2.onVote(HotStuffVote(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, com.decentralchain.state.Height(H), i, kps(i).sign(msg).byteStr))
+        node2.onVote(HotStuffVote(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, com.decentralchain.state.Height(H), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
       }
       node2.currentView should be(1) // advanced via the real QC, not a stall -- view 1's leader is index 1, not us
       HotStuffPacemaker.isLeader(2, node2.currentView, committee) should be(false)
@@ -460,7 +460,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
     node2.onProposal(HotStuffProposal(0, B, justify = None), H)
     Seq(0, 1).foreach { i =>
       val msg = HotStuffQuorum.voteMessage(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, H)
-      node2.onVote(HotStuffVote(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, com.decentralchain.state.Height(H), i, kps(i).sign(msg).byteStr))
+      node2.onVote(HotStuffVote(0, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, com.decentralchain.state.Height(H), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
     }
     node2.currentView should be(1)
     fx2.sent.clear()

@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffVote, Message}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -31,7 +31,7 @@ class HotStuffEquivocationDetectionSpecification extends FlatSpec {
     val bId    = blockId(b)
     val height = Height(10)
     val msg    = HotStuffQuorum.voteMessage(view, phase, bId, height.toInt, epoch)
-    HotStuffVote(view, phase, bId, height, voter, ByteStr(keyPair.sign(msg).arr), epoch)
+    HotStuffVote(view, phase, bId, height, voter, ByteStr(keyPair.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
   }
 
   /** Same shape as a real vote but with a garbage signature -- never verifies against the named

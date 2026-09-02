@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsSignature, BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -54,7 +54,8 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
       }
       def myVoterIndexes: Set[Int]                                   = if (multiKey) Set(0, 1, 2) else Set(0)
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] =
-        if (multiKey) Some(kps(idx).sign(msg)) else Option.when(idx == 0)(kps(0).sign(msg))
+        if (multiKey) Some(kps(idx).sign(msg, BlsUtils.BlsDomainSeparationTag))
+        else Option.when(idx == 0)(kps(0).sign(msg, BlsUtils.BlsDomainSeparationTag))
       def onCommit(blockId: BlockId, height: Int): Unit = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit = ()
     }
@@ -78,7 +79,7 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
       blockId,
       Height(height),
       idx,
-      kps(idx).sign(HotStuffQuorum.voteMessage(view, phase, blockId, height)).byteStr
+      kps(idx).sign(HotStuffQuorum.voteMessage(view, phase, blockId, height), BlsUtils.BlsDomainSeparationTag).byteStr
     )
 
   /** Drive `coordinator` to a REAL `lockedQC` on `blockId` at `view`: propose it (the coordinator

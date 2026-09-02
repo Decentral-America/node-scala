@@ -19,7 +19,14 @@ object CommitToGenerationTransactionDiff {
         GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
       }
       _ <- Either.raiseUnless(
-        BlsUtils.verifyBasic(tx.commitmentSignature.arr, tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray, tx.endorserPublicKey.arr).isRight
+        BlsUtils
+          .verifyBasic(
+            tx.commitmentSignature.arr,
+            tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray,
+            tx.endorserPublicKey.arr,
+            BlsUtils.BlsDomainSeparationTag
+          )
+          .isRight
       )(GenericError("Invalid commitment signature"))
       // Full curve validation (in-group, not point-at-infinity) at the actual enforcement point: once,
       // when the key is trusted going forward as a committed generator -- not on every deserialization.

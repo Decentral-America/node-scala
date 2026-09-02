@@ -45,7 +45,12 @@ case class HotStuffEquivocationProof(voteA: HotStuffVote, voteB: HotStuffVote) {
 
   private def verifyOne(v: HotStuffVote, pk: BlsPublicKey, label: String): Either[String, Unit] =
     BlsUtils
-      .verifyBasic(v.signature.arr, HotStuffQuorum.voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch), pk.arr)
+      .verifyBasic(
+        v.signature.arr,
+        HotStuffQuorum.voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch),
+        pk.arr,
+        BlsUtils.BlsDomainSeparationTag
+      )
       .left
       .map(e => s"equivocation proof $label signature invalid for voter $voterIndex: $e")
 

@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -22,12 +22,12 @@ class HotStuffVotePoolSpecification extends FlatSpec {
 
   private def voteAtHeight(i: Int, h: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(5, PREPARE, block, h)
-    HotStuffVote(5, PREPARE, block, Height(h), i, kps(i).sign(msg).byteStr)
+    HotStuffVote(5, PREPARE, block, Height(h), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
   }
 
   private def voteAtView(i: Int, view: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height)
-    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
   }
 
   "onVote" should "accumulate below quorum without emitting a QC" in {
@@ -84,7 +84,7 @@ class HotStuffVotePoolSpecification extends FlatSpec {
     val other: BlockId = ByteStr(Array.fill[Byte](32)(7))
     val voteOther      = {
       val msg = HotStuffQuorum.voteMessage(5, PREPARE, other, height)
-      HotStuffVote(5, PREPARE, other, Height(height), 1, kps(1).sign(msg).byteStr)
+      HotStuffVote(5, PREPARE, other, Height(height), 1, kps(1).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
     }
     val (p1, _) = HotStuffVotePool.onVote(VotePool(), vote(0), committee)
     val (p2, _) = HotStuffVotePool.onVote(p1, voteOther, committee)

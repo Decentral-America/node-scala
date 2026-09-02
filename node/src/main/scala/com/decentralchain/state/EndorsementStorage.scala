@@ -5,7 +5,7 @@ import cats.syntax.option.*
 import com.typesafe.scalalogging.StrictLogging
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{BlockEndorsement, FinalizationVoting}
-import com.decentralchain.crypto.bls.{BlsPublicKey, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsPublicKey, BlsSignature, BlsUtils}
 import com.decentralchain.network.EndorseBlock
 import com.decentralchain.state.EndorsementFilter.SimulationResult
 import com.decentralchain.state.EndorsementStorage.InMemory.FinalizationResult
@@ -180,7 +180,7 @@ object EndorsementStorage {
 
     private def verifySig(msg: EndorseBlock, pk: BlsPublicKey): Either[String, BlsSignature] = for {
       sig <- BlsSignature(msg.signature).leftMap(_.err)
-      _   <- sig.verifyBasic(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), pk)
+      _   <- sig.verifyBasic(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), pk, BlsUtils.BlsDomainSeparationTag)
     } yield sig
   }
 

@@ -463,7 +463,8 @@ package object appender {
                       BlsUtils.verifyAgg(
                         aggregatedEndorsement.arr,
                         BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
-                        validEndorsers.view.map(_._2.arr)
+                        validEndorsers.view.map(_._2.arr),
+                        BlsUtils.BlsDomainSeparationTag
                       )
                 } yield ()
           }

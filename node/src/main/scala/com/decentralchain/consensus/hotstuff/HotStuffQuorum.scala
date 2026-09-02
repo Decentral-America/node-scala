@@ -63,7 +63,7 @@ object HotStuffQuorum {
     */
   def verifyVote(vote: HotStuffVote, committee: GeneratorSet): Boolean =
     committee.find(_.index.toInt == vote.voterIndex).exists { gi =>
-      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr).isRight
+      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr, BlsUtils.BlsDomainSeparationTag).isRight
     }
 
   private def stakeOf(indexes: Set[Int], committee: GeneratorSet): BigInt = {
@@ -134,7 +134,8 @@ object HotStuffQuorum {
       BlsUtils.verifyAgg(
         qc.aggregatedSignature.arr,
         voteMessage(qc.view, qc.phase, qc.blockId, qc.blockHeight.toInt, qc.committeeEpoch),
-        signerOpt.flatten.map(_.blsPublicKey.arr)
+        signerOpt.flatten.map(_.blsPublicKey.arr),
+        BlsUtils.BlsDomainSeparationTag
       )
   }
 }
