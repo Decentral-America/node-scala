@@ -1,49 +1,126 @@
-# T5: Deterministic HotStuff Equivocation Evidence — Design
+# T5: Deterministic HotStuff Equivocation Evidence — Design (rev. 2)
+
+> **Revision 2 (2026-09-01).** Rewritten after an adversarial design review found four design defects
+> (C1–C4), four false/incomplete premises (H1–H5), and three hardening gaps (M1–M3) in revision 1.
+> Every claim below was re-verified against real code on `dev` @ `49809b487c`. Findings are cited
+> inline as [C1]…[M3] where the design decision exists to close them.
 
 ## Context
 
-The prior F-3 plan (`docs/superpowers/plans/2026-09-01-hotstuff-equivocation-detection.md`, Tasks 1-4 merged, Task 5 held) wired `HotStuffSafety.equivocators` into real vote-ingress traffic: detection, ERROR logging, a `/node/status` metric, and a critical alert. Task 5 attempted to feed a detected equivocator directly into `conflictGenerators`, but a final whole-branch review found two Critical issues, both real:
+The goal is unchanged: make a detected T2 HotStuff equivocation (a committee member signing two
+different blocks at the same `(view, phase)`) actually exclude the offender's stake via the existing
+feature-25 `conflictGenerators` mechanism — deterministically, so every node computes the identical
+exclusion set from the same block bytes.
 
-1. **The exclusion silently evaporates.** `FinalizationState.init` rebuilds `conflictGenerators` at every key block exclusively from persisted, header-derived data (`Caches.scala`, sourced from `block.header.finalizationVoting.conflict`). Nothing ever wrote HotStuff's detection into that persisted store, so a local, in-memory exclusion lived for at most one liquid block, then vanished — permanently, since the tracker's once-per-lifetime dedup guarantees the same voter is never re-reported.
-2. **Detection is node-local, so the exclusion is non-deterministic across nodes.** Which votes a given node happened to receive, and when its own pacemaker's view advanced far enough to prune the tracker, differ node to node. Two honest nodes can reach different `conflictGenerators` sets for the same block, perturbing `FinalizationState.isParentFinalized`'s stake denominator differently — a genuine cross-node finalization-divergence mechanism, the exact class of bug this codebase's own investigation history (`CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §9) has repeatedly chased down.
+The first attempt (F-3 plan Task 5) fed node-local detection straight into `conflictGenerators` and
+was rejected for two Critical reasons: the exclusion evaporated after one liquid block, and detection
+is node-local so honest nodes could diverge. The replacement principle stands: package the two
+conflicting signed `HotStuffVote`s as portable, independently-verifiable evidence
+(`HotStuffEquivocationProof`), carry it in the block itself, and have every node re-verify before
+trusting it — the same shape as T0's `FinalizationVoting.conflict` / `BlockEndorsement` mechanism.
 
-This spec replaces Task 5 with a deterministic design, mirroring the pattern T0's own conflict-detection already uses successfully: `BlockEndorsement`/`FinalizationVoting.conflict` — a locally-detected conflict is packaged as portable, independently-verifiable signed evidence, embedded in the block/microblock, and every node re-derives the identical `conflictGenerators` addition by verifying that evidence against the block's own signed bytes, not by trusting a peer's local observation.
+## Corrected premises (what revision 1 got wrong)
 
-**This is item T5 in `docs/hotstuff-audit-readiness.md`** ("Equivocation → slashing not wired to `conflictGenerators`") — already flagged as required work before HotStuff can move toward authoritative status.
-
-## What Already Exists (verified, not assumed)
-
-The wire format for this exact mechanism is **already designed, reviewed, and published** — it was never wired up on the node-scala side:
-
-- `packages/sdk/protobuf-schemas` (the `DecentralChain` monorepo) commit `959331f76` (2026-08-22) added `HotStuffEquivocationProof` and `FinalizationVoting.hotstuff_conflicts` to `dcc/block.proto`, schema version **1.6.6**, already published to Maven and cached locally (`~/.m2/repository/io/decentralchain/protobuf-schemas/1.6.6/`).
-- The schema's own comments state the exact design this spec re-derives independently: kept as a separate field from `EndorseBlock`/`conflict_endorsements` because a `HotStuffVote`'s signed message shape differs from a `BlockEndorsement`'s; proto3 default-empty semantics for backward compatibility (an old peer never sets the field, decodes as empty = "no equivocation evidence"); gated behind `dcc.hotstuff.slashing-enabled` (default false).
-- `node-scala`'s build (`project/Dependencies.scala:43`) is still pinned to protobuf-schemas **1.6.5** — the dependency was simply never bumped.
-
-This spec's job is the node-scala-side implementation against this already-designed, already-published schema — bounded, not open-ended protocol design.
+1. **[H1] F-3 Tasks 1–4 are NOT merged.** `dev` @ `49809b487c` contains no `EquivocationTracker`,
+   no `DetectedEquivocatorsRegistry`, no `HotStuffEffects.onEquivocation`, no
+   `HotStuffEquivocationObservation`, and no `/node/status` field. `HotStuffSafety.equivocators`
+   is still dead code (BFT audit F-3 still open). Only the infra side (exporter metric + critical
+   alert) landed — it scrapes a field no node binary emits. Detection must be built as part of this
+   work, not assumed.
+2. **[H2] Schema 1.6.6 is NOT published.** Maven Central's `maven-metadata.xml` ends at 1.6.5
+   (verified live 2026-09-01; the 1.6.6 POM 404s). The 1.6.6 artifacts exist only in the local
+   `~/.m2` (locally installed 2026-08-22), and the source commit `959331f76` sits on the unmerged
+   monorepo branch `feat/hotstuff-equivocation-proof-schema` (monorepo `main` is at 1.6.5 with no
+   `HotStuffEquivocationProof`). Merging that branch's two schema commits and running the
+   `publish-protobuf-schemas.yml` workflow (version `1.6.6`) is a hard prerequisite.
+3. **[H3] A full prior T5 attempt exists on unmerged branch `fix/height-3325-and-hotstuff-slashing`**
+   (node-scala, 2026-08-22): `HotStuffEquivocationEvidence`, PB conversions (including the
+   Dependencies 1.6.6 bump), coordinator-side detection over vote-pool buckets, and a miner-side
+   key-block fold (`Miner.foldHotStuffConflicts`). It had NO receive-side validation and NO
+   `conflictGenerators` union — detection/carriage only. This design **formally supersedes** that
+   branch and the F-3 plan's Tasks 1–2/5; it deliberately reuses the branch's proven patterns
+   (bucket-based detection, miner fold, `Application.scala` provider cell) as reference
+   implementations, re-derived against current `dev` (the branch predates the upstream sync and does
+   not cherry-pick cleanly — e.g. `FinalizationVoting.withValid` changed shape).
 
 ## Design
 
+### 0. Prerequisite: publish schema 1.6.6
+
+Merge monorepo commits `959331f76` + `f1dd8a76b` (branch `feat/hotstuff-equivocation-proof-schema`)
+to `main` via PR, then dispatch `.github/workflows/publish-protobuf-schemas.yml` with
+`version: 1.6.6` and verify the POM is live on Maven Central before any node-scala CI depends on it.
+The schema content itself is confirmed correct (read directly from `proto/dcc/block.proto`):
+`HotStuffEquivocationProof { voter_index, view, phase, vote_a, vote_b }` and
+`FinalizationVoting.hotstuff_conflicts = 5`.
+
 ### 1. Schema dependency bump
 
-Bump `project/Dependencies.scala`'s `protobuf-schemas` version from `1.6.5` to `1.6.6`. Real Scala protobuf bindings for `HotStuffEquivocationProof` and `FinalizationVoting.hotstuffConflicts` (generated field name) become available automatically via the existing scalapb build step — no manual binding code needed for the wire types themselves.
+`project/Dependencies.scala:43`: `protobuf-schemas` `1.6.5` → `1.6.6`.
 
-### 2. `HotStuffEquivocationProof` Scala wrapper
+### 2. `HotStuffEquivocationProof` wrapper — derived fields only [C3]
 
-New case class in `com.decentralchain.block` (alongside `BlockEndorsement`, matching its exact `toProtobuf`/`fromProtobuf` conversion pattern already used by `HotStuffVote`/`QuorumCertificate` in `network/messages.scala`):
+New case class in `com.decentralchain.consensus.hotstuff` (same placement the prior branch proved
+compiles; `consensus.hotstuff` already imports `network.HotStuffVote`, and `block.FinalizationVoting`
+importing `consensus.hotstuff` is module-internal):
 
 ```scala
-case class HotStuffEquivocationProof(
-    voterIndex: Int,
-    view: Int,
-    phase: HotStuffPhase,
-    voteA: HotStuffVote,
-    voteB: HotStuffVote
-)
+case class HotStuffEquivocationProof(voteA: HotStuffVote, voteB: HotStuffVote) {
+  def voterIndex: Int      = voteA.voterIndex
+  def view: Int            = voteA.view
+  def phase: HotStuffPhase = voteA.phase
+  def committeeEpoch: Int  = voteA.committeeEpoch
+}
 ```
 
-No signature of its own — verification re-derives from `voteA.signature`/`voteB.signature`, each independently checkable against the named voter's real BLS key via the existing `HotStuffQuorum.verifyVote`/`BlsUtils.verifyBasic` machinery. This is the same "the proof carries real signatures, not a claim" property `BlockEndorsement` already has.
+**No stored top-level fields.** The schema's redundant `voter_index`/`view`/`phase` are an attack
+surface: if the slashed index were read from an unchecked top-level field while signatures verify
+against the embedded votes, a real equivocation pair by voter X could be wrapped with
+`voter_index = Y` and frame an innocent generator. The wrapper derives everything from `voteA`;
+PB **encode** writes the derived values; PB **decode rejects** (fails block parsing, exactly like a
+malformed `conflict` endorsement already does in `PBFinalizationVotings`) any proof whose top-level
+fields disagree with `vote_a`, or whose `vote_a`/`vote_b` is missing.
 
-### 3. `FinalizationVoting` gains `hotstuffConflicts`
+This deliberately **reverses the prior branch's silent-drop decode** ("best-effort slashing
+evidence"): under this design proofs are consensus-critical inputs to `conflictGenerators`, and
+silent drops would also break decode/re-encode round-trip identity for header bytes. Strict decode
+is deterministic (same bytes ⇒ same rejection on every node).
+
+Consistency rule (one place, used by both the coordinator and block validation):
+
+```scala
+def consistent: Either[String, Unit] = for {
+  _ <- Either.raiseUnless(voteA.voterIndex == voteB.voterIndex)("proof votes name different voters")
+  _ <- Either.raiseUnless(voteA.view == voteB.view)("proof votes are for different views")
+  _ <- Either.raiseUnless(voteA.phase == voteB.phase)("proof votes are for different phases")
+  _ <- Either.raiseWhen(voteA.phase == HotStuffPhase.HOTSTUFF_PHASE_UNSPECIFIED)("unspecified phase")
+  _ <- Either.raiseUnless(voteA.committeeEpoch == voteB.committeeEpoch)("proof votes span committee epochs") // [C2]
+  _ <- Either.raiseUnless(voteA.blockId != voteB.blockId)("proof votes target the same block — not an equivocation")
+} yield ()
+```
+
+The **epoch-equality requirement is new and load-bearing** [C2]: `committeeEpoch` is inside each
+vote's signed bytes (`HotStuffQuorum.voteMessage`, T10), so it cannot be relabeled — but nothing
+forces two independently-signed votes to share an epoch, and the same `voterIndex` in two different
+epochs can be two different physical generators. A cross-epoch pair is not evidence of anything.
+(`HotStuffSafety.equivocators` groups on `(voterIndex, view, phase)` only — the coordinator must
+apply `consistent` before treating a detected pair as a proof.)
+
+Signature verification reuses the canonical message builder, never reimplements it:
+
+```scala
+def signaturesValid(blsKeyOf: Int => Option[BlsPublicKey]): Either[String, Unit] = for {
+  pk <- blsKeyOf(voterIndex).toRight(s"voter index $voterIndex outside committee")
+  _  <- verifyOne(voteA, pk, "voteA")
+  _  <- verifyOne(voteB, pk, "voteB")
+} yield ()
+// verifyOne: BlsUtils.verifyBasic(v.signature.arr,
+//   HotStuffQuorum.voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch), pk.arr)
+```
+
+### 3. `FinalizationVoting.hotstuffConflicts`
+
+As in revision 1 (and the prior branch, whose diff is the reference):
 
 ```scala
 case class FinalizationVoting(
@@ -55,66 +132,218 @@ case class FinalizationVoting(
 )
 ```
 
-Defaulted for backward compatibility with every existing call site (matches the schema's own proto3 default-empty semantics). `FinalizationVoting.combine` (used when accumulating across microblocks within one liquid block) is extended to concatenate `hotstuffConflicts` the same way it already concatenates `conflict`.
+- `nonEmpty` gains `|| hotstuffConflicts.nonEmpty`.
+- `combine(old, recent)` concatenates `hotstuffConflicts` exactly as it concatenates `conflict`
+  (`FinalizationVoting.scala:37-38`).
+- `PBFinalizationVotings.vanilla/protobuf` extended; decode is strict per §2.
 
-### 4. `EquivocationTracker` returns real proofs, not bare indexes
+### 4. On-chain feature gate: `BlockchainFeatures.HotStuffEquivocationEvidence` (id 28) [H4]
 
-`EquivocationTracker.recordVote`'s return type changes from `Set[Int]` to `Set[HotStuffEquivocationProof]`. The two conflicting votes are already present in the tracker's internal buffer (`EquivocationTracker.blockIdsFor`'s existing scan, generalized) — package them into a real proof rather than discarding all but the voter index. `HotStuffCoordinator.recordAcceptedVote`/`HotStuffEffects.onEquivocation` thread the real `HotStuffEquivocationProof` through instead of a bare `Int` + `Set[BlockId]`.
+Proto3 "backward compatibility" is wire-level only: a node running today's binary decodes and
+**ignores** `hotstuff_conflicts`, computes a different `conflictGenerators` set than an upgraded
+node from the same block bytes, and diverges on `isParentFinalized`'s stake denominator and on
+deposit-punishment state — the exact §9 divergence class. The standard fix is the codebase's own:
+an activation-voted feature.
 
-### 5. Local queue → microblock, via T0's existing drain seam
+- New `BlockchainFeature(28, "HotStuff Equivocation Evidence")` in `BlockchainFeature.scala`,
+  added to `dict` (making it `implemented`/votable).
+- New `Blockchain.supportsHotStuffEquivocationEvidence(height)` helper, exactly mirroring
+  `supportsFinalizationVoting` (`Blockchain.scala:309`).
+- `validateFinalizationVoting` rejects any block with non-empty `hotstuffConflicts` before
+  activation. After activation, upgraded miners may include proofs; by the feature-voting threshold,
+  a supermajority of generators runs evidence-aware code by then — the same upgrade-lag risk profile
+  as every prior feature.
 
-`DetectedEquivocatorsRegistry` becomes typed on `HotStuffEquivocationProof` (not `GeneratorIndex`): `report(proof: HotStuffEquivocationProof): Unit`, `drain(): Set[HotStuffEquivocationProof]`.
+### 5. Config flag `dcc.hotstuff.slashingEnabled` gates PRODUCTION ONLY [H5]
 
-Rather than inventing a new miner-side call site, this reuses T0's existing, proven drain point: `EndorsementStorage.tryCollectAndClear(endorsedId): Option[FinalizationVoting]` (called once per microblock by `MicroBlockMinerImpl.scala:163`) is extended to also drain `DetectedEquivocatorsRegistry` and merge the result's `hotstuffConflicts` into the `FinalizationVoting` it already returns. `MicroBlockMinerImpl` needs no new call site — it already calls `tryCollectAndClear` for T0's evidence, and now transparently picks up HotStuff's evidence too, riding the same microblock.
+New `HotStuffSettings.slashingEnabled: Boolean = false` with
+`require(!slashingEnabled || enabled)` (prior branch's diff is the reference; update its doc-comment
+to this revision).
 
-### 6. Deterministic verification — every node re-checks, nobody trusts a claim
+**The determinism contract, stated explicitly:**
 
-`validateFinalizationVoting` (`appender/package.scala:348`) gains a new validation step, structurally parallel to the existing `fv.conflict.traverse(validateConflictingEndorsement(...))`:
+- `slashingEnabled` gates exactly one thing: whether **this node's miner** folds pending evidence
+  into blocks it forges. Nothing else.
+- **Validation of received proofs and the `conflictGenerators` union are UNCONDITIONAL** in
+  evidence-aware binaries (gated only by feature-28 activation, which is chain state, identical on
+  every node). A node with `slashingEnabled = false` that receives a valid proof-carrying block
+  validates it and applies the exclusion identically to a node with the flag on. Mixed flag settings
+  can therefore never produce divergent `conflictGenerators` — the flag only affects who volunteers
+  evidence.
+- Detection + ERROR log + metric are unconditional whenever `hotstuff.enabled` (observability must
+  not depend on the slashing decision).
 
-```scala
-_ <- fv.hotstuffConflicts.traverse(validateHotStuffEquivocationProof(blockchain, proof, /* committee at proof.view's referenced height/epoch */))
-```
+### 6. Detection & evidence accumulation — in the coordinator (supersedes F-3 Tasks 1–2)
 
-`validateHotStuffEquivocationProof` (new function, same file) re-verifies: both `voteA`/`voteB` carry the SAME `voterIndex`/`view`/`phase` and DIFFERENT `blockId` (the proof's own internal consistency); both signatures independently verify against that voter's real committee key at the committee epoch the votes claim (reusing `HotStuffQuorum.verifyVote`'s existing signature-checking logic, not reimplementing it). A proof failing this check is rejected the same way an invalid `BlockEndorsement` is rejected today — the whole `FinalizationVoting` fails validation, matching this file's existing all-or-nothing per-block validation pattern.
+No `state.EquivocationTracker`. Detection happens inside `HotStuffCoordinator.Enabled.onVote`, using
+the prior branch's proven insight: `pool.pending` is keyed by the full `(view, phase, blockId)`
+target, so a double-signer's votes land in different buckets — gather all buckets sharing
+`(view, phase)` before running `HotStuffSafety.equivocators`, then build the proof from the two
+distinct-`blockId` votes, and accept it only if `proof.consistent` passes (this is where cross-epoch
+pairs are discarded [C2]) and both signatures verify against the current committee. Only verified
+proofs are accumulated — an attacker cannot frame an honest voter with a forged vote, because the
+forged vote's signature fails before the proof is stored.
 
-### 7. Verified proofs feed `conflictGenerators`
+New `HotStuffEffects.onEquivocation(proof: HotStuffEquivocationProof): Unit` hook: production
+implementation (`NodeHotStuffEffects`) logs ERROR and bumps a process-global
+`HotStuffEquivocationObservation` counter exposed as `/node/status`'s `hotStuffEquivocationsTotal`
+(present only when > 0) — this carries forward F-3 Task 3 unchanged in substance and finally feeds
+the already-deployed infra metric/alert [H1].
 
-Only after `validateHotStuffEquivocationProof` succeeds does `fv.hotstuffConflicts.map(_.voterIndex)` union into `conflictGenerators`, the same way `fv.conflict.map(_.endorserIndex)` already does — one unconditional union in `FinalizationState.append`, feeding the same persisted store T0's own conflicts already reach (closing Critical #1: this now DOES persist past a key block, because it's block-header data like everything else `Caches.scala` derives `conflictGenerators` from).
+**Retention, not drain [M2]:** the coordinator keeps accumulated proofs until either (a) the voter
+is already excluded on-chain (`blockchain.conflictGenerators(period)` contains it — meaning some
+block carried the evidence), or (b) the proof's epoch has expired (`committeeEpoch <
+current period index`), at which point it is pruned as unusable [C2]. A failed forge, an orphaned
+microblock, or a reorg therefore cannot permanently lose evidence — the miner just offers it again
+at the next key block. (Detection on non-miner nodes still never reaches the chain — there is no
+proof gossip; accepted limitation, documented, same trust shape as T0 where only endorsement
+*recipients* who mine can embed conflicts.)
 
-Because every node derives this from the same signed block bytes, not from local vote-arrival timing, Critical #2 (cross-node divergence) is closed by construction — this is now exactly as deterministic as T0's own mechanism.
+### 7. Carriage: key-block forge fold (supersedes rev. 1's `EndorsementStorage` drain) [C4]
 
-### 8. Feature gate: `dcc.hotstuff.slashingEnabled`
+Revision 1's plan — extending `EndorsementStorage.tryCollectAndClear` — fails two ways:
+`tryCollectAndClear` returns `None` whenever T0 has no new endorsements
+(`EndorsementStorage.scala:128-158`), stranding proofs indefinitely; and a synthesized proofs-only
+`FinalizationVoting` is rejected by `validateFinalizationVoting`'s emptiness check
+(`appender/package.scala:360`). Instead:
 
-New field on `HotStuffSettings`, default `false`, doc-commented in the same style as `authoritative` (explicit "TESTNET-ONLY... do NOT enable on mainnet until externally audited" framing, cross-referencing `docs/hotstuff-audit-readiness.md`'s T5 item). When `false`:
-- `EquivocationTracker` still detects, `NodeHotStuffEffects.onEquivocation` still logs ERROR and updates `HotStuffEquivocationObservation`'s metric (Tasks 1-4, entirely unaffected — this is why they were correctly kept even while Task 5 was reworked).
-- `DetectedEquivocatorsRegistry.report` is a no-op (or the registry itself is never constructed/wired) — no proof ever reaches a microblock, `hotstuffConflicts` stays empty everywhere, `conflictGenerators` is byte-for-byte unaffected by this feature.
+- `MinerImpl.forgeBlock` folds pending evidence at the key-block `FinalizationVoting` build site
+  (prior branch's `Miner.foldHotStuffConflicts` / `withHotStuffConflicts` pattern, including the
+  `Application.scala` `@volatile` provider-cell that bridges Miner-before-coordinator construction
+  order). The fold: only when `slashingEnabled`; only proofs whose `committeeEpoch` equals the
+  period index of the height being forged; only voters not already in
+  `blockchain.conflictGenerators(period)`; deduplicated by voter; synthesizes a
+  `FinalizationVoting` when T0 contributed none.
+- `validateFinalizationVoting`'s emptiness check is relaxed to
+  `fv.valid.isEmpty && fv.conflict.isEmpty && fv.hotstuffConflicts.isEmpty` — a proofs-only FV is
+  now legal (post feature-28 activation) [C4].
+- Evidence latency is at most one key block. Microblock carriage is deliberately NOT added — the
+  block-level `validateFinalizationVoting` call in the microblock append path
+  (`BlockchainUpdaterImpl.scala:606`) already validates the combined header FV, so validation
+  coverage is identical either way, and key-block-only carriage avoids touching `EndorsementStorage`
+  and `MicroBlockMinerImpl` at all.
 
-When `true` (testnet-only, matching `authoritative`'s existing risk posture): the full pipeline above runs.
+### 8. Deterministic verification in `validateFinalizationVoting`
 
-## Files
+New `validateHotStuffEquivocationProof` in `state/appender/package.scala`, called via
+`fv.hotstuffConflicts.traverse(...)` structurally parallel to the existing
+`validateConflictingEndorsement` traverse (`:382-394`). Full rule set, all deterministic functions
+of chain state + block bytes:
 
-- Modify: `project/Dependencies.scala` (schema version bump)
-- Create: `HotStuffEquivocationProof` in `node/src/main/scala/com/decentralchain/block/` (new file or added to an existing block-evidence file, following existing organization)
-- Modify: `node/src/main/scala/com/decentralchain/block/FinalizationVoting.scala` (new field + `combine` update)
-- Modify: `node/src/main/scala/com/decentralchain/state/EquivocationTracker.scala` (return type change)
-- Modify: `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffCoordinator.scala` (thread real proof through `onEquivocation`)
-- Modify: `node/src/main/scala/com/decentralchain/state/DetectedEquivocatorsRegistry.scala` (retype)
-- Modify: `node/src/main/scala/com/decentralchain/state/EndorsementStorage.scala` (drain HotStuff's registry alongside T0's own accumulator)
-- Modify: `node/src/main/scala/com/decentralchain/state/appender/package.scala` (`validateHotStuffEquivocationProof` + wiring into `validateFinalizationVoting`)
-- Modify: `node/src/main/scala/com/decentralchain/state/FinalizationState.scala` (union verified proofs' voter indexes into `conflictGenerators`)
-- Modify: `node/src/main/scala/com/decentralchain/settings/HotStuffSettings.scala` (new `slashingEnabled` field)
-- Test files: unit tests for `HotStuffEquivocationProof` construction/round-trip, `validateHotStuffEquivocationProof` (accept a genuine proof, reject a forged/malformed one), an end-to-end test proving two independently-running coordinators (in the DST harness, or a real multi-node integration test) converge on the identical `conflictGenerators` after one detects and the evidence propagates via a block.
+1. Feature 28 active at this height (else any non-empty `hotstuffConflicts` fails the block).
+2. `proof.consistent` (§2: same voter/view/phase, same epoch, different blockIds, phase specified).
+3. **Epoch = block period** [C2]: `proof.committeeEpoch == blockGenerationPeriod.index` (the period
+   already computed at `:367-369`). This pins the proof's index space to the same committee
+   (`allCommittedGenerators`, `:370`) whose indexes `conflictGenerators` punishes — the wrong
+   generator can never be excluded, and stale evidence from a previous period is invalid (it expires;
+   the coordinator prunes it, §6).
+4. `proof.voterIndex` within `allCommittedGenerators` bounds.
+5. **No duplicates / no re-litigation [M3]:** duplicate `voterIndex` within `hotstuffConflicts`
+   rejected (mirrors `:363`); voter already in `knownConflictGenerators` rejected (mirrors the
+   "Second conflicting endorsement from one generator" rule, `:325`); voter also present in this
+   FV's `conflict` endorser indexes rejected (one exclusion per voter per block is enough — and it
+   bounds verification work: a miner can never make the network verify more proofs than committee
+   members not yet excluded).
+6. `proof.signaturesValid` against `allCommittedGenerators(voterIndex)`'s BLS key — two
+   `BlsUtils.verifyBasic` calls over `HotStuffQuorum.voteMessage(...)` bytes.
+7. All-or-nothing: any failing proof fails the whole block's validation, matching the file's
+   existing pattern.
 
-## What This Explicitly Does NOT Change
+Unlike T0's rule set, a proof from the **miner itself** is allowed (an equivocating leader must be
+slashable), and no balance check applies (committee membership at the epoch is the criterion; the
+vote was only possible for a committed generator).
 
-- `HotStuffSafety.equivocators`'s existing signature/logic (still the pure detector; unmodified).
-- Tasks 1-4 of the prior F-3 plan (detection, logging, metric, alert) — all already merged, all unaffected, all remain the correct, safe, already-shipped foundation this spec builds on.
-- No vote/QC acceptance rule changes — this affects `conflictGenerators` (a stake-exclusion input to finalization voting), never HotStuff's own vote/QC/commit logic.
-- Not implementing an actual slashing/penalty mechanism beyond the existing `conflictGenerators` stake-exclusion — that's what T0's own mechanism already does, and this reuses it exactly, not inventing a new penalty.
+DoS posture [M3]: proofs travel only inside miner-signed blocks; rule 5 caps meaningful proofs at
+committee size; block size caps raw bytes; all-or-nothing rejection means a garbage-stuffing miner
+just invalidates its own block. No arbitrary-peer spam vector exists (proofs are not gossiped).
 
-## Self-Review
+### 9. Exclusion + persistence — BOTH layers [C1]
 
-- **No re-derivation of an already-solved problem:** the wire format was already designed and published (schema 1.6.6); this spec is the node-scala-side implementation against it, not a new protocol design.
-- **Mirrors a proven pattern exactly:** every design decision (proof shape, carriage via `FinalizationVoting`, drain-point reuse, verification-before-trust, feature gate) has a direct, working precedent in this codebase's own T0 mechanism — verified by reading the real code at each seam, not assumed by analogy.
-- **Closes both Critical findings by construction:** persistence (Critical #1) because `conflictGenerators` now derives from block-header data like every other input to that store; determinism (Critical #2) because every node verifies the same signed bytes rather than trusting local observation.
-- **Explicit backward-compatibility story**, matching this codebase's established pattern for prior schema-versioned fields (`committee_epoch`'s exact precedent, cited directly in the schema's own comments).
+Two places derive `conflictGenerators` from a `FinalizationVoting`, and **both** must read the new
+field (revision 1 missed the second, which is why its Critical #1 claim was wrong):
+
+- **Liquid (in-memory):** `FinalizationState.append` (`FinalizationState.scala:23`):
+  `newConflictGenerators = fv.conflict.map(_.endorserIndex) ++ fv.hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex))`.
+  Flows into `isParentFinalized`'s stake denominator and the accumulated set. No new parameter —
+  the proofs ride inside the FV the function already receives.
+- **Persisted (key-block):** `Caches.doAppend`'s extraction (`Caches.scala:409-412`) gains the same
+  union; that single value feeds both the `conflictGeneratorsCache` update (`:427-429`) and
+  `RocksDBWriter`'s `Keys.conflictGenerators` persistence (`:753`) — so the exclusion now genuinely
+  survives key blocks, restarts (`loadConflictGenerators`), and is period-scoped and
+  rollback-deleted (`RocksDBWriter.scala:1163`) exactly like T0's own conflicts.
+
+Consequence to state plainly: `conflictGenerators` membership drives **generation-deposit
+forfeiture** (`RocksDBWriter.collectGenerationDepositChanges`, `:1493` `punishmentHeight`), not just
+quorum exclusion. This design intentionally applies the same economic penalty T0 conflicts already
+carry — it is real slashing, and that is the point of T5.
+
+Reorg semantics (review question 2): deterministic by construction — exclusions are pure functions
+of applied block headers; a rollback deletes the period-keyed entries; every node applying the same
+blocks computes the same sets at every height. Evidence in an orphaned block is re-offered by the
+retention rule (§6).
+
+### 10. Honest-node protection: persist `lastVotedView` [M1]
+
+Slashing converts an honest double-sign from an alert into deposit forfeiture. The audited honest
+double-sign paths are: watchdog reset (closed — F-2 fix preserves `lastVotedView`), and **process
+restart** (still open: only `lockedQC` is persisted, via `HotStuffLockedQCStore`; a restarted
+replica boots with `lastVotedView = -1` and can legitimately re-sign a conflicting vote in a view it
+already voted). Before slashing can be enabled anywhere, persist `lastVotedView`:
+
+- New `HotStuffLastVotedViewStore`, a sibling of `HotStuffLockedQCStore` (same atomic-write,
+  never-throw, log-and-continue contract; trivial payload — the int as UTF-8), stored next to
+  `locked-qc.dat`.
+- Persisted on every vote cast; loaded as `initialLastVotedView` at coordinator construction.
+- T11's first-ever-boot window remains (nothing to load) — documented residual risk, bounded as
+  before; a first-boot replica should not be a committee member with slashing on until it has
+  participated (operational note in the settings doc-comment).
+
+### 11. What this explicitly does NOT change
+
+- `HotStuffSafety.equivocators` — unmodified (the coordinator feeds it wider input, per §6).
+- Vote/QC acceptance rules, the 3-chain commit rule, pacemaker — untouched.
+- T0's endorsement pipeline (`EndorsementStorage`, `BlockEndorser`) — untouched (rev. 1 would have
+  modified `EndorsementStorage`; this revision does not).
+- No new penalty mechanism — reuses `conflictGenerators` exactly, including its existing deposit
+  forfeiture.
+
+## Files (complete, both layers) — see the implementation plan for tasks
+
+- Monorepo: merge schema branch + publish 1.6.6 (workflow dispatch).
+- Modify: `project/Dependencies.scala` (1.6.6)
+- Create: `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEquivocationProof.scala`
+- Create: `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffEquivocationObservation.scala`
+- Create: `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffLastVotedViewStore.scala`
+- Create: `node/src/main/scala/io/decentralchain/protobuf/block/PBHotStuffEquivocationProofs.scala`
+- Modify: `node/src/main/scala/com/decentralchain/block/FinalizationVoting.scala`
+- Modify: `node/src/main/scala/io/decentralchain/protobuf/block/PBFinalizationVotings.scala`
+- Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` (feature 28)
+- Modify: `node/src/main/scala/com/decentralchain/state/Blockchain.scala` (`supportsHotStuffEquivocationEvidence`)
+- Modify: `node/src/main/scala/com/decentralchain/state/appender/package.scala` (validation + emptiness relaxation + generator-set exclusion)
+- Modify: `node/src/main/scala/com/decentralchain/state/FinalizationState.scala` (union) **[C1]**
+- Modify: `node/src/main/scala/com/decentralchain/database/Caches.scala` (persisted extraction) **[C1]**
+- Modify: `node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffCoordinator.scala` (detection, retention, `onEquivocation`, `initialLastVotedView`)
+- Modify: `node/src/main/scala/com/decentralchain/consensus/hotstuff/NodeHotStuffEffects.scala` (log + metric)
+- Modify: `node/src/main/scala/com/decentralchain/api/http/NodeApiRoute.scala` (`hotStuffEquivocationsTotal`)
+- Modify: `node/src/main/scala/com/decentralchain/mining/Miner.scala` (fold at key-block forge)
+- Modify: `node/src/main/scala/com/decentralchain/Application.scala` (provider cell + stores wiring)
+- Modify: `node/src/main/scala/com/decentralchain/settings/HotStuffSettings.scala` + `application.conf` (`slashingEnabled`)
+- Modify (docs, post-landing): `docs/hotstuff-audit-readiness.md` T5 entry; supersession notes on
+  `docs/superpowers/plans/2026-08-22-hotstuff-equivocation-slashing.md` and
+  `docs/superpowers/plans/2026-09-01-hotstuff-equivocation-detection.md`.
+
+## Self-review against the findings
+
+- **C1** closed: both derivation layers (FinalizationState + Caches) listed and specified.
+- **C2** closed: epoch equality in `consistent` + epoch-equals-block-period validation rule 3 +
+  coordinator-side expiry pruning.
+- **C3** closed: wrapper stores no top-level fields; strict decode rejects mismatches.
+- **C4** closed: key-block fold replaces the `EndorsementStorage` drain; emptiness check relaxed.
+- **H1** closed: detection/logging/metric built here (coordinator + effects + observation), not assumed.
+- **H2** closed: schema publish is prerequisite task 0 with a live-Central verification step.
+- **H3** closed: prior branch formally superseded; its proven patterns reused as references.
+- **H4** closed: feature 28 activation gates evidence validity on-chain.
+- **H5** closed: flag gates production only; validation/union unconditional — stated as a contract.
+- **M1** closed: `lastVotedView` persisted; first-boot residual documented.
+- **M2** closed: retention-until-on-chain-or-expired replaces drain-and-lose.
+- **M3** closed: dedup + already-known + overlap rules bound verification work; DoS posture stated.
