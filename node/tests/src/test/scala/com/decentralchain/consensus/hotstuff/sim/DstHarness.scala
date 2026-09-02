@@ -74,6 +74,15 @@ final class DstHarness(
   }
   private val live         = mutable.Set.from(0 until nodeCount)
   private val heightOfView = mutable.Map.empty[Int, Int]
+  // F-6 fix: blockId -> height, populated by `leaderTurn` and `setCommittedTipAll`. `heightOfView`
+  // alone is not enough for any scenario that exercises the SELF-DRIVEN re-propose path: when a node
+  // re-anchors through `onRoundTimerTick` -> `onLeaderTurn`, it proposes at a view the harness never
+  // registered a height for, so `deliver` fell back to `0` and every receiving replica saw height 0 --
+  // maximally stale under any advanced tip, so the re-anchored round could never complete and no
+  // scenario could observe a successful re-anchor at all. Keying by blockId fixes that: a block's
+  // height is a property of the BLOCK, not of the view it happens to be proposed in (and production's
+  // `onProposal` height likewise comes from `blockchainUpdater.heightOf(blockId)`, not from the view).
+  private val heightOfBlock = mutable.Map.empty[BlockId, Int]
   // Every node's OWN "currently-believed-active committee epoch" -- the DST-harness equivalent of
   // production's `committeeEpoch` closure (`blockchainUpdater.currentGenerationPeriod`, read fresh from
   // each node's OWN live chain tip). Used ONLY for `HotStuffEngine.onQC`/`onProposal`'s transition-
@@ -137,7 +146,13 @@ final class DstHarness(
           blockSource = () => committedTip.get(i),
           committeeEpochProvider = () => epochBelief(i),
           committeeEpochOf = committeeEpochOf,
-          onAction = action => onAction(i, action),
+          onAction = action => {
+            onAction(i, action)
+            action match {
+              case _: HotStuffAction.Rejected => rejectionCounter()
+              case _                          => ()
+            }
+          },
           // F-6 fix: per-node lag check, mirroring production's Application.scala wiring.
           maxTargetLag = maxTargetLag,
           tipHeight = () => simulatedTip(i)
@@ -147,7 +162,10 @@ final class DstHarness(
 
   private def deliver(to: Int, msg: Message): Unit =
     if (live.contains(to)) msg match {
-      case p: HotStuffProposal   => nodes(to).onProposal(p, heightOfView.getOrElse(p.view, 0))
+      // Resolve by blockId first (a block's height is intrinsic to the block -- mirrors production's
+      // `blockchainUpdater.heightOf(blockId)`), falling back to the per-view map for any scenario that
+      // only registered a height that way, then to 0 exactly as before.
+      case p: HotStuffProposal   => nodes(to).onProposal(p, heightOfBlock.getOrElse(p.blockId, heightOfView.getOrElse(p.view, 0)))
       case v: HotStuffVote       => nodes(to).onVote(v)
       case qc: QuorumCertificate => nodes(to).onQC(qc)
       case _                     => ()
@@ -159,6 +177,7 @@ final class DstHarness(
     */
   def leaderTurn(node: Int, view: Int, blockId: BlockId, blockHeight: Int): Unit = {
     heightOfView(view) = blockHeight
+    heightOfBlock(blockId) = blockHeight
     nodes(node).onLeaderTurn(view, blockId, blockHeight)
   }
 
@@ -192,6 +211,23 @@ final class DstHarness(
     * production watchdog would (`committee` var is private; scenarios must go through this, not reach in).
     */
   def currentCommittee(): GeneratorSet = committee
+
+  /** F-6 fix, test observability: the two stale-target counters on ONE node's own coordinator (see
+    * `HotStuffCoordinator.Enabled.staleTargetsAbandoned`/`staleTargetSkippedProposals`). Exposed so a
+    * scenario can assert the re-anchor path actually FIRED on the node it is about, rather than
+    * inferring it from an outcome a neutralized fix could also produce.
+    */
+  /** F-6 fix, test observability: a hook fired for every `HotStuffAction.Rejected` any node reports,
+    * so a scenario can count cluster-wide rejections from a point in time WITHOUT having to wire the
+    * `onAction` constructor param (which a scenario may already be using for something else, e.g. a
+    * watchdog's progress signal). Settable mid-scenario, which is the point: F-6 compares rejection
+    * volume AFTER the divergence is staged, not from t=0.
+    */
+  private var rejectionCounter: () => Unit     = () => ()
+  def setRejectionCounter(f: () => Unit): Unit = rejectionCounter = f
+
+  def staleTargetsAbandoned(node: Int): Int       = nodes(node).staleTargetsAbandoned
+  def staleTargetSkippedProposals(node: Int): Int = nodes(node).staleTargetSkippedProposals
 
   def crash(node: Int): Unit     = live -= node
   def restart(node: Int): Unit   = live += node
@@ -242,6 +278,16 @@ final class DstHarness(
     * restore commits. Writes all nodes including crashed ones, same rationale as `advanceEpochBelief`.
     */
   def advanceTipAll(height: Int): Unit = (0 until nodeCount).foreach(i => simulatedTip(i) = height)
+
+  /** F-6 fix: seed EVERY node's `blockSource` answer (its "settled tip") to `(blockId, height)`.
+    * Production's `blockSource` is `tip - settledDepth`, which advances WITH the live tip; the harness's
+    * is `committedTip(i)`, which only moves on an actual simulated COMMIT. A scenario that advances the
+    * cluster's tips (see `advanceTipAll`) must therefore also advance what those nodes would re-anchor
+    * TO, or the re-anchor target is itself stale under the new tip and the scenario tests nothing.
+    */
+  def setCommittedTipAll(blockId: BlockId, height: Int): Unit =
+    heightOfBlock(blockId) = height
+    (0 until nodeCount).foreach(i => committedTip(i) = (blockId, height))
 
   /** F-6 fix: push EVERY node's own `committeeEpoch` gating belief AND its own simulated tip to match
     * `height`, exactly as production wires them (both are read from the SAME live tip in

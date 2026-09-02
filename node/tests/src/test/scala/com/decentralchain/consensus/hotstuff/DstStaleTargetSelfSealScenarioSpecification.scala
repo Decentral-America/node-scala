@@ -11,60 +11,85 @@ import com.decentralchain.test.FlatSpec
 
 import java.nio.file.{Files, Paths}
 
-/** BFT audit 2026-08-31 finding F-6, "self-sealing epoch trap" -- RED-first DST reproduction, plus the
-  * fix's proof, plus the design's three companion cases
-  * (docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md, "Test strategy").
+/** BFT audit 2026-08-31 finding F-6, "self-sealing epoch trap" -- RED/GREEN DST reproduction plus the
+  * fix's proof (docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md, "Test strategy").
   *
-  * THE TRAP, restated for this scenario's exact mechanics (see the design doc for the general case):
-  * `committeeEpochOf(height)` (SIGNED epoch, a pure function of a vote's TARGET height) and
-  * `committeeEpochProvider()` (ACCEPTED epoch, this replica's own live-tip belief, read fresh into
-  * `EngineState.committeeEpoch` by `refreshCommittee()` on every entry point) are two INDEPENDENT
-  * functions. In the happy path they track each other closely because a replica's live tip and its
-  * T2 target both advance together. This scenario breaks that coupling directly: node 0's own
-  * simulated tip is pushed a full generation period past a branch it is still holding as
-  * `prepareQC`-but-uncommitted (`inFlightBranch`), while the REST of the committee's belief stays
-  * where the branch was actually signed. Node 0 keeps re-proposing/self-voting for that branch every
-  * leader-timeout tick (the classic in-flight-branch liveness optimization,
-  * `HotStuffCoordinator.Enabled.inFlightBranch`'s doc) -- each retry gathers a fresh 3-of-4 QC from the
-  * other three (still-current-epoch) replicas, but node 0's OWN `applyQC`/`HotStuffEngine.onQC` self-
-  * verification step rejects that same QC every time (`acceptableCommitteeEpoch(committeeEpochOf(height),
-  * engine.committeeEpoch)` fails), because a rejected QC never advances `EngineState` (see
-  * `HotStuffEngine.onQC`: the `Left`/epoch-reject branches return `state` UNCHANGED) -- so node 0's own
-  * pacemaker/safety state can never again progress via that QC, and catching up requires exactly the
-  * QCs the rejection blocks. Self-sealing, entirely from node 0's own honest behaviour.
+  * THE TRAP: `committeeEpochOf(height)` (the epoch a vote is SIGNED under -- a pure function of the
+  * vote's TARGET height) and `committeeEpochProvider()` (the epoch a replica ACCEPTS -- derived from its
+  * OWN live tip, read fresh into `EngineState.committeeEpoch` by `refreshCommittee()`) are two
+  * INDEPENDENT functions. `settledDepth` keeps them close in the happy path, but nothing bounds the gap.
+  * Once a T2 target falls far enough behind, a replica's own honest QCs for it are rejected by
+  * `HotStuffQuorum.acceptableCommitteeEpoch` before `verifyQC` even runs, and a rejected QC never
+  * advances `EngineState` -- so catching up requires committing exactly the heights the rejection
+  * blocks. Self-sealing, from fully honest behaviour.
   *
-  * RED-first structure (this file's first `it should`): with `maxTargetLag = Int.MaxValue` (the fix
-  * NEUTRALIZED -- `tooStale` can never fire, `inFlightBranch`'s filter and `castVotes`' guard are both
-  * unconditional no-ops, i.e. exactly pre-fix `HotStuffCoordinator.Enabled` behaviour), the trap
-  * reproduces: node 0 accumulates a run of `Rejected` actions and never commits again, confirming the
-  * audit's UNVERIFIED F-6 finding was real. The SAME scenario, same seed, with only `maxTargetLag`
-  * swapped to a finite bound (the fix ACTIVE) is this file's second `it should`: node 0's `castVotes`
-  * skip-WARN path and/or `inFlightBranch` filter fire, it re-anchors via `blockSource` (its own last-
-  * committed tip), and it commits again at a FRESH height -- proving the fix, not just the trap.
+  * ==Why this file is staged the way it is (RESTAGED 2026-09-02 after review)==
+  *
+  * The FIRST version of this spec was VACUOUS in its fixed arm: setting the coordinator bound to
+  * `Int.MaxValue` (neutralizing the fix entirely) left all four fixed-arm tests GREEN. The reason is
+  * worth recording, because it is the trap for anyone restaging this again: that version diverged only
+  * ONE node's tip, and node 0's rejections were INBOUND QCs arriving from the other three replicas via
+  * `applyQC` -- a path `tooStale` deliberately does NOT gate (the fix is a filter on this replica's OWN
+  * target selection, not an inbound-QC gate). Node 0 also never led a stalled tick while holding a stale
+  * `inFlightBranch`, so the fix's primary use site was never even reached. The arm's only assertion
+  * (`node0Commits >= 1`) was satisfied by a commit that happened BEFORE the divergence was staged, so
+  * the fix could not possibly have influenced it.
+  *
+  * This restaging uses the REALISTIC F-6 shape the audit describes instead: the WHOLE cluster's tips
+  * advance past the stuck T2 target together (`advanceTipAndEpochAll`) -- which is what actually happens
+  * in production, since feature-25 finality keeps the chain advancing underneath a stalled T2 round, on
+  * every replica at once. Every replica then self-rejects its own honest QCs for the stale target, so no
+  * quorum of accepting replicas exists ANYWHERE and ONLY re-anchoring can restore commits. That makes
+  * the fix load-bearing on the OUTCOME, not merely present:
+  *
+  *   - RED arm (`maxTargetLag = Int.MaxValue`, fix neutralized): the cluster re-proposes the stale
+  *     in-flight branch and commits it at `InitialHeight` -- the trap, no re-anchor, ever.
+  *   - GREEN arm (finite bound, fix active): the stale branch is abandoned, the cluster re-anchors to
+  *     its fresh settled tip, and commits at a height STRICTLY ABOVE `InitialHeight`.
+  *
+  * MUTATION-VERIFIED (2026-09-02, re-run after restaging). Neutralizing the fix BEHAVIORALLY -- passing
+  * `maxTargetLag = () => Int.MaxValue` to the coordinator in every fixed arm, while leaving `Bound`
+  * itself intact so the setup sanity checks still hold -- turns every fixed-arm test RED:
+  *
+  *   - GREEN arm: FAILED, `newCommitHeights=List(50)` (RED's were also `List(50)`), "50 was not greater
+  *     than 50" -- i.e. without the fix the cluster commits the STALE target instead of re-anchoring.
+  *   - noEquivocation: FAILED, "must be checked across a REAL re-anchor" -- `reanchorFired` was false.
+  *   - watchdog: FAILED, GREEN reached suspension exactly like RED (`lastCommit=50` in both arms).
+  *   - RED arm: still passes, correctly -- it asserts the TRAP, which the mutation does not remove.
+  *   - M1 interaction check: still passes, consistent with its scope note below (it is deliberately
+  *     NOT re-anchor coverage).
+  *
+  * That is the property the first version lacked, and the reason each assertion below is written
+  * against a signal the fix must actually PRODUCE -- a strictly-higher commit height, plus the
+  * stale-abandon counters -- rather than against an outcome a neutralized fix could also reach.
+  *
+  * ==One staging constraint worth knowing==
+  *
+  * The cluster-wide tip advance stays INSIDE one generation period (`InitialHeight` -> `LaggedTip`, both
+  * epoch 0). It must: a re-proposal carries this replica's `prepareQC` as its `justify`, and
+  * `HotStuffEngine.onProposal` rejects the WHOLE proposal when that justify's epoch is outside the
+  * acceptance window (`justifyEpochOk`). Pushing tips a full period ahead makes even the FRESH
+  * re-anchored proposal unvotable for that unrelated reason, so both arms stall identically and the
+  * scenario measures nothing (observed directly while restaging). Height lag alone -- `LaggedTip -
+  * InitialHeight` far exceeding the bound, same epoch -- is exactly what `tooStale` tests, and suffices.
   */
 class DstStaleTargetSelfSealScenarioSpecification extends FlatSpec {
-  private val RotationPeriod = 100 // matches the design doc's "generationPeriodLength" worked example shape
-  // Pure, height-derived epoch function shared by every node -- the DST-harness equivalent of
-  // `Application.scala`'s production `committeeEpochOf` (`blockchain.generationPeriodOf(h).index`).
+  private val RotationPeriod               = 100
   private val committeeEpochOf: Int => Int = h => h / RotationPeriod
 
-  private val InitialHeight = 50 // epoch 0 -- matches every node's default epochBelief(i) == 0 at t=0
-  private val LagPastBound  = 250 // node 0's tip lands at height 300 -> epoch 3, well past epoch 0 + 1
+  private val InitialHeight = 50 // the T2 target that gets stuck; epoch 0
+  private val PriorHeight   = 10 // a genuine commit before anything diverges; epoch 0
+  // The cluster's tips end up here: 45 blocks past the stuck target -- far outside any sane
+  // `maxTargetLag`, but still epoch 0, for the `justifyEpochOk` reason in this class's doc.
+  private val LaggedTip    = InitialHeight + 45
+  private val SettledDepth = 3
+  // What the cluster re-anchors TO: its fresh settled tip, `SettledDepth` behind the live tip, exactly
+  // production's `blockSource` shape. Strictly above `InitialHeight`, which is the whole point.
+  private val ReanchorHeight = LaggedTip - SettledDepth // 92
+  private val Bound          = SettledDepth + 1         // the design's `max(settledDepth + 1, ...)` floor
+  private val Seed           = 601L
 
   private def blockAt(tag: Int): BlockId = ByteStr(Array.fill[Byte](32)(tag.toByte))
-
-  /** Single-steps `harness`'s clock (`run(maxEvents = 1)`) until `cond` becomes true, then stops --
-    * shared by every test below that needs to freeze a harness at the EXACT moment node 0's own
-    * PREPARE QC has just formed (see `buildLaggedHarness`'s doc for why an unbounded `run()` would
-    * overshoot straight to a full COMMIT instead, defeating the in-flight-branch precondition every
-    * test in this file needs). Bounded by a generous event guard so a mis-set condition fails loudly
-    * (a `should be(true)` sanity check at the call site) instead of hanging.
-    */
-  private def advanceUntil(harness: DstHarness, maxGuardEvents: Int = 200)(cond: => Boolean): Int = {
-    var guard = 0
-    while (!cond && guard < maxGuardEvents) { harness.run(maxEvents = 1); guard += 1 }
-    guard
-  }
 
   private def tempLockPath(tag: String) = {
     val dir = Files.createTempDirectory(s"hotstuff-self-seal-$tag")
@@ -72,34 +97,52 @@ class DstStaleTargetSelfSealScenarioSpecification extends FlatSpec {
     Paths.get(dir.toString, "locked-qc.dat")
   }
 
-  /** Drives a fresh 4-node harness through EXACTLY the PREPARE phase for `(blockAt(1), InitialHeight)`
-    * and stops -- leaving `prepareQC` set on every node (the pacemaker view has advanced 0 -> 1
-    * everywhere, i.e. every node's `HotStuffAction.EnteredView(1)` has fired at least once) but
-    * `committedHeight` still 0 EVERYWHERE (no PRE_COMMIT/COMMIT-phase QC has yet formed on anyone) --
-    * exactly `inFlightBranch`'s `Some` precondition on every replica, node 0 included, and NOTHING
-    * further. `DstHarness.run()` (unbounded) would otherwise drive the round all the way to a genuine
-    * COMMIT on every node in a single call (there is no fault injection to stop it) -- deliberately
-    * NOT what this scenario wants: the trap's precondition is a branch that is QC'd but NOT YET
-    * committed, at the exact moment node 0's own tip races ahead of it. So this single-steps the clock
-    * (`run(maxEvents = 1)`) and stops the INSTANT node 0 itself reports its first `EnteredView` (the
-    * observable signature of node 0's own `prepareQC` having just been set -- see
-    * `HotStuffEngine.onQC`: `EnteredView` accompanies every accepted QC, and no `Committed` has fired
-    * yet at this point since a block only commits on the THIRD phase's QC).
-    *
-    * Then pushes ONLY node 0's own simulated tip and epoch belief `LagPastBound` past `InitialHeight`,
-    * simulating node 0's own live progress having genuinely raced ahead of a branch it is still holding
-    * open -- the trap's precondition -- while the rest of the committee's belief is untouched.
-    *
-    * `maxTargetLag` is the caller's to set: `Int.MaxValue` reproduces the trap (RED), a finite bound
-    * (`settledDepth + 1`-shaped, matching the design's floor) proves the fix.
+  /** What one arm observed, so RED and GREEN are compared on identical measurements instead of each
+    * asserting its own ad-hoc shape.
     */
-  private def buildLaggedHarness(
+  private case class ArmResult(
+      newCommitHeights: Seq[Int], // distinct heights committed AFTER the tips diverged
+      staleAbandoned: Int,        // cluster-wide `inFlightBranch`-filter firings (fix use site A)
+      staleSkipped: Int,          // cluster-wide `onProposal`-gate firings (fix use site B-primary)
+      rejections: Int,            // cluster-wide `Rejected` actions after the divergence
+      harness: DstHarness
+  ) {
+    def maxNewCommitHeight: Int = newCommitHeights.maxOption.getOrElse(-1)
+    def reanchorFired: Boolean  = staleAbandoned + staleSkipped > 0
+  }
+
+  /** Stages the trap on a fresh 4-node cluster and runs it, returning what was observed.
+    *
+    *   1. A genuine 3-phase commit at `PriorHeight` -- real history, nothing diverged yet.
+    *   2. An in-flight PREPARE QC at `InitialHeight`, single-stepped so it is QC'd but NOT committed --
+    *      `inFlightBranch`'s `Some` precondition, on every replica.
+    *   3. THE DIVERGENCE: every replica's own live tip (and epoch belief) jumps to `LaggedTip`, and
+    *      every replica's settled tip -- what `blockSource` answers, i.e. what it can re-anchor TO --
+    *      moves to `ReanchorHeight`. Both cluster-wide, the realistic shape (see class doc).
+    *   4. Leader-timeout ticks. `onRoundTimerTick` only self-drives a leader when it sees a STALLED view
+    *      (`lastTickView == current view`), which needs a tick that does not itself advance the view --
+    *      hence back-to-back PAIRS. Without that, no replica reaches the leader path at all and
+    *      `inFlightBranch` is never consulted (a real trap found while restaging).
+    */
+  private def runArm(
       seed: Long,
       maxTargetLag: () => Int,
-      onAction: (Int, HotStuffAction) => Unit = (_, _) => ()
-  ): DstHarness = {
+      onAction: (Int, HotStuffAction) => Unit = (_, _) => (),
+      // Called with the harness the instant it exists, BEFORE any round is driven -- so a scenario
+      // wiring a `HotStuffWatchdog` (whose `committeeNonEmpty`/`resetInMemoryState` closures need the
+      // harness) can bind it without a forward-reference `var` that is still null when the watchdog's
+      // first `check()` runs.
+      onHarnessReady: DstHarness => Unit = _ => (),
+      // Called once per leader-timeout tick iteration, AFTER that iteration's events have drained. A
+      // watchdog must be checked INTERLEAVED with the ticks like this, not in a batch afterwards: its
+      // whole contract is "has progress happened since my last check", so checking it only after all
+      // ticking is done sees one undifferentiated progress-free stretch in BOTH arms and cannot
+      // distinguish them (observed while restaging).
+      afterTick: () => Unit = () => ()
+  ): ArmResult = {
     var node0EnteredView = false
-    val harness = new DstHarness(
+    var rejections       = 0
+    val harness          = new DstHarness(
       seed,
       nodeCount = 4,
       FaultProfile(minDelayMillis = 1, maxDelayMillis = 3),
@@ -110,282 +153,260 @@ class DstStaleTargetSelfSealScenarioSpecification extends FlatSpec {
         onAction(node, action)
       }
     )
-    harness.leaderTurn(node = 0, view = 0, blockId = blockAt(1), blockHeight = InitialHeight)
-    val guard = advanceUntil(harness)(node0EnteredView)
+    onHarnessReady(harness)
 
-    withClue(s"setup sanity: node 0's own PREPARE QC must have genuinely formed before the trap is sprung (guard=$guard) -- ") {
+    harness.leaderTurn(node = 0, view = 0, blockId = blockAt(9), blockHeight = PriorHeight)
+    harness.run()
+    withClue("setup: the cluster needs a genuine prior commit before anything diverges -- ") {
+      harness.commits.count(_.height == PriorHeight) should be(4)
+    }
+
+    node0EnteredView = false
+    harness.leaderTurn(node = 0, view = 1, blockId = blockAt(1), blockHeight = InitialHeight)
+    var guard = 0
+    while (!node0EnteredView && guard < 200) { harness.run(maxEvents = 1); guard += 1 }
+    withClue(s"setup: node 0's own PREPARE QC must have formed (guard=$guard) -- ") {
       node0EnteredView should be(true)
     }
-    withClue("setup sanity: the in-flight branch must genuinely exist (QC'd, not yet committed) before the trap is sprung -- ") {
+    withClue("setup: the branch must be in-flight -- QC'd, NOT yet committed -- before the divergence -- ") {
       harness.commits.count(_.height == InitialHeight) should be(0)
     }
 
-    val laggedTip = InitialHeight + LagPastBound
-    harness.advanceTip(0, laggedTip)
-    harness.advanceEpochBeliefForNode(0, committeeEpochOf(laggedTip))
-    withClue("setup sanity: node 0's own belief must have genuinely diverged from the signed target epoch -- ") {
-      committeeEpochOf(laggedTip) should be > committeeEpochOf(InitialHeight) + 1 // outside the one-step acceptance window
+    harness.advanceTipAndEpochAll(LaggedTip, committeeEpochOf)
+    harness.setCommittedTipAll(blockAt(5), ReanchorHeight)
+    withClue("setup: the stuck target must be genuinely stale under the new tips -- ") {
+      (LaggedTip - InitialHeight) should be > Bound
     }
-    harness
+    withClue("setup: the re-anchor target must NOT be stale, or neither arm could ever commit again -- ") {
+      (LaggedTip - ReanchorHeight) should be <= Bound
+    }
+
+    val commitsBefore = harness.commits.size
+    harness.setRejectionCounter(() => rejections += 1)
+
+    (1 to 60).foreach { _ =>
+      harness.tickTimeoutAll()
+      harness.tickTimeoutAll()
+      harness.run(maxEvents = 200)
+      afterTick()
+    }
+
+    ArmResult(
+      newCommitHeights = harness.commits.drop(commitsBefore).map(_.height).distinct.sorted.toSeq,
+      staleAbandoned = (0 until 4).map(harness.staleTargetsAbandoned).sum,
+      staleSkipped = (0 until 4).map(harness.staleTargetSkippedProposals).sum,
+      rejections = rejections,
+      harness = harness
+    )
   }
 
-  "a node whose own tip has raced a full generation period past its in-flight (prepareQC'd-but-uncommitted) target" should
-    "RED: without the fix (maxTargetLag = Int.MaxValue), accumulate an unbounded run of Rejected actions on node 0 and never commit again" in {
-      val seed             = 601L
-      var node0Rejections   = 0
-      var node0OtherActions = 0
-      val harness = buildLaggedHarness(
-        seed,
-        maxTargetLag = () => Int.MaxValue,
-        onAction = (node, action) =>
-          if (node == 0) action match {
-            case _: HotStuffAction.Rejected => node0Rejections += 1
-            case _                          => node0OtherActions += 1
-          }
-      )
+  "the F-6 self-sealing epoch trap, with the whole cluster's tips advanced past a stuck T2 target" should
+    "RED: without the fix (maxTargetLag = Int.MaxValue), keep committing the STALE target and never re-anchor" in {
+      val red = runArm(Seed, maxTargetLag = () => Int.MaxValue)
 
-      // Drive many leader-timeout ticks on node 0 -- the in-flight branch keeps being re-proposed
-      // (maxTargetLag = Int.MaxValue never filters it out), the other 3 replicas keep re-forming a real
-      // 3-of-4 QC for it every retry (their own belief never moved), and node 0's own self-verification
-      // of that SAME QC keeps rejecting it (epoch mismatch) -- self-sealing, by construction.
-      (1 to 60).foreach { _ =>
-        harness.tickTimeoutAll()
-        harness.run(maxEvents = 50)
+      withClue(s"RED evidence: newCommitHeights=${red.newCommitHeights} abandoned=${red.staleAbandoned} skipped=${red.staleSkipped} -- ") {
+        // The trap: still chasing the stale in-flight branch, so the only thing the cluster can commit
+        // is that branch, at InitialHeight. It never re-anchors to the fresh settled tip.
+        red.newCommitHeights should be(Seq(InitialHeight))
+        red.maxNewCommitHeight should be < ReanchorHeight
       }
-
-      // RED EVIDENCE (recorded here for the commit body -- see the commit message for the observed
-      // numbers from an actual run): node 0 must show a substantial run of Rejected actions and zero
-      // further commits at InitialHeight -- the exact "unbounded Rejected stream, never commits" shape
-      // the design doc's Test strategy asks this RED-first spec to observe, reproducing F-6 and closing
-      // the audit's UNVERIFIED status on it.
-      withClue(s"RED evidence: node0Rejections=$node0Rejections node0OtherActions(non-Rejected)=$node0OtherActions -- ") {
-        node0Rejections should be > 0
+      withClue("RED: with the fix neutralized, NO stale-target path may fire (it is a no-op by construction) -- ") {
+        red.staleAbandoned should be(0)
+        red.staleSkipped should be(0)
+        red.reanchorFired should be(false)
       }
-      harness.commits.count(o => o.node == 0 && o.height == InitialHeight) should be(0) // PREPARE-only, never committed
-      harness.commits.count(_.node == 0) should be(0) // node 0 specifically NEVER commits anything, pre-fix
     }
 
   it should
-    "GREEN: with the fix (a finite maxTargetLag), skip signing the stale target (WARN), re-anchor via blockSource, and commit again at a fresh height" in {
-      val seed         = 601L // SAME seed as the RED case above -- same network/delivery jitter, only the fix flag differs
-      val settledDepth = 3
-      val bound        = settledDepth + 1 // design's floor shape: max(settledDepth + 1, fraction term) -- fraction term is irrelevant here, the floor alone suffices
+    "GREEN: with the fix (a finite maxTargetLag), abandon the stale branch, re-anchor, and commit STRICTLY ABOVE the stale target" in {
+      val green = runArm(Seed, maxTargetLag = () => Bound)
+      val red   = runArm(Seed, maxTargetLag = () => Int.MaxValue) // same seed: identical jitter, only the bound differs
 
-      // Node 0 needs a fresh height to re-anchor TO once it abandons the stale in-flight branch --
-      // `blockSource()` is `committedTip.get(0)` in this harness (mirrors production's settled-tip
-      // wiring), so node 0 must have SOME prior commit to fall back to. Drive one through first, at a
-      // height below the lag bound of node 0's (still un-advanced-at-this-point) tip so it commits
-      // cleanly under the SAME committee-wide epoch as InitialHeight -- this happens BEFORE the tip/
-      // epoch divergence engineered by `buildLaggedHarness`, so re-order: repeat the setup here with the
-      // committed-tip round FIRST.
-      var node0EnteredView = false
-      val fresh = new DstHarness(
-        seed,
-        nodeCount = 4,
-        FaultProfile(minDelayMillis = 1, maxDelayMillis = 3),
-        committeeEpochOf = committeeEpochOf,
-        maxTargetLag = () => bound,
-        onAction = (node, action) => if (node == 0 && action.isInstanceOf[HotStuffAction.EnteredView]) node0EnteredView = true
-      )
-      // Round 1: a full 3-phase commit at a LOW height, giving node 0 a real `blockSource()` answer
-      // to re-anchor to once it abandons the stale in-flight branch below. Unbounded `run()` is
-      // correct HERE (unlike round 2 below): nothing has diverged yet, so there is no in-flight
-      // precondition to preserve -- driving this round all the way to a genuine COMMIT is exactly
-      // what's wanted.
-      fresh.leaderTurn(node = 0, view = 0, blockId = blockAt(9), blockHeight = 10)
-      fresh.run()
-      withClue("setup sanity: node 0 needs a genuine prior commit for blockSource() to re-anchor to -- ") {
-        fresh.commits.count(o => o.node == 0 && o.height == 10) should be(1)
+      // (a) The re-anchor produced real PROGRESS: a NEW commit strictly above what the stale branch
+      //     could ever yield. This is the assertion the vacuous first version lacked -- it cannot be
+      //     satisfied by any pre-divergence commit, and it goes RED the moment the bound is neutralized.
+      withClue(s"GREEN evidence: newCommitHeights=${green.newCommitHeights} (RED's were ${red.newCommitHeights}) -- ") {
+        green.maxNewCommitHeight should be > InitialHeight
+        green.newCommitHeights should contain(ReanchorHeight)
+        green.maxNewCommitHeight should be > red.maxNewCommitHeight
       }
 
-      // Round 2: the SAME trap setup as the RED case -- a new in-flight (prepareQC'd-but-uncommitted)
-      // branch at InitialHeight, then node 0's own tip/epoch pushed LagPastBound ahead of it. Single-
-      // stepped (not unbounded `run()`) so it stops the instant node 0's own PREPARE QC forms, same as
-      // `buildLaggedHarness` -- see that method's doc for why.
-      node0EnteredView = false
-      // view=1000: comfortably above whatever view round 1's 3-phase commit landed the pacemaker at
-      // (each phase advances the view by at most 1, and round 1 started at view 0), so this cannot
-      // collide with any in-flight state left over from round 1 (same margin-of-safety convention
-      // `HotStuffWatchdogDstReproductionSpecification`'s post-heal `leaderTurn(..., view = 100, ...)`
-      // uses for an analogous "definitely higher than anything reached so far" need).
-      fresh.leaderTurn(node = 0, view = 1000, blockId = blockAt(1), blockHeight = InitialHeight)
-      val guard = advanceUntil(fresh)(node0EnteredView)
-      withClue(s"setup sanity: node 0's own PREPARE QC for round 2 must have genuinely formed (guard=$guard) -- ") {
-        node0EnteredView should be(true)
-      }
-      withClue("setup sanity: round 2's branch must be in-flight (QC'd, not yet committed) before the tip/epoch divergence -- ") {
-        fresh.commits.count(_.height == InitialHeight) should be(0)
-      }
-      fresh.advanceTip(0, InitialHeight + LagPastBound)
-      fresh.advanceEpochBeliefForNode(0, committeeEpochOf(InitialHeight + LagPastBound))
-
-      (1 to 20).foreach { _ =>
-        fresh.tickTimeoutAll()
-        fresh.run(maxEvents = 50)
+      // (b) The stale-abandon path (the WARN + Kamon `hotstuff.stale-target-abandoned` site) genuinely
+      //     FIRED -- via the coordinator's test-observable mirror of that counter, so the MECHANISM is
+      //     proven to have run rather than inferred from the outcome.
+      withClue(s"GREEN: the fix's re-anchor path must have fired -- abandoned=${green.staleAbandoned} skipped=${green.staleSkipped} -- ") {
+        green.reanchorFired should be(true)
+        green.staleAbandoned should be > 0
       }
 
-      // THE FIX'S OBSERVABLE SHAPE (design doc): node 0 must have RE-ANCHORED, i.e. it must show
-      // liveness beyond the stale target -- concretely, its committed height must have moved forward
-      // past what the stale in-flight branch alone could ever produce (that branch tops out at
-      // InitialHeight and, per the RED case above, never even reaches that under the trap). A fresh
-      // commit at height 10 already happened (round 1); the fix's job is to prove node 0 is not
-      // PERMANENTLY stuck after the tip/epoch divergence -- i.e. it does not accumulate the RED case's
-      // unbounded-Rejected-never-commits shape. Directly assert node 0 never rejects a QC signed by the
-      // OTHER three honest replicas at InitialHeight's epoch AS MANY times as the RED case did, AND that
-      // node 0's pacemaker/committee state is still healthy enough to have processed further ticks
-      // without wedging (the harness would have thrown were `onRoundTimerTick`/`onQC` to misbehave).
-      val node0CommitsAfterFix = fresh.commits.count(_.node == 0)
-      withClue(s"node0CommitsAfterFix=$node0CommitsAfterFix (round-1 commit at height 10 must still be intact, proving no regression while the fix is active) -- ") {
-        node0CommitsAfterFix should be >= 1
+      // (c) Rejections no worse than the RED arm: the fix stops a replica generating self-rejected QCs
+      //     for a target it can never again accept.
+      withClue(s"GREEN rejections=${green.rejections} vs RED rejections=${red.rejections} -- ") {
+        green.rejections should be <= red.rejections
       }
-      SafetyInvariants.checkAll(fresh.commits.toSeq, fresh.votes.toSeq) match {
+
+      SafetyInvariants.checkAll(green.harness.commits.toSeq, green.harness.votes.toSeq) match {
         case Left(reason) => fail(s"safety violation with the F-6 fix active: $reason")
         case Right(())    => succeed
       }
     }
 
-  it should
-    "preserve noEquivocation across the re-anchor (the fix produces no slashable double-vote)" in {
-      val seed         = 602L
-      val settledDepth = 3
-      val bound        = settledDepth + 1
-      val harness      = buildLaggedHarness(seed, maxTargetLag = () => bound)
-      (1 to 30).foreach { _ =>
-        harness.tickTimeoutAll()
-        harness.run(maxEvents = 50)
-      }
+  it should "preserve noEquivocation across an ACTUAL re-anchor (no slashable double-vote)" in {
+    val green = runArm(Seed, maxTargetLag = () => Bound)
 
-      // The harness records EVERY broadcast vote (audit F-2 wiring) regardless of whether it was ever
-      // delivered/accepted -- `SafetyInvariants.noEquivocation` runs the production detector
-      // (`HotStuffSafety.equivocators`) directly over that full recorded stream. A re-anchor voting at a
-      // HIGHER view for a DIFFERENT (fresh) target is not an equivocation by construction (equivocation
-      // is two DIFFERENT blocks signed at the SAME (view, phase) -- re-anchoring never revisits an old
-      // view), but this is the mechanical proof, not an assertion by argument alone.
-      SafetyInvariants.noEquivocation(harness.votes.toSeq) match {
-        case Left(reason) => fail(s"equivocation detected across the F-6 re-anchor: $reason")
-        case Right(())    => succeed
-      }
+    // Guard this companion against the same vacuity as the main arm: the invariant must be checked
+    // across a re-anchor that DEMONSTRABLY happened, not merely one that was configured to be possible.
+    withClue("noEquivocation must be checked across a REAL re-anchor -- ") {
+      green.reanchorFired should be(true)
+      green.maxNewCommitHeight should be > InitialHeight
     }
 
-  it should
-    "interact safely with a persisted lastVotedView across a simulated restart: no vote at or below the pre-re-anchor value" in {
-      val seed         = 603L
-      val settledDepth = 3
-      val bound        = settledDepth + 1
-      val harness      = buildLaggedHarness(seed, maxTargetLag = () => bound)
-      (1 to 20).foreach { _ =>
-        harness.tickTimeoutAll()
-        harness.run(maxEvents = 50)
-      }
-
-      // Node 0's `lastVotedView` immediately before the simulated restart -- the value M1's
-      // `HotStuffLastVotedViewStore` would have persisted most recently (mirrors
-      // `initialLastVotedView`'s doc on `HotStuffCoordinator.Enabled`: seeded from local disk instead
-      // of always starting at -1). The harness doesn't expose `engine.safety.lastVotedView` directly, so
-      // this test recovers an equivalent bound the SAME way production restart-safety reasons about it:
-      // the highest view any vote from node 0 was recorded at, pre-restart -- a real restart's
-      // persisted value is by construction >= this (M1 persists on every genuine advance, and this
-      // scenario's node 0 has been ticking/re-proposing continuously, so no vote was missed by the
-      // recording wire-tap).
-      val preRestartHighestVotedView = harness.votes.filter(_.node == 0).map(_.vote.view).maxOption.getOrElse(-1)
-
-      // Simulate the restart: a FRESH coordinator instance for node 0's role, seeded with the SAME
-      // committee/epoch inputs plus `initialLastVotedView = preRestartHighestVotedView` -- exactly what
-      // `Application.scala` does on a real process boot via `HotStuffLastVotedViewStore`. Directly
-      // exercises `HotStuffCoordinator.Enabled` (not the harness, which has no restart primitive) since
-      // this is specifically about the CONSTRUCTOR's `initialLastVotedView` parameter interacting with a
-      // fresh in-memory `SafetyState`.
-      val kps                      = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
-      val committee: GeneratorSet = kps.zipWithIndex.map { case (kp, i) =>
-        GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, 25L)
-      }
-
-      var restartedVotesSent = Vector.empty[HotStuffVote]
-      val restartedEffects   = new HotStuffEffects {
-        def broadcast(m: Message): Unit = m match {
-          case v: HotStuffVote => restartedVotesSent :+= v
-          case _                => ()
-        }
-        def myVoterIndexes: Set[Int]                                   = Set(0)
-        def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg)) else None
-        def onCommit(blockId: BlockId, height: Int): Unit              = ()
-        def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
-      }
-      val restarted = new HotStuffCoordinator.Enabled(
-        () => committee,
-        restartedEffects,
-        (_, _) => true,
-        committeeEpochOf = committeeEpochOf,
-        initialLastVotedView = preRestartHighestVotedView,
-        maxTargetLag = () => bound,
-        tipHeight = () => InitialHeight + LagPastBound // post-restart: this replica still believes its own advanced tip
-      )
-      // A fresh proposal at the SAME view as (or below) the pre-restart high-water mark must NOT be
-      // voted for -- exactly the M1 double-vote window `initialLastVotedView` closes. Target height
-      // deliberately re-anchored (near the restarted replica's own tip, NOT the stale InitialHeight
-      // branch) so this specific vote is rejected ONLY by the M1 lastVotedView bound, not conflated
-      // with the F-6 `tooStale` guard also being active here (both guards run; this proposal must be
-      // blocked by lastVotedView regardless of tooStale's verdict on it).
-      val reanchoredHeight = InitialHeight + LagPastBound - bound // within maxTargetLag of the restarted tip
-      restarted.onProposal(HotStuffProposal(preRestartHighestVotedView, blockAt(77), None), reanchoredHeight)
-      restartedVotesSent shouldBe empty
-
-      // A proposal at a view strictly ABOVE the persisted high-water mark, for a target WITHIN
-      // maxTargetLag of the restarted replica's own (still-advanced) tip -- i.e. genuine post-restart,
-      // post-re-anchor progress -- must still be votable (the M1 bound must not be a permanent
-      // lockout, and the F-6 guard must not be the thing blocking it here either).
-      restarted.onProposal(HotStuffProposal(preRestartHighestVotedView + 1, blockAt(78), None), reanchoredHeight)
-      restartedVotesSent.map(_.view) should contain(preRestartHighestVotedView + 1)
-      restartedVotesSent.foreach(_.view should be > preRestartHighestVotedView)
+    // The harness records EVERY broadcast vote regardless of delivery (audit F-2 -- the double signature
+    // is the violation, not its delivery); `SafetyInvariants.noEquivocation` runs the production
+    // detector (`HotStuffSafety.equivocators`) directly over that stream.
+    SafetyInvariants.noEquivocation(green.harness.votes.toSeq) match {
+      case Left(reason) => fail(s"equivocation detected across the F-6 re-anchor: $reason")
+      case Right(())    => succeed
     }
+  }
 
-  it should
-    "no longer exhaust a wired watchdog's five auto-recovery resets (the fix removes the trap instead of merely surviving it)" in {
-      val seed         = 604L
-      val settledDepth = 3
-      val bound        = settledDepth + 1
-      var harness: DstHarness = null
-      val watchdog             = new HotStuffWatchdog(
-        committeeNonEmpty = () => harness.currentCommittee().nonEmpty,
-        lockPath = tempLockPath("watchdog"),
-        resetInMemoryState = () => harness.resetLocalSafetyState(0),
-        stallThreshold = 5
+  it should "let a wired watchdog reach commit-stall EXHAUSTION under the trap, and NOT reach it once the fix re-anchors" in {
+    // The first version asserted only `isAutoRecoverySuspended == false` in the fixed arm -- trivially
+    // true, since the RED arm never reached exhaustion either, so it compared nothing.
+    //
+    // Making the two arms genuinely distinguishable required understanding WHICH stall signal the trap
+    // actually produces here, and the measurement is worth recording because the obvious choice is
+    // wrong. Under this scenario node 0 emits ~730 `EnteredView` actions in BOTH arms -- the pacemaker
+    // advances its view on every leader timeout regardless of whether anything is being agreed -- so a
+    // VIEW-based progress signal (`recordProgress`) can never distinguish them, and the view-stall
+    // counter never fires in either arm no matter how the thresholds are tuned. (Verified directly: an
+    // earlier revision of this test wired exactly that and got RED=GREEN=0 recoveries.)
+    //
+    // What DOES differ is the COMMIT stream, which is exactly why `HotStuffWatchdog` carries a second,
+    // independent `recordCommit()`/`commitStallThreshold` counter for the "views advancing while
+    // commits stall" case (see its doc). Measured per arm:
+    //   RED   -> last commit at height 50  (the STALE in-flight branch; never gets past it)
+    //   GREEN -> last commit at height 92  (the re-anchored settled tip)
+    // So "real progress" for this trap means committing ABOVE the stuck target, and that is what
+    // `recordCommit` is gated on below. RED then genuinely commit-stalls and burns its recovery budget
+    // to suspension; GREEN commits past the target and never exhausts.
+    def wire(bound: Int, tag: String): (HotStuffWatchdog, ArmResult, Int) = {
+      var harnessRef: Option[DstHarness] = None
+      var recoveries                     = 0
+      var escaped                        = false
+      val watchdog                       = new HotStuffWatchdog(
+        committeeNonEmpty = () => harnessRef.exists(_.currentCommittee().nonEmpty),
+        lockPath = tempLockPath(tag),
+        resetInMemoryState = () => { recoveries += 1; harnessRef.foreach(_.resetLocalSafetyState(0)) },
+        stallThreshold = 1,
+        // Small enough that five consecutive ineffective recoveries fit inside this scenario's 60 tick
+        // iterations even with the watchdog's doubling backoff (1 + 2 + 4 + 8 + 16 = 31 < 60).
+        commitStallThreshold = 1
       )
-      harness = buildLaggedHarness(
-        seed,
+      val result = runArm(
+        Seed,
         maxTargetLag = () => bound,
-        // Same Rejected-excluding filter as production/`HotStuffWatchdogDstReproductionSpecification`:
-        // a Rejected action must never count as progress (that is precisely the bug class F-6 could
-        // otherwise have masked from THIS watchdog, per that class's own doc comment's "e.g. one signed
-        // under a stale committee epoch" example -- this spec is the direct proof the F-6 fix removes
-        // that risk rather than merely tolerating it).
         onAction = (node, action) =>
           if (node == 0) action match {
+            // A Rejected action must never count as progress -- exactly the masking risk
+            // `HotStuffWatchdog`'s own doc comment flags ("e.g. one signed under a stale committee
+            // epoch"), which IS this F-6 trap.
             case _: HotStuffAction.Rejected => ()
-            case _                          => watchdog.recordProgress()
-          }
+            // Only a commit STRICTLY ABOVE the stuck target counts as escaping the trap. Committing the
+            // stale branch itself (RED, height 50) is precisely the trap succeeding, not progress.
+            case HotStuffAction.Committed(_, h) =>
+              watchdog.recordProgress()
+              if (h > InitialHeight) { watchdog.recordCommit(); escaped = true }
+            case _ => watchdog.recordProgress()
+          },
+        onHarnessReady = h => harnessRef = Some(h),
+        // Check only while the replica has NOT yet escaped the trap. This is the honest framing of the
+        // question the watchdog answers: "was the recovery budget exhausted BEFORE real progress
+        // happened?" It is deliberately NOT "does the watchdog stall forever afterwards" -- in this
+        // harness it must, because nothing keeps minting fresh heights after the single re-anchor
+        // commit, so a post-escape stall is a property of the SIMULATION's finite work, not of the fix.
+        afterTick = () => if (!escaped) watchdog.check()
       )
-      watchdog.check() // real (PREPARE-QC) progress just happened -> counter stays at 0
-
-      // Drive far more ticks than the watchdog's stallThreshold=5 would need to exhaust all
-      // maxConsecutiveRecoveries=5 attempts IF the trap were still active (see
-      // `HotStuffWatchdogDstReproductionSpecification`'s sibling scenario, where an unrelated genuine
-      // wedge fires repeatedly under an identical wiring). With the F-6 fix active, node 0 re-anchors
-      // via `blockSource` almost immediately once the stale in-flight branch is abandoned, so real
-      // progress (`Committed`/accepted `EnteredView`) resumes well before the watchdog's counter can
-      // accumulate anywhere near its threshold, let alone exhaust 5 consecutive recoveries.
-      (1 to 60).foreach { _ =>
-        harness.tickTimeoutAll()
-        harness.run(maxEvents = 50)
-        watchdog.check()
-      }
-
-      withClue(s"totalRecoveries=${watchdog.totalRecoveries} isAutoRecoverySuspended=${watchdog.isAutoRecoverySuspended} -- ") {
-        watchdog.isAutoRecoverySuspended should be(false) // never reached the 5-consecutive-failed-recoveries cap
-      }
-      SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
-        case Left(reason) => fail(s"safety violation in the watchdog-wired F-6 fix scenario: $reason")
-        case Right(())    => succeed
-      }
+      (watchdog, result, recoveries)
     }
+
+    // Both arms run the watchdog on the SAME schedule (one `check()` per tick iteration, via
+    // `afterTick`), so the only difference between them is whether the F-6 fix is active.
+    val (redWatchdog, redResult, redRecoveries)       = wire(Int.MaxValue, "watchdog-red")
+    val (greenWatchdog, greenResult, greenRecoveries) = wire(Bound, "watchdog-green")
+
+    withClue(
+      s"RED recoveries=$redRecoveries suspended=${redWatchdog.isAutoRecoverySuspended} lastCommit=${redResult.maxNewCommitHeight} " +
+        s"| GREEN recoveries=$greenRecoveries suspended=${greenWatchdog.isAutoRecoverySuspended} lastCommit=${greenResult.maxNewCommitHeight} -- "
+    ) {
+      // Under the trap the watchdog burns its whole budget and gives up: its reset cannot help, because
+      // the epoch mismatch is derived from chain HEIGHT, not from anything `resetLocalSafetyState`
+      // clears -- the audit's own point about why the watchdog is not the fix for F-6.
+      redWatchdog.isAutoRecoverySuspended should be(true)
+      // With the fix, node 0 re-anchors and commits past the stuck target, so the watchdog never
+      // exhausts -- the fix REMOVES the trap rather than merely surviving it.
+      greenWatchdog.isAutoRecoverySuspended should be(false)
+      greenRecoveries should be < redRecoveries
+    }
+    withClue("the GREEN watchdog arm must have re-anchored for real -- ") {
+      greenResult.reanchorFired should be(true)
+      greenResult.maxNewCommitHeight should be > InitialHeight
+      redResult.maxNewCommitHeight should be(InitialHeight)
+    }
+  }
+
+  // NOTE ON SCOPE (relabelled honestly after review): this case does NOT exercise a re-anchor. It is the
+  // M1 <-> F-6 INTERACTION check -- that a restarted replica's persisted `lastVotedView` bound and the
+  // F-6 stale-target guard coexist without either wrongly blocking the other. The re-anchor itself is
+  // proven by the GREEN arm above; the guard's effect on `lastVotedView` (review item IMPORTANT 2) is
+  // proven directly in `HotStuffLagReanchorSpecification`. Kept because the combination is worth
+  // pinning, but no longer described as re-anchor coverage.
+  it should "M1 interaction check (NOT a re-anchor): a restarted replica's persisted lastVotedView bound and the F-6 guard coexist" in {
+    val green                  = runArm(Seed, maxTargetLag = () => Bound)
+    val preRestartHighestVoted = green.harness.votes.filter(_.node == 0).map(_.vote.view).maxOption.getOrElse(-1)
+
+    val kps                     = (0 until 4).map(i => TestBlsKeyPair.unsafe(Array.fill[Byte](32)((i + 1).toByte)))
+    val committee: GeneratorSet = kps.zipWithIndex.map { case (kp, i) =>
+      GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, 25L)
+    }
+
+    var restartedVotesSent = Vector.empty[HotStuffVote]
+    val restartedEffects   = new HotStuffEffects {
+      def broadcast(m: Message): Unit = m match {
+        case v: HotStuffVote => restartedVotesSent :+= v
+        case _               => ()
+      }
+      def myVoterIndexes: Set[Int]                                   = Set(0)
+      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg)) else None
+      def onCommit(blockId: BlockId, height: Int): Unit              = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+    }
+    // A fresh coordinator seeded from disk exactly as `Application.scala` does on a real boot.
+    val restarted = new HotStuffCoordinator.Enabled(
+      () => committee,
+      restartedEffects,
+      (_, _) => true,
+      committeeEpochOf = committeeEpochOf,
+      initialLastVotedView = preRestartHighestVoted,
+      maxTargetLag = () => Bound,
+      tipHeight = () => LaggedTip
+    )
+
+    // Target deliberately NON-stale (within Bound of the restarted tip), so this vote can only be
+    // blocked by the M1 lastVotedView bound -- isolating it from the F-6 guard, which also runs.
+    val freshTarget = ReanchorHeight
+    restarted.onProposal(HotStuffProposal(preRestartHighestVoted, blockAt(77), None), freshTarget)
+    withClue("M1: a proposal at or below the persisted high-water mark must not be voted -- ") {
+      restartedVotesSent shouldBe empty
+    }
+    withClue("F-6 must NOT be what blocked it (the target is deliberately fresh) -- ") {
+      restarted.staleTargetSkippedProposals should be(0)
+    }
+
+    restarted.onProposal(HotStuffProposal(preRestartHighestVoted + 1, blockAt(78), None), freshTarget)
+    withClue("M1 must not be a permanent lockout: a strictly-higher view for a fresh target is votable -- ") {
+      restartedVotesSent.map(_.view) should contain(preRestartHighestVoted + 1)
+      restartedVotesSent.foreach(_.view should be > preRestartHighestVoted)
+    }
+  }
 }
