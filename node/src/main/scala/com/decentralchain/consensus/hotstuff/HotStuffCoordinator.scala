@@ -500,15 +500,19 @@ object HotStuffCoordinator {
           byBlock match {
             case Seq(a, b, _*) =>
               val proof = HotStuffEquivocationProof(a, b)
-              // KNOWN GAP, MUST BE FIXED BEFORE feature 30 (BlsCryptoV2) IS EVER ACTIVATED (2026-09-02
-              // review of ed0fbcb69c, see HotStuffEquivocationProof.signaturesValid's doc and Task 8 in
-              // docs/superpowers/plans/2026-09-02-bls-crypto-v2.md): signaturesValid still hardcodes the
-              // legacy DST, so once real votes sign under _HSVOTE_ every proof here fails signature
-              // verification and is silently dropped below (DEBUG log only) -- detection goes inert,
-              // fail-closed. Fix: pass a dst derived from the containing block's height, not live tip.
+              // Task 8 (fixes the gap flagged in the 2026-09-02 review of ed0fbcb69c): this is LOCAL
+              // detection/observability, not consensus validation, so it's fine to use the coordinator's
+              // own live cryptoV2 provider (same one castVotes/onQC/onProposal already use) rather than a
+              // containing-block height -- there is no containing block yet, this proof hasn't been
+              // folded into one. The consensus-critical re-verification of a BLOCK-CARRIED proof happens
+              // separately in state/appender/package.scala's validateHotStuffEquivocationProofs, which
+              // MUST derive its dst from the containing block's height instead.
               val ok = for {
                 _ <- proof.consistent
-                _ <- proof.signaturesValid(i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey))
+                _ <- proof.signaturesValid(
+                  i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey),
+                  HotStuffQuorum.voteDst(engine.cryptoV2)
+                )
               } yield ()
               ok match {
                 case Right(()) =>

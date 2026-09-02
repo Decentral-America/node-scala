@@ -37,33 +37,29 @@ case class HotStuffEquivocationProof(voteA: HotStuffVote, voteB: HotStuffVote) {
   /** Verify both signatures against the named voter's BLS key, over the SAME canonical bytes real
     * votes sign (`HotStuffQuorum.voteMessage`) — never a reimplementation of the message format.
     *
-    * KNOWN GAP — MUST BE FIXED BEFORE BlsCryptoV2 (feature 30) IS EVER ACTIVATED ON ANY CHAIN
-    * (2026-09-02 review of `ed0fbcb69c`, follow-up to Task 8 in
-    * docs/superpowers/plans/2026-09-02-bls-crypto-v2.md): this still hardcodes
-    * `BlsUtils.BlsDomainSeparationTag` (the legacy DST) below. Task 7 (`ed0fbcb69c`) switched REAL
-    * votes to sign under `_HSVOTE_` once feature 30 activates, but this verifier was not updated to
-    * match, so every equivocation proof's signature check will start failing as soon as feature 30 is
-    * live — proofs are silently rejected (fail-closed: no false accusations, but detection/slashing
-    * goes inert without warning) at both call sites: `HotStuffCoordinator.onVote`'s proof-check (logs
-    * the rejection at DEBUG only) and `state/appender/package.scala`'s
-    * `validateHotStuffEquivocationProofs`. The fix (scoped in Task 8) is for `signaturesValid` to take
-    * a `dst` chosen by the CALLER from the PROOF'S CONTAINING BLOCK's height (via
-    * `HotStuffQuorum.voteDst(blockchain.supportsBlsCryptoV2(containingBlockHeight))`) — never from live
-    * tip, since proofs are block-carried and must re-verify identically on consensus replay/rollback.
+    * `dst` is supplied by the CALLER, never hardcoded here or defaulted, because it is a function of
+    * the PROOF'S CONTAINING BLOCK, not of the proof itself (Task 8, fixing the gap left by Task 7
+    * `ed0fbcb69c`: real votes hard-switch to `_HSVOTE_` once feature 30 activates, so a proof's two
+    * embedded votes must be verified under whichever DST was live when they were cast). Block-carried
+    * callers (`state/appender/package.scala`'s `validateHotStuffEquivocationProofs`) MUST derive it
+    * from `HotStuffQuorum.voteDst(blockchain.supportsBlsCryptoV2(containingBlockHeight))` using the
+    * containing block's height — never the live tip — so verification stays deterministic across
+    * consensus replay/rollback. Local-only callers (`HotStuffCoordinator.onVote`'s detection path) may
+    * use their own live `cryptoV2` provider since that's observability, not consensus validation.
     */
-  def signaturesValid(blsKeyOf: Int => Option[BlsPublicKey]): Either[String, Unit] = for {
+  def signaturesValid(blsKeyOf: Int => Option[BlsPublicKey], dst: String): Either[String, Unit] = for {
     pk <- blsKeyOf(voterIndex).toRight(s"equivocation proof voter index $voterIndex outside committee")
-    _  <- verifyOne(voteA, pk, "voteA")
-    _  <- verifyOne(voteB, pk, "voteB")
+    _  <- verifyOne(voteA, pk, "voteA", dst)
+    _  <- verifyOne(voteB, pk, "voteB", dst)
   } yield ()
 
-  private def verifyOne(v: HotStuffVote, pk: BlsPublicKey, label: String): Either[String, Unit] =
+  private def verifyOne(v: HotStuffVote, pk: BlsPublicKey, label: String, dst: String): Either[String, Unit] =
     BlsUtils
       .verifyBasic(
         v.signature.arr,
         HotStuffQuorum.voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch),
         pk.arr,
-        BlsUtils.BlsDomainSeparationTag
+        dst
       )
       .left
       .map(e => s"equivocation proof $label signature invalid for voter $voterIndex: $e")
