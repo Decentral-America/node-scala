@@ -1,12 +1,14 @@
-# Testnet Final Source — Waves-Identical Feature Registry, DCC Improvements Unconditional (rev. 2, audited)
+# Testnet Final Source — Waves-Identical Feature Registry, DCC Improvements Unconditional (rev. 3)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **Rev. 2 (2026-09-02):** rev. 1 was adversarially audited against the real tree; 29 corrections applied (wrong anchors, a false CI premise, a would-break-CI step, a missing image-build step, and — most important — upstream feature 26 is NOT inert on DCC: two of its hunks are a monetary change). Task 2 now stops at an explicit operator decision.
+> **Rev. 3 (2026-09-02):** two operator decisions landed. (1) Feature 26's live hunks (reward reset to 20 DCC, retiring the 10x boost) are APPROVED for a faithful port, matching Waves exactly — Task 2 is no longer gated. (2) The 2026-09-01 stall was root-caused via real VPS logs (not the earlier empty-committee guess, which was wrong): the chain froze at height 2639 because 102 consecutive attempts to seal block 2640 each computed a DIFFERENT wrong state hash (`InvalidStateHash`, non-deterministic — same bug *class* as the already-solved height-3325 divergence, a new occurrence, not yet traced to a line). Former Task 3 (root-cause) is done; a new **Task 3b** (find + fix the actual code defect) is inserted and is now the hardest open item — the relaunch cannot proceed without it, or the new chain freezes again. Full incident record: `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §8 (2026-09-02 entry).
+>
+> **Rev. 2** (superseded by rev. 3's decisions): rev. 1 was adversarially audited against the real tree; 29 corrections applied (wrong anchors, a false CI premise, a would-break-CI step, a missing image-build step, and upstream feature 26's real economics).
 
 **Goal:** Produce the final node-scala source for the testnet relaunch: feature registry mirroring upstream Waves 1.6.x (ids 1–28), every DCC consensus/crypto improvement shipped as the ONLY behavior (no DCC-native feature ids, no legacy paths, no activation gates), the live stall root-caused from real logs, the commit-generator automation made fail-loud, and a full-suite-green, reviewed, tagged, image-built release.
 
-**Architecture:** Two decisions drive everything. (1) Testnet is disposable and mainnet's legacy chain has no BLS/HotStuff/commitment history (its genesis pre-activates `[1..13,15,16]` — feature 25 never activated, so no BLS bytes exist anywhere we keep), so the BLS domain-separation + bound-PoP fix (was feature 30) and block-carried equivocation evidence (was feature 29) need no activation gate — they become unconditional and 29/30 are deleted. (2) The registry mirrors upstream, which means registering upstream's 26 `AdjustedBlockRewardDistribution` WITH its logic ported — never as a placeholder, because `implemented = dict.keySet` is the unknown-feature safety net — but 26's live hunks change block-reward economics, so whether it is ever *activated* is an operator decision, not a bookkeeping default.
+**Architecture:** Three decisions drive everything. (1) Testnet is disposable and mainnet's legacy chain has no BLS/HotStuff/commitment history (its genesis pre-activates `[1..13,15,16]` — feature 25 never activated, so no BLS bytes exist anywhere we keep), so the BLS domain-separation + bound-PoP fix (was feature 30) and block-carried equivocation evidence (was feature 29) need no activation gate — they become unconditional and 29/30 are deleted. (2) The registry mirrors upstream, which means registering upstream's 26 `AdjustedBlockRewardDistribution` WITH its logic ported faithfully (operator-approved 2026-09-02: DCC adopts the same reward economics Waves runs — 20-DCC reward, retiring the 10x boost, once 26 activates) — never as a placeholder, because `implemented = dict.keySet` is the unknown-feature safety net. (3) The 2026-09-01 stall is a real, unsolved code defect (state-hash non-determinism at height 2640, same class as height-3325) that must be found and fixed before any relaunch, or it recurs at the next height that triggers the same condition.
 
 **Tech Stack:** Scala 3, sbt, ScalaTest, blst BLS, protobuf-schemas 1.6.6 (monorepo), GitHub Actions (infra), Kubernetes/LKE + Linode VPS (testnet).
 
@@ -142,32 +144,32 @@ tags. Registry has no id > 28."
 
 ---
 
-### Task 2: Register upstream feature 26 with its logic ported; realign 27/28; STOP at the economic decision
+### Task 2: Register upstream feature 26 with its logic ported faithfully; realign 27/28
+
+**Decision (operator-approved 2026-09-02): port `f1bedddb2e` faithfully, matching Waves exactly.** DCC adopts the same reward economics upstream runs once 26 activates: reward resets to `AdjustedFullReward = 20 * UnitsInWave`-equivalent, and feature 23's `blockRewardBoost` retires (returns 1). No DCC-specific constant substitution. This is a real monetary-policy change (DCC's current reward is 6 DCC/block with a live 10x boost period) — it is intentional, not a bookkeeping default, and both the commit body and `consensus-divergences-from-upstream.md` must say so plainly so a future reader doesn't mistake it for an oversight.
 
 **Files:**
 - Read: `git show upstream-waves/version-1.6.x:node/src/main/scala/com/wavesplatform/features/BlockchainFeature.scala`; upstream commit `f1bedddb2e` (`git show f1bedddb2e --stat`, then each file).
 - Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` — `26 = AdjustedBlockRewardDistribution` (in dict), `27 = ContinuationTransaction`, `28 = LeaseExpiration` (not exposed, not in dict)
 - Modify (port targets, DCC counterparts of upstream's 5 files): `state/diffs/BlockRewardCalculator.scala`, `state/Blockchain.scala`, `state/BlockchainUpdaterImpl.scala`, `state/diffs/EthereumTransactionDiff.scala`, `state/diffs/ExchangeTransactionDiff.scala`
-- Modify: `docs/consensus-divergences-from-upstream.md` (NEW section: reward distribution — DCC has `daoAddress = None` / `xtnBuybackAddress = None` on all presets, documented today only as an inline comment at `BlockchainSettings.scala:147-148/169-170/188-189`)
+- Modify: `docs/consensus-divergences-from-upstream.md` (NEW section: reward distribution — DCC has `daoAddress = None` / `xtnBuybackAddress = None` on all presets, documented today only as an inline comment at `BlockchainSettings.scala:147-148/169-170/188-189`; the split table (hunk a) is therefore inert even though it's ported — record that 100% of the 20-unit reward goes to the miner, no DAO/buyback split, by design)
 - Test: port `f1bedddb2e`'s spec changes; extend `BlockchainFeaturesRegistrySpec`
 
-**What `f1bedddb2e` actually is — four hunks, NOT one:**
+**What `f1bedddb2e` actually is — four hunks, all ported faithfully:**
 
-| Hunk | On DCC | Port? |
+| Hunk | On DCC | Port |
 |---|---|---|
-| (a) `RewardDistribution` split table (10/2 dao/xtn, 5/6–1/6 remainder) | **inert** — `daoAddress`/`xtnBuybackAddress` are `None` on all presets; every payout folds to 0 | port |
-| (b) `blockRewardBoost` returns 1 once 26 active (retires feature 23's 10×) | **LIVE** — DCC `blockRewardBoostPeriod` = 300,000 mainnet / 2,000 testnet | **operator decision** |
-| (c) one-time force-set of voted `blockReward` to `AdjustedFullReward = 20 * UnitsInWave` at activation | **LIVE — 3.33× inflation**: DCC `rewards.initial = 6 DCC`; with dao/xtn `None`, 100% of 20 DCC goes to the miner | **operator decision** |
-| (d) Eth/Exchange gate-widening `isFeatureActivated(25) → 25 || 26` | free no-op on any chain with 25 | port |
+| (a) `RewardDistribution` split table (10/2 dao/xtn, 5/6–1/6 remainder) | inert (`daoAddress`/`xtnBuybackAddress` are `None` on all presets — every payout folds to 0) | port as-is |
+| (b) `blockRewardBoost` returns 1 once 26 active (retires feature 23's 10×) | **adopted**: DCC's `blockRewardBoostPeriod` (300,000 mainnet / 2,000 testnet) ends when 26 activates | port as-is |
+| (c) one-time force-set of voted `blockReward` to `AdjustedFullReward = 20 * UnitsInWave` at activation | **adopted**: DCC's reward becomes 20-equivalent (up from 6) at activation, matching Waves | port as-is, use the SAME constant Waves uses (no DCC substitution) |
+| (d) Eth/Exchange gate-widening `isFeatureActivated(25) → 25 || 26` | free no-op on any chain with 25 | port as-is |
 
-`AdjustedFullReward = 20` is a NEW constant, not an existing DCC constant — "keep DCC's reward constants" does not resolve it.
+**Pre-activation on the relaunch genesis (Task 9): NOT pre-activated.** This is a real reward-economics change; it activates by the ordinary feature-voting process on the relaunched testnet, same as it would on mainnet later — not silently baked into genesis. Confirm this reading holds before Task 9's genesis config is written; if the operator instead wants it pre-activated from block 1, that is a one-line change to Task 9, but the default here is votable.
 
 **Interfaces:**
-- Produces: `BlockchainFeatures.AdjustedBlockRewardDistribution = BlockchainFeature(26, "Adjusted Block Reward Distribution")` implemented (hunks a + d, and b/c per decision); `ContinuationTransaction` id 27; `LeaseExpiration` id 28. Renumbering 27/28 is FREE only because the relaunch is a fresh genesis (non-votable placeholders never appear on-chain) and mainnet legacy has neither — state in the commit body.
+- Produces: `BlockchainFeatures.AdjustedBlockRewardDistribution = BlockchainFeature(26, "Adjusted Block Reward Distribution")` fully implemented (all four hunks); `ContinuationTransaction` id 27; `LeaseExpiration` id 28. Renumbering 27/28 is FREE only because the relaunch is a fresh genesis (non-votable placeholders never appear on-chain) and mainnet legacy has neither — state in the commit body.
 
-- [ ] **Step 1: ⛔ OPERATOR DECISION GATE (do not code past this without it).** Present the table above and get an explicit answer on hunks (b) and (c): port faithfully (adopts a 20-DCC reward and retires the boost when 26 activates), port with DCC constants (define `AdjustedFullReward` as DCC's own value — which?), or port the gate structure but leave (b)/(c) as explicitly-excluded divergences. Also decide: is 26 pre-activated at genesis on the relaunch chain (Task 9) or left votable? **Default if no answer: port (a)+(d), gate (b)+(c) behind the feature but DO NOT pre-activate 26; document the divergence.** Record the decision in the commit body and in `consensus-divergences-from-upstream.md`.
-
-- [ ] **Step 2: Failing registry test**
+- [ ] **Step 1: Failing registry test**
 
 ```scala
   "the registry mirrors upstream Waves 1.6.x ids 26-28" in {
@@ -181,37 +183,51 @@ tags. Registry has no id > 28."
 ```
 Run → FAIL.
 
-- [ ] **Step 3: Port hunk-by-hunk per the decision.** Map each upstream hunk to its DCC file; keep DCC's `daoAddress = None` handling; port upstream's tests for whatever hunks are ported and add a RED/GREEN case per hunk proving pre/post-26 behavior. Renumber 27/28. Presets: **there is no `25` entry to sit beside** — current maps are TESTNET `Map.empty`, MAINNET `{}` after Task 1 (was `{30->1}`), STAGENET `{1..13->0}` after Task 1, devnet conf `{1..15->0}` (gap 16–25 — leave as-is unless the decision says otherwise). Only add `26` where the Step 1 decision says so.
+- [ ] **Step 2: Port hunk-by-hunk, all four, faithfully.** Map each upstream hunk to its DCC file; keep DCC's `daoAddress = None` handling for hunk (a) (folds to 0, no code change needed there beyond the gate); port hunks (b)/(c) exactly as upstream wrote them — same `AdjustedFullReward` constant value, same boost-retirement logic; port (d) as pure gate-widening. Port upstream's tests for all four hunks and add a RED/GREEN case per hunk proving pre/post-26 behavior (in particular: a case proving the reward is 6-DCC-equivalent before 26 and 20-DCC-equivalent after, and a case proving `blockRewardBoost` returns the boosted multiplier before 26 and `1` after). Renumber 27/28. Presets: **there is no `25` entry to sit beside** — current maps are TESTNET `Map.empty`, MAINNET `{}` after Task 1 (was `{30->1}`), STAGENET `{1..13->0}` after Task 1, devnet conf `{1..15->0}` (gap 16–25 — leave as-is). Do NOT add `26` to any pre-activated-features map — it is votable, not pre-activated (see the decision note above).
 
-- [ ] **Step 4: Verify** — `sbt "node/compile" "node-tests/testOnly com.decentralchain.features.* com.decentralchain.state.* com.decentralchain.mining.* com.decentralchain.settings.*"` green, then registry parity:
+- [ ] **Step 3: Verify** — `sbt "node/compile" "node-tests/testOnly com.decentralchain.features.* com.decentralchain.state.* com.decentralchain.mining.* com.decentralchain.settings.*"` green, then registry parity:
 ```bash
 diff <(git show upstream-waves/version-1.6.x:node/src/main/scala/com/wavesplatform/features/BlockchainFeature.scala | grep -o 'BlockchainFeature([0-9-]*, "[^"]*")') \
      <(grep -o 'BlockchainFeature([0-9-]*, "[^"]*")' node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala)
 ```
 Expected: the ONLY difference is id 1's description.
 
-- [ ] **Step 5: Commit** — `feat(consensus): register upstream feature 26 (logic ported per <decision>); registry mirrors Waves 1.6.x ids 1-28`. Body: cite `f1bedddb2e`, list which hunks are live vs divergent, note 27/28 renumbering is safe only under fresh genesis.
+- [ ] **Step 4: Commit** — `feat(consensus): register upstream feature 26 -- reward economics ported faithfully, matching Waves; registry mirrors Waves 1.6.x ids 1-28`. Body: cite `f1bedddb2e`, state plainly that DCC's block reward becomes 20-DCC-equivalent and the 10x boost retires once 26 activates (operator-approved monetary change, not a bookkeeping default), note 27/28 renumbering is safe only under fresh genesis, and that 26 is votable (not pre-activated at the relaunch genesis).
 
 ---
 
-### Task 3: Root-cause the 2026-09-01 stall from node logs (read-only), fix the misleading miner message
+### Task 3: ✅ DONE — root-cause the 2026-09-01 stall from node logs; fix the misleading miner message
 
-**Files:**
-- Infra (read): `.github/workflows/export-kubeconfig.yml`, `clusters/testnet/TOPOLOGY.md`
-- Modify: `node/src/main/scala/com/decentralchain/mining/Miner.scala:213` message; new positive test
-- Docs: `/Users/jourlez/Documents/Code/Blockchain/CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` (incident section), infra incident note at repo root
+**Status: root-cause research complete (2026-09-02), via real logs pulled from the VPS.** Full record: `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §8 (2026-09-02 entry), filtered log archive at `node-scala/.superpowers/sdd/stall-2026-09-01-filtered.log` (local, not committed).
 
-**Verified facts to test against (dev):** an empty committee does NOT halt production — `appender/package.scala:74-78` `raiseWhen(validGenerators.nonEmpty && !generatorSet.contains(minerAddress))` falls back to classic PoS. Finality starvation cannot stop the miner — `validateFinalizationVoting` treats voting as optional (`appender:421-423`) and `tryCollectSelfWithGrace` (`Miner.scala:305-335`) is a bounded 1200 ms poll returning `None`; `authoritative` only raises a reported number. Ranked hypotheses:
-- **H1** generating-balance floor — `Miner.scala:212-213` / `GeneratingBalanceProvider.isMiningAllowed`: the only permanent forge veto; message misleadingly says "not committed".
-- **H2** conflict exclusion — `Miner.scala:215-217` `blockchain.isConflict`: the second permanent veto (a false-positive conflict/equivocation union permanently vetoes a generator).
-- **H3** partially-populated committee excluding this miner — `appender:75-78` fires only when the committee is NON-empty and excludes the miner; the dangerous case is a partial committee, not an empty one.
-- **H4** cumulative 1200 ms/block grace latency under endorsement starvation (degradation, not stall).
-- **H5** peer/network suspension (RC#2 class).
-- **H6** `InvalidStateHash` divergence recurrence.
+**Confirmed sequence:** chain advanced cleanly to height 2639 (`2026-09-01T09:02:15Z`, microblocks/endorsements all healthy). Sealing the next key block (2640), the miner made 102 consecutive attempts (`09:02:23Z`..`10:00:31Z`) and failed EVERY time with `InvalidStateHash(expected, computed)` — **a different expected/computed pair on every attempt**, meaning the state-hash computation is genuinely unstable, not one bad transaction being retried. After the last attempt the miner went silent forever — no crash, no exception, no restart; the container stayed "healthy" (its Docker healthcheck only pings the REST API, not chain advance), which is why surface checks looked fine for 24+ hours. Two `ERROR`-level exceptions in the same window (an unrelated `ERC20Address` length-validation bug in the Ethereum RPC route, and a stray future-timestamped tx rejected a day later) are confirmed noise.
 
-- [ ] **Step 1 (⛔ needs the operator):** obtain logs — (a) run `export-kubeconfig.yml` or supply a kubeconfig → `kubectl -n <ns> logs <pod> --since=48h | grep -Ei "not committed|isConflict|conflict|Quorum|InvalidStateHash|BlockFromFuture|suspend|EQUIVOCATION|HotStuff\] (onQC|castVotes SKIPPED|QUORUM REACHED)|Exception" | tail -300` for gen-0/gen-1/val-0 + `kubectl describe pod` restart counts; (b) VPS via SSH: `journalctl -u dcc-node --since "2026-09-01 08:00"` same filter.
-- [ ] **Step 2:** Write timeline + root cause with quoted lines into the reference doc; rank against H1–H6. If a code defect, append Task 3b before Task 8.
-- [ ] **Step 3:** Fix `Miner.scala:213` to state the real check (`generating balance <x> below minimal <y> at height <h>`). The only existing test referencing the string is a NEGATIVE assertion (`MinerWithFinalitySuite.scala:84` … `shouldBe empty`) — it stays green under any rewording, so WRITE a new positive test that triggers the veto and asserts the new message. Commit: `fix(mining): say what the forge veto actually checks (generating balance floor, not commitment)`.
+**This is the SAME BUG CLASS as the already-solved height-3325 divergence and the Waves committee-state-hash timing bug (§9 Bug 1/2 in the reference doc) — a NEW occurrence, not yet traced to a specific line.** The earlier hypotheses in this plan (H1 generating-balance floor, H2 conflict exclusion, H3 partial committee, empty-committee halt) are all RULED OUT by the logs: the miner never got far enough to hit any of those checks — it fails computing the block's own state hash, before any committee/conflict/finality logic runs. H6 (`InvalidStateHash` recurrence) is confirmed as the real cause; H4/H5 are irrelevant here.
+
+- [x] Logs obtained (VPS `deploy@66.228.55.154`, `docker logs node-scala-testnet`).
+- [x] Root cause written up in the reference doc.
+- [ ] **Remaining step: fix `Miner.scala:213`'s misleading "not committed" message anyway (cosmetic; unrelated to the real bug, do alongside Task 3b).** The only existing test referencing the string is a NEGATIVE assertion (`MinerWithFinalitySuite.scala:84` … `shouldBe empty`) — it stays green under any rewording, so WRITE a new positive test that triggers the balance-floor veto and asserts the new message (`generating balance <x> below minimal <y> at height <h>`). Commit: `fix(mining): say what the forge veto actually checks (generating balance floor, not commitment)`.
+
+---
+
+### Task 3b: ⛔ FIND AND FIX the state-hash non-determinism at height 2640 (blocking — the relaunch cannot proceed without this)
+
+**This is the hardest, least-scoped task in the plan.** Task 3 found the symptom; this task finds the cause. Treat it like the original height-3325 investigation (`docs/height-3325-diagnostic-log.md`, and `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §2's "confirmed with a real bidirectional test, not inference" standard) — evidence-first, no guessing, use `superpowers:systematic-debugging`.
+
+**What's known:**
+- Height: block 2640 (the key block sealing after liquid height 2639). Generation period boundary: `generationPeriodLength = 100` on testnet, so period `[2601,2700]` — 2640 is mid-period, not a period-boundary block (rules out anything gated on `committedGeneratorsHash`, which only fires at period boundaries).
+- Symptom: `MinerImpl`'s own computed state hash disagrees with itself across retries — not a peer-disagreement (`InvalidStateHash(expected, computed)` is a local check before broadcast, confirm via `MinerImpl`/`BlockDiffer` call site), and not a single-transaction issue (the miner would otherwise fail identically each retry if one bad tx were the cause; it doesn't — the hash pairs differ).
+- What changed on this chain vs the pre-08-30 chain: this is a FRESH genesis (2026-08-31), running the dev@ade354adcb-era fix for height-3325 PLUS everything merged since (T5 equivocation evidence, BFT/BLS/F-6 hardening, all merged 2026-09-02 — but the VPS is running an OLDER image, `ghcr.io/decentral-america/node-scala:testnet-1bd671f8e6`, per `docker ps` — verify this commit's actual content before assuming any post-`1bd671f8e6` change is implicated).
+- Non-determinism across retries at a FIXED height, with (presumably) the same transaction set each retry, points at something order-dependent or time-dependent in the state-hash computation itself — candidates to investigate first (do not assume, verify each): (a) transaction ordering non-determinism in the mempool/UTX pack step feeding slightly different tx sets/orders into each retry; (b) a HashMap/Set iteration-order dependency inside `TxStateSnapshotHashBuilder` or a diff accumulator that isn't using a canonically-ordered collection; (c) the same class of bug height-3325 was: an old vs new rule disagreement for some specific transaction type present at this height (check what tx types actually landed in the 09:02-10:00 window — the log's `MicroBlock(...txs=N)` lines around height 2639 name tx counts; cross-reference `/transactions/info` on-chain for the actual tx list at that height once the historical block is inspectable); (d) a genuinely non-deterministic source (wall-clock, `System.nanoTime`, unordered `Future`/parallel collection) reaching into diff computation.
+
+**Files:** unknown until root-caused — likely candidates to inspect first: `state/diffs/BlockDiffer.scala`, `state/TxStateSnapshotHashBuilder.scala` (or wherever state-hash accumulation lives — grep for `stateHash`/`checkStateHash`), `mining/MinerImpl.scala` (the retry loop itself — confirm it rebuilds the tx set identically each retry or if IT is the source of the differing input), `state/diffs/` transaction-specific diffs active at height ~2640 (identify from the real tx list first).
+
+- [ ] **Step 1: Reproduce locally, not just read logs.** Attempt to replay the real chain (genesis → height 2639, using the actual relaunch genesis config) against the CURRENT dev/final-source build in a local/CI environment, and see if the same `InvalidStateHash` recurs at 2640. If it reproduces locally, this becomes a normal debuggable failure (bisectable, attachable to a debugger) rather than a live-log-only mystery — hugely preferable. If it does NOT reproduce (e.g. depends on real wall-clock timing, real peer message ordering, or the specific older image build), fall back to Step 2.
+- [ ] **Step 2 (if no local repro):** identify the exact transaction set/order at height 2640 from the real chain (once inspectable — either from the live frozen node's REST API before any relaunch touches it, or from a state snapshot taken first) and construct a minimal unit/property test that feeds that exact input through `BlockDiffer`/state-hash computation twice and asserts byte-identical output. If it's already flaky in isolation, that's the bug, contained.
+- [ ] **Step 3:** Once root-caused, fix with the SAME rigor the height-3325 fix used (real regression test, RED before the fix, GREEN after, no speculative "this probably fixes it" commits). Update `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §8/§9 with the confirmed cause and the fix commit, promoting this from "open item" to a numbered, solved bug alongside height-3325 and the Waves committee-state-hash bugs.
+- [ ] **Step 4:** Add a general regression guard if the root cause suggests one exists elsewhere (e.g. if it's an iteration-order bug in a shared collection type, grep for the same anti-pattern across the diff/state-hash codebase — this is exactly the class of issue `CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` §5's "full-history sweep" methodology was built for).
+
+**Do not relax, skip, or work around this task.** A relaunch without it fixed is a coin-flip on which height the same freeze recurs at.
 
 ---
 
@@ -271,6 +287,8 @@ Expected: the ONLY difference is id 1's description.
 
 ### Task 9: Testnet relaunch runbook (operator-executed; this task produces the runbook and the config diff, not the mutation)
 
+**⛔ PRECONDITION: Task 3b must be complete, fixed, and verified before this task runs.** Do not write or execute a relaunch runbook while Task 3b is open — the whole point of finding the state-hash non-determinism is to not repeat this exact incident on the next chain.
+
 **Files (infra repo root):** `RELAUNCH-<date>.md` (new, beside `DEPLOY.md`/`RUNBOOK-*.md`), `node-config/testnet/dcc.conf:23-29` (pre-activated block), `clusters/testnet/apps/nodes.yaml` (THREE pre-activated blocks: :53-59, :200-206, :326-332), image tag/digest references in `nodes.yaml` + VPS deploy config
 
 - [ ] **Step 1:** Write the runbook from the verified 2026-08-31 procedure (there is no workflow; it was manual): `sbt generateGenesis node/genesis-dcc-testnet-relaunch.conf` (re-verify every seed via `GenesisBlockGenerator.toFullAddressInfo`) → commit new `timestamp`/`block-timestamp`/`signature` into `dcc.conf` + `nodes.yaml` → pre-activated features per Task 2's decision (`1..25 = 0`, plus `26` only if decided; never 27+) in all FOUR blocks → image = Task 8's digest on ALL FOUR nodes (mixed versions = silent split — no gate protects this anymore) → wipe the 4 PVCs → restart → confirm `/node/version` identical on all four and `/activation/status` shows exactly the intended set → run the Task 4 workflow and confirm the FIRST period's committee via `/generators/at/<next start>` (HTTP 200, non-empty) before period end → reset matcher/BPS/scanner, re-fund faucet + treasury → arm alerts.
@@ -282,7 +300,7 @@ Expected: the ONLY difference is id 1's description.
 
 | # | Decision | Rationale / caveat |
 |---|---|---|
-| D1 | Register upstream 26 WITH ported logic; never a placeholder | `implemented = dict.keySet` (`BlockchainFeature.scala:73`) is the unknown-feature safety net (`BlockchainUpdaterImpl.scala:130-147`, `:235-241`); placeholder = silent fork. **But** 26's hunks (b)/(c) are a monetary change — porting ≠ activating; see Task 2 Step 1 |
+| D1 | Register upstream 26 WITH ported logic, faithfully (all 4 hunks, operator-approved 2026-09-02) | `implemented = dict.keySet` (`BlockchainFeature.scala:73`) is the unknown-feature safety net (`BlockchainUpdaterImpl.scala:130-147`, `:235-241`); placeholder = silent fork. 26's hunks (b)/(c) ARE a real monetary-policy change (20-DCC reward, retires the 10x boost) — approved, matching Waves exactly; not pre-activated at genesis, activates by vote |
 | D2 | Renumber 27/28 to match upstream | Free under fresh genesis (non-votable, never on-chain); mainnet legacy genesis pre-activates `[1..13,15,16]` only |
 | D3 | No carry-forward committee mechanism | Premise was false — `appender:74-78` already falls back to classic PoS; root-cause the real stall first (Task 3, H1–H6) |
 | D4 | `authoritative` floor stays advisory; `slashing-enabled` off at relaunch | `HotStuffSettings.scala:88/:100`; audit F-1 option (b); flip slashing after the first live drill |
@@ -291,15 +309,18 @@ Expected: the ONLY difference is id 1's description.
 
 ## Requires the human operator (blocking items marked ⛔)
 
-1. ⛔ **Economic decision on feature 26 hunks (b) `blockRewardBoost` retirement and (c) 20-DCC reward reset** — blocks Task 2 Step 3 and Task 9's genesis feature list.
-2. ⛔ **Node logs** (kubeconfig via `export-kubeconfig.yml`, or SSH) — blocks Task 3.
-3. ⛔ **Maven Central publish** of protobuf-schemas 1.6.6 + environment-gate approval — blocks Task 5 Step 2. Separate decision: publish curve25519/blst/groth16 too (enables removing `mavenLocal`).
-4. Optional `NVD_API_KEY` secret.
-5. Confirm testnet is genuinely disposable (no third party holds testnet state worth preserving) — the unconditional-crypto premise rests on it.
-6. ⛔ Live go-aheads: Task 4 Step 4 workflow dispatch; all of Task 9.
+1. ✅ **Economic decision on feature 26 — RESOLVED 2026-09-02:** port faithfully, matching Waves. No longer blocking.
+2. ✅ **Node logs — RESOLVED 2026-09-02:** pulled from the VPS. Root cause found (Task 3); the FIX (Task 3b) is separate unsolved work, not blocked on an operator input — it's a debugging task.
+3. ⛔ **Task 3b itself is the new critical-path blocker.** Nothing past it should proceed to a real relaunch (Task 9) until it's solved. Tasks 1/2/4/5/6/7/8 can all proceed in parallel with Task 3b — they don't depend on it — but Task 9 (the actual relaunch) must not run until Task 3b is done and verified.
+4. ⛔ **Maven Central publish** of protobuf-schemas 1.6.6 (operator-approved, run pending) + environment-gate approval — blocks Task 5 Step 2. Separate decision: publish curve25519/blst/groth16 too (enables removing `mavenLocal`).
+5. Optional `NVD_API_KEY` secret.
+6. ✅ **Testnet disposability — CONFIRMED 2026-09-02** by the operator ("stagenet will catch same scenario as mainnet will have anyway").
+7. ⛔ Live go-aheads still needed: Task 4 Step 4 workflow dispatch; all of Task 9 (and Task 9 additionally gated on Task 3b, per #3 above).
+8. **The SSH key used for Task 3's log pull must be rotated** — it was pasted into a chat session. Not a plan blocker, but do this promptly regardless of plan progress.
 
 ## Self-Review
 
-- Spec coverage: registry parity (T1, T2), unconditional improvements (T1), stall root cause (T3), automation (T4), schema (T5), format gate (T6), docs + version (T7), final gate + image + tag (T8), relaunch + soak (T9). Every audited gap (E1–E29) is folded in.
-- Placeholder scan: the ⛔ steps are operator gates by necessity (credentials/classifier/economics) and say so; no "TBD".
+- Spec coverage: registry parity (T1, T2), unconditional improvements (T1), stall root cause (T3 — done) + actual fix (T3b — the critical open item), automation (T4), schema (T5), format gate (T6), docs + version (T7), final gate + image + tag (T8), relaunch + soak (T9, gated on T3b). Every audited gap (E1–E29) is folded in.
+- Placeholder scan: the ⛔ steps are operator gates or genuine unsolved debugging by necessity, and say so; no "TBD".
 - Type consistency: `popMessage(chainId, sender, endorserPk, periodStart)`, `PopDst`, `VoteDst`, the renamed `Bls*DomainSeparationTag` constants are named identically across T1/T7; `/generators/at/{height}` semantics identical in T4 and T9.
+- **Task 9 must explicitly check Task 3b's status before running** — added as its own precondition, not implied.
