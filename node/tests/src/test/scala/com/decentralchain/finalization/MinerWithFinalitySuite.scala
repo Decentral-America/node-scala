@@ -460,7 +460,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedId = genesisBlockId,
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
-          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
+          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
         )
       ) should beRight
 
@@ -556,7 +556,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedId = genesisBlockId,
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
-          signature = BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
+          signature = BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
         )
       ) should beRight
       d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))
@@ -574,7 +574,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
           signature =
-            BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), otherFinalizedBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
+            BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), otherFinalizedBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
         )
       ) should beRight
       d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))
@@ -591,7 +591,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedId = genesisBlockId,
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
-          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
+          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
         )
       ) should beRight
       d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))

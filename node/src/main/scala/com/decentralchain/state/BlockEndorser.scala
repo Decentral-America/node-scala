@@ -139,6 +139,13 @@ object BlockEndorser {
             case x if blockchain.isGeneratingBalanceValid(votingHeight, votingBlockHeader.header, x.balance) => x.address -> x.balance
           }.toMap
 
+          // Feature-30 era for THIS voting round, derived from votingHeight -- the height of the block
+          // this endorsement targets/signs for, not the live tip. Set once here and carried on the
+          // EndorsementFilter so EndorsementStorage.verifySig (the p2p gossip verifier) shares the
+          // exact same era as the signer below, instead of two independent tip reads that could
+          // straddle the activation boundary within one round (task 6).
+          cryptoV2 = blockchain.supportsBlsCryptoV2(votingHeight.toInt)
+
           filter = {
             val normalizedEndorsers = committed.map { case (address, blsPk) =>
               (address, blsPk, balances.getOrElse(address, 0L))
@@ -153,7 +160,8 @@ object BlockEndorser {
               finalizedHeight,
               endorsedId,
               normalizedEndorsers,
-              conflict
+              conflict,
+              cryptoV2
             )
           }
           _ = logger.debug(
@@ -171,7 +179,7 @@ object BlockEndorser {
               if balances.contains(committedAddr)
             } yield (pk, GeneratorIndex(idx))
 
-          endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId)
+          endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId, cryptoV2)
           networkMsg  = EndorseBlock.from(endorsement)
           broadcast <- storage.tryAdd(networkMsg) match {
             case Right(r)  => Some(r)

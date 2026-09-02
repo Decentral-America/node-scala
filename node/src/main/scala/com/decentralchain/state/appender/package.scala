@@ -314,7 +314,8 @@ package object appender {
       validEndorsements: Set[Address],
       minerAddress: Address,
       generatorsWithEnoughBalance: Set[GeneratorIndex],
-      validFinalizedHeight: Height
+      validFinalizedHeight: Height,
+      endorsementDst: String
   )(
       conflictingEndorsement: BlockEndorsement
   ): Either[String, Unit] = for {
@@ -342,7 +343,9 @@ package object appender {
     _ <- Either.raiseWhen(conflictingEndorsement.finalizedId == finalizedBlock.id()) {
       s"Contains expected finalized block: ${conflictingEndorsement.finalizedId}"
     }
-    _ <- conflictingEndorsement.signatureValid(blsPublicKey).leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
+    _ <- conflictingEndorsement
+      .signatureValid(blsPublicKey, endorsementDst)
+      .leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
   } yield ()
 
   /** Deterministic, unconditional re-verification of block-carried HotStuff equivocation proofs
@@ -408,6 +411,12 @@ package object appender {
 
           generatorsWithEnoughBalance = generatorSet.view.map(_._1).toSet
           blockHeight                 = Height(blockchain.height + 1)
+          // Feature-30 era for THIS block. Deliberately derived from the containing block's height,
+          // never the live tip: an endorsement's DST must be a pure function of the block that
+          // carries it, or a rollback across the activation height would re-validate the same block
+          // under a different domain (audit H2).
+          endorsementDst = if (blockchain.supportsBlsCryptoV2(blockHeight.toInt)) BlsUtils.BlsEndorseDomainSeparationTagV2
+                           else BlsUtils.BlsDomainSeparationTag
           blockGenerationPeriod <- blockchain
             .generationPeriodOf(blockHeight)
             .toRight(s"No period for height $blockHeight")
@@ -433,7 +442,8 @@ package object appender {
                 validEndorserAddresses,
                 block.header.generator.toAddress,
                 generatorsWithEnoughBalance,
-                fv.finalizedHeight
+                fv.finalizedHeight,
+                endorsementDst
               )
             )
           _ <- validateHotStuffEquivocationProofs(
@@ -464,7 +474,7 @@ package object appender {
                         aggregatedEndorsement.arr,
                         BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
                         validEndorsers.view.map(_._2.arr),
-                        BlsUtils.BlsDomainSeparationTag
+                        endorsementDst
                       )
                 } yield ()
           }
