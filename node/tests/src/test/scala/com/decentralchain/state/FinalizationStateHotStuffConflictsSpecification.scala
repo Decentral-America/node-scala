@@ -4,6 +4,7 @@ import com.decentralchain.block.FinalizationVoting
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.crypto.bls.BlsKeyPair
+import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.test.FreeSpec
 import com.decentralchain.transaction.TxHelpers
@@ -97,10 +98,15 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
     }
 
     "4. a proofs-only voting (no T0 conflict) still excludes the proof voter from THIS append's isParentFinalized denominator" in {
-      // Same boundary-quorum fixture as case 2, but the exclusion is carried solely via
-      // hotstuffConflicts -- no fv.conflict entries at all -- isolating isParentFinalized's own
-      // internal re-derivation of allConflictIndexes (FinalizationState.scala:106) from the
-      // append-level `knownConflict` plumbing that case 2 also exercises.
+      // Append-path regression, incl. the proofs-only short-circuit on the `.filterNot` guard at
+      // the top of `append` (a proofs-only fv must NOT be filtered out just because it carries no
+      // `conflict` entries). This does NOT isolate isParentFinalized's internal re-derivation of
+      // allConflictIndexes (FinalizationState.scala:106) from append's own `knownConflict`
+      // plumbing: `append` always folds `newFinalizationVoting`'s hotstuffConflicts into
+      // `newConflictGenerators` before calling `isParentFinalized`, via `updatedGeneratorSet`'s
+      // caller-supplied `conflictGenerators` argument, so the exclusion below is guaranteed twice
+      // over -- reverting line 106 alone would NOT turn this test red. See case 5 for the
+      // FinalizationState.init path, where line 106 is the only source of the exclusion.
       // Four generators: miner(idx0)=1, voter1(idx1)=1, voter2(idx2)=1, voter3(idx3)=3, total=6.
       // Miner + voter1 endorse => endorsed=2. Without exclusion: 2/6 = 33% < 2/3 => NOT finalized.
       // With voter3 excluded via a proofs-only hotstuff equivocation proof (no T0 conflict at all),
@@ -112,6 +118,40 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
       val (updatedState, _, _) = state.append(TxHelpers.randomBlockId, Some(fvProofsOnly), generatorSet)
 
       updatedState.parentFinalized shouldBe true
+    }
+  }
+
+  "FinalizationState.init" - {
+    "5. a proofs-only base block excludes the proof voter from isParentFinalized's denominator with an empty knownConflict arg" in {
+      // Isolates isParentFinalized's own internal re-derivation of allConflictIndexes
+      // (FinalizationState.scala:106, `knownConflict ++ voting.fold(...)(_.allConflictGeneratorIndexes...)`)
+      // from `init`'s caller-supplied `conflictGenerators` arg. On the real `init` call path
+      // (BlockchainUpdaterImpl), `conflictGenerators` comes from persisted prior state and never
+      // contains the base key block's own proofs -- so we pass it EMPTY here, matching production.
+      // If line 106 is reverted to `_.conflict.view.map(_.endorserIndex)` (dropping the
+      // `hotstuffConflicts` term), voter3's balance would no longer be excluded and this test fails.
+      //
+      // Same boundary-quorum fixture as case 2/4: miner(idx0)=1, voter1(idx1)=1, voter2(idx2)=1,
+      // voter3(idx3)=3, total=6. Miner + voter1 endorse => endorsed=2. Without exclusion:
+      // 2/6 = 33% < 2/3 => NOT finalized. With voter3 excluded via a proofs-only hotstuff
+      // equivocation proof (no T0 conflict at all), the denominator drops to 3: 2/3 exactly =>
+      // finalized.
+      val generatorSet = Seq(mkGenerator(0, 1L), mkGenerator(1, 1L), mkGenerator(2, 1L), mkGenerator(3, 3L))
+
+      def baseBlockWith(fv: FinalizationVoting) = {
+        val b = TestBlock.create(minerSigner, Seq.empty).block
+        b.copy(header = b.header.copy(finalizationVoting = Some(fv)))
+      }
+
+      val fvProofsOnly = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
+      val withProofState =
+        FinalizationState.init(generatorSet, conflictGenerators = Set.empty, base = baseBlockWith(fvProofsOnly))
+      withProofState.parentFinalized shouldBe true
+
+      val fvWithoutProof = mkFv().copy(valid = Seq(GeneratorIndex(1)))
+      val withoutProofState =
+        FinalizationState.init(generatorSet, conflictGenerators = Set.empty, base = baseBlockWith(fvWithoutProof))
+      withoutProofState.parentFinalized shouldBe false
     }
   }
 }
