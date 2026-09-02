@@ -315,13 +315,21 @@ object UtilApp {
         currentPeriod <- GenerationPeriod.from(c.signTxOptions.currentHeight, finalityActivationHeight, ns.settings)
       } yield currentPeriod
 
+      // Audit M2: same settings-derived pattern as `finalityActivationHeight` above -- this offline
+      // tool has no live `Blockchain` to ask `supportsBlsCryptoV2`, so it derives the same answer from
+      // the pre-activated-features map in settings, compared against the operator-supplied
+      // `currentHeight` (the era this tx is expected to actually be validated at).
+      val cryptoV2 = ns.settings.blockchainSettings.functionalitySettings.preActivatedFeatures
+        .get(BlockchainFeatures.BlsCryptoV2.id)
+        .exists(Height(_) <= c.signTxOptions.currentHeight)
+
       val signedTx = for {
         tpe           <- (unsignedTx \ "type").validate[Int].asEither.left.map { _ => s"Can't parse as transaction request: $unsignedTx" }
         currentPeriod <-
           if (tpe == TransactionType.CommitToGeneration.id)
             currentPeriod.toRight("Finality activation height is required for signing CommitToGeneration transaction")
           else Right(GenerationPeriod(Height(1), Height(1), 1))
-        factory = TransactionFactory(ns.wallet, ns.time, Some(currentPeriod))
+        factory = TransactionFactory(ns.wallet, ns.time, Some(currentPeriod), cryptoV2)
         signedTx <- factory.parseRequestAndSign(c.signTxOptions.signerAddress, unsignedTx)
       } yield signedTx
 
