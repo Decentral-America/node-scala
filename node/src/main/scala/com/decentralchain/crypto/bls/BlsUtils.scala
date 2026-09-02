@@ -14,6 +14,28 @@ object BlsUtils {
   val PublicKeySizeInBytes = 48
   val SignatureSizeInBytes = 96
 
+  /** Stable error labels (audit L3): `Left` strings returned from this file used to interpolate raw
+    * `BLST_ERROR` enum values and `e.getMessage` from blst's native exceptions. Those surface all the
+    * way up through block-validation errors and, via `GenericError`, into API responses -- i.e. they
+    * are effectively part of this codebase's external error contract, not internal debug output. A
+    * raw library-internal string is unnecessary implementation disclosure and is unstable across blst
+    * upgrades (a wording change in the native library would silently change API error text). These
+    * fixed labels keep the error CATEGORY (which is what an operator needs to act on) without leaking
+    * library internals; nothing here involves secret material, so this is a hygiene fix, not a
+    * confidentiality one.
+    */
+  private val ErrEmptySignatureList    = "Empty BLS signature list"
+  private val ErrEmptyPublicKeyList    = "Empty BLS public key list"
+  private val ErrDuplicatePublicKeys   = "Duplicate BLS public keys in aggregate"
+  private val ErrAggregatingSignatures = "Error aggregating BLS signatures"
+  private val ErrAggregatingPublicKeys = "Error aggregating BLS public keys"
+  private val ErrCreatingPublicKey     = "Error creating BLS public key"
+  private val ErrPublicKeyNotInGroup   = "Wrong BLS public key: not in a group"
+  private val ErrPublicKeyIsInfinity   = "Wrong BLS public key: point at infinity"
+  private val ErrPairingAggregate      = "Error verifying BLS signature: pairing aggregation failed"
+  private val ErrSignatureInvalid      = "Wrong BLS signature"
+  private val ErrVerifyingSignature    = "Error verifying BLS signature"
+
   /** Minimum IKM length required by the IETF BLS keygen spec (draft-irtf-cfrg-bls-signature,
     * keygen_v5 / HKDF-based key derivation): >= 32 bytes of input keying material. In production the
     * seed is always a node's 32-byte Curve25519 private key (`BlsKeyPair`), so this is unreachable
@@ -56,7 +78,7 @@ object BlsUtils {
     _   <- sanityCheckSignature(appendSig)
     agg <- Either
       .catchNonFatal(new blst.P2(baseSig).add(new blst.P2(appendSig)).compress())
-      .leftMap(e => s"Error aggregating BLS signatures: ${e.getMessage}")
+      .leftMap(_ => ErrAggregatingSignatures)
   } yield agg
 
   /** Single-pass aggregation of the whole signature set, replacing a pairwise `reduceLeft(aggSign)`
@@ -66,10 +88,10 @@ object BlsUtils {
     * @return Not validated, but must be in the group
     */
   def aggSig(sigs: Iterable[Array[Byte]]): Either[String, Array[Byte]] = for {
-    _ <- Either.raiseWhen(sigs.isEmpty)("Empty BLS signature list")
+    _   <- Either.raiseWhen(sigs.isEmpty)(ErrEmptySignatureList)
     agg <- Either
       .catchNonFatal(sigs.map(new blst.P2(_)).reduce(_.add(_)))
-      .leftMap(e => s"Error aggregating BLS signatures: ${e.getMessage}")
+      .leftMap(_ => ErrAggregatingSignatures)
   } yield new blst.P2_Affine(agg).compress()
 
   /** @param aggSigBytes Validated internally
@@ -102,28 +124,28 @@ object BlsUtils {
     * its apparent signing stake past 2/3 quorum without a matching honest signature count.
     */
   def verifyAgg(aggSigBytes: Array[Byte], message: Array[Byte], blsPks: Iterable[Array[Byte]]): Either[String, Unit] = for {
-    _ <- Either.raiseWhen(blsPks.isEmpty)("Empty BLS public key list")
-    _ <- Either.raiseUnless(blsPks.map(_.toSeq).toSet.size == blsPks.size)("Duplicate BLS public keys in aggregate")
+    _     <- Either.raiseWhen(blsPks.isEmpty)(ErrEmptyPublicKeyList)
+    _     <- Either.raiseUnless(blsPks.map(_.toSeq).toSet.size == blsPks.size)(ErrDuplicatePublicKeys)
     aggPk <- Either
       .catchNonFatal(blsPks.map(new blst.P1(_)).reduce(_.add(_)))
-      .leftMap(e => s"Error aggregating BLS public keys: ${e.getMessage}")
+      .leftMap(_ => ErrAggregatingPublicKeys)
     aggPkAffine = new blst.P1_Affine(aggPk)
-    _   <- Either.raiseUnless(aggPkAffine.in_group())("Wrong BLS public key: aggregate not in a group")
-    _   <- Either.raiseWhen(aggPkAffine.is_inf())("Wrong BLS public key: aggregate is point at infinity")
+    _   <- Either.raiseUnless(aggPkAffine.in_group())(ErrPublicKeyNotInGroup)
+    _   <- Either.raiseWhen(aggPkAffine.is_inf())(ErrPublicKeyIsInfinity)
     res <- verify(aggSigBytes, message, aggPkAffine)
   } yield res
 
   private def verify(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: blst.P1_Affine): Either[String, Unit] = try {
     val ctx       = new blst.Pairing(true, BlsDomainSeparationTag)
     val aggResult = ctx.aggregate(blsPkBytes, new blst.P2_Affine(blsSigBytes), message, Array.emptyByteArray)
-    if (aggResult != BLST_ERROR.BLST_SUCCESS) s"Can't aggregate during verification of BLS signature: $aggResult".asLeft
+    if (aggResult != BLST_ERROR.BLST_SUCCESS) ErrPairingAggregate.asLeft
     else {
       ctx.commit()
       if (ctx.finalverify()) Either.unit
-      else "Wrong BLS signature".asLeft
+      else ErrSignatureInvalid.asLeft
     }
   } catch {
-    case NonFatal(e) => s"Error verifying BLS signature: ${e.getMessage}".asLeft
+    case NonFatal(_) => ErrVerifyingSignature.asLeft
   }
 
   /** Full curve validation (in-group + not point-at-infinity). Expensive relative to
@@ -131,9 +153,9 @@ object BlsUtils {
     * (e.g. registering a new committed generator), not on every deserialization.
     */
   def validatePublicKey(bytes: Array[Byte]): Either[String, Unit] = for {
-    pk <- Either.catchNonFatal(new blst.P1_Affine(bytes)).leftMap(e => s"Error in creating BLS public key: ${e.getMessage}")
-    _  <- Either.raiseUnless(pk.in_group())("Wrong BLS public key: not in a group")
-    _  <- Either.raiseWhen(pk.is_inf())("Wrong BLS public key: point at infinity")
+    pk <- Either.catchNonFatal(new blst.P1_Affine(bytes)).leftMap(_ => ErrCreatingPublicKey)
+    _  <- Either.raiseUnless(pk.in_group())(ErrPublicKeyNotInGroup)
+    _  <- Either.raiseWhen(pk.is_inf())(ErrPublicKeyIsInfinity)
   } yield ()
 
   def sanityCheckPublicKey(bytes: Array[Byte]): Either[String, Unit] =

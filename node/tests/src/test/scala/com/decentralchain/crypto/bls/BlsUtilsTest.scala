@@ -215,7 +215,7 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       // public key is the point at infinity.
       val infinityPk = new blst.P1(mkDegenerateSecretKey())
       val ctx        = new blst.Pairing(true, BlsDomainSeparationTag)
-      val aggResult = ctx.aggregate(
+      val aggResult  = ctx.aggregate(
         new blst.P1_Affine(infinityPk.compress()),
         new blst.P2_Affine(sig1),
         message,
