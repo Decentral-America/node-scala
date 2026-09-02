@@ -24,6 +24,14 @@ case class FinalizationVoting(
 
   def nonEmpty: Boolean = valid.nonEmpty || conflict.nonEmpty || hotstuffConflicts.nonEmpty
 
+  /** Union of both conflict sources as generator indexes, T0 endorsement conflicts first (this ordering is
+    * persisted, see Keys.conflictGenerators). Safe to wrap hotstuffConflicts' raw voterIndex in GeneratorIndex.apply
+    * without a bounds check: PBHotStuffEquivocationProofs.vanilla rejects any wire proof with voterIndex < 0 at
+    * decode time, so every HotStuffEquivocationProof reachable here already carries a non-negative voterIndex.
+    */
+  def allConflictGeneratorIndexes: Seq[GeneratorIndex] =
+    conflict.map(_.endorserIndex) ++ hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex))
+
   override def toString: String =
     s"Voting(v=[${valid.mkString(",")}], h=$finalizedHeight, c=[${conflict.mkString(", ")}], " +
       s"hsc=[${hotstuffConflicts.mkString(", ")}], s=$aggregatedEndorsement)"

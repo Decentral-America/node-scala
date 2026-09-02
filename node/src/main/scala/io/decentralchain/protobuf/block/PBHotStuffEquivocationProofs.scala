@@ -20,6 +20,8 @@ object PBHotStuffEquivocationProofs {
         s"HotStuffEquivocationProof top-level fields (voter=${pb.voterIndex}, view=${pb.view}, phase=${pb.phase}) " +
           s"disagree with vote_a (voter=${proof.voterIndex}, view=${proof.view}, phase=${proof.phase})"
       )
+    if (proof.voterIndex < 0)
+      throw new IllegalArgumentException(s"HotStuffEquivocationProof voter index must be >= 0, got ${proof.voterIndex}")
     proof
   }
 

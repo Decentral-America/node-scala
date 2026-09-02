@@ -31,6 +31,13 @@ class PBHotStuffEquivocationProofsSpecification extends AnyFreeSpec with Matcher
     an[IllegalArgumentException] should be thrownBy PBHotStuffEquivocationProofs.vanilla(pb.copy(voteB = None))
   }
 
+  "REJECTS a wire proof whose votes carry a negative voter index" in {
+    val negativeVoterProof = HotStuffEquivocationProof(vote(-1, 7, 1, 2), vote(-1, 7, 2, 2))
+    val pb                 = PBHotStuffEquivocationProofs.protobuf(negativeVoterProof)
+    pb.voterIndex shouldBe -1
+    an[IllegalArgumentException] should be thrownBy PBHotStuffEquivocationProofs.vanilla(pb)
+  }
+
   "FinalizationVoting round-trip carries hotstuffConflicts, and an empty field decodes to empty (1.6.5 compat)" in {
     val fv   = com.decentralchain.block.FinalizationVoting(Seq.empty, com.decentralchain.state.Height(1), None, Seq.empty, Seq(proof))
     val back = PBFinalizationVotings.vanilla(PBFinalizationVotings.protobuf(fv)).get

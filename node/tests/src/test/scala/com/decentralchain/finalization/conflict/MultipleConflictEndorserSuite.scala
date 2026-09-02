@@ -9,7 +9,6 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, Height}
-import com.decentralchain.test.DomainPresets
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
 import com.decentralchain.transaction.TxHelpers
 import io.decentralchain.protobuf.block.HotStuffPhase

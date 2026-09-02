@@ -8,7 +8,6 @@ import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.block.{Block, BlockEndorsement, BlockSnapshot, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
-import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
@@ -445,14 +444,11 @@ package object appender {
             knownConflictGenerators,
             blockHeight.toInt
           )
-          // Safe by construction: never call GeneratorIndex.apply/checked on a raw, unguarded voterIndex --
-          // both throw on negative input. At this point every proof HAS been validated by
-          // validateHotStuffEquivocationProofs (bounds-checked, non-negative), but that guarantee lives in a
-          // separate function call above; re-deriving it here defends against a future reordering/refactor
-          // turning a malicious negative voterIndex into an uncaught exception instead of a ValidationError.
-          conflictingEndorsers     =
-            fv.conflict.map(_.endorserIndex).toSet ++
-              fv.hotstuffConflicts.flatMap(p => Option.when(p.voterIndex >= 0)(GeneratorIndex(p.voterIndex))).toSet
+          // Safe by construction: FinalizationVoting.allConflictGeneratorIndexes wraps each proof's raw voterIndex
+          // in GeneratorIndex.apply, which throws on negative input. That's sound here because
+          // PBHotStuffEquivocationProofs.vanilla already rejects any wire proof with voterIndex < 0 at decode
+          // time, before it can ever reach this validation -- see PBHotStuffEquivocationProofs.vanilla.
+          conflictingEndorsers     = fv.allConflictGeneratorIndexes.toSet
           nonConflictingGenerators = generatorSet.filterNot(x => conflictingEndorsers.contains(x.index))
           _ <- fv.aggregatedEndorsement match {
             case None => Either.raiseWhen(validEndorsers.nonEmpty)("No endorsements are included, but aggregated endorsement signature is non-empty")
