@@ -39,7 +39,12 @@ object UtilApp {
   case class SignOptions(privateKey: PrivateKey = null.asInstanceOf[PrivateKey])
   case class VerifyOptions(publicKey: PublicKey = null.asInstanceOf[PublicKey], signature: ByteStr = ByteStr.empty, checkWeakPk: Boolean = false)
   case class HashOptions(mode: String = "fast")
-  case class SignTxOptions(signerAddress: String = "", currentHeight: Height = Height(1), finalityActivationHeight: Option[Height] = None)
+  case class SignTxOptions(
+      signerAddress: String = "",
+      currentHeight: Height = Height(1),
+      finalityActivationHeight: Option[Height] = None,
+      blsCryptoV2ActivationHeight: Option[Height] = None
+  )
   case class KeyPairOptions(seedType: String = "account", nonce: Int = 0)
 
   enum Input {
@@ -200,13 +205,22 @@ object UtilApp {
               .text("Signer address (requires corresponding key in wallet.dat)")
               .action((a, c) => c.copy(signTxOptions = c.signTxOptions.copy(signerAddress = a))),
             opt[Int]('h', "current-height")
-              .text("Current height, required for signing CommitToGeneration transaction")
+              .text(
+                "Current height the node is at (the tx itself will land at current-height + 1), required for signing CommitToGeneration transaction"
+              )
               .optional()
               .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(currentHeight = Height(h)))),
             opt[Int]('f', "finality-activation-height")
               .text("Finality activation height, required for signing CommitToGeneration transaction. From preActivatedFeatures setting by default")
               .optional()
-              .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(finalityActivationHeight = Some(Height(h)))))
+              .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(finalityActivationHeight = Some(Height(h))))),
+            opt[Int]("bls-crypto-v2-activation-height")
+              .text(
+                "BlsCryptoV2 (feature 30) activation height, used to pick the PoP era for signing CommitToGeneration transaction. " +
+                  "From preActivatedFeatures setting by default"
+              )
+              .optional()
+              .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(blsCryptoV2ActivationHeight = Some(Height(h)))))
           ),
         cmd("sign-with-sk")
           .text("Sign JSON transaction with private key")
@@ -226,6 +240,28 @@ object UtilApp {
       })
     )
   }
+
+  /** Audit M2 offline-signer helper. This tool has no live `Blockchain` to ask `supportsBlsCryptoV2`,
+    * so it re-derives the same answer from settings, but must compare against the height the tx will
+    * actually land at, not the operator-supplied `currentHeight` itself: exactly like
+    * `TransactionsApiRoute.mkTxFactory` (`blockchain.supportsBlsCryptoV2(blockchain.height + 1)`), a
+    * CommitToGeneration tx signed here lands, at the earliest, in the NEXT block -- `currentHeight + 1`.
+    *
+    * `explicitActivationHeight` is an operator-supplied CLI override (`--bls-crypto-v2-activation-height`),
+    * mirroring the existing `-f/--finality-activation-height` override: it wins whenever present, so a
+    * VOTE-activated chain (no `preActivatedFeatures` entry) can still be signed for offline, by having
+    * the operator pass the activation height they observed on-chain. When absent, falls back to the
+    * `preActivatedFeatures` setting, matching `supportsBlsCryptoV2`'s `Height(height) >= activation`
+    * (i.e. active from the activation height onward, inclusive).
+    */
+  private[utils] def blsCryptoV2Era(
+      currentHeight: Height,
+      explicitActivationHeight: Option[Height],
+      settingsActivationHeight: Option[Height]
+  ): Boolean =
+    explicitActivationHeight
+      .orElse(settingsActivationHeight)
+      .exists(activation => currentHeight.next >= activation)
 
   // noinspection TypeAnnotation
   private final class NodeState(c: Command) {
@@ -315,13 +351,11 @@ object UtilApp {
         currentPeriod <- GenerationPeriod.from(c.signTxOptions.currentHeight, finalityActivationHeight, ns.settings)
       } yield currentPeriod
 
-      // Audit M2: same settings-derived pattern as `finalityActivationHeight` above -- this offline
-      // tool has no live `Blockchain` to ask `supportsBlsCryptoV2`, so it derives the same answer from
-      // the pre-activated-features map in settings, compared against the operator-supplied
-      // `currentHeight` (the era this tx is expected to actually be validated at).
-      val cryptoV2 = ns.settings.blockchainSettings.functionalitySettings.preActivatedFeatures
-        .get(BlockchainFeatures.BlsCryptoV2.id)
-        .exists(Height(_) <= c.signTxOptions.currentHeight)
+      val cryptoV2 = blsCryptoV2Era(
+        c.signTxOptions.currentHeight,
+        c.signTxOptions.blsCryptoV2ActivationHeight,
+        ns.settings.blockchainSettings.functionalitySettings.preActivatedFeatures.get(BlockchainFeatures.BlsCryptoV2.id).map(Height.apply)
+      )
 
       val signedTx = for {
         tpe           <- (unsignedTx \ "type").validate[Int].asEither.left.map { _ => s"Can't parse as transaction request: $unsignedTx" }

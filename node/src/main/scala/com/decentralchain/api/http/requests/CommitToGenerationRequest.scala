@@ -26,6 +26,7 @@ case class CommitToGenerationRequest(
     commitmentSignature: Option[ByteStr] = None,
     chainId: Option[Byte] = None
 ) {
+
   /** @param cryptoV2 Which PoP era to sign the auto-generated commitment signature under (audit M2).
     *   The caller must derive this from the SAME height the transaction will actually be validated
     *   at -- i.e. `blockchain.supportsBlsCryptoV2` evaluated at (an estimate of) the containing

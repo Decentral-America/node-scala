@@ -257,7 +257,8 @@ case class TransactionsApiRoute(
   // still fail on-chain (the gate in `CommitToGenerationTransactionDiff` is the real source of truth),
   // but this keeps the common case -- signed and mined promptly -- from needlessly minting a PoP for
   // the wrong era.
-  private def mkTxFactory = TransactionFactory(wallet, time, blockchain.currentGenerationPeriod, blockchain.supportsBlsCryptoV2(blockchain.height + 1))
+  private def mkTxFactory =
+    TransactionFactory(wallet, time, blockchain.currentGenerationPeriod, blockchain.supportsBlsCryptoV2(blockchain.height + 1))
 }
 
 object TransactionsApiRoute {
