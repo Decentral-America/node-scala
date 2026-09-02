@@ -137,7 +137,7 @@ case class FinalizationVoting(
   (`FinalizationVoting.scala:37-38`).
 - `PBFinalizationVotings.vanilla/protobuf` extended; decode is strict per §2.
 
-### 4. On-chain feature gate: `BlockchainFeatures.HotStuffEquivocationEvidence` (id 28) [H4]
+### 4. On-chain feature gate: `BlockchainFeatures.HotStuffEquivocationEvidence` (id 29) [H4]
 
 Proto3 "backward compatibility" is wire-level only: a node running today's binary decodes and
 **ignores** `hotstuff_conflicts`, computes a different `conflictGenerators` set than an upgraded
@@ -145,7 +145,7 @@ node from the same block bytes, and diverges on `isParentFinalized`'s stake deno
 deposit-punishment state — the exact §9 divergence class. The standard fix is the codebase's own:
 an activation-voted feature.
 
-- New `BlockchainFeature(28, "HotStuff Equivocation Evidence")` in `BlockchainFeature.scala`,
+- New `BlockchainFeature(29, "HotStuff Equivocation Evidence")` in `BlockchainFeature.scala`,
   added to `dict` (making it `implemented`/votable).
 - New `Blockchain.supportsHotStuffEquivocationEvidence(height)` helper, exactly mirroring
   `supportsFinalizationVoting` (`Blockchain.scala:309`).
@@ -165,7 +165,7 @@ to this revision).
 - `slashingEnabled` gates exactly one thing: whether **this node's miner** folds pending evidence
   into blocks it forges. Nothing else.
 - **Validation of received proofs and the `conflictGenerators` union are UNCONDITIONAL** in
-  evidence-aware binaries (gated only by feature-28 activation, which is chain state, identical on
+  evidence-aware binaries (gated only by feature-29 activation, which is chain state, identical on
   every node). A node with `slashingEnabled = false` that receives a valid proof-carrying block
   validates it and applies the exclusion identically to a node with the flag on. Mixed flag settings
   can therefore never produce divergent `conflictGenerators` — the flag only affects who volunteers
@@ -216,7 +216,7 @@ Revision 1's plan — extending `EndorsementStorage.tryCollectAndClear` — fail
   `FinalizationVoting` when T0 contributed none.
 - `validateFinalizationVoting`'s emptiness check is relaxed to
   `fv.valid.isEmpty && fv.conflict.isEmpty && fv.hotstuffConflicts.isEmpty` — a proofs-only FV is
-  now legal (post feature-28 activation) [C4].
+  now legal (post feature-29 activation) [C4].
 - Evidence latency is at most one key block. Microblock carriage is deliberately NOT added — the
   block-level `validateFinalizationVoting` call in the microblock append path
   (`BlockchainUpdaterImpl.scala:606`) already validates the combined header FV, so validation
@@ -230,7 +230,7 @@ New `validateHotStuffEquivocationProof` in `state/appender/package.scala`, calle
 `validateConflictingEndorsement` traverse (`:382-394`). Full rule set, all deterministic functions
 of chain state + block bytes:
 
-1. Feature 28 active at this height (else any non-empty `hotstuffConflicts` fails the block).
+1. Feature 29 active at this height (else any non-empty `hotstuffConflicts` fails the block).
 2. `proof.consistent` (§2: same voter/view/phase, same epoch, different blockIds, phase specified).
 3. **Epoch = block period** [C2]: `proof.committeeEpoch == blockGenerationPeriod.index` (the period
    already computed at `:367-369`). This pins the proof's index space to the same committee
@@ -317,7 +317,7 @@ already voted). Before slashing can be enabled anywhere, persist `lastVotedView`
 - Create: `node/src/main/scala/io/decentralchain/protobuf/block/PBHotStuffEquivocationProofs.scala`
 - Modify: `node/src/main/scala/com/decentralchain/block/FinalizationVoting.scala`
 - Modify: `node/src/main/scala/io/decentralchain/protobuf/block/PBFinalizationVotings.scala`
-- Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` (feature 28)
+- Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` (feature 29)
 - Modify: `node/src/main/scala/com/decentralchain/state/Blockchain.scala` (`supportsHotStuffEquivocationEvidence`)
 - Modify: `node/src/main/scala/com/decentralchain/state/appender/package.scala` (validation + emptiness relaxation + generator-set exclusion)
 - Modify: `node/src/main/scala/com/decentralchain/state/FinalizationState.scala` (union) **[C1]**
@@ -342,7 +342,7 @@ already voted). Before slashing can be enabled anywhere, persist `lastVotedView`
 - **H1** closed: detection/logging/metric built here (coordinator + effects + observation), not assumed.
 - **H2** closed: schema publish is prerequisite task 0 with a live-Central verification step.
 - **H3** closed: prior branch formally superseded; its proven patterns reused as references.
-- **H4** closed: feature 28 activation gates evidence validity on-chain.
+- **H4** closed: feature 29 activation gates evidence validity on-chain.
 - **H5** closed: flag gates production only; validation/union unconditional — stated as a contract.
 - **M1** closed: `lastVotedView` persisted; first-boot residual documented.
 - **M2** closed: retention-until-on-chain-or-expired replaces drain-and-lose.

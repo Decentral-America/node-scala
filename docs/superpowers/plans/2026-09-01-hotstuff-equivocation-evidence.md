@@ -4,7 +4,7 @@
 
 **Goal:** Detected T2 HotStuff equivocations become portable, block-carried, independently-verified evidence that deterministically excludes the offender's stake via the existing `conflictGenerators` mechanism — closing audit item T5 and BFT-audit finding F-3.
 
-**Architecture:** Coordinator detects double-signs from its own vote pool and accumulates verified `HotStuffEquivocationProof`s (two conflicting signed votes, no claim). The miner folds pending proofs into the key block's `FinalizationVoting.hotstuffConflicts` (schema 1.6.6). Every node re-verifies each proof in `validateFinalizationVoting` (consistency, epoch = block period, both BLS signatures) and only then unions the voter index into `conflictGenerators` — in BOTH derivation layers (liquid `FinalizationState.append` and persisted `Caches.doAppend`). Gated on-chain by new feature 28; the `slashing-enabled` config flag gates evidence PRODUCTION only, never validation/union.
+**Architecture:** Coordinator detects double-signs from its own vote pool and accumulates verified `HotStuffEquivocationProof`s (two conflicting signed votes, no claim). The miner folds pending proofs into the key block's `FinalizationVoting.hotstuffConflicts` (schema 1.6.6). Every node re-verifies each proof in `validateFinalizationVoting` (consistency, epoch = block period, both BLS signatures) and only then unions the voter index into `conflictGenerators` — in BOTH derivation layers (liquid `FinalizationState.append` and persisted `Caches.doAppend`). Gated on-chain by new feature 29; the `slashing-enabled` config flag gates evidence PRODUCTION only, never validation/union.
 
 **Design SSOT:** `docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md` (rev. 2). Read it before starting — every rule below is justified there.
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Reference implementation exists on unmerged branch `fix/height-3325-and-hotstuff-slashing` (commits `aac7a68928`, `456b7058ad`, `6d98b38394`, `62184efa67`). It is STALE vs `dev` (predates the upstream sync — e.g. `FinalizationVoting.withValid` changed shape) and is missing validation + union entirely. Use `git show <commit> -- <file>` as a pattern reference; NEVER cherry-pick it.
-- Determinism contract (spec §5): `slashingEnabled` gates ONLY the miner-side fold. Proof validation and the `conflictGenerators` union are unconditional in this binary, gated only by feature-28 activation (chain state). Do not add any `slashingEnabled` check to `appender`, `FinalizationState`, or `Caches`.
+- Determinism contract (spec §5): `slashingEnabled` gates ONLY the miner-side fold. Proof validation and the `conflictGenerators` union are unconditional in this binary, gated only by feature-29 activation (chain state). Do not add any `slashingEnabled` check to `appender`, `FinalizationState`, or `Caches`.
 - PB decode of a proof is STRICT: malformed or top-level-mismatched proofs throw (fail block parsing), never silently drop. This deliberately reverses the reference branch's decision (spec §2).
 - No changes to `HotStuffSafety.equivocators`'s signature/logic, to vote/QC acceptance rules, or to T0's endorsement pipeline (`EndorsementStorage`, `BlockEndorser`, `MicroBlockMinerImpl` are untouched).
 - Build/verify after every code task: `cd /Users/jourlez/Documents/Code/Blockchain/Ecosystem/node-scala && sbt "node/compile" "node-tests/testOnly com.decentralchain.consensus.hotstuff.* com.decentralchain.state.* com.decentralchain.mining.*"`.
@@ -421,7 +421,7 @@ round-trip identity."
 
 ---
 
-### Task 3: Feature 28 + `supportsHotStuffEquivocationEvidence`
+### Task 3: Feature 29 + `supportsHotStuffEquivocationEvidence`
 
 **Files:**
 - Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala`
@@ -429,17 +429,17 @@ round-trip identity."
 - Test: extend whichever spec covers feature registration (grep `"DeterministicFinality"` under `node/tests/src` for the pattern; if none asserts registry contents, a 2-line check in the Task 4 validation spec suffices)
 
 **Interfaces:**
-- Produces: `BlockchainFeatures.HotStuffEquivocationEvidence` (id 28, in `dict` ⇒ votable/implemented); `blockchain.supportsHotStuffEquivocationEvidence(height: Int = blockchain.height): Boolean`.
+- Produces: `BlockchainFeatures.HotStuffEquivocationEvidence` (id 29, in `dict` ⇒ votable/implemented); `blockchain.supportsHotStuffEquivocationEvidence(height: Int = blockchain.height): Boolean`.
 
 - [ ] **Step 1: Add the feature**
 
 In `BlockchainFeature.scala` after `DeterministicFinality`:
 
 ```scala
-  val HotStuffEquivocationEvidence    = BlockchainFeature(28, "HotStuff Equivocation Evidence")
+  val HotStuffEquivocationEvidence    = BlockchainFeature(29, "HotStuff Equivocation Evidence")
 ```
 
-Add `HotStuffEquivocationEvidence` to the `dict` Seq. (Ids 26/27 are taken by not-exposed features; 28 is free — verified against dev.)
+Add `HotStuffEquivocationEvidence` to the `dict` Seq. (Ids 26/27 are taken by not-exposed features. Id 28 is BURNED — it was ModernGroth16Verifier, deleted in 62f8a1240a, and testnet configs historically pre-activated it (stale-config incident 2026-08-30); reusing it invites mixed-semantics confusion. Id 29 verified free on dev AND main, and absent from all infra configs.)
 
 - [ ] **Step 2: Add the support helper**
 
@@ -459,7 +459,7 @@ Expected: green. (Some feature specs assert the implemented-set size — if one 
 
 ```bash
 git add -A node/src node/tests/src
-git commit -m "feat(consensus): feature 28 HotStuff Equivocation Evidence + support helper
+git commit -m "feat(consensus): feature 29 HotStuff Equivocation Evidence + support helper
 
 On-chain activation gate for hotstuffConflicts (design finding H4):
 proto3 compat is wire-level only -- an evidence-unaware node ignoring
@@ -483,7 +483,7 @@ Test through the public `validateFinalizationVoting(block, blockchain, generator
 
 ```text
 1. valid proof (same epoch as block period, real signatures, fresh voter)      => Right, and result excludes the voter
-2. hotstuffConflicts non-empty BEFORE feature-28 activation                     => Left("...not allowed before HotStuff Equivocation Evidence activation...")
+2. hotstuffConflicts non-empty BEFORE feature-29 activation                     => Left("...not allowed before HotStuff Equivocation Evidence activation...")
 3. proofs-only FV (valid=[], conflict=[], one valid proof), post-activation     => Right   [C4: emptiness check relaxed]
 4. proof whose committeeEpoch != block period index                             => Left (epoch/period mismatch)
 5. cross-epoch vote pair (voteA.epoch != voteB.epoch)                           => Left (consistent fails)
@@ -576,7 +576,7 @@ git add -A node/src node/tests/src
 git commit -m "feat(consensus): validate HotStuff equivocation proofs at block ingress
 
 All-or-nothing, unconditional (no local-flag gating -- determinism
-contract, finding H5), feature-28 gated on-chain. Rules: internal
+contract, finding H5), feature-29 gated on-chain. Rules: internal
 consistency incl. epoch equality (C2), epoch == block generation
 period (index-space pin, C2), bounds, dedup + already-excluded +
 conflict-overlap (M3), both BLS signatures over the real voteMessage
@@ -676,7 +676,7 @@ point."
   * @param slashingEnabled T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md):
   *                     gates ONLY whether THIS node's miner folds pending equivocation proofs into
   *                     blocks it forges. Proof VALIDATION and the conflictGenerators union are
-  *                     unconditional (gated solely by feature-28 activation) -- a node with this
+  *                     unconditional (gated solely by feature-29 activation) -- a node with this
   *                     flag off applies exclusions from received proof-carrying blocks identically,
   *                     so mixed flag settings can never diverge consensus. TESTNET-ONLY until
   *                     externally audited; consequences are real (generation-deposit forfeiture).
@@ -976,7 +976,7 @@ view/phase/epoch, different blockIds).
 2. MINER path: foldHotStuffConflicts(slashingEnabled = true, Seq(P), None, periodIndex, _ => false, ...)
    -> Some(fv); serialize fv via PBFinalizationVotings.protobuf, then DESERIALIZE the bytes.
 3. RECEIVING node (never saw the votes): run validateFinalizationVoting over a block carrying the
-   deserialized fv (feature 28 active in the stub) -> Right, and the returned generatorSet excludes
+   deserialized fv (feature 29 active in the stub) -> Right, and the returned generatorSet excludes
    voter 2.
 4. Both a "detecting" FinalizationState.append and a "receiving" FinalizationState.append (same fv)
    produce IDENTICAL conflictGenerators sets.
@@ -985,7 +985,7 @@ view/phase/epoch, different blockIds).
 ```
 
 - [ ] **Step 2: Run it** — green.
-- [ ] **Step 3: Docs.** `hotstuff-audit-readiness.md`: T5 row → "proof-carried, block-validated exclusion wired (feature 28 + `slashing-enabled`, default off); live testnet exercise pending"; §8 checklist: T5 item checked with the same caveat. Supersession banner on both old plans: superseded by this plan + spec rev.2, with one line on why (branch had no validation/union; F-3 Tasks 1-2 replaced by coordinator-side detection).
+- [ ] **Step 3: Docs.** `hotstuff-audit-readiness.md`: T5 row → "proof-carried, block-validated exclusion wired (feature 29 + `slashing-enabled`, default off); live testnet exercise pending"; §8 checklist: T5 item checked with the same caveat. Supersession banner on both old plans: superseded by this plan + spec rev.2, with one line on why (branch had no validation/union; F-3 Tasks 1-2 replaced by coordinator-side detection).
 - [ ] **Step 4: Full gate** — `sbt "node/compile" "node-tests/test"` (full unit suite) + scalafmt/scalafix per repo convention.
 - [ ] **Step 5: Commit** (`test(hotstuff): E2E equivocation-evidence determinism proof + docs closure (T5)`).
 
