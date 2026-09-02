@@ -341,18 +341,26 @@ class MinerImpl(
   // committedGenerators/conflictGenerators on append (validation/union elsewhere are unconditional).
   private def withHotStuffConflicts(voting: Option[FinalizationVoting]): Option[FinalizationVoting] = {
     val forgeHeight = Height(blockchainUpdater.height + 1)
-    blockchainUpdater.generationPeriodOf(forgeHeight) match {
-      case None         => voting // pre-activation: no periods, no committee, nothing to fold
-      case Some(period) =>
-        Miner.foldHotStuffConflicts(
-          settings.hotStuffSettings.slashingEnabled,
-          hotStuffEquivocations(),
-          voting,
-          period.index,
-          idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
-          () => blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight)
-        )
-    }
+    // Validation (appender/package.scala:364, via validateHotStuffEquivocationProofs) rejects any
+    // block whose FinalizationVoting carries hotstuffConflicts before feature 29
+    // (HotStuffEquivocationEvidence) is active AT THE BLOCK HEIGHT -- a strictly later gate than
+    // feature 28 (DeterministicFinality, checked by generationPeriodOf below). Composing proofs
+    // during the 28-active-but-29-inactive window would forge a block this same node's own
+    // appender then rejects on append: a pure self-DoS. Skip the fold entirely until 29 is live.
+    if (!blockchainUpdater.supportsHotStuffEquivocationEvidence(forgeHeight.toInt)) voting
+    else
+      blockchainUpdater.generationPeriodOf(forgeHeight) match {
+        case None         => voting // pre-activation: no periods, no committee, nothing to fold
+        case Some(period) =>
+          Miner.foldHotStuffConflicts(
+            settings.hotStuffSettings.slashingEnabled,
+            hotStuffEquivocations(),
+            voting,
+            period.index,
+            idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
+            () => Miner.clampFinalizedHeight(blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight), blockchainUpdater.height)
+          )
+      }
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =
@@ -543,8 +551,29 @@ object Miner {
     if (usable.isEmpty) voting
     else
       voting match {
-        case Some(fv) => Some(fv.copy(hotstuffConflicts = (fv.hotstuffConflicts ++ usable).distinctBy(_.voterIndex)))
-        case None     => Some(FinalizationVoting(Seq.empty, fallbackFinalizedHeight(), None, Seq.empty, usable))
+        case Some(fv) =>
+          // Validation rejects any hotstuffConflicts proof whose voterIndex already carries a T0
+          // conflicting endorsement in the SAME voting (appender/package.scala:382-384, rule 6) --
+          // fv.conflict is populated by the endorsement-collection path this fold runs after, so a
+          // proof for a voter already present there must be dropped here too, or the composed block
+          // fails that same validator rule on this node's own append.
+          val conflictingVoters = fv.conflict.map(_.endorserIndex.toInt).toSet
+          val stillUsable       = usable.filterNot(p => conflictingVoters.contains(p.voterIndex))
+          if (stillUsable.isEmpty) voting
+          else Some(fv.copy(hotstuffConflicts = (fv.hotstuffConflicts ++ stillUsable).distinctBy(_.voterIndex)))
+        case None => Some(FinalizationVoting(Seq.empty, fallbackFinalizedHeight(), None, Seq.empty, usable))
       }
   }
+
+  /** Validation requires `fv.finalizedHeight.toInt < blockchain.height` (appender/package.scala:401,
+    * evaluated while the chain tip is still at the parent height H that the miner read at forge
+    * time) -- i.e. the synthesized value must land in `[GenesisBlockHeight, H-1]`. The raw
+    * `blockchainUpdater.finalizedHeight` fallback can equal H itself once `hotstuff.authoritative`
+    * has raised the finalized floor to the tip, which would forge a block this node's own appender
+    * then rejects. Extracted as a small pure function (private[mining] for direct unit coverage)
+    * rather than folded inline, since the pure `foldHotStuffConflicts` fold must stay agnostic to
+    * "current chain height" and just pass through whatever fallback it's given.
+    */
+  private[mining] def clampFinalizedHeight(rawFallback: Height, currentHeight: Int): Height =
+    Height(rawFallback.toInt.min(currentHeight - 1).max(GenesisBlockHeight.toInt))
 }

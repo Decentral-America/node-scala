@@ -17,6 +17,7 @@ import com.decentralchain.api.http.leasing.LeaseApiRoute
 import com.decentralchain.api.http.utils.UtilsApiRoute
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.database.{DBExt, Keys, RDB}
 import com.decentralchain.events.{BlockchainUpdateTriggers, UtxEvent}
 import com.decentralchain.extensions.{Context, Extension}
@@ -118,7 +119,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   // when `dcc.hotstuff.enabled = false`; reassigned below to the real coordinator's
   // `detectedEquivocations` once it exists, inside the `hotstuff.enabled` block.
   @volatile
-  private var hotStuffEquivocations: () => Seq[com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof] = () => Seq.empty
+  private var hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
   private val (blockchainUpdater, rocksDB)  =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
