@@ -135,6 +135,25 @@ object BlsUtils {
     res <- verify(aggSigBytes, message, aggPkAffine)
   } yield res
 
+  /** Pairing-allocation DoS posture (audit L4): a fresh `blst.Pairing` context is allocated on every
+    * call rather than pooled/reused -- deliberately, not merely un-optimized. `Pairing` is a
+    * mutable, single-use accumulator: `aggregate()` mutates its internal state, `commit()` finalizes
+    * it, and `finalverify()` consumes that state once. Reusing one instance across concurrent
+    * verifications would require external synchronization serializing every verification through
+    * one lock, which is strictly worse under the exact flood scenario the audit is concerned about
+    * (many invalid votes arriving concurrently) -- it would trade a per-call native allocation for a
+    * shared bottleneck. blst does expose `Pairing.merge` for combining multiple contexts into a
+    * single batched final check, but adopting that is a real verification-flow redesign (accumulate
+    * N contexts, then merge + finalverify once), not a cheap fix, and changes the caller-visible
+    * shape of a failure (today each vote's `Left` is independently attributable; a merged batch
+    * verify only tells you the batch failed, not which member). The audit's suggested mitigation that
+    * IS cheap and already lives on the hot path it names: `HotStuffQuorum.verifyVote` checks
+    * committee membership (`committee.find(_.index.toInt == vote.voterIndex)`, a map lookup) before
+    * ever reaching this pairing-based `verify` call, so an attacker flooding votes from indexes
+    * outside the committee never allocates a `Pairing` at all -- only a genuine (if forged) committee
+    * member's vote pays the pairing cost. Rate limiting on the vote-ingress path (also named in the
+    * audit) is a networking-layer concern outside this file's scope. No code change here.
+    */
   private def verify(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: blst.P1_Affine): Either[String, Unit] = try {
     val ctx       = new blst.Pairing(true, BlsDomainSeparationTag)
     val aggResult = ctx.aggregate(blsPkBytes, new blst.P2_Affine(blsSigBytes), message, Array.emptyByteArray)
