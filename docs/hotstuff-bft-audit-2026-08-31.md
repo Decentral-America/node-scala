@@ -337,6 +337,22 @@ invisible to the watchdog. Note this must be paired with F-2's fix — making th
 
 ### F-6 — **[MEDIUM]** T10's one-step epoch acceptance window can become a self-sealing liveness trap during exactly the kind of long stall that motivated the watchdog, and the watchdog's recovery cannot fix it.
 
+> **STATUS (2026-09-02): UNVERIFIED → REPRODUCED AND FIXED.** Filed here as unverified (see "What I
+> could not verify" below: not reproducible in the DST harness as it then stood). The harness change
+> this finding asked for was made (per-node simulated tip + epoch belief), the trap was reproduced
+> against it, and a height-lag re-anchor fix landed on `feat/hotstuff-lag-reanchor`. Design:
+> `docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md`. Tests:
+> `DstStaleTargetSelfSealScenarioSpecification` (paired RED/GREEN — the RED arm commits the stale
+> target at height 50, the GREEN arm re-anchors and commits at 92; mutation-verified, and restaged
+> after a review caught the first version's fixed arm passing with the fix neutralized) and
+> `HotStuffLagReanchorSpecification` (predicate boundaries, the `settledDepth + 1` floor, guard
+> placement vs. `lastVotedView`). `acceptableCommitteeEpoch`'s one-step window is deliberately
+> UNCHANGED — the fix is a filter on target selection only. Full write-up:
+> `docs/hotstuff-audit-readiness.md` §7 item 7. Not yet observed live on testnet; the new
+> `hotstuff.stale-target-abandoned` / `hotstuff.stale-target-skipped-proposal` counters exist so a real
+> occurrence becomes graphable.
+
+
 The two epoch functions are deliberately different, and correctly so:
 - **Signed** epoch: `committeeEpochOf(targetHeight)` — a pure function of the target's height
   (`Application.scala:262-263`).
@@ -574,7 +590,7 @@ below the floor) touches the mechanism T2 is supposed to leave alone.
    own design review.
 3. **F-3** — wire or delete `equivocators`. Ship no Byzantine detector, or ship a real one; do not ship
    an uncalled one.
-4. **F-6** — bound the HotStuff lag so the epoch window cannot self-seal.
+4. **F-6** — bound the HotStuff lag so the epoch window cannot self-seal. **DONE 2026-09-02** (see F-6's STATUS note).
 5. **F-5** — add commit-specific stall detection (only after F-2 is fixed).
 
 **Explicitly could NOT verify here** — stated plainly rather than papered over, per this project's
@@ -588,9 +604,13 @@ standard:
   two conflicting QCs, because `formQC`'s identical-`blockHeight` requirement separates the buckets.
   I do not consider that a safety *proof* — it is an accidental barrier, and I did not exhaustively
   search for a same-height variant. A dedicated adversarial DST scenario is needed.
-- **F-6's self-sealing epoch trap.** Not reproducible in the current DST harness (single shared
-  `epochBelief` var). Needs a harness change or a long-running testnet observation across a generation
-  period boundary while T2 is lagging.
+- **F-6's self-sealing epoch trap.** Not reproducible in the DST harness as it stood at the time of
+  this audit (single shared `epochBelief` var). Needs a harness change or a long-running testnet
+  observation across a generation period boundary while T2 is lagging.
+  **RESOLVED 2026-09-02 (harness half):** the harness change was made (per-node simulated tip + epoch
+  belief), the trap reproduced, and the fix landed — see this finding's STATUS note above. The
+  *testnet-observation* half remains open: the trap has never been seen on a live cluster, only in
+  simulation.
 - **F-10's 49% root cause.** Needs per-seed DST bisection, not static reading.
 - **Anything requiring live multi-node behavior:** real network partitions, real committee rotation on
   a running cluster (F-7's open T10 item), real BLS key rotation, and real timing under load. Nothing
