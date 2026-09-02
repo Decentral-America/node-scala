@@ -638,7 +638,8 @@ object BlockDiffer {
                     BlsUtils
                       .verifyBasic(
                         tx.commitmentSignature.arr,
-                        CommitToGenerationTransaction.popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2 = false),
+                        CommitToGenerationTransaction
+                          .popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2 = false),
                         tx.endorserPublicKey.arr,
                         CommitToGenerationTransaction.popDst(cryptoV2 = false)
                       )

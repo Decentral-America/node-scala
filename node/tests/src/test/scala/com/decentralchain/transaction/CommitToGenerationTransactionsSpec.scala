@@ -188,7 +188,8 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val unsignedTx  = TxHelpers
           .commitToGeneration(periodStart, newGenerator)
           .copy(commitmentSignature =
-            CommitToGenerationTransaction.mkPopSignature(otherGeneratorKp, periodStart, newGenerator.publicKey, AddressScheme.current.chainId, cryptoV2 = false)
+            CommitToGenerationTransaction
+              .mkPopSignature(otherGeneratorKp, periodStart, newGenerator.publicKey, AddressScheme.current.chainId, cryptoV2 = false)
           )
         val signedTx = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))
 

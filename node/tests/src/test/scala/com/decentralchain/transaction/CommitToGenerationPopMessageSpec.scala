@@ -1,6 +1,6 @@
 package com.decentralchain.transaction
 
-import com.decentralchain.crypto.bls.BlsKeyPair
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsUtils}
 import com.decentralchain.state.Height
 import com.decentralchain.test.FlatSpec
 
@@ -36,5 +36,21 @@ class CommitToGenerationPopMessageSpec extends FlatSpec {
     v2('T'.toByte, sender.publicKey) should not be v2('T'.toByte, TxHelpers.signer(9).publicKey)
     // This equality IS the M2 finding, pinned so the legacy path can never drift:
     legacy('T'.toByte, sender.publicKey) shouldBe legacy('W'.toByte, TxHelpers.signer(9).publicKey)
+  }
+
+  "popDst" should "map cryptoV2 = false to the legacy DST" in {
+    CommitToGenerationTransaction.popDst(false) shouldBe BlsUtils.BlsDomainSeparationTag
+  }
+
+  it should "map cryptoV2 = true to the v2 POP DST" in {
+    CommitToGenerationTransaction.popDst(true) shouldBe BlsUtils.BlsPopDomainSeparationTagV2
+  }
+
+  "mkPopSignature(cryptoV2 = true)" should "verify under popDst(true)/popMessage(v2) and fail under the legacy DST" in {
+    val signature = CommitToGenerationTransaction.mkPopSignature(endorserKp, start, sender.publicKey, chainId, cryptoV2 = true)
+    val v2Message = CommitToGenerationTransaction.popMessage(chainId, sender.publicKey, endorserKp.publicKey, start, cryptoV2 = true)
+
+    endorserKp.publicKey.verify(v2Message, signature, CommitToGenerationTransaction.popDst(true)) shouldBe true
+    endorserKp.publicKey.verify(v2Message, signature, CommitToGenerationTransaction.popDst(false)) shouldBe false
   }
 }
