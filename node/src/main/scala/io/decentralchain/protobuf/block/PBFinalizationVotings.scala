@@ -31,6 +31,7 @@ object PBFinalizationVotings {
     GeneratorIndex.toInts(v.valid),
     v.finalizedHeight.toInt,
     v.aggregatedEndorsement.fold(ByteString.EMPTY)(_.byteStr.toByteString),
-    v.conflict.map(PBEndorseBlocks.protobuf)
+    v.conflict.map(PBEndorseBlocks.protobuf),
+    Seq.empty // hotstuffConflicts: wired in a later task (HotStuffEquivocationProof carriage in FinalizationVoting)
   )
 }
