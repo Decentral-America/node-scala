@@ -20,7 +20,10 @@ case class FinalizationState(
       newFinalizationVoting: Option[FinalizationVoting],
       updatedGeneratorSet: GeneratorSet
   ): (updatedState: FinalizationState, accVoting: Option[FinalizationVoting], height: Height) = {
-    val newConflictGenerators = newFinalizationVoting.fold(Nil)(_.conflict.map(_.endorserIndex)).toSet
+    val newConflictGenerators =
+      newFinalizationVoting.fold(Set.empty[GeneratorIndex]) { fv =>
+        fv.conflict.view.map(_.endorserIndex).toSet ++ fv.hotstuffConflicts.view.map(p => GeneratorIndex(p.voterIndex))
+      }
     val (updatedParentFinalized, updatedFinalizedHeight) = newFinalizationVoting
       .filterNot(parentFinalized && _.conflict.isEmpty)
       .fold((parentFinalized, finalizedHeight)) { _ =>

@@ -93,7 +93,11 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
           finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof)))
         )
         d.appender.appendBlockWithoutFallback(block3) should beRight
-        d.blockchain.conflictGenerators(d.blockchain.currentGenerationPeriod.value).all should not contain voterAIdx
+        // Task 5 [C1]: before the liquid/persisted conflictGenerators union fix, this assertion was
+        // inverted (`should not contain voterAIdx`) -- the proof validated fine but the exclusion never
+        // actually reached `conflictGenerators`, and this test happened to pass against that bug. It
+        // must contain the voter -- that is the whole point of a "verified equivocation proof".
+        d.blockchain.conflictGenerators(d.blockchain.currentGenerationPeriod.value).all should contain(voterAIdx)
       }
 
     "2. hotstuffConflicts non-empty BEFORE feature-29 activation => Left" in
