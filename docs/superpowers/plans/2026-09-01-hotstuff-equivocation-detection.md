@@ -1,3 +1,13 @@
+> **SUPERSEDED** by `docs/superpowers/plans/2026-09-01-hotstuff-equivocation-evidence.md` + spec rev.2.
+> This plan's Tasks 1-2 (a standalone `state`-package `EquivocationTracker` re-running
+> `HotStuffSafety.equivocators` over a separately-accumulated vote history, draining straight into
+> `FinalizationVoting.conflict`) were replaced by coordinator-side detection instead:
+> `HotStuffCoordinator.Enabled` itself now detects conflicting votes as they arrive and retains verified
+> `HotStuffEquivocationProof`s, with no second parallel vote-history structure needed. Task 5
+> (drain equivocators straight into `conflictGenerators`, trust-the-detecting-node) was replaced by the
+> evidence design's proof-carried, receive-side-validated exclusion — see the other plan's banner for why
+> that step needed independent verification rather than a bare exclusion list.
+
 # HotStuff Equivocation Detection (F-3) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
