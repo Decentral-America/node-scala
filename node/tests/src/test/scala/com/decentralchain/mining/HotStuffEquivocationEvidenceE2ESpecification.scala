@@ -4,7 +4,7 @@ import com.decentralchain.account.KeyPair
 import com.decentralchain.block.{Block, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, HotStuffEffects, HotStuffEquivocationProof, HotStuffQuorum}
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
@@ -55,35 +55,53 @@ class HotStuffEquivocationEvidenceE2ESpecification extends BaseFinalizationSpec 
       .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance, BlockchainFeatures.HotStuffEquivocationEvidence)
       .configure(_.copy(generationPeriodLength = 2, lightNodeBlockFieldsAbsenceInterval = 0))
 
+  /** Task 9 step (d) / Task 8 review carry-over: BlsCryptoV2 PRE-activated (from height 1, alongside
+    * every other feature here) -- there is no activation-period boundary to navigate, so every vote
+    * cast anywhere in this chain's history is unambiguously v2-era, and `validateHotStuffEquivocationProofs`'s
+    * "refuse every proof carried by a block in the activation period" rule (see
+    * `state/appender/package.scala`) simply never triggers.
+    */
+  private val withEvidenceFeatureV2 =
+    withEvidenceFeature.addFeatures(BlockchainFeatures.BlsCryptoV2)
+
   private val prepare = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
 
   // Same period-index arithmetic as HotStuffEquivocationValidationSpecification: block height 3
   // falls in the SECOND generation period (index 1) under generationPeriodLength = 2.
   private val periodIndex = 1
 
-  private def signedVote(signer: KeyPair, voterIndex: Int, view: Int, blockIdByte: Byte, epoch: Int): HotStuffVote = {
+  private def signedVote(signer: KeyPair, voterIndex: Int, view: Int, blockIdByte: Byte, epoch: Int, cryptoV2: Boolean): HotStuffVote = {
     val blockId = ByteStr(Array.fill(32)(blockIdByte))
     val height  = Height(10)
     val msg     = HotStuffQuorum.voteMessage(view, prepare, blockId, height.toInt, epoch)
     val kp      = BlsKeyPair(signer.privateKey)
-    HotStuffVote(view, prepare, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
+    HotStuffVote(view, prepare, blockId, height, voterIndex, ByteStr(kp.sign(msg, HotStuffQuorum.voteDst(cryptoV2)).arr), epoch)
   }
 
   private def withCommittedCommittee(test: (com.decentralchain.history.Domain, Block) => Unit): Unit =
-    withDomain(withEvidenceFeature, AddrWithBalance.enoughBalances(generators*)) { d =>
-      val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
+    withCommittedCommittee(withEvidenceFeature)(test)
+
+  private def withCommittedCommittee(settings: com.decentralchain.settings.DCCSettings)(
+      test: (com.decentralchain.history.Domain, Block) => Unit
+  ): Unit =
+    withDomain(settings, AddrWithBalance.enoughBalances(generators*)) { d =>
+      // The commitment block lands at height 2 -- PoP era must match whatever `settings` says is live
+      // at that height (BlsCryptoV2 pre-activated from height 1 in `withEvidenceFeatureV2`, absent in
+      // `withEvidenceFeature`), or CommitToGenerationTransactionDiff rejects the whole setup block.
+      val commitmentsAreV2      = d.blockchain.supportsBlsCryptoV2(2)
+      val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x, cryptoV2 = commitmentsAreV2))
       val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = minerGenerator, strictTime = true)
       d.appender.appendBlock(block2WithCommitments)
       test(d, block2WithCommitments)
     }
 
   private class RecordingEffects extends HotStuffEffects {
-    var equivocations: Vector[HotStuffEquivocationProof]                = Vector.empty
-    def broadcast(m: Message): Unit                                     = ()
-    def myVoterIndexes: Set[Int]                                        = Set.empty
-    def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature]      = None
-    def onCommit(blockId: Block.BlockId, height: Int): Unit             = ()
-    override def onEquivocation(proof: HotStuffEquivocationProof): Unit = equivocations :+= proof
+    var equivocations: Vector[HotStuffEquivocationProof]                        = Vector.empty
+    def broadcast(m: Message): Unit                                             = ()
+    def myVoterIndexes: Set[Int]                                                = Set.empty
+    def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = None
+    def onCommit(blockId: Block.BlockId, height: Int): Unit                     = ()
+    override def onEquivocation(proof: HotStuffEquivocationProof): Unit         = equivocations :+= proof
   }
 
   /** Round-trips a `FinalizationVoting` through REAL protobuf wire bytes -- the receiving node in
@@ -102,18 +120,19 @@ class HotStuffEquivocationEvidenceE2ESpecification extends BaseFinalizationSpec 
     * MINER folds the resulting proof into a `FinalizationVoting` and round-trips it through real
     * protobuf wire bytes. Returns (detectedProof, foldedFv, wire-round-tripped fv).
     */
-  private def detectFoldAndSend(): (HotStuffEquivocationProof, FinalizationVoting, FinalizationVoting) = {
+  private def detectFoldAndSend(cryptoV2: Boolean = false): (HotStuffEquivocationProof, FinalizationVoting, FinalizationVoting) = {
     val committee   = committeeOf(generators)
     val fx          = new RecordingEffects
     val coordinator = new HotStuffCoordinator.Enabled(
       committeeProvider = () => committee,
       effects = fx,
       extendsBranch = (_, _) => true,
-      committeeEpochProvider = () => periodIndex
+      committeeEpochProvider = () => periodIndex,
+      cryptoV2 = () => cryptoV2
     )
 
-    val voteA = signedVote(voterB, voterBIdx.toInt, view = 5, blockIdByte = 1, epoch = periodIndex)
-    val voteB = signedVote(voterB, voterBIdx.toInt, view = 5, blockIdByte = 2, epoch = periodIndex)
+    val voteA = signedVote(voterB, voterBIdx.toInt, view = 5, blockIdByte = 1, epoch = periodIndex, cryptoV2 = cryptoV2)
+    val voteB = signedVote(voterB, voterBIdx.toInt, view = 5, blockIdByte = 2, epoch = periodIndex, cryptoV2 = cryptoV2)
     coordinator.onVote(voteA)
     coordinator.onVote(voteB)
 
@@ -198,6 +217,64 @@ class HotStuffEquivocationEvidenceE2ESpecification extends BaseFinalizationSpec 
         result.isLeft shouldBe true
         result.left.value.toString should include("signature invalid for voter")
       }
+
+    // --- Task 9 step (d) / Task 8 review carry-over: the whole chain above runs entirely under the
+    // legacy DST. Repeat the SAME chain-of-custody proof with BlsCryptoV2 activated: detecting
+    // coordinator configured `cryptoV2 = () => true`, votes signed under
+    // `HotStuffQuorum.voteDst(true)` (the `_HSVOTE_` v2 tag), and the receiving node's
+    // `validateHotStuffEquivocationProofs` deriving the SAME v2 dst from the containing block's
+    // height (BlsCryptoV2 pre-activated from height 1, so every height in this chain is v2-era).
+    "under BlsCryptoV2 (v2 DST)" - {
+      "produces identical conflictGenerators exclusion via detection -> miner fold -> wire -> receiving-node validation, " +
+        "and identical FinalizationState.append results on both sides, all under the v2 DST" in
+        withCommittedCommittee(withEvidenceFeatureV2) { (d, _) =>
+          val (detectedProof, _, receivedFv) = detectFoldAndSend(cryptoV2 = true)
+          val committee                      = committeeOf(generators)
+
+          val block3 = d.createBlock(
+            version = Block.ProtoBlockVersion,
+            txs = Nil,
+            generator = minerGenerator,
+            strictTime = true,
+            finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = receivedFv.hotstuffConflicts))
+          )
+          d.appender.appendBlockWithoutFallback(block3) should beRight
+          d.blockchain.conflictGenerators(d.blockchain.currentGenerationPeriod.value).all should contain(voterBIdx)
+
+          val detectingState = FinalizationState.notActivated(minerGenerator.toAddress)
+          val receivingState = FinalizationState.notActivated(minerGenerator.toAddress)
+
+          val votingForDetectingSide = mkFinalizationVoting().copy(hotstuffConflicts = Seq(detectedProof))
+          val votingForReceivingSide = mkFinalizationVoting().copy(hotstuffConflicts = receivedFv.hotstuffConflicts)
+
+          val (detectingAfter, _, _) = detectingState.append(block3.id(), Some(votingForDetectingSide), committee)
+          val (receivingAfter, _, _) = receivingState.append(block3.id(), Some(votingForReceivingSide), committee)
+
+          detectingAfter.conflictGenerators shouldBe receivingAfter.conflictGenerators
+          detectingAfter.conflictGenerators should contain(voterBIdx)
+        }
+
+      "NEGATIVE: a legacy-DST-signed equivocation proof is rejected in a v2-activated chain" in
+        withCommittedCommittee(withEvidenceFeatureV2) { (d, _) =>
+          // Detect + fold under the LEGACY dst (cryptoV2 = false everywhere in detection), but the
+          // RECEIVING chain has BlsCryptoV2 active from height 1 -- so `validateHotStuffEquivocationProofs`
+          // derives dst = voteDst(true) for the containing block, and this legacy-signed proof's
+          // signatures must fail that verification.
+          val (_, legacyFoldedFv, _) = detectFoldAndSend(cryptoV2 = false)
+          val legacyWireFv           = throughWire(legacyFoldedFv)
+
+          val block3v2 = d.createBlock(
+            version = Block.ProtoBlockVersion,
+            txs = Nil,
+            generator = minerGenerator,
+            strictTime = true,
+            finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = legacyWireFv.hotstuffConflicts))
+          )
+          val result = d.appender.appendBlockWithoutFallback(block3v2)
+          result.isLeft shouldBe true
+          result.left.value.toString should include("signature invalid for voter")
+        }
+    }
   }
 
   private def flipOneByte(bs: ByteStr): ByteStr = {
