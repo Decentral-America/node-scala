@@ -12,7 +12,13 @@ import com.decentralchain.test.FlatSpec
   */
 class HotStuffIngressGuardSpecification extends FlatSpec {
   private val currentHeight = 900_000
-  private val slack         = 1000 // e.g. testnet generationPeriodLength
+  // 1000 is the floor `Application.scala` applies via `math.max(generationPeriodLength, 1000)`, NOT
+  // live testnet's raw `generationPeriodLength` -- that is 100 (infra/node-config/testnet/dcc.conf),
+  // which is exactly why the floor exists (review follow-up to F-8: deployed margin was 10x thinner
+  // than this doc assumed). `HotStuffIngressGuard.sane` itself takes `slack` as a plain Int and knows
+  // nothing about the floor; the case below proves the floor's effect at the value the wiring actually
+  // computes for testnet.
+  private val slack = 1000
 
   "HotStuffIngressGuard.sane" should "accept normal, plausible values" in {
     HotStuffIngressGuard.sane(view = 42, blockHeight = currentHeight - 3, currentHeight, slack) should be(true)
@@ -44,5 +50,21 @@ class HotStuffIngressGuardSpecification extends FlatSpec {
 
   it should "reject a blockHeight further ahead of the tip than one generation period's worth of slack" in {
     HotStuffIngressGuard.sane(view = 1, blockHeight = currentHeight + slack + 1, currentHeight, slack) should be(false)
+  }
+
+  it should "prove the Application.scala floor: testnet's raw generationPeriodLength (100) would let " +
+    "through a target the floored slack (1000) correctly rejects" in {
+    val rawTestnetGenerationPeriodLength = 100
+    val flooredSlack                     = math.max(rawTestnetGenerationPeriodLength, 1000)
+    flooredSlack should be(1000)
+
+    val target = currentHeight + rawTestnetGenerationPeriodLength + 1
+    // Without the floor (raw testnet generationPeriodLength as slack), this target would be rejected --
+    // demonstrating the pre-fix margin was 10x thinner than intended.
+    HotStuffIngressGuard.sane(view = 1, target, currentHeight, slack = rawTestnetGenerationPeriodLength) should be(
+      false
+    )
+    // With the floor Application.scala actually applies, the same target is still plausible slack.
+    HotStuffIngressGuard.sane(view = 1, target, currentHeight, slack = flooredSlack) should be(true)
   }
 }

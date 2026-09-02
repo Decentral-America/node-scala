@@ -26,16 +26,29 @@ object HotStuffIngressGuard {
     * @param blockHeight   the QC/vote's claimed target block height.
     * @param currentHeight this replica's own current chain height (`blockchainUpdater.height`).
     * @param slack         how far above `currentHeight` a target is still considered plausible. Chosen
-    *                      by the caller as ONE `generationPeriodLength`: HotStuff intentionally runs
-    *                      `settledDepth` blocks BEHIND the tip (`HotStuffSettings.settledDepth`), and
-    *                      F-6 documents HotStuff's lag as legitimately able to grow up to roughly one
-    *                      generation period before other mechanisms intervene -- so a target within one
-    *                      full period of this replica's own tip is still a plausible, honestly-signed
-    *                      height (e.g. this replica is itself lagging behind a faster peer), while
-    *                      anything further out is not a height any real chain state could justify
-    *                      voting on right now. A simpler fixed constant would work too; tying it to
-    *                      `generationPeriodLength` keeps the bound meaningful across mainnet/testnet's
-    *                      differing block-rate configurations instead of picking an arbitrary number.
+    *                      by the caller (`Application.scala`) as ONE `generationPeriodLength`: HotStuff
+    *                      intentionally runs `settledDepth` blocks BEHIND the tip
+    *                      (`HotStuffSettings.settledDepth`), and F-6 documents HotStuff's lag as
+    *                      legitimately able to grow up to roughly one generation period before other
+    *                      mechanisms intervene -- so a target within one full period of this replica's
+    *                      own tip is still a plausible, honestly-signed height (e.g. this replica is
+    *                      itself lagging behind a faster peer), while anything further out is not a
+    *                      height any real chain state could justify voting on right now. A simpler fixed
+    *                      constant would work too; tying it to `generationPeriodLength` keeps the bound
+    *                      meaningful across mainnet/testnet's differing block-rate configurations instead
+    *                      of picking an arbitrary number.
+    *
+    *                      The caller floors this at 1000 (`math.max(generationPeriodLength, 1000)`):
+    *                      this doc originally assumed `generationPeriodLength` in the 1000-10000 range,
+    *                      but live testnet overrides it down to 100
+    *                      (`infra/node-config/testnet/dcc.conf`), which would leave the deployed margin
+    *                      an order of magnitude thinner than documented above. The floor exists because
+    *                      this guard's job is wedge-prevention, not tight bounding -- a few thousand
+    *                      blocks of extra slack is free (still trivially far below `Int.MaxValue`) and
+    *                      the only cost of being generous is a slightly later rejection of an already
+    *                      quorum-signed, already-total-protocol-break message. See the F-8 review
+    *                      follow-up finding (deployed-margin-vs-documented-margin mismatch) and
+    *                      `HotStuffIngressGuardSpecification`'s floor-proving case.
     * @return `true` iff `view` is non-negative AND far enough from `Int.MaxValue` that
     *         `PacemakerState.onQC`'s `qcView + 1` cannot overflow, AND `blockHeight > 0`, AND
     *         `blockHeight <= currentHeight + slack`.
