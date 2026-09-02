@@ -8,6 +8,7 @@ import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.block.{Block, BlockEndorsement, BlockSnapshot, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
@@ -345,6 +346,48 @@ package object appender {
     _ <- conflictingEndorsement.signatureValid(blsPublicKey).leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
   } yield ()
 
+  /** Deterministic, unconditional re-verification of block-carried HotStuff equivocation proofs
+    * (finding H5 -- no local-flag gating, no `hotStuffSettings`/`slashingEnabled` reference here;
+    * gated purely by the on-chain feature-29 check). All-or-nothing: any failing proof fails the
+    * whole block.
+    */
+  private def validateHotStuffEquivocationProofs(
+      blockchain: Blockchain,
+      fv: FinalizationVoting,
+      blockGenerationPeriodIndex: Int,
+      commitedGenerators: IndexedSeq[(Address, BlsPublicKey)],
+      knownConflictGenerators: Set[GeneratorIndex],
+      blockHeight: Int
+  ): Either[String, Unit] =
+    if (fv.hotstuffConflicts.isEmpty) Right(())
+    else
+      for {
+        _ <- Either.raiseUnless(blockchain.supportsHotStuffEquivocationEvidence(blockHeight))(
+          "HotStuff equivocation evidence is not allowed before HotStuff Equivocation Evidence feature activation"
+        )
+        voters = fv.hotstuffConflicts.map(_.voterIndex)
+        _ <- Either.raiseWhen(voters.toSet.size != voters.length)("Duplicate equivocation-proof voter indexes")
+        conflictIdxs = fv.conflict.map(_.endorserIndex.toInt).toSet
+        _ <- fv.hotstuffConflicts.toList.traverse { proof =>
+          for {
+            _ <- proof.consistent
+            _ <- Either.raiseUnless(proof.committeeEpoch == blockGenerationPeriodIndex)(
+              s"Equivocation proof epoch ${proof.committeeEpoch} does not match block generation period $blockGenerationPeriodIndex"
+            )
+            _ <- Either.raiseUnless(proof.voterIndex >= 0 && proof.voterIndex < commitedGenerators.length)(
+              s"Equivocation proof voter index ${proof.voterIndex} outside committee (size ${commitedGenerators.length})"
+            )
+            _ <- Either.raiseWhen(knownConflictGenerators.contains(GeneratorIndex(proof.voterIndex)))(
+              s"Voter ${proof.voterIndex} is already excluded as a conflict generator"
+            )
+            _ <- Either.raiseWhen(conflictIdxs.contains(proof.voterIndex))(
+              s"Voter ${proof.voterIndex} already carries a conflicting endorsement in this voting"
+            )
+            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2))
+          } yield ()
+        }
+      } yield ()
+
   def validateFinalizationVoting(block: Block, blockchain: Blockchain, generatorSet: GeneratorSet): Either[ValidationError, GeneratorSet] =
     block.header.finalizationVoting
       .fold(Right(generatorSet)) { fv =>
@@ -357,7 +400,9 @@ package object appender {
           )
           _ <- Either.raiseWhen(fv.finalizedHeight < GenesisBlockHeight)(s"Finalized block height is less than $GenesisBlockHeight")
           _ <- Either.raiseWhen(fv.finalizedHeight.toInt >= blockchain.height)("Voting for finalized block")
-          _ <- Either.raiseWhen(fv.valid.isEmpty && fv.conflict.isEmpty)("Finalization voting contains neither valid nor conflicting endorsements")
+          _ <- Either.raiseWhen(fv.valid.isEmpty && fv.conflict.isEmpty && fv.hotstuffConflicts.isEmpty)(
+            "Finalization voting contains neither valid nor conflicting endorsements nor equivocation proofs"
+          )
           _ <- Either.raiseWhen(fv.valid.size > blockchain.settings.functionalitySettings.maxValidEndorsers)("Too many valid endorsements")
           _ <- Either.raiseWhen(fv.valid.toSet.size != fv.valid.length)("Duplicate valid endorser indexes")
           _ <- Either.raiseWhen(fv.conflict.groupBy(_.endorserIndex).size != fv.conflict.length)("Duplicate conflicting endorser indexes")
@@ -392,7 +437,15 @@ package object appender {
                 fv.finalizedHeight
               )
             )
-          conflictingEndorsers     = fv.conflict.map(_.endorserIndex).toSet
+          _ <- validateHotStuffEquivocationProofs(
+            blockchain,
+            fv,
+            blockGenerationPeriod.index,
+            allCommittedGenerators,
+            knownConflictGenerators,
+            blockHeight.toInt
+          )
+          conflictingEndorsers     = fv.conflict.map(_.endorserIndex).toSet ++ fv.hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex)).toSet
           nonConflictingGenerators = generatorSet.filterNot(x => conflictingEndorsers.contains(x.index))
           _ <- fv.aggregatedEndorsement match {
             case None => Either.raiseWhen(validEndorsers.nonEmpty)("No endorsements are included, but aggregated endorsement signature is non-empty")
