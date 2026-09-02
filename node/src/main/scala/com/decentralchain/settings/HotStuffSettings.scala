@@ -32,16 +32,28 @@ import scala.concurrent.duration.FiniteDuration
   *                     metric only, feature-25 remains sole authority) is unchanged unless BOTH flags are
   *                     explicitly set. Do NOT set `true` on mainnet -- this is ahead of the external audit
   *                     (see docs/hotstuff-audit-readiness.md) and is accepted, scoped risk for testnet only.
+  * @param slashingEnabled T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md):
+  *                     gates ONLY whether THIS node's miner folds pending equivocation proofs into
+  *                     blocks it forges. Proof VALIDATION and the conflictGenerators union are
+  *                     unconditional (gated solely by feature-29 activation) -- a node with this
+  *                     flag off applies exclusions from received proof-carrying blocks identically,
+  *                     so mixed flag settings can never diverge consensus. TESTNET-ONLY until
+  *                     externally audited; consequences are real (generation-deposit forfeiture).
+  *                     OPERATIONAL NOTE: a replica's very first boot has no persisted lastVotedView
+  *                     (T11 first-boot window) -- do not run a first-boot replica as a committee
+  *                     member with slashing active until it has participated once.
   */
 case class HotStuffSettings(
     enabled: Boolean,
     roundTimeout: FiniteDuration,
     settledDepth: Int = 3,
-    authoritative: Boolean = false
+    authoritative: Boolean = false,
+    slashingEnabled: Boolean = false
 ) derives ConfigReader {
   if (enabled) {
     require(roundTimeout.toMillis > 0, "dcc.hotstuff.round-timeout must be positive when hotstuff is enabled")
     require(settledDepth >= 1, "dcc.hotstuff.settled-depth must be >= 1 when hotstuff is enabled")
   }
   require(!authoritative || enabled, "hotstuff.authoritative requires hotstuff.enabled")
+  require(!slashingEnabled || enabled, "hotstuff.slashing-enabled requires hotstuff.enabled")
 }
