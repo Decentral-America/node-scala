@@ -134,7 +134,24 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof)))
         )
-        d.appender.appendBlockWithoutFallback(block3).isLeft shouldBe true
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("does not match block generation period")
+      }
+
+    "4b. proof whose voterIndex is negative (-1) => Left, no exception (GeneratorIndex.apply guard at conflictingEndorsers)" in
+      withCommittedCommittee(withEvidenceFeature) { (d, _) =>
+        val proof = proofFor(voterA, -1, periodIndex)
+        val block3 = d.createBlock(
+          version = Block.ProtoBlockVersion,
+          txs = Nil,
+          generator = minerGenerator,
+          strictTime = true,
+          finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof)))
+        )
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("outside committee")
       }
 
     "5. cross-epoch vote pair (voteA.epoch != voteB.epoch) => Left (consistent fails)" in
@@ -150,7 +167,9 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(badProof)))
         )
-        d.appender.appendBlockWithoutFallback(block3).isLeft shouldBe true
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("proof votes span committee epochs")
       }
 
     "6. forged voteB signature => Left (signaturesValid fails)" in
@@ -164,7 +183,9 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(forged)))
         )
-        d.appender.appendBlockWithoutFallback(block3).isLeft shouldBe true
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("signature invalid for voter")
       }
 
     "7. voter index out of committee bounds => Left" in
@@ -177,7 +198,9 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof)))
         )
-        d.appender.appendBlockWithoutFallback(block3).isLeft shouldBe true
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("outside committee")
       }
 
     "8. duplicate voter across two proofs in one FV => Left" in
@@ -191,7 +214,9 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
           strictTime = true,
           finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof1, proof2)))
         )
-        d.appender.appendBlockWithoutFallback(block3).isLeft shouldBe true
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("Duplicate equivocation-proof voter indexes")
       }
 
     "9. voter already in knownConflictGenerators => Left (already excluded)" in
@@ -233,7 +258,9 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
               .copy(hotstuffConflicts = Seq(proof))
           )
         )
-        d.appender.appendBlockWithoutFallback(block3).isLeft shouldBe true
+        val result = d.appender.appendBlockWithoutFallback(block3)
+        result.isLeft shouldBe true
+        result.left.value.toString should include("already carries a conflicting endorsement in this voting")
       }
 
     "11. proof from the MINER's own index => Right (an equivocating leader IS slashable)" in

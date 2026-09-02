@@ -445,7 +445,14 @@ package object appender {
             knownConflictGenerators,
             blockHeight.toInt
           )
-          conflictingEndorsers     = fv.conflict.map(_.endorserIndex).toSet ++ fv.hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex)).toSet
+          // Safe by construction: never call GeneratorIndex.apply/checked on a raw, unguarded voterIndex --
+          // both throw on negative input. At this point every proof HAS been validated by
+          // validateHotStuffEquivocationProofs (bounds-checked, non-negative), but that guarantee lives in a
+          // separate function call above; re-deriving it here defends against a future reordering/refactor
+          // turning a malicious negative voterIndex into an uncaught exception instead of a ValidationError.
+          conflictingEndorsers     =
+            fv.conflict.map(_.endorserIndex).toSet ++
+              fv.hotstuffConflicts.flatMap(p => Option.when(p.voterIndex >= 0)(GeneratorIndex(p.voterIndex))).toSet
           nonConflictingGenerators = generatorSet.filterNot(x => conflictingEndorsers.contains(x.index))
           _ <- fv.aggregatedEndorsement match {
             case None => Either.raiseWhen(validEndorsers.nonEmpty)("No endorsements are included, but aggregated endorsement signature is non-empty")
