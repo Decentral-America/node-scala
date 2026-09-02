@@ -115,7 +115,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   "Can't commit" - {
     "zero public key" in withDomain(DeterministicFinality, AddrWithBalance.enoughBalances(sender)) { d =>
       log.info("First")
-      val zeroBlsKp = TestBlsKeyPair.unsafe(Array.emptyByteArray)
+      // TestBlsKeyPair.zero() bypasses BlsUtils.mkBlsSecretKey's own seed guard (audit M3) by
+      // construction, so this keeps exercising the on-chain rejection (PoP verify / `.validated`)
+      // as its own independent defense, regardless of that guard.
+      val zeroBlsKp = TestBlsKeyPair.zero()
       val txn       = TxHelpers.commitToGenerationWithEndorserKey(Height(3001), zeroBlsKp, sender)
       d.appendBlockE(txn) should produce("Invalid commitment signature")
     }

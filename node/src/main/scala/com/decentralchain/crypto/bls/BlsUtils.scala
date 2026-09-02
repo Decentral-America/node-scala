@@ -14,9 +14,21 @@ object BlsUtils {
   val PublicKeySizeInBytes = 48
   val SignatureSizeInBytes = 96
 
+  /** Minimum IKM length required by the IETF BLS keygen spec (draft-irtf-cfrg-bls-signature,
+    * keygen_v5 / HKDF-based key derivation): >= 32 bytes of input keying material. In production the
+    * seed is always a node's 32-byte Curve25519 private key (`BlsKeyPair`), so this is unreachable
+    * today -- but `mkBlsSecretKey` is a public method taking an arbitrary `Array[Byte]`, and a
+    * too-short/low-entropy seed can silently derive the all-zero scalar (whose public key is the
+    * point at infinity), i.e. a node that believes it configured a signing key actually signs
+    * nothing verifiable. Fail closed rather than let that happen silently (audit M3).
+    */
+  private val MinSeedLengthInBytes = 32
+
   def mkBlsSecretKey(arr: Array[Byte]): blst.SecretKey = {
+    require(arr.length >= MinSeedLengthInBytes, s"BLS secret key seed must be at least $MinSeedLengthInBytes bytes, got ${arr.length}")
     val sk = new blst.SecretKey()
     sk.keygen_v5(arr, BlsKeyGenSalt)
+    require(!new blst.P1(sk).is_inf(), "Derived BLS secret key is degenerate (zero scalar)")
     sk
   }
 
