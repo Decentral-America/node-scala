@@ -500,7 +500,13 @@ object HotStuffCoordinator {
           byBlock match {
             case Seq(a, b, _*) =>
               val proof = HotStuffEquivocationProof(a, b)
-              val ok    = for {
+              // KNOWN GAP, MUST BE FIXED BEFORE feature 30 (BlsCryptoV2) IS EVER ACTIVATED (2026-09-02
+              // review of ed0fbcb69c, see HotStuffEquivocationProof.signaturesValid's doc and Task 8 in
+              // docs/superpowers/plans/2026-09-02-bls-crypto-v2.md): signaturesValid still hardcodes the
+              // legacy DST, so once real votes sign under _HSVOTE_ every proof here fails signature
+              // verification and is silently dropped below (DEBUG log only) -- detection goes inert,
+              // fail-closed. Fix: pass a dst derived from the containing block's height, not live tip.
+              val ok = for {
                 _ <- proof.consistent
                 _ <- proof.signaturesValid(i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey))
               } yield ()

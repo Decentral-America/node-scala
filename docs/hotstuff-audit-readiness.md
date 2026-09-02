@@ -242,6 +242,22 @@ laptop (see
    **Still open for this item:** no live multi-node/testnet observation of the trap or of the re-anchor
    firing in production. The fix is DST- and unit-proven only, and the counters above exist precisely so
    a real occurrence becomes graphable — same caveat as the T10 item above.
+8. **BlsCryptoV2 (feature 30) activation-boundary no-QC liveness window — expected, self-healing
+   (2026-09-02).** `cryptoV2` (`HotStuffCoordinator.Enabled`, wired from
+   `blockchainUpdater.supportsBlsCryptoV2()` in `Application.scala`) is a monotone per-node read of that
+   node's own live tip, so replicas cross the activation height at slightly different moments (ordinary
+   propagation skew — the same class of boundary behaviour as the T10 liveness gap above, but on the
+   vote/QC signing DST rather than `committeeEpoch`). `formQC`/`verifyQC` require a uniform DST across
+   every vote in one QC (see `HotStuffQuorum.voteDst`'s scaladoc); mixed-era votes are dropped by
+   `HotStuffVotePool`'s verify-gate rather than merged. A view straddling the boundary can therefore see
+   NO QC form for one or more rounds. This self-heals via the pacemaker's normal view advance once every
+   replica has crossed, and is liveness-only — doubly harmless today since T2 is observational-only (item
+   4 above). **Separately, and unlike this liveness window, `HotStuffEquivocationProof.signaturesValid`
+   has an outstanding correctness gap for the same activation**: it still hardcodes the legacy DST and
+   was not updated to a per-containing-block DST (Task 8 in
+   docs/superpowers/plans/2026-09-02-bls-crypto-v2.md, not yet done as of this entry) — until that lands,
+   feature 30 MUST NOT be activated on any chain, or equivocation detection/slashing goes silently inert.
+   Must be re-evaluated (both items) if HotStuff is ever made authoritative.
 
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.authoritative = true` on **mainnet** — testnet already has both flags on, see banner)
 - [x] Pure core + engine + shell implemented, gated OFF by default (mainnet)

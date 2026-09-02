@@ -385,6 +385,13 @@ package object appender {
             _ <- Either.raiseWhen(conflictIdxs.contains(proof.voterIndex))(
               s"Voter ${proof.voterIndex} already carries a conflicting endorsement in this voting"
             )
+            // KNOWN GAP, MUST BE FIXED BEFORE feature 30 (BlsCryptoV2) IS EVER ACTIVATED (2026-09-02
+            // review of ed0fbcb69c, see HotStuffEquivocationProof.signaturesValid's doc and Task 8 in
+            // docs/superpowers/plans/2026-09-02-bls-crypto-v2.md): signaturesValid still hardcodes the
+            // legacy DST, so once real votes sign under _HSVOTE_ every block-carried proof fails here
+            // and block validation of the finalization voting silently drops it -- detection/slashing
+            // goes inert, fail-closed. Fix: pass a dst derived from THIS proof's containing block
+            // height (blockHeight, already in scope), not live tip, so replay/rollback stay deterministic.
             _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2))
           } yield ()
         }

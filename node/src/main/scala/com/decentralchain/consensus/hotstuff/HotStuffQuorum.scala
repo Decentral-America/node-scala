@@ -50,6 +50,16 @@ object HotStuffQuorum {
     * PoP/endorsement verification this is NOT height-gated per-message; callers select `cryptoV2` from
     * a coordinator-level "is v2 active" provider (see `HotStuffCoordinator.Enabled`'s `cryptoV2`
     * parameter and `Application.scala`'s wiring of it to `blockchainUpdater.supportsBlsCryptoV2()`).
+    *
+    * ACTIVATION-BOUNDARY LIVENESS WINDOW (2026-09-02 review): `cryptoV2` is a monotone per-node read
+    * of the node's own live tip, so replicas cross the BlsCryptoV2 activation height at slightly
+    * different times (ordinary block-propagation skew). `formQC`/`verifyQC` require every vote in one
+    * QC to share the same DST; mixed-era votes are dropped by `HotStuffVotePool`'s verify-gate, not
+    * merged. So a view straddling the boundary may briefly see NO QC form at all. This self-heals via
+    * the pacemaker's normal view advance once every replica has crossed the boundary, and is
+    * liveness-only, not a safety issue -- and today is doubly harmless since T2 is observational only
+    * (feature-25 remains the authoritative finality source per docs/hotstuff-audit-readiness.md). This
+    * must be re-evaluated if HotStuff is ever made authoritative (`dcc.hotstuff.authoritative`).
     */
   def voteDst(cryptoV2: Boolean): String = if (cryptoV2) BlsUtils.BlsHsVoteDomainSeparationTagV2 else BlsUtils.BlsDomainSeparationTag
 
