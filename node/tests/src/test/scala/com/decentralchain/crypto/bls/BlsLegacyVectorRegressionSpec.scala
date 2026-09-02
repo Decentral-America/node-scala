@@ -52,7 +52,9 @@ class BlsLegacyVectorRegressionSpec extends FreeSpec with EitherValues {
     // pk = endorser's BLS public key; message = popMessage(chainId='D', senderPk, endorserPk, periodStart=12345, cryptoV2=false)
     val pk        = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
     val message   = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFcAAAwOQ==")
-    val signature = Base64.decode("qCjEnAO3kh+PIFnsIOJtKqpJYPnUArDe1VjVvqi6Bygr+kZq68vtLR4IJ9TFuIYUDpM2ua73KFNpp4l7QdQ8Db23AQ+R6WsI4799GnwRgA8P7fBruFRkdRtBHcC4VpOQ")
+    val signature = Base64.decode(
+      "qCjEnAO3kh+PIFnsIOJtKqpJYPnUArDe1VjVvqi6Bygr+kZq68vtLR4IJ9TFuIYUDpM2ua73KFNpp4l7QdQ8Db23AQ+R6WsI4799GnwRgA8P7fBruFRkdRtBHcC4VpOQ"
+    )
 
     "verifies under the legacy DST" in {
       BlsUtils.verifyBasic(signature, message, pk, BlsUtils.BlsDomainSeparationTag) shouldBe a[Right[?, ?]]
@@ -75,10 +77,12 @@ class BlsLegacyVectorRegressionSpec extends FreeSpec with EitherValues {
     // pk1, pk2 = the two endorsers' BLS public keys; message = BlockEndorsement.mkMessage(finalizedId
     // = 32 bytes of 0x07, finalizedHeight = 100, endorsedId = 32 bytes of 0x09); aggSig = the
     // FastAggregateVerify-style aggregate of both signers' legacy-DST signatures over that message.
-    val pk1    = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
-    val pk2    = Base64.decode("ufAt+MwEJbR3hVEdco3aTWFgFCPnSi40GH/igBlwEWJ515I7/LNQVupwX7EIVWOD")
+    val pk1     = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
+    val pk2     = Base64.decode("ufAt+MwEJbR3hVEdco3aTWFgFCPnSi40GH/igBlwEWJ515I7/LNQVupwX7EIVWOD")
     val message = Base64.decode("BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcAAABkCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk=")
-    val aggSig  = Base64.decode("oGRF/2FMhl4NHXwvG0h1Lr4Dlq6pAwvU8c4vUek1cVNbaPFPDaNSd0Ekz1Hbgc5MDEoNL2sMJQQFnAu3aw7fmskiQqLauYnweOqxuXeCXL7ryBz5nwqemNsFYot9S49u")
+    val aggSig  = Base64.decode(
+      "oGRF/2FMhl4NHXwvG0h1Lr4Dlq6pAwvU8c4vUek1cVNbaPFPDaNSd0Ekz1Hbgc5MDEoNL2sMJQQFnAu3aw7fmskiQqLauYnweOqxuXeCXL7ryBz5nwqemNsFYot9S49u"
+    )
 
     "verifies under the legacy DST" in {
       BlsUtils.verifyAgg(aggSig, message, Seq(pk1, pk2), BlsUtils.BlsDomainSeparationTag) shouldBe a[Right[?, ?]]
