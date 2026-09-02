@@ -20,12 +20,14 @@ class HotStuffSettingsSpecification extends FlatSpec {
                           |settled-depth = 3
                           |authoritative = false
                           |slashing-enabled = false
+                          |max-target-lag-fraction = 0.25
       """.stripMargin)
     settings.enabled should be(true)
     settings.roundTimeout should be(1200.millis)
     settings.settledDepth should be(3)
     settings.authoritative should be(false)
     settings.slashingEnabled should be(false)
+    settings.maxTargetLagFraction should be(0.25)
   }
 
   it should "reject a settled-depth below 1 when enabled" in {
@@ -77,6 +79,7 @@ class HotStuffSettingsSpecification extends FlatSpec {
                           |settled-depth = 3
                           |authoritative = false
                           |slashing-enabled = true
+                          |max-target-lag-fraction = 0.25
       """.stripMargin)
     settings.slashingEnabled should be(true)
   }
@@ -85,5 +88,45 @@ class HotStuffSettingsSpecification extends FlatSpec {
     assertThrows[IllegalArgumentException] {
       HotStuffSettings(enabled = false, roundTimeout = 1200.millis, slashingEnabled = true)
     }
+  }
+
+  // F-6 fix (docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md): maxTargetLagFraction.
+  it should "default maxTargetLagFraction to 0.25 in the reference config" in {
+    val settings = ConfigSource.fromConfig(ConfigFactory.load()).at("dcc.hotstuff").loadOrThrow[HotStuffSettings]
+    settings.maxTargetLagFraction should be(0.25)
+  }
+
+  it should "read an explicit maxTargetLagFraction" in {
+    val settings = load("""
+                          |enabled = true
+                          |round-timeout = 1200ms
+                          |settled-depth = 3
+                          |authoritative = false
+                          |slashing-enabled = false
+                          |max-target-lag-fraction = 0.1
+      """.stripMargin)
+    settings.maxTargetLagFraction should be(0.1)
+  }
+
+  it should "reject maxTargetLagFraction <= 0 when enabled" in {
+    assertThrows[IllegalArgumentException] {
+      HotStuffSettings(enabled = true, roundTimeout = 1200.millis, maxTargetLagFraction = 0.0)
+    }
+  }
+
+  it should "reject a negative maxTargetLagFraction when enabled" in {
+    assertThrows[IllegalArgumentException] {
+      HotStuffSettings(enabled = true, roundTimeout = 1200.millis, maxTargetLagFraction = -0.1)
+    }
+  }
+
+  it should "reject maxTargetLagFraction >= 1 when enabled" in {
+    assertThrows[IllegalArgumentException] {
+      HotStuffSettings(enabled = true, roundTimeout = 1200.millis, maxTargetLagFraction = 1.0)
+    }
+  }
+
+  it should "allow an out-of-(0,1) maxTargetLagFraction when disabled (flag off = inert)" in {
+    HotStuffSettings(enabled = false, roundTimeout = 1200.millis, maxTargetLagFraction = 5.0).enabled should be(false)
   }
 }

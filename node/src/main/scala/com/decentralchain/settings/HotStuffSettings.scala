@@ -57,6 +57,19 @@ import scala.concurrent.duration.FiniteDuration
   *                     2026-08-31.md` F-1 for why that is nontrivial (it can wedge a node that finalized a
   *                     minority branch). See also `docs/hotstuff-audit-readiness.md` for the corresponding
   *                     operator-facing caveat.
+  * @param maxTargetLagFraction F-6 fix (docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md):
+  *                     bounds how far behind the live tip a T2 target (in particular the in-flight,
+  *                     not-yet-committed `prepareQC` branch re-proposed by `onRoundTimerTick`) may lag
+  *                     before this replica abandons it and re-anchors near the tip, expressed as a
+  *                     fraction of `generationPeriodLength`. Without this bound, a target more than one
+  *                     generation period behind the tip signs an epoch `HotStuffQuorum
+  *                     .acceptableCommitteeEpoch` will never again accept from this replica's own live
+  *                     tip -- a self-sealing trap: catching up requires committing those heights, which
+  *                     requires accepting those QCs. See `HotStuffCoordinator.Enabled.tooStale` and its
+  *                     two use sites (`inFlightBranch` filtering, `castVotes` defensive guard). Must be
+  *                     in `(0, 1)` when `enabled`. Production wiring floors the resulting block count at
+  *                     `settledDepth + 1` (see `Application.scala`) so the bound can never be tighter
+  *                     than the happy path's own structural lag.
   * @param slashingEnabled T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md):
   *                     gates ONLY whether THIS node's miner folds pending equivocation proofs into
   *                     blocks it forges. Proof VALIDATION and the conflictGenerators union are
@@ -73,11 +86,16 @@ case class HotStuffSettings(
     roundTimeout: FiniteDuration,
     settledDepth: Int = 3,
     authoritative: Boolean = false,
-    slashingEnabled: Boolean = false
+    slashingEnabled: Boolean = false,
+    maxTargetLagFraction: Double = 0.25
 ) derives ConfigReader {
   if (enabled) {
     require(roundTimeout.toMillis > 0, "dcc.hotstuff.round-timeout must be positive when hotstuff is enabled")
     require(settledDepth >= 1, "dcc.hotstuff.settled-depth must be >= 1 when hotstuff is enabled")
+    require(
+      maxTargetLagFraction > 0 && maxTargetLagFraction < 1,
+      "dcc.hotstuff.max-target-lag-fraction must be in (0, 1) when hotstuff is enabled"
+    )
   }
   require(!authoritative || enabled, "hotstuff.authoritative requires hotstuff.enabled")
   require(!slashingEnabled || enabled, "hotstuff.slashing-enabled requires hotstuff.enabled")
