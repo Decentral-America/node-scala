@@ -33,10 +33,15 @@ case class CommitToGenerationRequest(
       defaultTimestamp: => Long
   ): Either[ValidationError, CommitToGenerationTransaction] = {
     val exactGenerationPeriodStart = generationPeriodStart.getOrElse(defaultGenerationPeriodStart)
+    val exactChainId                = chainId.getOrElse(AddressScheme.current.chainId)
     for {
       commitmentSignature <- commitmentSignature match {
         case Some(r) => BlsSignature(r)
-        case None    => Right(CommitToGenerationTransaction.mkPopSignature(defaultEndorserKp, exactGenerationPeriodStart))
+        case None =>
+          Right(
+            CommitToGenerationTransaction
+              .mkPopSignature(defaultEndorserKp, exactGenerationPeriodStart, senderPk, exactChainId, cryptoV2 = false)
+          )
       }
       endorserPublicKey <- endorserPublicKey match {
         case Some(endorserPublicKey) => BlsPublicKey(endorserPublicKey)

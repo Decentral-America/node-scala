@@ -638,9 +638,9 @@ object BlockDiffer {
                     BlsUtils
                       .verifyBasic(
                         tx.commitmentSignature.arr,
-                        tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray,
+                        CommitToGenerationTransaction.popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2 = false),
                         tx.endorserPublicKey.arr,
-                        BlsUtils.BlsDomainSeparationTag
+                        CommitToGenerationTransaction.popDst(cryptoV2 = false)
                       )
                       .isRight
                   )(GenericError("Invalid commitment signature"))

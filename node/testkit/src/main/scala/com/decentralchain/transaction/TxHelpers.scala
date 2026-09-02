@@ -471,9 +471,10 @@ object TxHelpers {
       timestamp: TxTimestamp = timestamp,
       fee: Long = TestValues.commitToGenerationFee,
       chainId: Byte = AddressScheme.current.chainId,
-      version: TxVersion = TxVersion.V1
+      version: TxVersion = TxVersion.V1,
+      cryptoV2: Boolean = false
   ): CommitToGenerationTransaction =
-    commitToGenerationWithEndorserKey(generationPeriodStart, BlsKeyPair(sender.privateKey), sender, timestamp, fee, chainId, version)
+    commitToGenerationWithEndorserKey(generationPeriodStart, BlsKeyPair(sender.privateKey), sender, timestamp, fee, chainId, version, cryptoV2)
 
   def commitToGenerationWithEndorserKey(
       generationPeriodStart: Height,
@@ -482,7 +483,8 @@ object TxHelpers {
       timestamp: TxTimestamp = timestamp,
       fee: Long = TestValues.commitToGenerationFee,
       chainId: Byte = AddressScheme.current.chainId,
-      version: TxVersion = TxVersion.V1
+      version: TxVersion = TxVersion.V1,
+      cryptoV2: Boolean = false
   ): CommitToGenerationTransaction = CommitToGenerationTransaction
     .selfSigned(
       version,
@@ -491,7 +493,7 @@ object TxHelpers {
       generationPeriodStart,
       timestamp,
       fee,
-      CommitToGenerationTransaction.mkPopSignature(endorserKp, generationPeriodStart),
+      CommitToGenerationTransaction.mkPopSignature(endorserKp, generationPeriodStart, sender.publicKey, chainId, cryptoV2),
       chainId
     )
     .explicitGet()
