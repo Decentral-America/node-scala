@@ -53,13 +53,26 @@ object BlsUtils {
   /** @param aggSigBytes Validated internally
     * @param blsPks Expected to have validated public keys
     * @see https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#name-fastaggregateverify
+    *
+    * Defense-in-depth (audit H1): the individual-key validation this function's contract relies on
+    * ("Expected to have validated public keys") is enforced only at registration time
+    * (`CommitToGenerationTransactionDiff`), not here. `new blst.P1(bytes)` decompresses and checks
+    * the point is on the curve, but deliberately does NOT run the (expensive) `in_group()` subgroup
+    * test, and a small-subgroup element summed with others need not trip the aggregate's own
+    * `is_inf()`/`BLST_PK_IS_INFINITY` check inside `verify`. So this function re-validates on the
+    * *aggregate* (one `in_group()`/`is_inf()` pair instead of one per key) rather than trusting the
+    * caller's contract, closing the gap for any caller that cannot itself guarantee validated inputs
+    * (see C1/H1 in docs/hotstuff-bls-crypto-audit-2026-08-31.md).
     */
   def verifyAgg(aggSigBytes: Array[Byte], message: Array[Byte], blsPks: Iterable[Array[Byte]]): Either[String, Unit] = for {
     _ <- Either.raiseWhen(blsPks.isEmpty)("Empty BLS public key list")
     aggPk <- Either
       .catchNonFatal(blsPks.map(new blst.P1(_)).reduce(_.add(_)))
       .leftMap(e => s"Error aggregating BLS public keys: ${e.getMessage}")
-    res <- verify(aggSigBytes, message, new blst.P1_Affine(aggPk))
+    aggPkAffine = new blst.P1_Affine(aggPk)
+    _   <- Either.raiseUnless(aggPkAffine.in_group())("Wrong BLS public key: aggregate not in a group")
+    _   <- Either.raiseWhen(aggPkAffine.is_inf())("Wrong BLS public key: aggregate is point at infinity")
+    res <- verify(aggSigBytes, message, aggPkAffine)
   } yield res
 
   private def verify(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: blst.P1_Affine): Either[String, Unit] = try {

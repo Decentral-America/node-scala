@@ -217,6 +217,40 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     }
   }
 
+  // --- H1 (audit): verifyAgg must defend itself against a non-subgroup / infinity aggregate,
+  // rather than relying solely on the "callers only ever pass validated keys" contract -- a contract
+  // that C1 shows does not hold on every path (e.g. a light-node snapshot path). These probe the
+  // production entry point (BlsUtils.verifyAgg), not blst internals directly.
+  "verifyAgg defense-in-depth (audit H1)" - {
+    "rejects an aggregate that sums to the point at infinity (pk + (-pk))" in {
+      // publicKey1's negation, compressed: on-curve, in-group, but pk1 + (-pk1) == infinity.
+      val negPk1 = new blst.P1(publicKey1).neg().compress()
+      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, negPk1)) shouldBe a[Left[?, ?]]
+    }
+
+    "rejects a public key that is on-curve but not in the correct subgroup" in {
+      // A hand-picked BLS12-381 G1 point (x=4, smallest x with a valid y on E(Fp): y^2 = x^3 + 4)
+      // that is on-curve (blst's decompression itself enforces that) but, verified independently via
+      // plain-Python double-and-add, NOT a member of the prime-order-r subgroup: r*(x,y) != infinity.
+      // This is exactly the "on curve, wrong subgroup" shape H1 targets -- blst's decompression alone
+      // does not run the (separate, expensive) in_group() check.
+      val notInGroupPkBytes =
+        "800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004"
+          .grouped(2)
+          .map(Integer.parseInt(_, 16).toByte)
+          .toArray
+      val candidate = new blst.P1_Affine(notInGroupPkBytes)
+      assume(candidate.on_curve(), "test fixture must be on-curve to be a meaningful probe")
+      assume(!candidate.in_group(), "test fixture must actually be outside the subgroup to be meaningful")
+      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, notInGroupPkBytes)) shouldBe a[Left[?, ?]]
+    }
+
+    "still verifies an honest aggregate (no regression)" in {
+      val aggSig = BlsUtils.aggSig(Seq(sig1, sig2)).value
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Right[?, ?]]
+    }
+  }
+
   private def mkRandomSecretKey(): SecretKey = mkBlsSecretKey(mkRandomDccKeyPair().privateKey.arr)
   private def mkRandomDccKeyPair(): KeyPair  = KeyPair(Array.fill(32)(ThreadLocalRandom.current().nextInt().toByte))
 }
