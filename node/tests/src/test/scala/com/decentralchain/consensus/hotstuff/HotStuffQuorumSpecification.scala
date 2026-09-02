@@ -54,7 +54,7 @@ class HotStuffQuorumSpecification extends FlatSpec {
   }
 
   "verifyQC" should "reject a QC whose signer set is below quorum" in {
-    val aggSig = Seq(vote(0), vote(1)).map(_.signature.arr).reduceLeft(BlsUtils.aggSign)
+    val aggSig = Seq(vote(0), vote(1)).map(_.signature.arr).reduceLeft((a, b) => BlsUtils.aggSign(a, b).toOption.get)
     val badQc  = QuorumCertificate(view, phase, blockId, height, Seq(0, 1), ByteStr(aggSig))
     HotStuffQuorum.verifyQC(badQc, committee).isLeft should be(true)
   }

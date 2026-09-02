@@ -19,7 +19,8 @@ object BlsSignature {
     def verifyAgg(message: Array[Byte], blsPks: Iterable[BlsPublicKey]): Either[String, Unit] =
       BlsUtils.verifyAgg(byteStr.arr, message, blsPks.map(_.arr))
 
-    def append(other: BlsSignature): BlsSignature = ByteStr(BlsUtils.aggSign(self.arr, other.arr))
+    def append(other: BlsSignature): Either[GenericError, BlsSignature] =
+      BlsUtils.aggSign(self.arr, other.arr).left.map(GenericError(_)).flatMap(apply)
   }
 
   // Validates (via apply's sanity check) rather than blindly wrapping bytes.

@@ -29,22 +29,28 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
 
   "aggregation in verifyAgg" - {
     "aggregation of two same signatures" in {
-      val aggSig = BlsUtils.aggSign(BlsUtils.aggSign(sig1, sig2), sig1)
+      val aggSig = BlsUtils.aggSign(BlsUtils.aggSign(sig1, sig2).value, sig1).value
 
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1)) shouldBe a[Right[?, ?]]
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Left[?, ?]]
     }
 
     "different order of signatures and keys" in {
-      val aggSig = BlsUtils.aggSign(sig1, sig2)
+      val aggSig = BlsUtils.aggSign(sig1, sig2).value
 
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1)) shouldBe a[Right[?, ?]]
     }
 
     "associativity" in {
-      val aggSig = Seq(sig1, sig2, sig3).reduceLeft(BlsUtils.aggSign)
+      val aggSig = Seq(sig1, sig2, sig3).reduceLeft((a, b) => BlsUtils.aggSign(a, b).value)
 
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1, publicKey3)) shouldBe a[Right[?, ?]]
+    }
+
+    // audit L1: aggSign must fail closed (Left), never throw, on malformed input.
+    "rejects malformed input instead of throwing" in {
+      BlsUtils.aggSign(Array.fill[Byte](10)(0), sig2) shouldBe a[Left[?, ?]]
+      BlsUtils.aggSign(sig1, Array.emptyByteArray) shouldBe a[Left[?, ?]]
     }
   }
 

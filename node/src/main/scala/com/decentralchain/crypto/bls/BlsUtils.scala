@@ -34,8 +34,18 @@ object BlsUtils {
   def verifyBasic(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: Array[Byte]): Either[String, Unit] =
     verify(blsSigBytes, message, new blst.P1_Affine(blsPkBytes))
 
-  def aggSign(baseSig: Array[Byte], appendSig: Array[Byte]): Array[Byte] =
-    new blst.P2(baseSig).add(new blst.P2(appendSig)).compress()
+  /** Pairwise signature aggregation (audit L1): the only non-fail-closed primitive in this file until
+    * this fix -- it took raw `Array[Byte]` and threw out of `new blst.P2(...)` on malformed input
+    * instead of returning `Left` like its siblings (`aggSig`, `verifyAgg`). Kept for the pairwise-fold
+    * call shape (`reduceLeft(aggSign)`); prefer [[aggSig]] for aggregating a whole set in one pass.
+    */
+  def aggSign(baseSig: Array[Byte], appendSig: Array[Byte]): Either[String, Array[Byte]] = for {
+    _   <- sanityCheckSignature(baseSig)
+    _   <- sanityCheckSignature(appendSig)
+    agg <- Either
+      .catchNonFatal(new blst.P2(baseSig).add(new blst.P2(appendSig)).compress())
+      .leftMap(e => s"Error aggregating BLS signatures: ${e.getMessage}")
+  } yield agg
 
   /** Single-pass aggregation of the whole signature set, replacing a pairwise `reduceLeft(aggSign)`
     * fold (which cannot report a failure and silently keeps going on empty/invalid input).
