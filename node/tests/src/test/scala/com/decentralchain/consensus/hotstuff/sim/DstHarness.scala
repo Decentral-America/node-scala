@@ -50,7 +50,15 @@ final class DstHarness(
     // historical `_ => true`, so every pre-existing scenario keeps byte-for-byte prior behaviour; the
     // audit's point is precisely that a permissive default cannot exercise the realistic case, so
     // `HotStuffWatchdogInFlightResetScenarioSpecification` supplies a genuinely chain-backed one.
-    proposalValid: (Int, BlockId) => Boolean = (_, _) => true
+    proposalValid: (Int, BlockId) => Boolean = (_, _) => true,
+    // F-6 fix additive hook (docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md, audit
+    // F-6 "self-sealing epoch trap"): the max-target-lag bound wired to EVERY node's
+    // `HotStuffCoordinator.Enabled.maxTargetLag`, mirroring production's single Application.scala-wide
+    // setting. Defaults to `Int.MaxValue`, matching `HotStuffCoordinator.Enabled`'s own default -- i.e.
+    // the lag check is unconditionally a no-op for every existing scenario spec that doesn't pass this,
+    // preserving byte-for-byte prior behaviour. `DstStaleTargetSelfSealScenarioSpecification` is the one
+    // scenario that supplies a finite bound here.
+    maxTargetLag: () => Int = () => Int.MaxValue
 ) {
   val clock: SimClock                                = new SimClock(seed)
   val commits: mutable.ListBuffer[CommitObservation] = mutable.ListBuffer.empty
@@ -66,14 +74,30 @@ final class DstHarness(
   }
   private val live         = mutable.Set.from(0 until nodeCount)
   private val heightOfView = mutable.Map.empty[Int, Int]
-  // Every node's shared "currently-believed-active committee epoch" -- the DST-harness equivalent of
+  // Every node's OWN "currently-believed-active committee epoch" -- the DST-harness equivalent of
   // production's `committeeEpoch` closure (`blockchainUpdater.currentGenerationPeriod`, read fresh from
   // each node's OWN live chain tip). Used ONLY for `HotStuffEngine.onQC`/`onProposal`'s transition-
   // gating decision (`HotStuffQuorum.acceptableCommitteeEpoch`), never for what a node signs (that is
-  // `committeeEpochOf` above). Advances via `advanceEpochBelief` to simulate every node's live tip
-  // having genuinely progressed to (agreed on) the new generation period -- see
-  // `DstCommitteeEpochRotationScenarioSpecification`.
-  private var epochBelief: Int = 0
+  // `committeeEpochOf` above).
+  //
+  // F-6 fix (audit "self-sealing epoch trap"): this used to be ONE shared `var`, updated only via
+  // `advanceEpochBelief` -- adequate for exercising the epoch-rotation TRANSITION-GATING rule
+  // (`DstCommitteeEpochRotationScenarioSpecification`), but structurally incapable of expressing "one
+  // node's own tip has diverged from the others'" -- exactly the F-6 trap's precondition (a node whose
+  // OWN live tip has outrun a target it is still voting on). Replaced with a genuine per-node map so a
+  // scenario can move ONE node's belief independently. `advanceEpochBelief` below is kept as a thin
+  // shim over this map -- see its doc -- so every existing scenario spec keeps byte-for-byte identical
+  // behaviour without being rewritten.
+  private val epochBelief: mutable.Map[Int, Int] = mutable.Map.empty[Int, Int].withDefaultValue(0)
+  // F-6 fix: each node's OWN simulated live chain tip height, fed to that node's own
+  // `HotStuffCoordinator.Enabled.tipHeight` -- the DST-harness equivalent of production's
+  // `blockchainUpdater.height`. Defaults to 0 for every node (matching `HotStuffCoordinator.Enabled`'s
+  // own `tipHeight` default), so a scenario that never calls `advanceTip` observes the lag check as an
+  // unconditional no-op, same as `maxTargetLag`'s `Int.MaxValue` default above. Deliberately SEPARATE
+  // from `committedTip`/`blockSource` below: `tipHeight` models the replica's OWN progress for the F-6
+  // liveness check, independent of what it has actually T2-committed (a node can legitimately be ahead
+  // of its own last commit -- that gap is exactly what F-6 is about).
+  private val simulatedTip: mutable.Map[Int, Int] = mutable.Map.empty[Int, Int].withDefaultValue(0)
   // Per-node "settled tip" (most recent T2-committed blockId/height), fed to that node's own
   // `HotStuffCoordinator.Enabled` as its `blockSource` -- see below. Mirrors production's `blockSource`
   // (Application.scala): "the current settled tip", not an in-flight/uncommitted branch.
@@ -111,9 +135,12 @@ final class DstHarness(
           // falls back to ITS OWN last-committed tip, exactly as production's `blockSource` would.
           proposalValid = (blockId: BlockId) => proposalValid(i, blockId),
           blockSource = () => committedTip.get(i),
-          committeeEpochProvider = () => epochBelief,
+          committeeEpochProvider = () => epochBelief(i),
           committeeEpochOf = committeeEpochOf,
-          onAction = action => onAction(i, action)
+          onAction = action => onAction(i, action),
+          // F-6 fix: per-node lag check, mirroring production's Application.scala wiring.
+          maxTargetLag = maxTargetLag,
+          tipHeight = () => simulatedTip(i)
         )
       )
       .toMap
@@ -172,15 +199,31 @@ final class DstHarness(
 
   def setCommittee(next: GeneratorSet): Unit = committee = next
 
-  /** Advance every node's shared `committeeEpoch` gating belief (see `epochBelief` above) to `next` --
-    * simulating every replica's own live chain tip having genuinely progressed into (and agreed on) a
-    * new generation period, the real-world trigger for production's `committeeEpoch` provider to
-    * advance. `HotStuffEngine.onQC`'s transition-gating rule (`HotStuffQuorum.acceptableCommitteeEpoch`)
-    * still accepts `next` or `next - 1`, so this does not need to be called with perfect synchrony
-    * relative to `committeeEpochOf`-derived vote/QC epochs -- it only needs to reflect that the epoch
-    * a round's votes/QCs are signed under is (or was, one step back) one this replica currently accepts.
+  /** Advance every LIVE node's shared `committeeEpoch` gating belief (see `epochBelief` above) to
+    * `next` -- simulating every replica's own live chain tip having genuinely progressed into (and
+    * agreed on) a new generation period, the real-world trigger for production's `committeeEpoch`
+    * provider to advance. `HotStuffEngine.onQC`'s transition-gating rule
+    * (`HotStuffQuorum.acceptableCommitteeEpoch`) still accepts `next` or `next - 1`, so this does not
+    * need to be called with perfect synchrony relative to `committeeEpochOf`-derived vote/QC epochs --
+    * it only needs to reflect that the epoch a round's votes/QCs are signed under is (or was, one step
+    * back) one this replica currently accepts.
+    *
+    * F-6 fix: `epochBelief` is now a per-node map (was a single shared `var`); this method is kept as a
+    * thin shim that sets EVERY live node's entry to the same `next`, so every existing scenario spec
+    * that calls this (all of them as of this change) observes byte-for-byte identical behaviour to the
+    * old shared-`var` semantics. It does NOT touch `simulatedTip` -- that is a separate, F-6-only
+    * concept (see `simulatedTip`'s doc and `advanceTip` below); no pre-existing scenario spec wires a
+    * finite `maxTargetLag`, so `tipHeight`/`simulatedTip` remain a no-op for all of them regardless.
     */
-  def advanceEpochBelief(next: Int): Unit = epochBelief = next
+  def advanceEpochBelief(next: Int): Unit = live.foreach(i => epochBelief(i) = next)
+
+  /** F-6 fix: push ONE node's own simulated live chain tip to `height`, independent of every other
+    * node's tip and independent of `epochBelief` (see `simulatedTip`'s doc for why the two are kept
+    * separate). Lets a scenario put a single replica's tip a full generation period ahead of a target
+    * it is still voting on -- the F-6 trap's precondition -- without perturbing any other node or the
+    * epoch-gating belief exercised by `advanceEpochBelief`/`DstCommitteeEpochRotationScenarioSpecification`.
+    */
+  def advanceTip(node: Int, height: Int): Unit = simulatedTip(node) = height
 
   def partition(a: Set[Int], b: Set[Int]): Unit     = network.partition(a, b)
   def healPartition(a: Set[Int], b: Set[Int]): Unit = network.healPartition(a, b)
