@@ -308,6 +308,9 @@ object Blockchain {
 
     def supportsFinalizationVoting(height: Int = blockchain.height): Boolean =
       blockchain.featureActivationHeight(BlockchainFeatures.DeterministicFinality).exists(Height(height) >= _)
+
+    def supportsHotStuffEquivocationEvidence(height: Int = blockchain.height): Boolean =
+      blockchain.featureActivationHeight(BlockchainFeatures.HotStuffEquivocationEvidence).exists(Height(height) >= _)
   }
 
   def finalizedHeightOrFallback(at: Height, latestFinalized: Option[Height], maxRollbackLength: Int): Height = {
