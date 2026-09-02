@@ -431,6 +431,24 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           true
         }
 
+      // audit F-8 (LOW): ingress sanity bounds on a wire QC/vote's `view`/`blockHeight`, applied at this
+      // ingress seam (the shell, which has `blockchainUpdater`) rather than inside the pure
+      // `HotStuffEngine`/`HotStuffPacemaker` reducers. The actual bound is the pure, independently unit
+      // tested `HotStuffIngressGuard.sane` -- see that object's doc for the full rationale (why LOW
+      // severity/colluding-quorum-only, why these specific bounds, why `slack` is one
+      // `generationPeriodLength`). This closure only reads live chain state and logs the rejection.
+      def hsIngressSane(kind: String, view: Int, blockHeight: Int): Boolean = {
+        val currentHeight = blockchainUpdater.height
+        val slack         = settings.blockchainSettings.functionalitySettings.generationPeriodLength
+        val sane          = com.decentralchain.consensus.hotstuff.HotStuffIngressGuard.sane(view, blockHeight, currentHeight, slack)
+        if (!sane)
+          log.warn(
+            s"[HotStuff] ingress sanity check REJECTED $kind: view=$view blockHeight=$blockHeight " +
+              s"(currentHeight=$currentHeight, slack=$slack) -- dropping before it reaches the coordinator (audit F-8)"
+          )
+        sane
+      }
+
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, p) =>
@@ -455,12 +473,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, v) =>
-          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v)) hsCoordinator.onVote(v)
+          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v) && hsIngressSane("vote", v.view, v.blockHeight.toInt))
+            hsCoordinator.onVote(v)
         }(using hotStuffScheduler)
       messageObserver.hotStuffQCs
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, qc) =>
-          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc)) hsCoordinator.onQC(qc)
+          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc) && hsIngressSane("QC", qc.view, qc.blockHeight.toInt))
+            hsCoordinator.onQC(qc)
         }(using hotStuffScheduler)
 
       // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
