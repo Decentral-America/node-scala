@@ -34,6 +34,7 @@ class HotStuffSimulationSpecification extends FlatSpec {
       def myVoterIndexes: Set[Int]                                   = Set(self)
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
       def onCommit(blockId: BlockId, height: Int): Unit              = committed(self) = Some((blockId, height))
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }
 
     val nodes: Map[Int, HotStuffCoordinator.Enabled] =
@@ -75,6 +76,7 @@ class HotStuffSimulationSpecification extends FlatSpec {
       def myVoterIndexes: Set[Int]                                   = Set(1)
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(1).sign(msg))
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }
     // Real-world guard: only B is a block this replica recognizes as canonical on its own chain.
     val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true, (b: BlockId) => b == B)

@@ -24,6 +24,9 @@ trait HotStuffEffects {
 
   /** A block reached T2 finality — apply it (advance finalized height). */
   def onCommit(blockId: BlockId, height: Int): Unit
+
+  /** A verified equivocation proof was recorded (at most once per (voter, view, phase)). */
+  def onEquivocation(proof: HotStuffEquivocationProof): Unit
 }
 
 /** Orchestrates the pure reducers (`HotStuffEngine`, `HotStuffVotePool`, `HotStuffQuorum`) into the
@@ -54,6 +57,19 @@ sealed trait HotStuffCoordinator {
     * supplied at construction, or it has nothing to propose right now.
     */
   def onRoundTimerTick(): Unit
+
+  /** Verified equivocation proofs recorded so far (at most one per (voter, view, phase)), retained
+    * until pruned via `pruneEquivocations` -- see that method's doc. `Disabled` always returns
+    * `Seq.empty`. Task 8's miner reads this to fold conflicts into a block when slashing is enabled.
+    */
+  def detectedEquivocations: Seq[HotStuffEquivocationProof] = Seq.empty
+
+  /** Retention rule [M2]: drop any retained proof whose voter is already excluded on-chain
+    * (`alreadyExcluded(voterIndex)`), or whose `committeeEpoch` has fallen behind the currently-active
+    * period (`committeeEpoch < currentPeriodIndex`) -- a stale-epoch proof no longer names a committee
+    * slot that matters. No-op on `Disabled`.
+    */
+  def pruneEquivocations(alreadyExcluded: Int => Boolean, currentPeriodIndex: Int): Unit = ()
 
   /** Task 4 (wedged-committee watchdog) additive recovery hook: clear this replica's in-memory HotStuff
     * safety lock (`SafetyState.lockedQC`/`prepareQC`) so the NEXT event/tick starts from a blank lock,
@@ -240,6 +256,15 @@ object HotStuffCoordinator {
     private var lastReproposedBlockId: Option[BlockId] = None
     private var reproposeAttempts: Int                 = 0
 
+    // T5 rev.2 (equivocation detection, audit F-3): verified equivocation proofs recorded by this
+    // replica so far, at most one per (voter, view, phase) -- see `detectedEquivocations`/
+    // `pruneEquivocations` on the trait for the read/retention contract.
+    private var _detectedEquivocations: Vector[HotStuffEquivocationProof] = Vector.empty
+    override def detectedEquivocations: Seq[HotStuffEquivocationProof]    = _detectedEquivocations
+
+    override def pruneEquivocations(alreadyExcluded: Int => Boolean, currentPeriodIndex: Int): Unit =
+      _detectedEquivocations = _detectedEquivocations.filterNot(p => alreadyExcluded(p.voterIndex) || p.committeeEpoch < currentPeriodIndex)
+
     // The committed-generator committee rotates per generation period; refresh it from the chain at
     // the start of each event so reducers always see the current period's set.
     private def refreshCommittee(): Unit =
@@ -307,6 +332,35 @@ object HotStuffCoordinator {
       refreshCommittee()
       val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
       pool = nextPool
+      // T5 rev.2: pool.pending is keyed by the FULL (view, phase, blockId) target, so a double-signer's
+      // votes land in different buckets -- gather every bucket sharing (view, phase) before running
+      // HotStuffSafety.equivocators. Only a proof that passes `consistent` (epoch-equal, C2) AND both
+      // signature checks is recorded: a forged vote can never frame an honest voter, and a cross-epoch
+      // pair is not evidence. Detection is unconditional (observability); slashing-enabled only gates
+      // whether the MINER folds these into a block (see Miner.foldHotStuffConflicts).
+      val sameRoundVotes = nextPool.pending.collect { case ((v, p, _), vs) if v == vote.view && p == vote.phase => vs }.flatten
+      HotStuffSafety.equivocators(sameRoundVotes).foreach { idx =>
+        val alreadyRecorded = _detectedEquivocations.exists(e => e.voterIndex == idx && e.view == vote.view && e.phase == vote.phase)
+        if (!alreadyRecorded) {
+          val byBlock = sameRoundVotes.filter(_.voterIndex == idx).groupBy(_.blockId).values.map(_.head).toSeq
+          byBlock match {
+            case Seq(a, b, _*) =>
+              val proof = HotStuffEquivocationProof(a, b)
+              val ok = for {
+                _ <- proof.consistent
+                _ <- proof.signaturesValid(i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey))
+              } yield ()
+              ok match {
+                case Right(()) =>
+                  _detectedEquivocations = _detectedEquivocations :+ proof
+                  effects.onEquivocation(proof)
+                case Left(reason) =>
+                  logger.debug(s"[HotStuff] equivocation candidate for voter #$idx rejected: $reason")
+              }
+            case _ => ()
+          }
+        }
+      }
       // Pool-level instrumentation: distinct signers accumulated for this target and whether they clear
       // the 2/3 stake quorum. On QC formation the bucket is cleared, so report the QC's own signer set
       // instead of the (now-empty) bucket. High-volume => DEBUG (per the step-5 handoff: reduce from INFO

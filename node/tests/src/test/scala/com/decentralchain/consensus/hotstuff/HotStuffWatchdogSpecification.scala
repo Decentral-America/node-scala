@@ -164,6 +164,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
         def myVoterIndexes: Set[Int]                                   = Set(0, 1, 2)
         def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(idx).sign(msg))
         def onCommit(blockId: BlockId, height: Int): Unit              = ()
+        def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
       }
       val coordinator = new HotStuffCoordinator.Enabled(
         committeeProvider = () => committee,

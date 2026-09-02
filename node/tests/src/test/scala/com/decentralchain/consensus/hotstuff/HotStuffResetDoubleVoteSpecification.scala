@@ -53,6 +53,7 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] =
         if (multiKey) Some(kps(idx).sign(msg)) else Option.when(idx == 0)(kps(0).sign(msg))
       def onCommit(blockId: BlockId, height: Int): Unit = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit = ()
     }
     val c = new HotStuffCoordinator.Enabled(
       committeeProvider = () => committee,

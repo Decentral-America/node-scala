@@ -43,6 +43,7 @@ class HotStuffViewChangeSpecification extends FlatSpec {
     def myVoterIndexes: Set[Int]                                   = Set(self)
     def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
     def onCommit(blockId: BlockId, height: Int): Unit              = ()
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
   }
 
   "onRoundTimerTick" should "leave the pacemaker view unchanged and propose nothing on the very first tick (no prior progress to compare against)" in {
