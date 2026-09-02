@@ -41,15 +41,30 @@ import scala.util.control.NonFatal
   *     wedge forever; see `HotStuffWatchdogRejectedStreamSpecification`). `recordProgress()` is called
   *     from that hook; `check()` consumes and resets that flag on every call.
   *
-  * SAFETY BY CONSTRUCTION -- the hard, non-negotiable constraint (task brief, "the hard safety
-  * constraint"): this class holds no reference of any kind to `finalizedHeight`, `BlockchainUpdaterImpl`,
-  * feature-25's finality path, or any component that could reach them -- and, following a review finding,
-  * this is now enforced by the TYPE SIGNATURE itself, not merely by this class's code happening not to
-  * call anything else on a wider object it was handed. Its constructor accepts exactly four collaborators
-  * -- a `() => Boolean` committee-non-emptiness check, a progress accessor/reset, a `clearLock: Path =>
-  * Unit` action, and a `path: Path` to the on-disk lock file. `Boolean`, `Unit`, and `Path` are the ENTIRE
-  * capability surface available to this class; even a maximally buggy implementation of `check()` could
-  * not synthesize a `BlockchainUpdaterImpl`/`finalizedHeight` reference out of a `Boolean` and a `Path`,
+  * A SECOND, COMMIT-SPECIFIC SIGNAL (audit F-5, MEDIUM): `recordProgress()` above resets the view-based
+  * counter for `Committed` AND `EnteredView` actions alike, so a replica that keeps forming/receiving
+  * valid PREPARE/PRE_COMMIT QCs -- advancing the view every round -- but never reaches a COMMIT QC
+  * calls `recordProgress()` on essentially every tick and the view-based counter never accumulates,
+  * even though `hotStuffFinalizedHeight` is genuinely frozen. That is a plausible description of the
+  * live incident this watchdog was built for (2h19m / 604+ blocks frozen while views kept advancing).
+  * `recordCommit()` drives a SEPARATE, independent counter (`consecutiveTicksSinceCommit`) reset ONLY
+  * by a genuine `HotStuffAction.Committed`, with its own (larger -- see `commitStallThreshold`)
+  * threshold; `check()` fires recovery when EITHER counter trips. This widening is safe ONLY because
+  * F-2 is already fixed (`resetLocalSafetyState()` preserves `lastVotedView`, the sole anti-double-vote
+  * bound on the PREPARE path -- see that method's doc): firing recovery in strictly MORE situations
+  * would otherwise have been a net safety regression, which is exactly why F-5's own recommendation
+  * says this must be paired with F-2's fix, not shipped alone.
+  *
+  * NO DIRECT REFERENCE TO `finalizedHeight` -- the hard, non-negotiable constraint (task brief, "the
+  * hard safety constraint"), SCOPED PRECISELY per audit F-4 (2026-08-31): this class holds no DIRECT
+  * reference of any kind to `finalizedHeight`, `BlockchainUpdaterImpl`, feature-25's finality path, or
+  * any component that could reach them -- and, following a review finding, this is now enforced by the
+  * TYPE SIGNATURE itself, not merely by this class's code happening not to call anything else on a
+  * wider object it was handed. Its constructor accepts exactly four collaborators -- a `() => Boolean`
+  * committee-non-emptiness check, a progress accessor/reset, a `clearLock: Path => Unit` action, and a
+  * `path: Path` to the on-disk lock file. `Boolean`, `Unit`, and `Path` are the ENTIRE capability
+  * surface available to this class; even a maximally buggy implementation of `check()` could not
+  * synthesize a `BlockchainUpdaterImpl`/`finalizedHeight` reference out of a `Boolean` and a `Path`,
   * because none was ever received. (Earlier revision: the committee parameter was `() => Seq[?]` /
   * `() => GeneratorSet`, which in PRODUCTION closes over `blockchainUpdater` to compute -- the closure
   * itself could reach `blockchainUpdater`'s other methods even though this class's code never called
@@ -57,6 +72,20 @@ import scala.util.control.NonFatal
   * `HotStuffWatchdogFinalizedHeightIsolationSpecification` asserts this property directly (not just by
   * comment) by constructing a `finalizedHeight` variable that ONLY a distinct, never-invoked function
   * could mutate, and proving the watchdog's full recovery action leaves it untouched.
+  *
+  * WHAT THIS DOES NOT PROVE (audit F-4, INFO -- read this before assuming "cannot touch finalized
+  * state"): the property proven above is "this class holds no DIRECT reference through which it could
+  * write `finalizedHeight`". It is NOT a proof that the watchdog cannot INFLUENCE finalized state, and
+  * an earlier version of this comment read as though it were -- that was an overclaim, corrected here.
+  * The indirect path is real and complete: this watchdog's recovery action resets safety state
+  * (`resetLocalSafetyState()`) -> safety state governs voting (`HotStuffSafety.safeToVote`) -> voting
+  * governs which QCs form -> a COMMIT-phase QC calls `effects.onCommit` -> under
+  * `dcc.hotstuff.authoritative = true`, `onCommit` calls `raiseFinalizedHeight`
+  * (`NodeHotStuffEffects.scala`). Audit finding F-2 is precisely an instance of this indirect path (a
+  * watchdog-driven reset enabling an equivocating double-vote); see F-2 for the concrete mechanism, and
+  * F-1 for what the raised `finalizedHeight` value is actually worth once written (advisory, not
+  * enforcing -- see `HotStuffSettings.authoritative`'s doc). This class's own guarantee stops at "no
+  * direct reference" and was never meant to substitute for reasoning about that longer causal chain.
   *
   * N SIZING (do not guess -- see the task's real numbers):
   *   - `round-timeout = 1200ms` (`node-config/testnet/dcc.conf`).
@@ -139,14 +168,48 @@ final class HotStuffWatchdog(
     resetInMemoryState: () => Unit,
     clearLock: Path => Unit = HotStuffWatchdog.deleteQuietly,
     stallThreshold: Int = HotStuffWatchdog.DefaultStallThreshold,
-    maxConsecutiveRecoveries: Int = HotStuffWatchdog.MaxConsecutiveRecoveries
+    maxConsecutiveRecoveries: Int = HotStuffWatchdog.MaxConsecutiveRecoveries,
+    // audit F-5 (MEDIUM): a SECOND, commit-specific staleness counter, independent of the view-based
+    // `consecutiveStalledTicks` below. `recordProgress()` (any verified/accepted QC action -- see its
+    // doc) resets the view-based counter but NOT this one; only `recordCommit()` (a genuine
+    // `HotStuffAction.Committed`) resets THIS counter. See `check()` for why this closes the gap: a
+    // replica that keeps forming/receiving valid PREPARE/PRE_COMMIT QCs -- advancing the view every
+    // round -- but never reaches a COMMIT QC calls `recordProgress()` on essentially every tick, so
+    // `consecutiveStalledTicks` never accumulates and the view-based detector never fires, even though
+    // `hotStuffFinalizedHeight` is genuinely frozen. That is a plausible description of the live
+    // incident this watchdog was built for (2h19m / 604+ blocks frozen while views kept advancing) --
+    // "frozen finalized height" means no COMMIT QCs, which does NOT imply no PREPARE/PRE_COMMIT QCs.
+    //
+    // Safe to widen the trigger this way ONLY because F-2 is already fixed:
+    // `resetLocalSafetyState()` preserves `lastVotedView` (the only anti-double-vote bound on the
+    // PREPARE path -- see that method's doc and `HotStuffResetDoubleVoteSpecification`), so firing
+    // recovery in MORE situations no longer risks reopening the double-vote window F-2 closed. Before
+    // that fix, widening the trigger here would have been a net safety regression (more resets = more
+    // chances to hit the F-2 window) -- the audit explicitly flags this ordering requirement (F-5's
+    // recommendation: "this must be paired with F-2's fix").
+    //
+    // Meaningfully LARGER than `stallThreshold`: commits legitimately lag views by design (a block only
+    // commits on the THIRD phase's QC -- PREPARE -> PRE_COMMIT -> COMMIT -- so even perfectly healthy
+    // operation has `Committed` actions arrive less often than `EnteredView` ones, and normal network/
+    // committee churn adds further lag on top). Defaults to `3x stallThreshold` (180 ticks = 216
+    // real seconds at the 1200ms round-timeout default) -- generous enough that ordinary 3-phase lag
+    // and transient hiccups never spuriously fire this counter, while still firing well inside Task 1's
+    // 15m/30m alert windows for a genuine commit-only stall.
+    commitStallThreshold: Int = HotStuffWatchdog.DefaultCommitStallThreshold
 ) extends StrictLogging {
   require(stallThreshold > 0, "HotStuffWatchdog stallThreshold must be positive")
   require(maxConsecutiveRecoveries > 0, "HotStuffWatchdog maxConsecutiveRecoveries must be positive")
+  require(commitStallThreshold > 0, "HotStuffWatchdog commitStallThreshold must be positive")
 
   private var consecutiveStalledTicks: Int    = 0
   private var progressSinceLastCheck: Boolean = false
   private var recoveryCount: Long             = 0L
+
+  // audit F-5: commit-specific staleness. `consecutiveTicksSinceCommit` counts ticks since the last
+  // `recordCommit()` call (or since construction); `commitSinceLastCheck` is the per-tick flag
+  // `check()` consumes, mirroring `progressSinceLastCheck`'s own consume-on-check pattern below.
+  private var consecutiveTicksSinceCommit: Int = 0
+  private var commitSinceLastCheck: Boolean    = false
 
   // Backoff state (review fix): `effectiveThreshold` is the ticks-to-fire for the NEXT attempt --
   // starts at `stallThreshold`, doubles after each recovery that turns out not to have helped.
@@ -164,6 +227,16 @@ final class HotStuffWatchdog(
     * contract).
     */
   def recordProgress(): Unit = progressSinceLastCheck = true
+
+  /** Wire to `HotStuffCoordinator.Enabled`'s `onAction` hook, but ONLY for a genuine
+    * `HotStuffAction.Committed` (audit F-5) -- distinct from `recordProgress()`, which fires for
+    * `Committed` AND `EnteredView` alike. `Application.scala`'s `hsOnAction` calls BOTH
+    * `recordProgress()` and (for `Committed` specifically) this method on the same action, so a commit
+    * resets both counters; a bare view-advance (`EnteredView` from a verified QC, or the unconditional
+    * bare-timeout `EnteredView`) resets only the view-based one. Safe to call from the same single
+    * thread as `check()`; NOT synchronized (matches the coordinator's own threading contract).
+    */
+  def recordCommit(): Unit = commitSinceLastCheck = true
 
   /** How many recovery actions this watchdog has fired since construction (observability/testing). Only
     * counts ACTUAL fired recoveries -- never the logged-only no-ops after `autoRecoverySuspended`.
@@ -188,56 +261,96 @@ final class HotStuffWatchdog(
       // unrelated non-empty-committee stall window.
       consecutiveStalledTicks = 0
       progressSinceLastCheck = false
-      false
-    } else if (progressSinceLastCheck) {
-      // Real progress happened since the last check -- committee is healthy. If this followed a
-      // recovery attempt, that attempt WORKED: reset all backoff state to a clean slate so a later,
-      // unrelated wedge starts fresh rather than inheriting an escalated threshold/near-exhausted budget.
-      if (awaitingResultOfLastRecovery) {
-        effectiveThreshold = stallThreshold.toLong
-        consecutiveIneffectiveRecoveries = 0
-        autoRecoverySuspended = false
-        awaitingResultOfLastRecovery = false
-      }
-      consecutiveStalledTicks = 0
-      progressSinceLastCheck = false
+      consecutiveTicksSinceCommit = 0
+      commitSinceLastCheck = false
       false
     } else {
-      consecutiveStalledTicks += 1
-      if (awaitingResultOfLastRecovery && consecutiveStalledTicks >= effectiveThreshold) {
-        // The PREVIOUS recovery did not help: another full (escalated) stall elapsed with zero progress.
-        consecutiveIneffectiveRecoveries += 1
-        if (consecutiveIneffectiveRecoveries >= maxConsecutiveRecoveries) {
-          autoRecoverySuspended = true
-          logger.warn(
-            s"[HotStuff] WATCHDOG: $consecutiveIneffectiveRecoveries consecutive recovery attempts have " +
-              "ALL failed to restore progress -- suspending further automated recovery (this run) to avoid " +
-              "an unbounded reset loop; a human should investigate (Task 1's HotStuffLagGrowing/" +
-              "HotStuffMetricMissing alerts should already be firing by now). Will resume auto-recovery " +
-              "immediately once real progress is next observed."
-          )
+      // audit F-5: advance/reset the commit-specific counter FIRST and independently of the view-based
+      // branch below -- a `Committed` action also always implies `recordProgress()` fired (see
+      // `recordCommit`'s doc), but the reverse is not true, so this counter must be driven by its own
+      // flag, not derived from `progressSinceLastCheck`.
+      if (commitSinceLastCheck) {
+        consecutiveTicksSinceCommit = 0
+        commitSinceLastCheck = false
+      } else {
+        consecutiveTicksSinceCommit += 1
+      }
+      val commitStalled = consecutiveTicksSinceCommit >= commitStallThreshold
+
+      if (progressSinceLastCheck) {
+        // Real progress happened since the last check (view-based signal) -- but per F-5, that alone no
+        // longer guarantees health: `commitStalled` may still independently be true (views advancing,
+        // nothing committing). If EITHER signal demands recovery, fire it; otherwise this is a genuinely
+        // healthy tick and the recovery/backoff state resets exactly as before F-5.
+        if (!commitStalled) {
+          // Committee is healthy on BOTH signals. If this followed a recovery attempt, that attempt
+          // WORKED: reset all backoff state to a clean slate so a later, unrelated wedge starts fresh
+          // rather than inheriting an escalated threshold/near-exhausted budget.
+          if (awaitingResultOfLastRecovery) {
+            effectiveThreshold = stallThreshold.toLong
+            consecutiveIneffectiveRecoveries = 0
+            autoRecoverySuspended = false
+            awaitingResultOfLastRecovery = false
+          }
           consecutiveStalledTicks = 0
+          progressSinceLastCheck = false
           false
         } else {
-          effectiveThreshold *= 2 // exponential backoff before the next attempt
-          fireRecovery()
-          consecutiveStalledTicks = 0
-          true
+          fireForWedge(consecutiveTicksSinceCommit, "commit-specific stall (views advancing, nothing committing -- audit F-5)")
         }
-      } else if (!awaitingResultOfLastRecovery && consecutiveStalledTicks >= effectiveThreshold) {
-        fireRecovery()
-        awaitingResultOfLastRecovery = true
-        consecutiveStalledTicks = 0
-        true
-      } else false
+      } else {
+        consecutiveStalledTicks += 1
+        val viewStalled = consecutiveStalledTicks >= effectiveThreshold
+        if (viewStalled || commitStalled) {
+          val ticksElapsed = if (viewStalled) consecutiveStalledTicks else consecutiveTicksSinceCommit
+          val reason        = if (viewStalled) "zero progress despite a non-empty committee" else "commit-specific stall (audit F-5)"
+          fireForWedge(ticksElapsed, reason)
+        } else false
+      }
     }
   }
 
-  private def fireRecovery(): Unit = {
+  /** Shared recovery-firing path for BOTH the view-based and commit-specific (audit F-5) wedge
+    * signatures -- the exponential-backoff / consecutive-failure-suspension state machine (see class
+    * doc's "BACKOFF AND A HARD CAP") is a property of "how many times has recovery been tried without
+    * working", not of which signal tripped it, so both signals drive the SAME budget rather than each
+    * getting an independent one (which would let a wedge that trips both alternately dodge suspension
+    * forever). Resets BOTH counters on firing, so neither signal double-fires on the very next tick
+    * against a target the recovery action has already reset local state for.
+    */
+  private def fireForWedge(ticksElapsed: Long, reason: String): Boolean = {
+    consecutiveStalledTicks = 0
+    consecutiveTicksSinceCommit = 0
+    if (awaitingResultOfLastRecovery) {
+      // The PREVIOUS recovery did not help: another full (escalated) stall elapsed with zero progress.
+      consecutiveIneffectiveRecoveries += 1
+      if (consecutiveIneffectiveRecoveries >= maxConsecutiveRecoveries) {
+        autoRecoverySuspended = true
+        logger.warn(
+          s"[HotStuff] WATCHDOG: $consecutiveIneffectiveRecoveries consecutive recovery attempts have " +
+            "ALL failed to restore progress -- suspending further automated recovery (this run) to avoid " +
+            "an unbounded reset loop; a human should investigate (Task 1's HotStuffLagGrowing/" +
+            "HotStuffMetricMissing alerts should already be firing by now). Will resume auto-recovery " +
+            "immediately once real progress is next observed."
+        )
+        false
+      } else {
+        effectiveThreshold *= 2 // exponential backoff before the next attempt
+        fireRecovery(ticksElapsed, reason)
+        true
+      }
+    } else {
+      fireRecovery(ticksElapsed, reason)
+      awaitingResultOfLastRecovery = true
+      true
+    }
+  }
+
+  private def fireRecovery(ticksElapsed: Long, reason: String): Unit = {
     logger.warn(
-      s"[HotStuff] WATCHDOG: $effectiveThreshold consecutive round-timer ticks with zero progress despite " +
-        "a non-empty committee -- clearing persisted lockedQC and resetting local safety state (automated " +
-        "recovery from the 2026-08-30/31 wedge; blast radius is HotStuff's own local state only)" +
+      s"[HotStuff] WATCHDOG: $ticksElapsed consecutive round-timer ticks -- $reason -- clearing persisted " +
+        "lockedQC and resetting local safety state (automated recovery from the 2026-08-30/31 wedge; blast " +
+        "radius is HotStuff's own local state only)" +
         (if (consecutiveIneffectiveRecoveries > 0) s" [attempt #${consecutiveIneffectiveRecoveries + 1} after backoff]" else "")
     )
     clearLock(lockPath)
@@ -269,6 +382,19 @@ object HotStuffWatchdog extends StrictLogging {
     * before an alert would fire or continuing to act long after a human should have taken over.
     */
   val MaxConsecutiveRecoveries: Int = 5
+
+  /** audit F-5 (MEDIUM): default for the commit-specific staleness threshold, `3x DefaultStallThreshold`
+    * (180 ticks = 216 real seconds at the 1200ms round-timeout default). Deliberately larger than
+    * `DefaultStallThreshold`: commits legitimately lag views (3-phase HotStuff commits only on the
+    * THIRD QC of a round -- PREPARE -> PRE_COMMIT -> COMMIT -- so `Committed` actions are inherently
+    * less frequent than `EnteredView` ones even under perfectly healthy operation), so this threshold
+    * must tolerate that structural lag plus ordinary transient hiccups without spuriously firing, while
+    * still catching a genuine commit-only stall (the audit's F-5 scenario: views advancing every round,
+    * nothing ever reaching COMMIT) well inside Task 1's 15m/30m alert windows. See `HotStuffWatchdog`'s
+    * constructor doc for why widening the trigger this way is safe only now that F-2
+    * (`resetLocalSafetyState` preserving `lastVotedView`) is already fixed.
+    */
+  val DefaultCommitStallThreshold: Int = DefaultStallThreshold * 3
 
   /** Default `clearLock`: best-effort delete, never throws (mirrors `HotStuffLockedQCStore`'s own
     * failure-handling philosophy -- a failed delete just means the next successful watchdog cycle or

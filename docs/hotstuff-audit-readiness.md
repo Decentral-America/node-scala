@@ -28,18 +28,41 @@
 > be considered for mainnet (§1, §7 item 4, §8 checklist still gate that). Gated behind
 > `dcc.hotstuff.enabled`/`dcc.hotstuff.authoritative` (both default `false` outside testnet) — no behaviour
 > change on mainnet today.
+>
+> **F-1, ADVISORY NOT ENFORCING (2026-08-31 adversarial audit, `docs/hotstuff-bft-audit-2026-08-31.md`
+> §F-1) — read before treating `authoritative = true` as "T2 provides finality":** the "authoritative"
+> finalized height this flag lets HotStuff raise does **not** actually prevent a reorg below it. No
+> rollback path anywhere in the codebase (`removeAfter`/`rollbackTo`/`ExtensionAppender`'s fork choice)
+> checks `finalizedHeight` before rolling back; a rollback below the HotStuff floor silently *caps the
+> floor back down* rather than being refused. The floor's only real behavioural effects are shortening
+> `GetSignatures`' offered id list (a probabilistic damper on negotiating a deep fork, not a guard) and
+> suppressing feature-25's own `BlockEndorser` voting/rebroadcast below the floor — itself a second-order
+> hazard, since a HotStuff-raised floor on a branch that later loses a reorg means feature-25 endorsement
+> was suppressed on the range of heights on the branch that actually won. Per the audit's recommendation
+> option (b): this is being documented plainly rather than fixed with an enforcing rollback refusal,
+> which would be its own consensus change requiring its own design and audit. Do not read "testnet has
+> `authoritative = true` live and finality is advancing" (above) as "T2 enforces finality on testnet" —
+> it reports a number and suppresses one downstream mechanism; it does not stop a reorg.
 
 ## 1. What it is, and the one property that bounds the whole audit
 Basic 3-phase HotStuff (prepare → pre-commit → commit) over the **committed-generator committee**
 (generators who submitted a `CommitToGenerationTransaction` with a PoP-verified BLS key). Quorum =
 **≥2/3 of committed stake**.
 
-**The bounding property: HotStuff commit is _observational_.** `NodeHotStuffEffects.onCommit` records a
-`hotStuffFinalizedHeight` (surfaced on `/node/status`) but **does not mutate** the authoritative finalized
+**The bounding property: HotStuff commit is _observational_ at the shipped default.**
+`NodeHotStuffEffects.onCommit` records a `hotStuffFinalizedHeight` (surfaced on `/node/status`) but, when
+`dcc.hotstuff.authoritative = false` (mainnet default), **does not mutate** the authoritative finalized
 height — feature-25 Deterministic Finality remains the sole source of finality in `BlockchainUpdaterImpl`.
-Therefore, in its current form, **a HotStuff bug cannot fork, halt, or roll back the chain**; the worst
-case is a wrong/lagging observational number. The audit's severity ceiling is set by this — until a future
-change makes HotStuff *authoritative* (raise finalized height on `commitQC`), which is explicitly out of
+Therefore, in that default posture, **a HotStuff bug cannot fork, halt, or roll back the chain**; the worst
+case is a wrong/lagging observational number.
+**Where `authoritative = true` is opted into (testnet), this bounding property is narrower than it reads:**
+`onCommit` DOES then raise `finalizedHeight` — but per audit F-1 (see the banner above), what gets raised
+is still advisory rather than enforcing (no rollback is refused on account of it), so the "cannot fork,
+halt, or roll back the chain" claim continues to hold for a different reason on that path too — not
+because HotStuff is inert, but because nothing downstream of the raise actually blocks a rollback. The
+audit's severity ceiling is set by this distinction — until a future
+change makes HotStuff *authoritative in the enforcing sense* (refuse a rollback below the floor, not
+merely report a number), which is explicitly out of
 scope here and must be re-audited when proposed.
 
 ## 2. Audit scope
@@ -133,7 +156,15 @@ laptop (see
    protobuf bytes) by `HotStuffEquivocationEvidenceE2ESpecification`. **Live testnet exercise pending**
    before this is claimed production-proven; `slashing-enabled` stays off on both testnet and mainnet
    until then.
-4. **hotStuffFinalizedHeight is observational only** — no path raises the authoritative finalized height.
+4. **hotStuffFinalizedHeight is observational-only at the shipped default** (`authoritative = false`) —
+   no path raises the "authoritative" finalized height in that posture. Where `authoritative = true` is
+   explicitly opted into (testnet only, see the banner above), a genuine `commitQC` DOES raise it — but
+   per audit **F-1** (see the banner's F-1 callout and `HotStuffSettings.authoritative`'s scaladoc), that
+   raised value is **advisory, not enforcing**: no rollback refusal is keyed on it, so it does not
+   actually prevent a reorg below the height it reports. Do not conflate "the number advances" with "T2
+   provides finality" — see F-1 for the full trace of what the value's raise boundary DOES protect
+   (correctly — see the audit's "Verified — sound" table) versus what happens to it afterward (nothing
+   enforces it).
 5. **Cross-committee-epoch fork (T10) — narrowed, not fully closed.** Committee identity
    (`committeeEpoch`, schema 1.6.5 `committee_epoch` field 7, = `GenerationPeriod.index`) is bound
    into the signed vote/QC bytes in `HotStuffQuorum.voteMessage`, and a new transition-gating rule
@@ -191,3 +222,10 @@ laptop (see
 - [ ] Live multi-node Docker evidence of an actual committee-epoch (T10) transition — unit/DST-simulation
       only so far
 - [ ] Decision + re-audit if/when HotStuff `authoritative` is proposed for mainnet
+- [ ] **F-1 (audit 2026-08-31): decide advisory vs. enforcing for `authoritative`, and align the naming
+      with the answer.** Today the floor is advisory only (no rollback refusal — see the banner's F-1
+      callout); the flag's name (`authoritative`) and its raise method's name
+      (`raiseHotStuffFinalizedHeight`) both imply enforcement that does not exist. Blocking for mainnet
+      per the audit's residual-risk section regardless of which way this is decided — if enforcing is
+      chosen, that is a separate consensus change (rollback refusal below the floor) needing its own
+      design review and audit, not a documentation fix.

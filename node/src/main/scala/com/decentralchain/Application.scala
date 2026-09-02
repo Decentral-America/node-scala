@@ -18,6 +18,7 @@ import com.decentralchain.api.http.utils.UtilsApiRoute
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
 import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
+import com.decentralchain.consensus.hotstuff.HotStuffIngressGuard
 import com.decentralchain.database.{DBExt, Keys, RDB}
 import com.decentralchain.events.{BlockchainUpdateTriggers, UtxEvent}
 import com.decentralchain.extensions.{Context, Extension}
@@ -390,9 +391,19 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // real progress -- exactly the failure mode this watchdog exists to catch. Only `Committed`/
       // `EnteredView` (both of which `applyQC` only ever includes alongside a QC that PASSED verification
       // -- see `HotStuffEngine.onQC`) count.
+      //
+      // audit F-5: additionally distinguish `Committed` from `EnteredView` here -- `recordProgress()`
+      // (view-based signal) still fires for both, but ONLY a genuine `Committed` also calls
+      // `recordCommit()` (the second, commit-specific staleness signal -- see `HotStuffWatchdog`'s doc).
+      // This is the wiring the audit's recommendation asks for: collapsing everything non-`Rejected`
+      // into a single `recordProgress()` (the previous wiring) is exactly what made a commit-only stall
+      // invisible to the watchdog.
       val hsOnAction: HotStuffAction => Unit = {
-        case _: HotStuffAction.Rejected => ()
-        case _                          => hsWatchdog.recordProgress()
+        case _: HotStuffAction.Rejected  => ()
+        case _: HotStuffAction.Committed =>
+          hsWatchdog.recordCommit()
+          hsWatchdog.recordProgress()
+        case _ => hsWatchdog.recordProgress()
       }
 
       val hsCoordinator =
@@ -431,6 +442,29 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           true
         }
 
+      // audit F-8 (LOW): ingress sanity bounds on a wire QC/vote's `view`/`blockHeight`, applied at this
+      // ingress seam (the shell, which has `blockchainUpdater`) rather than inside the pure
+      // `HotStuffEngine`/`HotStuffPacemaker` reducers. The actual bound is the pure, independently unit
+      // tested `HotStuffIngressGuard.sane` -- see that object's doc for the full rationale (why LOW
+      // severity/colluding-quorum-only, why these specific bounds, why `slack` is one
+      // `generationPeriodLength`, floored at 1000 -- see review follow-up note in that object's doc).
+      // This closure only reads live chain state and logs the rejection.
+      def hsIngressSane(kind: String, view: Int, blockHeight: Int): Boolean = {
+        val currentHeight = blockchainUpdater.height
+        // Floored at 1000: live testnet overrides generationPeriodLength down to 100
+        // (infra/node-config/testnet/dcc.conf), which would otherwise thin this guard's margin to a
+        // tenth of what its rationale assumes. The guard exists to prevent a permanent wedge, not to
+        // bound tightly, so a generous floor costs nothing.
+        val slack = math.max(settings.blockchainSettings.functionalitySettings.generationPeriodLength, 1000)
+        val sane  = HotStuffIngressGuard.sane(view, blockHeight, currentHeight, slack)
+        if (!sane)
+          log.warn(
+            s"[HotStuff] ingress sanity check REJECTED $kind: view=$view blockHeight=$blockHeight " +
+              s"(currentHeight=$currentHeight, slack=$slack) -- dropping before it reaches the coordinator (audit F-8)"
+          )
+        sane
+      }
+
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, p) =>
@@ -455,12 +489,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, v) =>
-          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v)) hsCoordinator.onVote(v)
+          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v) && hsIngressSane("vote", v.view, v.blockHeight.toInt))
+            hsCoordinator.onVote(v)
         }(using hotStuffScheduler)
       messageObserver.hotStuffQCs
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, qc) =>
-          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc)) hsCoordinator.onQC(qc)
+          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc) && hsIngressSane("QC", qc.view, qc.blockHeight.toInt))
+            hsCoordinator.onQC(qc)
         }(using hotStuffScheduler)
 
       // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
