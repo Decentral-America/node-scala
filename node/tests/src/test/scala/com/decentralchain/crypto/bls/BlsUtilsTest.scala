@@ -1,6 +1,7 @@
 package com.decentralchain.crypto.bls
 
 import com.decentralchain.account.KeyPair
+import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.Base64
 import com.decentralchain.crypto.bls.BlsUtils.*
 import com.decentralchain.test.FreeSpec
@@ -283,6 +284,20 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     "accepts a 32-byte seed (the production shape) and derives a non-degenerate key" in {
       val sk = BlsUtils.mkBlsSecretKey(Array.fill[Byte](32)(1))
       new blst.P1(sk).is_inf() shouldBe false
+    }
+  }
+
+  // --- L2 (audit): BlsPublicKey.unsafe used to be a bare cast with no check at all, unlike
+  // BlsSignature.unsafe (which routes through apply's length sanity check and throws on a bad
+  // length). Both are private[bls]/test-package-visible only, so the blast radius was always small,
+  // but the asymmetry was a footgun for any future same-package caller.
+  "BlsPublicKey.unsafe validation symmetry (audit L2)" - {
+    "throws on a bad-length byte string, like BlsSignature.unsafe does" in {
+      intercept[IllegalArgumentException](BlsPublicKey.unsafe(ByteStr(Array.fill[Byte](10)(0))))
+    }
+
+    "accepts a correctly-sized byte string, like a freshly-derived public key" in {
+      BlsPublicKey.unsafe(ByteStr(publicKey1)).arr shouldBe publicKey1
     }
   }
 
