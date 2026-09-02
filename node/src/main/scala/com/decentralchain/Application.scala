@@ -390,9 +390,19 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // real progress -- exactly the failure mode this watchdog exists to catch. Only `Committed`/
       // `EnteredView` (both of which `applyQC` only ever includes alongside a QC that PASSED verification
       // -- see `HotStuffEngine.onQC`) count.
+      //
+      // audit F-5: additionally distinguish `Committed` from `EnteredView` here -- `recordProgress()`
+      // (view-based signal) still fires for both, but ONLY a genuine `Committed` also calls
+      // `recordCommit()` (the second, commit-specific staleness signal -- see `HotStuffWatchdog`'s doc).
+      // This is the wiring the audit's recommendation asks for: collapsing everything non-`Rejected`
+      // into a single `recordProgress()` (the previous wiring) is exactly what made a commit-only stall
+      // invisible to the watchdog.
       val hsOnAction: HotStuffAction => Unit = {
-        case _: HotStuffAction.Rejected => ()
-        case _                          => hsWatchdog.recordProgress()
+        case _: HotStuffAction.Rejected  => ()
+        case _: HotStuffAction.Committed =>
+          hsWatchdog.recordCommit()
+          hsWatchdog.recordProgress()
+        case _ => hsWatchdog.recordProgress()
       }
 
       val hsCoordinator =
