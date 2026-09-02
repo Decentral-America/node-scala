@@ -467,7 +467,9 @@ the field would compute different conflictGenerators from the same
 block bytes. Activation voting is the codebase's standard fix."
 ```
 
----### Task 4: Deterministic proof validation in `validateFinalizationVoting`
+---
+
+### Task 4: Deterministic proof validation in `validateFinalizationVoting`
 
 **Files:**
 - Modify: `node/src/main/scala/com/decentralchain/state/appender/package.scala`

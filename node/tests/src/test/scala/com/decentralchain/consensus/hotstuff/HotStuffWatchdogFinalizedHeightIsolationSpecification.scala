@@ -50,6 +50,7 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
     def myVoterIndexes: Set[Int]                                   = Set(self)
     def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
     def onCommit(blockId: BlockId, height: Int): Unit              = ()
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
   }
 
   private def tempLockPath() = {

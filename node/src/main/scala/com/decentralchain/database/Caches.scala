@@ -407,9 +407,9 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     }
 
     val conflictGenerators = for {
-      v <- block.header.finalizationVoting.toSeq
-      e <- v.conflict
-    } yield e.endorserIndex
+      v   <- block.header.finalizationVoting.toSeq
+      idx <- v.allConflictGeneratorIndexes
+    } yield idx
 
     this.generationPeriodOf(current.height) match {
       case None =>

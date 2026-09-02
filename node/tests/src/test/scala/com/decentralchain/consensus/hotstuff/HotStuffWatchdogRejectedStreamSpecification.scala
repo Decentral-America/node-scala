@@ -63,6 +63,7 @@ class HotStuffWatchdogRejectedStreamSpecification extends FlatSpec {
     def myVoterIndexes: Set[Int]                                   = Set.empty // never this replica's own turn -- purely a receiver in this spec
     def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = None
     def onCommit(blockId: BlockId, height: Int): Unit              = ()
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
   }
 
   "a Rejected-only QC stream, with the FIXED onAction filter" should

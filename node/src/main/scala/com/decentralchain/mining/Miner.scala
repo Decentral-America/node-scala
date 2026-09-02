@@ -5,6 +5,7 @@ import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block.*
 import com.decentralchain.block.{Block, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
 import com.decentralchain.crypto
@@ -64,7 +65,8 @@ class MinerImpl(
     val minerScheduler: Scheduler,
     val appenderScheduler: Scheduler,
     transactionAdded: Observable[Unit],
-    maxTimeDrift: Long = appender.MaxTimeDrift
+    maxTimeDrift: Long = appender.MaxTimeDrift,
+    hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
 ) extends Miner
     with MinerDebugInfo
     with ScorexLogging {
@@ -272,7 +274,7 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = tryCollectSelfWithGrace(reference),
+            finalizationVoting = withHotStuffConflicts(tryCollectSelfWithGrace(reference)),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
@@ -331,6 +333,34 @@ class MinerImpl(
     }
     log.debug(s"tryCollectSelfWithGrace($endorsedId): attempts=$attempts result=$result")
     result
+  }
+
+  // T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md §5):
+  // production-side slashingEnabled gate. Folds pending HotStuff equivocation proofs detected by
+  // this replica's coordinator into the key block's FinalizationVoting, so they get union'd into
+  // committedGenerators/conflictGenerators on append (validation/union elsewhere are unconditional).
+  private def withHotStuffConflicts(voting: Option[FinalizationVoting]): Option[FinalizationVoting] = {
+    val forgeHeight = Height(blockchainUpdater.height + 1)
+    // Validation (appender/package.scala:364, via validateHotStuffEquivocationProofs) rejects any
+    // block whose FinalizationVoting carries hotstuffConflicts before feature 29
+    // (HotStuffEquivocationEvidence) is active AT THE BLOCK HEIGHT -- a strictly later gate than
+    // feature 28 (DeterministicFinality, checked by generationPeriodOf below). Composing proofs
+    // during the 28-active-but-29-inactive window would forge a block this same node's own
+    // appender then rejects on append: a pure self-DoS. Skip the fold entirely until 29 is live.
+    if (!blockchainUpdater.supportsHotStuffEquivocationEvidence(forgeHeight.toInt)) voting
+    else
+      blockchainUpdater.generationPeriodOf(forgeHeight) match {
+        case None         => voting // pre-activation: no periods, no committee, nothing to fold
+        case Some(period) =>
+          Miner.foldHotStuffConflicts(
+            settings.hotStuffSettings.slashingEnabled,
+            hotStuffEquivocations(),
+            voting,
+            period.index,
+            idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
+            () => Miner.clampFinalizedHeight(blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight), blockchainUpdater.height)
+          )
+      }
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =
@@ -497,4 +527,58 @@ object Miner {
       (),
       s"Account($address) is scripted and not allowed to forge blocks"
     )
+
+  /** T5 rev.2: fold pending verified equivocation proofs into the key block's FinalizationVoting.
+    * PRODUCTION-side gate only (spec §5): validation/union on receipt are unconditional elsewhere.
+    * Filters: epoch must equal the forge height's generation-period index (validation would reject
+    * anything else -- rule 3), voter not already excluded on-chain (validation rule 5), dedup by voter.
+    * `fallbackFinalizedHeight` is evaluated only when synthesizing an FV from nothing.
+    */
+  private[mining] def foldHotStuffConflicts(
+      slashingEnabled: Boolean,
+      pending: Seq[HotStuffEquivocationProof],
+      voting: Option[FinalizationVoting],
+      forgeHeightPeriodIndex: Int,
+      alreadyExcluded: Int => Boolean,
+      fallbackFinalizedHeight: () => Height
+  ): Option[FinalizationVoting] = {
+    // No voterIndex-vs-committee-size bounds filter here (appender/package.scala:376-378, rule 4):
+    // unnecessary today because the coordinator that ultimately appends this block re-validates
+    // every folded proof against that same period's committee anyway, and committees never shrink
+    // within a period (Caches.committedGenerators only grows a period's generator set), so a
+    // voterIndex in-bounds now stays in-bounds through append.
+    val usable =
+      if (!slashingEnabled) Seq.empty
+      else
+        pending
+          .filter(p => p.committeeEpoch == forgeHeightPeriodIndex && !alreadyExcluded(p.voterIndex))
+          .distinctBy(_.voterIndex)
+    if (usable.isEmpty) voting
+    else
+      voting match {
+        case Some(fv) =>
+          // Validation rejects any hotstuffConflicts proof whose voterIndex already carries a T0
+          // conflicting endorsement in the SAME voting (appender/package.scala:382-384, rule 6) --
+          // fv.conflict is populated by the endorsement-collection path this fold runs after, so a
+          // proof for a voter already present there must be dropped here too, or the composed block
+          // fails that same validator rule on this node's own append.
+          val conflictingVoters = fv.conflict.map(_.endorserIndex.toInt).toSet
+          val stillUsable       = usable.filterNot(p => conflictingVoters.contains(p.voterIndex))
+          if (stillUsable.isEmpty) voting
+          else Some(fv.copy(hotstuffConflicts = (fv.hotstuffConflicts ++ stillUsable).distinctBy(_.voterIndex)))
+        case None => Some(FinalizationVoting(Seq.empty, fallbackFinalizedHeight(), None, Seq.empty, usable))
+      }
+  }
+
+  /** Validation requires `fv.finalizedHeight.toInt < blockchain.height` (appender/package.scala:401,
+    * evaluated while the chain tip is still at the parent height H that the miner read at forge
+    * time) -- i.e. the synthesized value must land in `[GenesisBlockHeight, H-1]`. The raw
+    * `blockchainUpdater.finalizedHeight` fallback can equal H itself once `hotstuff.authoritative`
+    * has raised the finalized floor to the tip, which would forge a block this node's own appender
+    * then rejects. Extracted as a small pure function (private[mining] for direct unit coverage)
+    * rather than folded inline, since the pure `foldHotStuffConflicts` fold must stay agnostic to
+    * "current chain height" and just pass through whatever fallback it's given.
+    */
+  private[mining] def clampFinalizedHeight(rawFallback: Height, currentHeight: Int): Height =
+    Height(rawFallback.toInt.min(currentHeight - 1).max(GenesisBlockHeight.toInt))
 }

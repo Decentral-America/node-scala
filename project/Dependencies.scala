@@ -40,7 +40,7 @@ object Dependencies {
 
   // Node protobuf schemas
   lazy val protoSchemasLib =
-    "io.decentralchain" % "protobuf-schemas" % "1.6.5" classifier "protobuf-src" intransitive ()
+    "io.decentralchain" % "protobuf-schemas" % "1.6.6" classifier "protobuf-src" intransitive ()
 
   private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.6.0"
 

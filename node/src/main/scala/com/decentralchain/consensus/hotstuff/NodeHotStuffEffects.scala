@@ -78,4 +78,13 @@ final class NodeHotStuffEffects(
       logger.info(s"[HotStuff] observational commit: block $blockId finalized at height $height (feature-25 remains authoritative)")
     }
   }
+
+  override def onEquivocation(proof: HotStuffEquivocationProof): Unit = {
+    logger.error(
+      s"[HotStuff] EQUIVOCATION DETECTED: voter #${proof.voterIndex} double-signed view=${proof.view} ${proof.phase} " +
+        s"epoch=${proof.committeeEpoch} blocks=${proof.voteA.blockId.trim}/${proof.voteB.blockId.trim} -- " +
+        s"Byzantine actor or protocol-violating bug; investigate immediately"
+    )
+    HotStuffEquivocationObservation.recordEquivocation()
+  }
 }

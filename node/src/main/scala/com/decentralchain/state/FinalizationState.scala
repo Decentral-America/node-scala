@@ -20,9 +20,10 @@ case class FinalizationState(
       newFinalizationVoting: Option[FinalizationVoting],
       updatedGeneratorSet: GeneratorSet
   ): (updatedState: FinalizationState, accVoting: Option[FinalizationVoting], height: Height) = {
-    val newConflictGenerators = newFinalizationVoting.fold(Nil)(_.conflict.map(_.endorserIndex)).toSet
+    val newConflictGenerators =
+      newFinalizationVoting.fold(Set.empty[GeneratorIndex])(_.allConflictGeneratorIndexes.toSet)
     val (updatedParentFinalized, updatedFinalizedHeight) = newFinalizationVoting
-      .filterNot(parentFinalized && _.conflict.isEmpty)
+      .filterNot(v => parentFinalized && v.conflict.isEmpty && v.hotstuffConflicts.isEmpty)
       .fold((parentFinalized, finalizedHeight)) { _ =>
         val updatedParentFinalized = FinalizationState.isParentFinalized(
           newBlockId,
@@ -102,7 +103,7 @@ object FinalizationState extends ScorexLogging {
   ): Boolean = generatorSet.nonEmpty && {
     val votedIndexes       = voting.fold(Seq.empty)(_.valid)
     val votedIndexesSet    = votedIndexes.toSet
-    val allConflictIndexes = knownConflict ++ voting.fold(Set.empty)(_.conflict.view.map(_.endorserIndex))
+    val allConflictIndexes = knownConflict ++ voting.fold(Set.empty[GeneratorIndex])(_.allConflictGeneratorIndexes.toSet)
     val (totalBalance, endorsedBalance, minerIdx) = generatorSet.foldLeft((BigInt(0), BigInt(0), -1)) {
       case (orig @ (totalBalance, endorsedBalance, minerIdx), x) =>
         val gi = x.index

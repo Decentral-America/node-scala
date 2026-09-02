@@ -17,6 +17,7 @@ import com.decentralchain.api.http.leasing.LeaseApiRoute
 import com.decentralchain.api.http.utils.UtilsApiRoute
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.database.{DBExt, Keys, RDB}
 import com.decentralchain.events.{BlockchainUpdateTriggers, UtxEvent}
 import com.decentralchain.extensions.{Context, Extension}
@@ -29,7 +30,16 @@ import com.decentralchain.mining.{BlockChallengerImpl, Miner, MinerDebugInfo, Mi
 import com.decentralchain.network.*
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.appender.{BlockAppender, ExtensionAppender, MicroblockAppender}
-import com.decentralchain.state.{BlockEndorser, BlockRewardCalculator, Blockchain, CompleteBlockchainUpdater, EndorsementStorage, Height, TxMeta}
+import com.decentralchain.state.{
+  BlockEndorser,
+  BlockRewardCalculator,
+  Blockchain,
+  CompleteBlockchainUpdater,
+  EndorsementStorage,
+  GeneratorIndex,
+  Height,
+  TxMeta
+}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.smart.script.trace.TracedResult
 import com.decentralchain.transaction.{DiscardedBlocks, Transaction}
@@ -102,6 +112,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   private var triggers = Seq.empty[BlockchainUpdateTriggers]
 
   private var miner: Miner & MinerDebugInfo = Miner.StrictDisabledMiner
+
+  // T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md §5): read by
+  // MinerImpl at every key-block forge to fold pending HotStuff equivocation proofs into
+  // FinalizationVoting (production-gated by HotStuffSettings.slashingEnabled). Stays the no-op default
+  // when `dcc.hotstuff.enabled = false`; reassigned below to the real coordinator's
+  // `detectedEquivocations` once it exists, inside the `hotstuff.enabled` block.
+  @volatile
+  private var hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
   private val (blockchainUpdater, rocksDB)  =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
@@ -174,7 +192,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         appenderScheduler,
         utxEvents.collect { case _: UtxEvent.TxAdded =>
           ()
-        }
+        },
+        hotStuffEquivocations = () => hotStuffEquivocations()
       )
 
     val blockChallenger =
@@ -329,6 +348,15 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       import com.decentralchain.consensus.hotstuff.HotStuffLockedQCStore
       val hsLockedQCPath    = java.nio.file.Paths.get(settings.directory, "hotstuff", "locked-qc.dat")
       val hsInitialLockedQC = HotStuffLockedQCStore.load(hsLockedQCPath)
+
+      // M1 fix: closes the "post-restart lastVotedView=-1" double-vote window (see
+      // `HotStuffLastVotedViewStore`'s doc and `HotStuffCoordinator.resetLocalSafetyState`'s RESIDUAL
+      // GAP note) the same way `hsLockedQCPath` above closes the equivalent `lockedQC` window: reload
+      // this replica's last-persisted voted view at startup, and persist every subsequent advance.
+      // Sibling file of `hsLockedQCPath`, same `hotstuff` data directory.
+      import com.decentralchain.consensus.hotstuff.HotStuffLastVotedViewStore
+      val hsLastVotedViewPath    = hsLockedQCPath.resolveSibling("last-voted-view.dat")
+      val hsInitialLastVotedView = HotStuffLastVotedViewStore.load(hsLastVotedViewPath).getOrElse(-1)
       // `heightOf` lets the self-vote path (`onLeaderTurn`) independently re-derive a block's height
       // from its blockId, the same defense-in-depth the receive path below already applies via
       // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
@@ -377,11 +405,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           blockchainUpdater.heightOf,
           hsInitialLockedQC,
           qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc),
+          hsInitialLastVotedView,
+          v => HotStuffLastVotedViewStore.save(hsLastVotedViewPath, v),
           committeeEpoch,
           committeeEpochOf,
           onAction = hsOnAction
         )
       hsCoordinatorRef = hsCoordinator
+      hotStuffEquivocations = () => hsCoordinator.detectedEquivocations
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
@@ -446,6 +477,16 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           val tip = info.height.toInt
           if (tip > hsLastHeight) {
             hsLastHeight = tip
+            // Retention pruning [M2] (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md
+            // §5): drop proofs already reflected on-chain (voter excluded via committedGenerators/
+            // conflictGenerators union) or aged out of the current committee epoch, so
+            // `detectedEquivocations` doesn't grow unboundedly and doesn't keep re-offering evidence
+            // the chain has already acted on. Runs once per appended key block (height increment), the
+            // same cadence this subscription already drives the coordinator's leader turn on.
+            hsCoordinator.pruneEquivocations(
+              idx => blockchainUpdater.currentGenerationPeriod.exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
+              blockchainUpdater.currentGenerationPeriod.fold(0)(_.index)
+            )
             // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,
             // not a liquid tip that still differs across nodes) before it is proposed — else the
             // canonical-block guard rejects and votes never converge. See HotStuffSettings.settledDepth.

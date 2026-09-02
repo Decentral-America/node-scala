@@ -67,7 +67,7 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T2 | Forged / below-quorum QC | `HotStuffQuorum.verifyQC` | all-signers-∈-committee + 2/3-stake + agg verify; unit-tested |
 | T3 | Unverified QC influencing safety/commit | `HotStuffEngine.onQC/onProposal` | `verifyQC` gate before `update` (`:44`,`:70`); finding #1 ✅ |
 | T4 | Conflicting / out-of-chain COMMIT | `verifyQC` + honest-quorum voting/lock rules | verified COMMIT QC trusted by design (finding #2); forged/below-quorum rejected, same-height re-commit blocked (tested) — audit the safety proof under the honest-≥2/3 assumption |
-| T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | detected; slashing/`conflictGenerators` wiring is future work |
+| T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | proof-carried, block-validated exclusion wired (feature 29 + `slashing-enabled`, default off); live testnet exercise pending |
 | T6 | Byzantine voter stalls QC formation | `HotStuffVotePool.onVote` | invalid votes dropped on ingress; finding #3 ✅ |
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
 | T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 |
@@ -121,8 +121,18 @@ laptop (see
    No receiver-side chain-replay gap; covered by `verifyQC` + monotonic-commit + `safeToVote` tests.
 2. **Live behaviour unproven** — view=height/forger mapping, cross-period state, and proposing have only
    unit + single-CI-run coverage; **testnet soak (infra PR #49) required.**
-3. **Equivocation → slashing** not wired to `conflictGenerators` (T5) — acceptable while observational;
-   required before authoritative.
+3. **Equivocation → slashing (T5) — wired, gated off by default.** `HotStuffCoordinator.Enabled`
+   detects verified conflicting votes (same voter/view/phase/committee-epoch, different block) and
+   retains them as `HotStuffEquivocationProof`s independent of any settings (`onEquivocation` fires
+   unconditionally); the miner folds retained proofs into a key block's `FinalizationVoting` only when
+   `slashing-enabled` is set (default **off**, `Miner.foldHotStuffConflicts`); on receipt, feature 29
+   (`HotStuffEquivocationEvidence`) gates `validateFinalizationVoting`'s proof checks (signature,
+   same-epoch, non-duplicate, not-already-excluded) and, once a proof passes, unions the voter into
+   `conflictGenerators` (`FinalizationVoting.allConflictGeneratorIndexes`) the same way a T0 conflicting
+   endorsement does — proven end-to-end, including the wire hop (serialize/deserialize through real
+   protobuf bytes) by `HotStuffEquivocationEvidenceE2ESpecification`. **Live testnet exercise pending**
+   before this is claimed production-proven; `slashing-enabled` stays off on both testnet and mainnet
+   until then.
 4. **hotStuffFinalizedHeight is observational only** — no path raises the authoritative finalized height.
 5. **Cross-committee-epoch fork (T10) — narrowed, not fully closed.** Committee identity
    (`committeeEpoch`, schema 1.6.5 `committee_epoch` field 7, = `GenerationPeriod.index`) is bound
@@ -172,9 +182,10 @@ laptop (see
       advancing via this mechanism (2026-08-04)
 - [ ] Multi-day soak with crash/partition/equivocation scenarios formally recorded for the
       reworked/authoritative model — not yet documented despite the live deployment above
-- [ ] Equivocation → `conflictGenerators` slashing wired (T5) before HotStuff is made authoritative **on
-      mainnet** (testnet's authoritative flag was enabled without this, by the same explicit human
-      decision — acceptable for testnet, not for mainnet)
+- [x] Equivocation → `conflictGenerators` slashing wired (T5) — feature 29 + `slashing-enabled` (default
+      off); proof-carried, block-validated exclusion proven end-to-end incl. the wire hop
+      (`HotStuffEquivocationEvidenceE2ESpecification`); **live testnet exercise pending** before
+      `slashing-enabled` is turned on anywhere
 - [ ] **External third-party consensus audit sign-off** (this package) — required before mainnet
       `authoritative`, not yet engaged
 - [ ] Live multi-node Docker evidence of an actual committee-epoch (T10) transition — unit/DST-simulation

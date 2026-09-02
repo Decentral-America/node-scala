@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff.sim
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.consensus.hotstuff.{HotStuffAction, HotStuffCoordinator, HotStuffEffects}
+import com.decentralchain.consensus.hotstuff.{HotStuffAction, HotStuffCoordinator, HotStuffEffects, HotStuffEquivocationProof}
 import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
@@ -96,6 +96,7 @@ final class DstHarness(
       commits += CommitObservation(self, blockId, height, clock.currentTime)
       committedTip(self) = (blockId, height)
     }
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit = ()
   }
 
   private val nodes: Map[Int, HotStuffCoordinator.Enabled] =

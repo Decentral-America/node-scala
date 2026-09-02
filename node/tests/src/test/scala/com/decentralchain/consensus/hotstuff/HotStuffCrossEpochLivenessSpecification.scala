@@ -82,6 +82,7 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
       def myVoterIndexes: Set[Int]                                   = Set(voterIdx)
       def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == voterIdx) Some(kps(voterIdx).sign(msg)) else None
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }
     new HotStuffCoordinator.Enabled(
       committeeProvider = () => committee,

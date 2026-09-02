@@ -310,8 +310,8 @@ case class SnapshotBlockchain(
         val extraConflictIndexes = for {
           (blockMeta, _) <- blockMeta.toSeq
           v              <- blockMeta.header.finalizationVoting.toSeq
-          c              <- v.conflict
-        } yield c.endorserIndex
+          idx            <- v.allConflictGeneratorIndexes
+        } yield idx
 
         base.appendAll(Height(height), extraConflictIndexes*)
       }
