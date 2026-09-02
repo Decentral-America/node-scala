@@ -53,8 +53,8 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
       lag: Int,
       initialTip: Int
   ): (HotStuffCoordinator.Enabled, RecordingEffects, mutable.ArrayBuffer[Int]) = {
-    val fx  = new RecordingEffects(2)
-    val tip = mutable.ArrayBuffer(initialTip)
+    val fx   = new RecordingEffects(2)
+    val tip  = mutable.ArrayBuffer(initialTip)
     val node = new HotStuffCoordinator.Enabled(
       () => committee,
       fx,
@@ -141,7 +141,7 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
   it should "let the fraction term dominate once it genuinely exceeds settledDepth + 1" in {
     val settledDepth           = 3
     val generationPeriodLength = 1000
-    val fraction                = 0.25
+    val fraction               = 0.25
     val maxTargetLag           = math.max(settledDepth + 1, (generationPeriodLength * fraction).toInt)
     maxTargetLag should be(250)
   }
@@ -149,7 +149,7 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
   it should "match the design doc's live-testnet worked example (generation-period-length=100)" in {
     val settledDepth           = 3
     val generationPeriodLength = 100 // live testnet override (infra dcc.conf)
-    val fraction                = 0.25
+    val fraction               = 0.25
     val maxTargetLag           = math.max(settledDepth + 1, (generationPeriodLength * fraction).toInt)
     maxTargetLag should be(25) // the fraction term (25) still dominates the floor (4) here
   }
@@ -164,7 +164,7 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
 
   "castVotes' defensive height-lag guard" should
     "skip signing (no broadcast vote) for a target more than maxTargetLag blocks behind this replica's own tip, without recording a voted entry that blocks a later legitimate vote" in {
-      val fx = new RecordingEffects(1)
+      val fx   = new RecordingEffects(1)
       val node = new HotStuffCoordinator.Enabled(
         () => committee,
         fx,
@@ -234,5 +234,68 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
     )
     node.onLeaderTurn(0, B, 1000)
     fx.sent.collect { case v: HotStuffVote => v } should not be empty
+  }
+
+  // ---- The guard's PLACEMENT (review finding, 2026-09-02): the stale-target gate must run before
+  // `HotStuffEngine.onProposal`, not merely before signing in `castVotes`. `HotStuffEngine.onProposal`
+  // calls `HotStuffSafety.recordVote`, which RAISES `safety.lastVotedView` as soon as it decides
+  // `shouldVote` -- strictly before `castVotes` could skip. A `castVotes`-only guard therefore burned the
+  // monotonic, M1-PERSISTED anti-double-vote bound on a target the replica deliberately declined to
+  // sign: the view is consumed forever, and no vote was ever cast for it. These two tests pin the
+  // relocated guard by its observable consequence.
+
+  "the onProposal stale-target gate" should
+    "leave lastVotedView UNCHANGED when it declines a stale-epoch proposal (the review finding: a skipped target must not burn the M1 bound)" in {
+      val fx = new RecordingEffects(1)
+      // `initialLastVotedView = -1` (the default) plus a persistence spy: `onLastVotedViewPersist` is
+      // called by `onProposal` EXACTLY when `safety.lastVotedView` genuinely advances, so it is a direct,
+      // public observation of the bound moving -- no reach-in to the private `engine` needed.
+      var persisted = List.empty[Int]
+      val node      = new HotStuffCoordinator.Enabled(
+        () => committee,
+        fx,
+        (_, _) => true,
+        onLastVotedViewPersist = v => persisted = persisted :+ v,
+        maxTargetLag = () => 4,
+        tipHeight = () => 1000 // 1000 - 500 = 500 >> 4 -> stale
+      )
+      node.onProposal(HotStuffProposal(7, B, None), 500)
+
+      withClue("a declined stale proposal must not advance (nor persist) lastVotedView -- ") {
+        persisted shouldBe empty
+      }
+      withClue("a declined stale proposal must not sign anything either -- ") {
+        fx.sent.collect { case v: HotStuffVote => v } shouldBe empty
+      }
+      withClue("the gate must report itself as having fired (test-observable counter) -- ") {
+        node.staleTargetSkippedProposals should be(1)
+      }
+
+      // THE POINT: view 7 was never voted in, so it must STILL be votable once the replica re-anchors.
+      // Under the pre-relocation (castVotes-only) guard, `recordVote` had already raised lastVotedView to
+      // 7 here, and this second, entirely legitimate proposal at the SAME view for a FRESH target would
+      // have been silently refused by `HotStuffSafety.safeToVote` -- a self-inflicted liveness loss.
+      node.onProposal(HotStuffProposal(7, B, None), 998) // 1000 - 998 = 2 <= 4 -> fresh, re-anchored
+      withClue("view 7 must remain votable after the skip, since the skip cast no vote in it -- ") {
+        persisted should be(List(7))
+        fx.sent.collect { case v: HotStuffVote => v }.map(_.view) should contain(7)
+      }
+    }
+
+  it should "still advance lastVotedView normally for a fresh (non-stale) proposal (the gate is a no-op in the happy path)" in {
+    val fx        = new RecordingEffects(1)
+    var persisted = List.empty[Int]
+    val node      = new HotStuffCoordinator.Enabled(
+      () => committee,
+      fx,
+      (_, _) => true,
+      onLastVotedViewPersist = v => persisted = persisted :+ v,
+      maxTargetLag = () => 10,
+      tipHeight = () => 505
+    )
+    node.onProposal(HotStuffProposal(3, B, None), 500) // 505 - 500 = 5 <= 10 -> fresh
+    persisted should be(List(3))
+    node.staleTargetSkippedProposals should be(0)
+    fx.sent.collect { case v: HotStuffVote => v }.map(_.view) should contain(3)
   }
 }
