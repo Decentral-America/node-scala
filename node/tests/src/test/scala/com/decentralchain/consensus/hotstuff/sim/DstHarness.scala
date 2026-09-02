@@ -225,6 +225,19 @@ final class DstHarness(
     */
   def advanceTip(node: Int, height: Int): Unit = simulatedTip(node) = height
 
+  /** F-6 fix: push ONE node's own `committeeEpoch` gating belief independently of every other node's,
+    * unlike `advanceEpochBelief` above (which deliberately moves every live node in lockstep, matching
+    * every PRE-F-6 scenario's assumption that all replicas' live tips advance together). The F-6 trap's
+    * precondition needs the OPPOSITE: exactly one replica whose own tip (and therefore its own
+    * `committeeEpoch` belief, per `Application.scala`'s production wiring -- both are read from the
+    * SAME live tip) has genuinely diverged from its peers, while a target it is still voting on was
+    * signed under the epoch the REST of the committee is still on. Companion to `advanceTip`: a
+    * scenario that wants a fully faithful "node N's own tip raced ahead" simulation calls both, with
+    * `epoch` computed the same way production would (`committeeEpochOf(height)`), for the SAME `height`
+    * passed to `advanceTip`.
+    */
+  def advanceEpochBeliefForNode(node: Int, epoch: Int): Unit = epochBelief(node) = epoch
+
   def partition(a: Set[Int], b: Set[Int]): Unit     = network.partition(a, b)
   def healPartition(a: Set[Int], b: Set[Int]): Unit = network.healPartition(a, b)
 
