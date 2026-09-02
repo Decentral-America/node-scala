@@ -7,6 +7,7 @@ import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
 import com.decentralchain.test.DomainPresets.{DeterministicFinality, DCCSettingsOps}
 import com.decentralchain.test.PropSpec
+import com.decentralchain.test.produce
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
 
 /** Task 9, Step 3 (feature-30 BlsCryptoV2 plan): rollback-across-activation determinism.
@@ -17,18 +18,25 @@ import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
   * the transaction") is a pure function of the CONTAINING block's height, not of when validation
   * happened to run: rolling back across the activation height and re-appending the same two
   * transactions in the same positions must reproduce the exact same acceptance outcomes and the exact
-  * same resulting `committedGenerators` state -- and moving a legacy-signed PoP from a pre-activation
-  * height to a post-activation height must still be rejected (the negative control that rules out "any
-  * PoP is accepted once its bytes have been seen/validated before" or some other non-height-derived
-  * accidental pass).
+  * same resulting `committedGenerators` state.
+  *
+  * The boundary property is pinned directly: a v2 commitment placed at EXACTLY the activation height H
+  * must be accepted and a legacy commitment at exactly H must be REJECTED; a legacy commitment at
+  * exactly H-1 must be accepted and a v2 commitment at exactly H-1 must be REJECTED. Pinning all four
+  * of these at the boundary (rather than leaving a one-block margin on either side) is what actually
+  * rules out a gate that is off by one in either direction -- e.g. reading `blockchain.height - 1`
+  * (a live-tip-style read that is one block stale relative to the block being validated) would still
+  * pass a test that only checked H-1 and H+1, because H-1 stays legacy and H+1 stays v2 either way.
+  * This was confirmmed by mutation: swapping the gate to `blockchain.height - 1` turns the exact-H
+  * cases red; restoring the gate turns them green again (see the commit message for the transcript).
   */
 class BlsCryptoV2RollbackDeterminismSpec extends PropSpec with WithDomain {
-  // Large enough that H-1, H, and H+1 (and the period the commitments register INTO, one period
-  // later) don't cross an unrelated generation-period boundary the test isn't controlling for.
+  // Large enough that H-1 and H (and the period the commitments register INTO, one period later)
+  // don't cross an unrelated generation-period boundary the test isn't controlling for.
   private val generationPeriodLength = 100
   private val activationHeight       = 3
 
-  // BlsCryptoV2 activates at height H: legacy commitment lands at H-1, v2 commitment at H+1.
+  // BlsCryptoV2 activates at height H.
   private val h = activationHeight + 5
 
   private def freshSettings =
@@ -74,11 +82,10 @@ class BlsCryptoV2RollbackDeterminismSpec extends PropSpec with WithDomain {
       val legacyTx = TxHelpers.commitToGeneration(period.start, legacySender, cryptoV2 = false)
       val v2Tx     = TxHelpers.commitToGeneration(period.start, v2Sender, cryptoV2 = true)
 
-      // 1. Legacy-PoP commitment at H-1 (pre-activation), v2-PoP commitment at H+1 (post-activation).
+      // 1. Legacy-PoP commitment at H-1 (pre-activation), v2-PoP commitment at H (post-activation,
+      // the activation height itself).
       appendCommitmentBlockAt(d, h - 1, legacyTx)
-      d.appendBlock() // filler block landing exactly at H
-      d.blockchain.height shouldBe h
-      appendCommitmentBlockAt(d, h + 1, v2Tx)
+      appendCommitmentBlockAt(d, h, v2Tx)
 
       val committedGeneratorsFirstRun = d.blockchain.committedGenerators(period)
       val heightFirstRun              = d.blockchain.height
@@ -90,9 +97,7 @@ class BlsCryptoV2RollbackDeterminismSpec extends PropSpec with WithDomain {
       d.blockchain.height shouldBe h - 2
 
       appendCommitmentBlockAt(d, h - 1, legacyTx)
-      d.appendBlock() // filler block landing exactly at H
-      d.blockchain.height shouldBe h
-      appendCommitmentBlockAt(d, h + 1, v2Tx)
+      appendCommitmentBlockAt(d, h, v2Tx)
 
       // Both transactions succeeded again on replay (the gate re-derives the SAME era from height,
       // not from "have I seen this tx before"), and the resulting state is identical to the first run.
@@ -105,8 +110,50 @@ class BlsCryptoV2RollbackDeterminismSpec extends PropSpec with WithDomain {
     }
   }
 
-  property("NEGATIVE control: the H-1 block's legacy-PoP transaction is rejected if resubmitted inside a block at H+1") {
+  property("BOUNDARY: v2 PoP at exactly H is accepted, legacy PoP at exactly H is rejected") {
     withDomain(freshSettings, AddrWithBalance.enoughBalances(legacySender, v2Sender)) { d =>
+      val period   = advanceToPeriodBase(d)
+      val legacyTx = TxHelpers.commitToGeneration(period.start, legacySender, cryptoV2 = false)
+      val v2Tx     = TxHelpers.commitToGeneration(period.start, v2Sender, cryptoV2 = true)
+
+      while (d.blockchain.height < h - 1) d.appendBlock()
+      d.blockchain.height shouldBe h - 1
+
+      // A legacy-signed PoP submitted in the block landing exactly at H (the activation height, i.e.
+      // already post-activation) must be rejected -- a gate reading `height - 1` instead of `height`
+      // would still treat this block as pre-activation and wrongly accept it.
+      d.appendBlockE(legacyTx) should produce("Invalid commitment signature")
+      d.blockchain.height shouldBe h - 1 // rejected: chain unchanged
+
+      // The v2-signed PoP for the same block/period is accepted at exactly H.
+      d.appendBlockE(v2Tx) should beRight
+      d.blockchain.height shouldBe h
+    }
+  }
+
+  property("BOUNDARY: legacy PoP at exactly H-1 is accepted, v2 PoP at exactly H-1 is rejected") {
+    withDomain(freshSettings, AddrWithBalance.enoughBalances(legacySender, v2Sender)) { d =>
+      val period   = advanceToPeriodBase(d)
+      val legacyTx = TxHelpers.commitToGeneration(period.start, legacySender, cryptoV2 = false)
+      val v2Tx     = TxHelpers.commitToGeneration(period.start, v2Sender, cryptoV2 = true)
+
+      while (d.blockchain.height < h - 2) d.appendBlock()
+      d.blockchain.height shouldBe h - 2
+
+      // A v2-signed PoP submitted in the block landing exactly at H-1 (still pre-activation) must be
+      // rejected -- a gate reading `height + 1` instead of `height` (or any off-by-one that treats
+      // H-1 as already post-activation) would wrongly accept it.
+      d.appendBlockE(v2Tx) should produce("Invalid commitment signature")
+      d.blockchain.height shouldBe h - 2 // rejected: chain unchanged
+
+      // The legacy-signed PoP for the same block/period is accepted at exactly H-1.
+      d.appendBlockE(legacyTx) should beRight
+      d.blockchain.height shouldBe h - 1
+    }
+  }
+
+  property("NEGATIVE control: the H-1 block's legacy-PoP transaction is rejected if resubmitted inside a block at H+1") {
+    withDomain(freshSettings, AddrWithBalance.enoughBalances(legacySender)) { d =>
       val period   = advanceToPeriodBase(d)
       val legacyTx = TxHelpers.commitToGeneration(period.start, legacySender, cryptoV2 = false)
 
@@ -123,8 +170,7 @@ class BlsCryptoV2RollbackDeterminismSpec extends PropSpec with WithDomain {
       d.appendBlock() // -> H
       d.blockchain.height shouldBe h
 
-      val legacyBlockAtHPlus1 = d.createBlockE(Block.ProtoBlockVersion, Seq(legacyTx))
-      legacyBlockAtHPlus1 should beLeft
+      d.appendBlockE(legacyTx) should produce("Invalid commitment signature")
       d.blockchain.height shouldBe h // rejected: chain unchanged
     }
   }

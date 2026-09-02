@@ -26,10 +26,14 @@ import org.scalatest.EitherValues
   * this file's literals; the seeds themselves are reproduced in comments below for auditability, but
   * are NOT re-derived at test run time):
   *
-  *   - PoP signer seed:  the 32 ASCII bytes "task9-legacy-vector-signer1-see"
-  *   - Endorsement signer 1 seed: the 32 ASCII bytes "task9-legacy-vector-signer1-see"
-  *   - Endorsement signer 2 seed: the 32 ASCII bytes "task9-legacy-vector-signer2-see"
-  *   - DCC sender seed (PoP message binding, legacy layout does not use it): "task9-legacy-vector-sender-seed"
+  *   - PoP signer seed: the 31 ASCII bytes "task9-legacy-vector-signer1-see" zero-padded to 32 bytes
+  *     (one trailing 0x00 byte appended -- the literal ASCII string is only 31 bytes long)
+  *   - Endorsement signer 1 seed: the 31 ASCII bytes "task9-legacy-vector-signer1-see" zero-padded to
+  *     32 bytes (same padding as the PoP signer seed above)
+  *   - Endorsement signer 2 seed: the 31 ASCII bytes "task9-legacy-vector-signer2-see" zero-padded to
+  *     32 bytes (one trailing 0x00 byte appended)
+  *   - DCC sender seed (PoP message binding, legacy layout does not use it): the 31 ASCII bytes
+  *     "task9-legacy-vector-sender-seed" zero-padded to 32 bytes (one trailing 0x00 byte appended)
   *   - generationPeriodStart = 12345, chainId = 'D' (0x44 = 68)
   *   - Endorsement: finalizedId = 32 bytes of 0x07, finalizedHeight = 100, endorsedId = 32 bytes of 0x09
   *
