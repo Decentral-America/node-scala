@@ -40,13 +40,37 @@ import com.decentralchain.test.FlatSpec
   *   (b) The coordinator actually RESUMES COMMITTING once handed a real committee again -- not merely
   *       "stays safe while starved." This is the assertion today's real incident got wrong: production
   *       did NOT self-resume once the automation eventually ran; it required a full manual node
-  *       restart. MEASURED RESULT (see the `resumedCount` assertion at the bottom of this test, and the
-  *       task report): self-resumption in this harness is FLAKY -- 49/100 seeds converged to a full
-  *       4-node commit after the real committee was restored, and 51/100 did not, within this
-  *       scenario's event/tick budget, with nothing structurally different between seeds besides timing
-  *       jitter. That is neither "always recovers" nor "never recovers" -- it is documented plainly
-  *       below rather than forced toward either extreme, and it is consistent with (does not
-  *       contradict) the live incident landing in the "did not recover" half.
+  *       restart.
+  *
+  *       MEASURED RESULT, UPDATED 2026-09-02 -- SELF-RESUMPTION IS NOW RELIABLE (100/100 seeds).
+  *       This scenario was originally written against a measured 49/100 (flaky, coin-flip) and its band
+  *       asserted that split. The audit F-9 fix (`voted`-set pruning in `HotStuffCoordinator.prunePool`,
+  *       commit `f8c2650c52`) changed this to a deterministic 100/100. ATTRIBUTION (four runs of this
+  *       exact scenario, see the hardening report):
+  *         - clean tip `197420fd10` (pre-batch):                        49/100
+  *         - full audit-hardening batch `66eb535158`:                   100/100
+  *         - that batch with ONLY the F-9 coordinator change reverted:   49/100
+  *         - F-9 restored:                                             100/100
+  *       i.e. F-9 is the sole cause; no other item in the batch moves this number.
+  *
+  *       MECHANISM. `castVotes` is guarded by `voted`, a set of `(view, phase, blockId)` keys. During
+  *       the empty-committee window this scenario drives ~10 `tickTimeoutAll()` rounds in which nodes
+  *       DO reach `castVotes` and record `voted` entries, but every resulting vote is dropped on
+  *       ingress (`HotStuffQuorum.verifyVote` cannot find the signer in an empty committee), so no QC
+  *       ever forms for those targets. Before F-9, `voted` was never reclaimed, so those dead entries
+  *       persisted indefinitely; whether a given node could then vote in the post-restoration round
+  *       depended on whether timing jitter had happened to leave it holding a `voted` entry that
+  *       collided with the recovery round's target -- which is exactly the observed coin-flip. F-9
+  *       prunes `voted` on every `prunePool()` (reached from `onTimeout()`, itself reached from
+  *       `onRoundTimerTick()` on each tick) under the same `view >= pacemaker.view - 1` margin the
+  *       pool uses, so the stale entries age out as views advance during the starvation window and
+  *       every node can vote cleanly once the real committee returns.
+  *
+  *       This CLOSES audit F-10 ("nobody has characterized why it is 49%"): the 49% was not inherent
+  *       timing nondeterminism in HotStuff recovery, it was the unbounded `voted` set retaining dead
+  *       vote-guard entries across a starvation window. The live 2026-08-30/31 incident (which needed
+  *       a manual restart) is consistent with the pre-fix "did not resume" half; a restart cleared the
+  *       in-memory `voted` set, which is precisely what F-9 now does incrementally.
   *
   * Scope, stated honestly (matching `DstCommitteeChangeScenarioSpecification`'s corrected docstring
   * standard): this harness only ever injects ONE candidate `BlockId` per round via `leaderTurn`, so
@@ -138,36 +162,31 @@ class DstEmptyCommitteeSourceScenarioSpecification extends FlatSpec {
       // (b) THE KEY FINDING. Per the task brief: do not weaken this assertion to force a pass. Report
       // exactly what the sweep found -- including if the honest result is "it depends".
       //
-      // MEASURED RESULT (recorded from an actual run of this exact scenario, not assumed in advance):
-      // resumedCount was 49 / 100 seeds -- i.e. self-resumption is FLAKY, not reliably absent and not
-      // reliably present. Roughly half the seeds converge to a full 4-node commit at height 102 after
-      // the real committee is restored (via the fresh `leaderTurn` and/or the subsequent
-      // `tickTimeoutAll` round-timer ticks this scenario drives); the other half do not, within this
-      // scenario's event budget, even though nothing about the fault differs structurally between
-      // seeds -- only the delivery-delay/timing jitter draws from `FaultProfile`. This is a genuine,
-      // reportable finding: it means whether HotStuff "self-heals" after an empty-committee-source
-      // window is timing-dependent, not a property one can rely on. It also means this specific
-      // in-process harness result does NOT contradict the live 2026-08-30/31 incident (which needed a
-      // full manual restart and did not self-resume in that instance) -- that incident is consistent
-      // with landing in this scenario's "did not resume" bucket, which is not rare (>50% of seeds here).
+      // MEASURED RESULT, UPDATED 2026-09-02: resumedCount is now 100 / 100 seeds -- self-resumption is
+      // RELIABLE, not flaky. It was 49/100 when this scenario was written, and the audit F-9 fix
+      // (`voted`-set pruning in `HotStuffCoordinator.prunePool`, commit `f8c2650c52`) is the sole
+      // cause of the change -- attributed by re-running this exact scenario at the pre-batch tip
+      // (49/100), on the full batch (100/100), and on the batch with only F-9's coordinator change
+      // reverted (49/100 again). See the class docstring for the full attribution table and the
+      // stale-`voted`-entry mechanism, which is what CLOSES audit F-10 ("nobody has characterized why
+      // it is 49%"): the coin-flip was the unbounded `voted` set retaining dead vote-guard entries
+      // across the starvation window, not inherent timing nondeterminism.
       //
-      // Because the true result is neither a clean 0 nor a clean SeedCount, this assertion checks the
-      // MEASURED split directly (a tight band around the observed 49%) rather than either extreme, so
-      // that a genuine change in this behaviour (e.g. a future fix that makes self-resumption reliable,
-      // or a regression that makes it fail even more often) fails this test and is caught, instead of
-      // being silently absorbed by a loose bound chosen just to make the run go green. If this
+      // The band is kept as a GUARD (>= 90), not widened to accept anything: a regression back toward
+      // the old coin-flip -- e.g. `voted` pruning being removed, narrowed, or made unreachable from the
+      // round-timer path -- must fail this test loudly rather than being silently absorbed. If this
       // assertion starts failing, do NOT just widen the band -- re-read the new resumedCount, decide
-      // whether it reflects a real behaviour change, and update this docstring (and the task report) to
-      // say so honestly.
+      // whether it reflects a real behaviour change, and update this docstring (and the report) to say
+      // so honestly.
       withClue(
-        s"self-resume count = $resumedCount / $SeedCount seeds (expected roughly 40-60, matching the " +
-          "49/100 measured when this scenario was written). A count near 0 across the whole band would " +
-          "mean self-resumption is now reliably ABSENT (matching the live incident more strongly than " +
-          s"measured here); a count near $SeedCount would mean it is now reliably PRESENT (the bug would " +
-          "be fixed). Either is a real, reportable change from what this test currently documents -- " +
-          "update this file's docstring and the task report, do not just widen the band silently."
+        s"self-resume count = $resumedCount / $SeedCount seeds (expected >= 90; measured 100/100 on " +
+          "2026-09-02 after the audit F-9 `voted`-pruning fix, up from 49/100 before it). A count back " +
+          "near 50 would mean the F-9 pruning has regressed (removed, narrowed, or no longer reached " +
+          "from the round-timer/`onTimeout` path) and the empty-committee recovery coin-flip is back; a " +
+          "count near 0 would mean self-resumption is now reliably ABSENT. Either is a real, reportable " +
+          "change -- update this file's docstring and the report, do not just widen the band silently."
       ) {
-        resumedCount should (be >= 35 and be <= 63)
+        resumedCount should be >= 90
       }
     }
 }
