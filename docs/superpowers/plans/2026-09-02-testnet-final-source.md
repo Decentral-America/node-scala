@@ -1,42 +1,46 @@
-# Testnet Final Source — Waves-Identical Feature Registry, DCC Improvements Unconditional
+# Testnet Final Source — Waves-Identical Feature Registry, DCC Improvements Unconditional (rev. 2, audited)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **Rev. 2 (2026-09-02):** rev. 1 was adversarially audited against the real tree; 29 corrections applied (wrong anchors, a false CI premise, a would-break-CI step, a missing image-build step, and — most important — upstream feature 26 is NOT inert on DCC: two of its hunks are a monetary change). Task 2 now stops at an explicit operator decision.
 
-**Goal:** Produce the final node-scala source for the testnet relaunch: feature registry byte-identical to upstream Waves 1.6.x (ids 1–28, including a real port of 26), every DCC consensus/crypto improvement shipped as the ONLY behavior (no DCC-native feature ids, no legacy paths, no activation gates), the live stall root-caused from real logs, the commit-generator automation made fail-loud, and a full-suite-green, reviewed, tagged build.
+**Goal:** Produce the final node-scala source for the testnet relaunch: feature registry mirroring upstream Waves 1.6.x (ids 1–28), every DCC consensus/crypto improvement shipped as the ONLY behavior (no DCC-native feature ids, no legacy paths, no activation gates), the live stall root-caused from real logs, the commit-generator automation made fail-loud, and a full-suite-green, reviewed, tagged, image-built release.
 
-**Architecture:** Two decisions drive everything. (1) Testnet is disposable and mainnet's legacy chain has no BLS/HotStuff/commitment history, so the BLS domain-separation + bound-PoP fix (was feature 30) and block-carried equivocation evidence (was feature 29) need no activation gate — they become unconditional, and features 29/30 are deleted. (2) The registry mirrors upstream exactly, which requires porting upstream's `AdjustedBlockRewardDistribution` (id 26, upstream commit `f1bedddb2e`) as real logic — never as a placeholder, because `implemented = dict.keySet` is the unknown-feature safety net. Every node on any chain must run this binary from genesis; mixed versions = split (documented rule, enforced operationally).
+**Architecture:** Two decisions drive everything. (1) Testnet is disposable and mainnet's legacy chain has no BLS/HotStuff/commitment history (its genesis pre-activates `[1..13,15,16]` — feature 25 never activated, so no BLS bytes exist anywhere we keep), so the BLS domain-separation + bound-PoP fix (was feature 30) and block-carried equivocation evidence (was feature 29) need no activation gate — they become unconditional and 29/30 are deleted. (2) The registry mirrors upstream, which means registering upstream's 26 `AdjustedBlockRewardDistribution` WITH its logic ported — never as a placeholder, because `implemented = dict.keySet` is the unknown-feature safety net — but 26's live hunks change block-reward economics, so whether it is ever *activated* is an operator decision, not a bookkeeping default.
 
 **Tech Stack:** Scala 3, sbt, ScalaTest, blst BLS, protobuf-schemas 1.6.6 (monorepo), GitHub Actions (infra), Kubernetes/LKE + Linode VPS (testnet).
 
 ## Global Constraints
 
-- Branch off `dev` @ `36caa7edc1` for node-scala work; `feat/bls-crypto-v2` (10 commits, contains the H2/M2 code) is the source to strip gates FROM — merge it first (Task 1), then remove gates on top. Never re-implement what that branch already has.
-- Registry target (verbatim from `upstream-waves/version-1.6.x` `features/BlockchainFeature.scala`): 1–25 unchanged (DCC's 1 says "DCC" not "WAVES" — keep DCC wording), `26 = AdjustedBlockRewardDistribution` (in dict, logic ported), `27 = ContinuationTransaction`, `28 = LeaseExpiration` (both not-exposed/not in dict, as upstream). No id > 28. No `Dummy`-style burned-id comments about 28.
-- NEVER register a feature in `dict` whose logic is not implemented (`BlockchainUpdaterImpl.scala:139-145` / `:235-241` treat `dict.keySet` as "implemented"; a placeholder converts a loud UNIMPLEMENTED shutdown into a silent fork).
-- v2 crypto is the ONLY crypto: DSTs `…_POP_` / `…_ENDORSE_` / `…_HSVOTE_`; PoP message = `chainId(1) ‖ senderPublicKey(32) ‖ endorserPublicKey(48) ‖ generationPeriodStart(4)`. The legacy `_NUL_` tag is deleted from production code entirely.
+- Branch off `dev` @ `36caa7edc1` for node-scala work; `feat/bls-crypto-v2` (**19 commits** ahead of dev, contains the H2/M2 code, gated) is the source to strip gates FROM — merge it first (Task 1), then remove gates on top. Never re-implement what that branch already has.
+- Registry target (verbatim from `upstream-waves/version-1.6.x` `features/BlockchainFeature.scala`): 1–25 unchanged (id 1 keeps DCC wording), `26 = AdjustedBlockRewardDistribution` (in dict, logic ported), `27 = ContinuationTransaction`, `28 = LeaseExpiration` (both not-exposed/not in dict, as upstream). No id > 28.
+- NEVER register a feature in `dict` whose logic is not implemented (`BlockchainUpdaterImpl.scala:130-147` warn/`forceStopApplication`, `:235-241` append rejection — both key on `dict.keySet`; a placeholder converts a loud UNIMPLEMENTED shutdown into a silent fork).
+- v2 crypto is the ONLY crypto: DSTs `…_POP_` / `…_ENDORSE_` / `…_HSVOTE_`; PoP message = `chainId(1) ‖ senderPublicKey(32) ‖ endorserPublicKey(48) ‖ generationPeriodStart(4)` = 85 bytes (asserted today at `CommitToGenerationPopMessageSpec:26`). The legacy `_NUL_` tag is deleted from production code entirely.
 - `hotstuffConflicts` is always valid when well-formed (no activation gate). `slashing-enabled` stays an operator flag (default `false`).
-- `HotStuffSettings` unchanged: `authoritative=false` default (advisory floor — documented, F-1 decision = advisory), `slashingEnabled=false`, `maxTargetLagFraction=0.25`.
-- FOREGROUND sbt only in every task (background-and-wait has wedged multiple agents). Full-suite gate command: `cd /Users/jourlez/Documents/Code/Blockchain/Ecosystem/node-scala && sbt "node/compile" "node-testkit/compile" "node-tests/test"` (~8-10 min).
+- `HotStuffSettings` unchanged: `authoritative=false` default (advisory floor — audit F-1 decision = advisory), `slashingEnabled=false`, `maxTargetLagFraction=0.25`.
+- Infra repo paths are repo-root-relative: `/Users/jourlez/Documents/Code/Blockchain/Ecosystem/infra/.github/workflows/...`, `.../infra/monitoring/...` (source) vs `.../infra/clusters/testnet/monitoring/...` (deployed copy — edit source, let Flux roll it), runbooks live at the infra repo ROOT (`DEPLOY.md`, `RUNBOOK-*.md`), not under `docs/`.
+- FOREGROUND sbt only in every task (background-and-wait has wedged multiple agents). Full-suite gate command: `cd /Users/jourlez/Documents/Code/Blockchain/Ecosystem/node-scala && sbt "node/compile" "node-testkit/compile" "node-tests/test"` (~8-10 min; baseline 2,943 tests / 0 failed).
 - Commits sole-authored by jourlez; NEVER add Co-Authored-By / AI attribution. No `git worktree` (sbt-git breaks); use a full clone if isolation is needed.
-- Infra changes: read-only investigation first; no live-node mutation (restarts, PVC wipes, config rollouts) without an explicit go-ahead step in the task.
+- Infra: read-only investigation first; no live-node mutation (restarts, PVC wipes, config rollouts, workflow dispatch against live nodes) without the explicit go-ahead step named in the task.
+- Review packages: there is no `scripts/review-package` in this repo. Use the superpowers script by absolute path: `/Users/jourlez/.claude/plugins/cache/superpowers-dev/superpowers/6.1.1/skills/subagent-driven-development/scripts/review-package BASE HEAD` (or `git log --oneline BASE..HEAD; git diff --stat BASE..HEAD; git diff -U10 BASE..HEAD > file`).
 
 ---
 
 ### Task 1: Merge the H2/M2 code branch, then remove features 29 and 30 with all gates
 
-**Files:**
+**Files (all on `feat/testnet-final-source` after the merge; anchors verified on `feat/bls-crypto-v2`):**
 - Merge: `feat/bls-crypto-v2` → new branch `feat/testnet-final-source` (off `dev`)
-- Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` (remove 29, 30; leave 26/27 for Task 2)
+- Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` (:32 `HotStuffEquivocationEvidence`, :33 "28 is BURNED" comment, :34 `BlsCryptoV2`, :69-70 dict entries — remove; 26/27 handled in Task 2)
 - Modify: `node/src/main/scala/com/decentralchain/state/Blockchain.scala` (delete `supportsHotStuffEquivocationEvidence` :312-313, `supportsBlsCryptoV2` :323)
-- Modify: `node/src/main/scala/com/decentralchain/state/appender/package.scala` (:364 feature-29 gate → delete; :388-395 activation-period boundary block → delete; :397/:446 DST → constants)
-- Modify: `node/src/main/scala/com/decentralchain/mining/Miner.scala` (:346-350 gate → delete)
-- Modify: `node/src/main/scala/com/decentralchain/crypto/bls/BlsUtils.scala` (delete legacy tag :17; `dst` params keep NO default — every caller names its context)
-- Modify: `BlockEndorsement.scala` (:27 `_ENDORSE_` unconditional), `HotStuffQuorum.scala` (:64 `_HSVOTE_` unconditional; drop `cryptoV2` from `verifyVote`/`formQC`/`verifyQC`), `HotStuffEquivocationProof.scala` (dst = HSVOTE constant), `HotStuffCoordinator.scala`, `HotStuffEngine.scala`, `HotStuffVotePool.scala` (drop `cryptoV2` provider/params), `CommitToGenerationTransaction.scala` (:70-77 v2 branch only; drop `cryptoV2` param from `popMessage`/`popDst`/`mkPopSignature`), `TransactionFactory.scala`, `BlockEndorser.scala` (remove `carrierHeight` :110/:123/:154/:160 — its only purpose was the gate), `EndorsementFilter.scala` (drop `cryptoV2` field), `EndorsementStorage.scala`, `BlockDiffer.scala` (:643 → v2), `CommitToGenerationTransactionDiff.scala` (:26 → v2), `BlockchainSettings.scala` (:155/:181 remove `BlsCryptoV2.id -> 1`), `Application.scala` (:351-355 remove provider), `TransactionsApiRoute.scala` (:261), `requests/CommitToGenerationRequest.scala`, `utils/UtilApp.scala` (:415-423 v2 tags; remove `--bls-crypto-v2-activation-height`), `utx/UtxPoolImpl.scala` (comment), `node/testkit/.../TxHelpers.scala`
-- Delete tests: `settings/BlsCryptoV2PreActivationSpec.scala`, `state/BlsCryptoV2ActivationHelperSpec.scala`, `state/BlsCryptoV2RollbackDeterminismSpec.scala`, `state/appender/BlsCryptoV2EquivocationProofBoundarySpec.scala`, `utils/UtilAppSpec.scala`, and case 2 (:103-117) of `HotStuffEquivocationValidationSpecification.scala`
-- Edit tests to v2-only: `crypto/bls/BlsUtilsTest.scala` (drop "legacy tag remains default" case; keep 3x3 matrices), `crypto/bls/BlsLegacyVectorRegressionSpec.scala` → rename `BlsVectorRegressionSpec`, RE-PIN as v2 vectors, REWRITE header (vectors are synthesized fixed-seed pins of the current encoding — regenerate ONLY with a deliberate encoding change, never to "fix" a failure), `transaction/CommitToGenerationPopMessageSpec.scala` (drop legacy-layout cases; keep chainId/sender-differ + exact 85-byte layout), `state/diffs/CommitToGenerationPopV2Spec.scala` (keep transplant-by-domain; collapse pre/post pairs), `finalization/BlsCryptoV2EndorsementSpec.scala` (collapse 8→4), `state/BlsCryptoV2SnapshotPathPopSpec.scala`, `state/BlockEndorserSpec.scala` (remove `carrierHeight` block :136), `features/BlockchainFeaturesRegistrySpec.scala` (assert 29/30 ABSENT; Task 2 adds 26-28 assertions), `MultipleConflictEndorserSuite.scala:89` + `mining/HotStuffEquivocationEvidenceE2ESpecification.scala:55` (drop `.addFeatures(HotStuffEquivocationEvidence)`), ~20 `consensus/hotstuff/*Specification` (drop positional `cryptoV2 = false` / legacy-dst args)
+- Modify: `node/src/main/scala/com/decentralchain/state/appender/package.scala` (**:369-371** feature-29 gate → delete; :388-395 activation-period boundary block → delete; :397/:446 DST → constants)
+- Modify: `node/src/main/scala/com/decentralchain/mining/Miner.scala` (:344-350 `withHotStuffConflicts` gate + its comment → delete)
+- Modify: `node/src/main/scala/com/decentralchain/crypto/bls/BlsUtils.scala` (:11-17 legacy tag + "kept HERE FOREVER" scaladoc → delete; :75/:88/:151 `dst` defaults → remove, params stay required), `crypto/bls/BlsSignature.scala:18` (stale "legacy paths" scaladoc)
+- Modify: `block/BlockEndorsement.scala` (:27 `_ENDORSE_` unconditional), `consensus/hotstuff/HotStuffQuorum.scala` (:64 `_HSVOTE_` unconditional; drop `cryptoV2` from `verifyVote`/`formQC`/`verifyQC`), `HotStuffEquivocationProof.scala` (dst = HSVOTE constant), `HotStuffCoordinator.scala`, `HotStuffEngine.scala` (`EngineState.cryptoV2`), `HotStuffVotePool.scala`, `NodeHotStuffEffects.scala` (`signVote(dst)` → constant), `transaction/CommitToGenerationTransaction.scala` (:70-77 v2 branch only; drop `cryptoV2` from `popMessage`/`popDst`/`mkPopSignature`), `transaction/TransactionFactory.scala`, `state/BlockEndorser.scala` (remove `carrierHeight` :110/:123/:154/:160 — its ONLY use is the era read at :160), `state/EndorsementFilter.scala` (drop `cryptoV2` field), `state/EndorsementStorage.scala`, `state/diffs/BlockDiffer.scala` (:643), `state/diffs/CommitToGenerationTransactionDiff.scala` (:26), `settings/BlockchainSettings.scala` (:155 MAINNET `BlsCryptoV2.id -> 1`, :181 STAGENET — delete; compile error otherwise), `Application.scala` (:351-355 provider), `api/http/TransactionsApiRoute.scala` (:261), `api/http/requests/CommitToGenerationRequest.scala`, `utils/UtilApp.scala` (:347/:357 `blsCryptoV2Era` + :415-423 tags + the `--bls-crypto-v2-activation-height` option → delete/v2), `utx/UtxPoolImpl.scala` (comment), `node/src/main/resources/network-defaults.conf:47` (`30 = 1` → delete), `application.conf` BlsCryptoV2 comment block, `node/testkit/.../TxHelpers.scala`
+- Delete tests (gate-only): `settings/BlsCryptoV2PreActivationSpec.scala`, `state/BlsCryptoV2ActivationHelperSpec.scala`, `state/BlsCryptoV2RollbackDeterminismSpec.scala`, `state/appender/BlsCryptoV2EquivocationProofBoundarySpec.scala`, `utils/UtilAppSpec.scala` (tests only `blsCryptoV2Era`), and case 2 (:103-117) of `state/appender/HotStuffEquivocationValidationSpecification.scala`
+- Edit tests to v2-only: `crypto/bls/BlsUtilsTest.scala` (drop "legacy tag remains the BlsUtils-level default"; keep both 3x3 matrices), `crypto/bls/BlsLegacyVectorRegressionSpec.scala` → `BlsVectorRegressionSpec.scala` (re-pin, see Step 5), `transaction/CommitToGenerationPopMessageSpec.scala` (drop legacy-layout cases; keep 85-byte layout + chainId/sender-differ), `state/diffs/CommitToGenerationPopV2Spec.scala` (keep transplant-by-domain; collapse pre/post pairs), `finalization/BlsCryptoV2EndorsementSpec.scala` (8→4), `state/BlsCryptoV2SnapshotPathPopSpec.scala`, `state/BlockEndorserSpec.scala` (remove `carrierHeight` block :136), `features/BlockchainFeaturesRegistrySpec.scala` (assert 29/30 ABSENT), `finalization/conflict/MultipleConflictEndorserSuite.scala:89` + `mining/HotStuffEquivocationEvidenceE2ESpecification.scala:55` (drop `.addFeatures(HotStuffEquivocationEvidence)`), ~20 `consensus/hotstuff/*Specification` (drop positional `cryptoV2 = false` / legacy-dst args)
 
 **Interfaces:**
-- Produces: `BlsUtils.{BlsPopDomainSeparationTag, BlsEndorseDomainSeparationTag, BlsHsVoteDomainSeparationTag}` (rename from `…TagV2` — there is no v1 anymore); `HotStuffQuorum.VoteDst` constant; `CommitToGenerationTransaction.popMessage(chainId, sender, endorserPk, periodStart)`; `HotStuffQuorum.verifyVote(vote, committee)` / `formQC(votes, committee)` / `verifyQC(qc, committee)` without `cryptoV2`.
+- Produces: `BlsUtils.{BlsPopDomainSeparationTag, BlsEndorseDomainSeparationTag, BlsHsVoteDomainSeparationTag}` (renamed from `…TagV2`); `HotStuffQuorum.VoteDst`; `CommitToGenerationTransaction.{popMessage(chainId, sender, endorserPk, periodStart), PopDst}`; `HotStuffQuorum.verifyVote(vote, committee)` / `formQC(votes, committee)` / `verifyQC(qc, committee)` without `cryptoV2`.
 
 - [ ] **Step 1: Create branch and merge the H2/M2 code**
 
@@ -47,7 +51,7 @@ git checkout -b feat/testnet-final-source
 git merge --no-ff feat/bls-crypto-v2 -m "Merge branch 'feat/bls-crypto-v2' into feat/testnet-final-source (H2/M2 code; gates removed in following commits)"
 sbt "node/compile" "node-testkit/compile"
 ```
-Expected: clean merge (branch is a strict descendant of dev + 10 task commits + fixes), compile green.
+Expected: clean merge (strict descendant), compile green.
 
 - [ ] **Step 2: Write the failing registry test**
 
@@ -63,18 +67,17 @@ In `node/tests/src/test/scala/com/decentralchain/features/BlockchainFeaturesRegi
 
 - [ ] **Step 3: Run to verify it fails**
 
-Run: `sbt "node-tests/testOnly com.decentralchain.features.BlockchainFeaturesRegistrySpec"`
-Expected: FAIL — `feature(29)` is `Some(...)`.
+Run: `sbt "node-tests/testOnly com.decentralchain.features.BlockchainFeaturesRegistrySpec"` — Expected: FAIL (`feature(29)` is `Some`).
 
 - [ ] **Step 4: Remove feature 29 + its gate**
 
-`BlockchainFeature.scala`: delete the `HotStuffEquivocationEvidence` val (:32), its dict entry (:67), and the "Id 28 is deliberately BURNED" comment (:33). `Blockchain.scala`: delete `supportsHotStuffEquivocationEvidence` (:312-313). `appender/package.scala` `validateHotStuffEquivocationProofs`: delete the `raiseUnless(blockchain.supportsHotStuffEquivocationEvidence(blockHeight))(...)` step at :364 (keep every other rule: consistency, epoch==period, bounds, dedup, known-conflict, overlap, signatures). `Miner.scala` `withHotStuffConflicts`: delete the `if (!blockchainUpdater.supportsHotStuffEquivocationEvidence(...)) voting else` wrapper (:346-350), keep the `generationPeriodOf` match. `HotStuffEquivocationValidationSpecification.scala`: delete case 2 (:103-117); renumber nothing else. Drop `.addFeatures(BlockchainFeatures.HotStuffEquivocationEvidence)` at `MultipleConflictEndorserSuite.scala:89` and `HotStuffEquivocationEvidenceE2ESpecification.scala:55`.
+`BlockchainFeature.scala`: delete the `HotStuffEquivocationEvidence` val (:32), its dict entry, and the "Id 28 is deliberately BURNED" comment (:33). `Blockchain.scala`: delete `supportsHotStuffEquivocationEvidence` (:312-313). `appender/package.scala` `validateHotStuffEquivocationProofs`: delete the `raiseUnless(blockchain.supportsHotStuffEquivocationEvidence(blockHeight))(...)` step at **:369-371** (keep every other rule: consistency, epoch==period, bounds, dedup, known-conflict, overlap, signatures). `Miner.scala` `withHotStuffConflicts`: delete the `if (!blockchainUpdater.supportsHotStuffEquivocationEvidence(...)) voting else` wrapper and its comment (:344-350), keep the `generationPeriodOf` match. `HotStuffEquivocationValidationSpecification.scala`: delete case 2 (:103-117). Drop `.addFeatures(BlockchainFeatures.HotStuffEquivocationEvidence)` at `MultipleConflictEndorserSuite.scala:89` and `HotStuffEquivocationEvidenceE2ESpecification.scala:55`.
 
-Run: `sbt "node/compile" "node-tests/testOnly com.decentralchain.state.appender.* com.decentralchain.mining.* com.decentralchain.features.*"` — expected green except the registry test still failing on 30.
+Run: `sbt "node/compile" "node-tests/testOnly com.decentralchain.state.appender.* com.decentralchain.mining.* com.decentralchain.features.*"` — green except the registry test still failing on 30.
 
 - [ ] **Step 5: Remove feature 30 — crypto becomes unconditional**
 
-`BlsUtils.scala`: delete `BlsDomainSeparationTag` (legacy, :17). Rename `BlsPopDomainSeparationTagV2` → `BlsPopDomainSeparationTag`, `BlsEndorseDomainSeparationTagV2` → `BlsEndorseDomainSeparationTag`, `BlsHsVoteDomainSeparationTagV2` → `BlsHsVoteDomainSeparationTag`. Remove the `= BlsDomainSeparationTag` defaults at :75/:88/:151 (params stay required). Rewrite the :14-17 scaladoc: three contexts, three tags, no legacy — regenerating a tag is a chain-identity change.
+`BlsUtils.scala`: delete `BlsDomainSeparationTag` and its :11-17 "kept HERE FOREVER / chain split" scaladoc (obsolete: mainnet never activated feature 25, so no BLS bytes exist pre-25 — say this in the commit body). Rename `Bls{Pop,Endorse,HsVote}DomainSeparationTagV2` → `Bls{Pop,Endorse,HsVote}DomainSeparationTag`. Remove the `= BlsDomainSeparationTag` defaults at :75/:88/:151 (params stay required). New scaladoc: three contexts, three tags; changing a tag is a chain-identity change (every node ships it from genesis).
 
 `CommitToGenerationTransaction.scala`:
 ```scala
@@ -85,33 +88,33 @@ Run: `sbt "node/compile" "node-tests/testOnly com.decentralchain.state.appender.
 
   val PopDst: String = BlsUtils.BlsPopDomainSeparationTag
 ```
-Update `mkPopSignature(blsKeyPair, generationPeriodStart, sender, chainId)` (drop `cryptoV2`) and every caller (`TxHelpers`, `CommitToGenerationRequest.toTxFrom`, `TransactionFactory`, `UtilApp`, tests — compiler names them).
+Update `mkPopSignature(blsKeyPair, generationPeriodStart, sender, chainId)` (drop `cryptoV2`) and every caller (`TxHelpers`, `CommitToGenerationRequest.toTxFrom`, `TransactionFactory`, `UtilApp`, tests — the compiler names them).
 
-`BlockDiffer.scala:643`, `CommitToGenerationTransactionDiff.scala:26`: delete the `val cryptoV2 = blockchain.supportsBlsCryptoV2(...)` lines; call `popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)` + `PopDst`.
+`BlockDiffer.scala:643`, `CommitToGenerationTransactionDiff.scala:26`: delete `val cryptoV2 = ...`; call `popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)` + `PopDst`.
 
-`BlockEndorsement.scala`: `mkMessage` unchanged; `sign`/`signed`/`signatureValid` drop `cryptoV2`, use `BlsUtils.BlsEndorseDomainSeparationTag`. `EndorsementFilter.scala`: delete the `cryptoV2` field (and its 3 test constructions). `EndorsementStorage.verifySig`: use the endorse tag. `BlockEndorser.scala`: delete `carrierHeight` parameter + the `supportsBlsCryptoV2(carrierHeight)` read (:110/:123/:154/:160) and the `cryptoV2` val; `castVote(votingHeight, endorsedHeight, ...)` as before Task 6 of the old plan. `appender/package.scala`: `endorsementDst` → constant; `proofDst` → `HotStuffQuorum.VoteDst`; delete the boundary block :388-395.
+`BlockEndorsement.scala`: `mkMessage` unchanged (68 bytes); `sign`/`signed`/`signatureValid` drop `cryptoV2`, use `BlsUtils.BlsEndorseDomainSeparationTag`. `EndorsementFilter.scala`: delete the `cryptoV2` field (+ its 3 test constructions). `EndorsementStorage.verifySig`: endorse tag. `BlockEndorser.scala`: delete `carrierHeight` (:110/:123/:154) and the `cryptoV2 = blockchain.supportsBlsCryptoV2(carrierHeight.toInt)` read (:160); `castVote(votingHeight, endorsedHeight, ...)`. `appender/package.scala`: `endorsementDst` → constant; `proofDst` → `HotStuffQuorum.VoteDst`; delete the boundary block :388-395.
 
-`HotStuffQuorum.scala`: `val VoteDst: String = BlsUtils.BlsHsVoteDomainSeparationTag`; delete `voteDst(cryptoV2)`; drop `cryptoV2` from `verifyVote`/`formQC`/`verifyQC` and their `HotStuffVotePool`/`HotStuffEngine` (`EngineState.cryptoV2`)/`HotStuffCoordinator` (`cryptoV2: () => Boolean` provider; both read sites)/`NodeHotStuffEffects.signVote(dst)` (pass `VoteDst`)/`Application.scala:351-355` callers. `HotStuffEquivocationProof.signaturesValid` drops `dst` and uses `HotStuffQuorum.VoteDst`; its two call sites simplify.
+`HotStuffQuorum.scala`: `val VoteDst: String = BlsUtils.BlsHsVoteDomainSeparationTag`; delete `voteDst(cryptoV2)`; drop `cryptoV2` from `verifyVote`/`formQC`/`verifyQC` and from `HotStuffVotePool` / `HotStuffEngine` (`EngineState.cryptoV2`) / `HotStuffCoordinator` (`cryptoV2: () => Boolean` provider and both read sites) / `NodeHotStuffEffects.signVote` (pass `VoteDst`) / `Application.scala:351-355`. `HotStuffEquivocationProof.signaturesValid` drops `dst`, uses `HotStuffQuorum.VoteDst`; both call sites simplify.
 
-`BlockchainSettings.scala`: delete the `BlsCryptoV2.id -> 1` entries at :155/:181. `network-defaults.conf` devnet: delete `30 = 1`. `application.conf`: delete the BlsCryptoV2 comment block. `UtilApp.scala`: delete the `--bls-crypto-v2-activation-height` option and era arithmetic; sign with `PopDst`. `UtxPoolImpl.scala`: keep the pack-side era comment but drop the BlsCryptoV2 mention. `Blockchain.scala`: delete `supportsBlsCryptoV2` (:323). `BlockchainFeature.scala`: delete the `BlsCryptoV2` val + dict entry.
+`BlockchainSettings.scala`: delete `BlsCryptoV2.id -> 1` at :155 and :181. `network-defaults.conf:47`: delete `30 = 1`. `application.conf`: delete the BlsCryptoV2 comment block. `UtilApp.scala`: delete `blsCryptoV2Era` (:347/:357), the `--bls-crypto-v2-activation-height` option, the era arithmetic; sign with `PopDst`. `UtxPoolImpl.scala`: keep the pack-side era comment minus the BlsCryptoV2 mention. `Blockchain.scala`: delete `supportsBlsCryptoV2` (:323). `BlockchainFeature.scala`: delete the `BlsCryptoV2` val + dict entry. `BlsSignature.scala:18`: drop the "legacy paths" sentence.
 
-Delete the six gate-only test files listed under Files. Edit the kept specs to v2-only exactly as listed (each pre/post pair collapses to the post half; every `cryptoV2 = false`/legacy-tag argument is removed — the compiler is the checklist).
+Delete the six gate-only test files. Edit the kept specs to v2-only exactly as listed (each pre/post pair collapses to the post half; every `cryptoV2 = false` / legacy-tag argument removed — the compiler is the checklist).
 
-`BlsLegacyVectorRegressionSpec.scala` → `git mv` to `BlsVectorRegressionSpec.scala`: regenerate the three pinned triples under the v2 tags with the SAME fixed seeds (31 ASCII bytes + one 0x00 pad, as the current header documents), paste as literals, delete the printer, and rewrite the header:
+**Vector re-pin** — `git mv` `BlsLegacyVectorRegressionSpec.scala` → `BlsVectorRegressionSpec.scala`. The one-shot printer was ALREADY deleted (file header :25) — re-create a throwaway printer (do not commit it) that derives the keys from the seeds documented at :29-38 (each seed = the 31-ASCII-byte string + one `0x00` pad = 32 bytes; **signer-1's seed and the PoP seed are intentionally the same string — do not "fix" that**), `generationPeriodStart = 12345`, `chainId = 'D'`, `finalizedId = 32×0x07`, `finalizedHeight = 100`, `endorsedId = 32×0x09`; sign under the three tags; paste the Base64 triples as literals; assert each verifies under its own tag and FAILS under the other two. Rewrite the header:
 
 ```scala
 /** Pinned byte vectors for the three BLS contexts (PoP / endorsement / HotStuff vote), synthesized from
-  * fixed seeds and pasted as literals. They pin TODAY'S encoding + domain tags so an accidental change
-  * to a message layout or DST fails loudly. Regenerate ONLY as part of a deliberate, reviewed encoding
-  * change (which is a chain-identity change: every node must ship it from genesis). Never regenerate
-  * to make a red test green.
+  * fixed seeds (documented below) and pasted as literals. They pin TODAY'S message layouts + domain tags
+  * so an accidental change to either fails loudly. Regenerate ONLY as part of a deliberate, reviewed
+  * encoding change — which is a chain-identity change (every node must ship it from genesis). Never
+  * regenerate to make a red test green.
   */
 ```
 
-- [ ] **Step 6: Run the registry test and the affected suites**
+- [ ] **Step 6: Verify**
 
-Run: `sbt "node/compile" "node-testkit/compile" "node-tests/testOnly com.decentralchain.features.* com.decentralchain.crypto.bls.* com.decentralchain.transaction.* com.decentralchain.finalization.* com.decentralchain.state.* com.decentralchain.consensus.hotstuff.* com.decentralchain.mining.* com.decentralchain.settings.*"`
-Expected: all green; `git grep -n "cryptoV2\|supportsBlsCryptoV2\|BlsDomainSeparationTag\b\|_NUL_\|HotStuffEquivocationEvidence\|BlsCryptoV2" node/src node/testkit node/tests` returns ZERO hits in `node/src` and `node/testkit` (tests may keep the words only inside the new registry test's "absent" assertions).
+Run: `sbt "node/compile" "node-testkit/compile" "node-tests/testOnly com.decentralchain.features.* com.decentralchain.crypto.bls.* com.decentralchain.transaction.* com.decentralchain.finalization.* com.decentralchain.state.* com.decentralchain.consensus.hotstuff.* com.decentralchain.mining.* com.decentralchain.settings.* com.decentralchain.utils.*"` — all green.
+Then: `git grep -n "cryptoV2\|supportsBlsCryptoV2\|BlsDomainSeparationTag\b\|_NUL_\|HotStuffEquivocationEvidence\|BlsCryptoV2\|carrierHeight\|voteDst\|popDst\|TagV2" -- node/src node/testkit` → ZERO hits. In `node/tests` the only permitted hits are the registry spec's "absent" assertions.
 
 - [ ] **Step 7: Commit (two commits)**
 
@@ -119,37 +122,50 @@ Expected: all green; `git grep -n "cryptoV2\|supportsBlsCryptoV2\|BlsDomainSepar
 git add -A node/src node/testkit node/tests
 git commit -m "refactor(consensus): remove feature 29 -- block-carried equivocation evidence is unconditional
 
-Testnet is re-genesised and mainnet's legacy chain has no HotStuff history,
-so the activation gate protected nothing. hotstuffConflicts is now valid
-whenever well-formed (consistency, epoch==period, bounds, dedup, signatures
-all still enforced). Rule: every node on a chain runs this binary from
-genesis."
+Testnet is re-genesised and mainnet's legacy chain never activated
+feature 25 (no HotStuff history), so the activation gate protected
+nothing. hotstuffConflicts is now valid whenever well-formed (consistency,
+epoch==period, bounds, dedup, signatures all still enforced). Rule: every
+node on a chain runs this binary from genesis."
 ```
-(Split the Step 5 work into the second commit:)
+(second commit for the Step 5 work)
 ```bash
 git commit -m "refactor(crypto): per-context BLS domain tags + chain/sender-bound PoP are the only crypto (remove feature 30)
 
-Deletes the legacy _NUL_ tag, every cryptoV2 gate/provider, the
-activation-period boundary rule, and the rollback-across-activation
-scaffolding. The fixes for BLS-audit H2 and M2 ship unconditionally;
-pinned vectors re-pinned under the three tags. Registry has no id > 28."
+Deletes the legacy _NUL_ tag (its 'kept forever / chain split' rationale
+was obsolete: no BLS bytes exist on any chain we keep, since mainnet never
+activated feature 25), every cryptoV2 gate/provider, the activation-period
+boundary rule, and the rollback-across-activation scaffolding. BLS-audit
+H2 and M2 fixes ship unconditionally; vectors re-pinned under the three
+tags. Registry has no id > 28."
 ```
 
 ---
 
-### Task 2: Port upstream feature 26 (`AdjustedBlockRewardDistribution`) and realign 27/28
+### Task 2: Register upstream feature 26 with its logic ported; realign 27/28; STOP at the economic decision
 
 **Files:**
-- Read: `git show upstream-waves/version-1.6.x:node/src/main/scala/com/wavesplatform/features/BlockchainFeature.scala`, and upstream commit `f1bedddb2e` (`git show f1bedddb2e --stat`, then each file): `BlockRewardCalculator.scala` (:63, :91), `Blockchain.scala` (:276-278), `BlockchainUpdaterImpl.scala` (:198-199), `EthereumTransactionDiff.scala` (:106, :112), `ExchangeTransactionDiff.scala` (:292), plus its tests.
+- Read: `git show upstream-waves/version-1.6.x:node/src/main/scala/com/wavesplatform/features/BlockchainFeature.scala`; upstream commit `f1bedddb2e` (`git show f1bedddb2e --stat`, then each file).
 - Modify: `node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala` — `26 = AdjustedBlockRewardDistribution` (in dict), `27 = ContinuationTransaction`, `28 = LeaseExpiration` (not exposed, not in dict)
-- Modify: the five DCC counterparts of the upstream files (`com/decentralchain/...` paths)
-- Modify: `node/src/main/scala/com/decentralchain/settings/BlockchainSettings.scala` — TESTNET/STAGENET/MAINNET presets pre-activate 1–26 only where DCC already pre-activates 1–25 (check each preset's current map; add `26 -> 1` beside `25`), `network-defaults.conf` devnet likewise
-- Test: port `f1bedddb2e`'s spec changes (`BlockRewardCalculatorSpec` or equivalent — read the commit), extend `BlockchainFeaturesRegistrySpec`
+- Modify (port targets, DCC counterparts of upstream's 5 files): `state/diffs/BlockRewardCalculator.scala`, `state/Blockchain.scala`, `state/BlockchainUpdaterImpl.scala`, `state/diffs/EthereumTransactionDiff.scala`, `state/diffs/ExchangeTransactionDiff.scala`
+- Modify: `docs/consensus-divergences-from-upstream.md` (NEW section: reward distribution — DCC has `daoAddress = None` / `xtnBuybackAddress = None` on all presets, documented today only as an inline comment at `BlockchainSettings.scala:147-148/169-170/188-189`)
+- Test: port `f1bedddb2e`'s spec changes; extend `BlockchainFeaturesRegistrySpec`
+
+**What `f1bedddb2e` actually is — four hunks, NOT one:**
+
+| Hunk | On DCC | Port? |
+|---|---|---|
+| (a) `RewardDistribution` split table (10/2 dao/xtn, 5/6–1/6 remainder) | **inert** — `daoAddress`/`xtnBuybackAddress` are `None` on all presets; every payout folds to 0 | port |
+| (b) `blockRewardBoost` returns 1 once 26 active (retires feature 23's 10×) | **LIVE** — DCC `blockRewardBoostPeriod` = 300,000 mainnet / 2,000 testnet | **operator decision** |
+| (c) one-time force-set of voted `blockReward` to `AdjustedFullReward = 20 * UnitsInWave` at activation | **LIVE — 3.33× inflation**: DCC `rewards.initial = 6 DCC`; with dao/xtn `None`, 100% of 20 DCC goes to the miner | **operator decision** |
+| (d) Eth/Exchange gate-widening `isFeatureActivated(25) → 25 || 26` | free no-op on any chain with 25 | port |
+
+`AdjustedFullReward = 20` is a NEW constant, not an existing DCC constant — "keep DCC's reward constants" does not resolve it.
 
 **Interfaces:**
-- Produces: `BlockchainFeatures.AdjustedBlockRewardDistribution = BlockchainFeature(26, "Adjusted Block Reward Distribution")` implemented; `ContinuationTransaction` id 27; `LeaseExpiration` id 28. Renumbering 27/28 is FREE only because the relaunch is a fresh genesis (non-votable placeholders never appear on-chain) — state this in the commit body.
+- Produces: `BlockchainFeatures.AdjustedBlockRewardDistribution = BlockchainFeature(26, "Adjusted Block Reward Distribution")` implemented (hunks a + d, and b/c per decision); `ContinuationTransaction` id 27; `LeaseExpiration` id 28. Renumbering 27/28 is FREE only because the relaunch is a fresh genesis (non-votable placeholders never appear on-chain) and mainnet legacy has neither — state in the commit body.
 
-- [ ] **Step 1: Read the upstream commit fully and map each hunk to the DCC file** (`git show f1bedddb2e -- <file>` for all 5 + tests). DCC's `BlockRewardCalculator` may already differ from upstream (DCC reward economics — check `docs/consensus-divergences-from-upstream.md` for any deliberate divergence in reward distribution; if DCC deliberately diverged, porting 26's LOGIC must respect that divergence — write down the reconciliation before coding).
+- [ ] **Step 1: ⛔ OPERATOR DECISION GATE (do not code past this without it).** Present the table above and get an explicit answer on hunks (b) and (c): port faithfully (adopts a 20-DCC reward and retires the boost when 26 activates), port with DCC constants (define `AdjustedFullReward` as DCC's own value — which?), or port the gate structure but leave (b)/(c) as explicitly-excluded divergences. Also decide: is 26 pre-activated at genesis on the relaunch chain (Task 9) or left votable? **Default if no answer: port (a)+(d), gate (b)+(c) behind the feature but DO NOT pre-activate 26; document the divergence.** Record the decision in the commit body and in `consensus-divergences-from-upstream.md`.
 
 - [ ] **Step 2: Failing registry test**
 
@@ -165,111 +181,125 @@ pinned vectors re-pinned under the three tags. Registry has no id > 28."
 ```
 Run → FAIL.
 
-- [ ] **Step 3: Port the logic** hunk-by-hunk (upstream's `isFeatureActivated(AdjustedBlockRewardDistribution, height)` gates; keep DCC's reward constants), add the feature val + dict entry, renumber 27/28, update presets/devnet conf. Port upstream's tests for the reward-distribution change; add a RED/GREEN case proving the adjusted distribution applies when 26 is active and the old one when not.
+- [ ] **Step 3: Port hunk-by-hunk per the decision.** Map each upstream hunk to its DCC file; keep DCC's `daoAddress = None` handling; port upstream's tests for whatever hunks are ported and add a RED/GREEN case per hunk proving pre/post-26 behavior. Renumber 27/28. Presets: **there is no `25` entry to sit beside** — current maps are TESTNET `Map.empty`, MAINNET `{}` after Task 1 (was `{30->1}`), STAGENET `{1..13->0}` after Task 1, devnet conf `{1..15->0}` (gap 16–25 — leave as-is unless the decision says otherwise). Only add `26` where the Step 1 decision says so.
 
-- [ ] **Step 4: Verify**
-
-Run: `sbt "node/compile" "node-tests/testOnly com.decentralchain.features.* com.decentralchain.state.* com.decentralchain.mining.* com.decentralchain.settings.*"` — green. Then confirm registry parity mechanically:
+- [ ] **Step 4: Verify** — `sbt "node/compile" "node-tests/testOnly com.decentralchain.features.* com.decentralchain.state.* com.decentralchain.mining.* com.decentralchain.settings.*"` green, then registry parity:
 ```bash
-diff <(git show upstream-waves/version-1.6.x:node/src/main/scala/com/wavesplatform/features/BlockchainFeature.scala | grep -o 'BlockchainFeature([0-9-]*, "[^"]*")' ) \
+diff <(git show upstream-waves/version-1.6.x:node/src/main/scala/com/wavesplatform/features/BlockchainFeature.scala | grep -o 'BlockchainFeature([0-9-]*, "[^"]*")') \
      <(grep -o 'BlockchainFeature([0-9-]*, "[^"]*")' node/src/main/scala/com/decentralchain/features/BlockchainFeature.scala)
 ```
-Expected: the ONLY difference is id 1's description ("1000 DCC" vs "1000 WAVES").
+Expected: the ONLY difference is id 1's description.
 
-- [ ] **Step 5: Commit** — `feat(consensus): port upstream feature 26 AdjustedBlockRewardDistribution; registry now mirrors Waves 1.6.x (ids 1-28)`. Body: cite `f1bedddb2e`, note 27/28 renumbering is safe only under fresh genesis, and that DCC-native ids are gone.
+- [ ] **Step 5: Commit** — `feat(consensus): register upstream feature 26 (logic ported per <decision>); registry mirrors Waves 1.6.x ids 1-28`. Body: cite `f1bedddb2e`, list which hunks are live vs divergent, note 27/28 renumbering is safe only under fresh genesis.
 
 ---
 
 ### Task 3: Root-cause the 2026-09-01 stall from node logs (read-only), fix the misleading miner message
 
 **Files:**
-- Infra (read): `infra/.github/workflows/export-kubeconfig.yml` (or the documented access path), `infra/clusters/testnet/TOPOLOGY.md`
-- Modify: `node/src/main/scala/com/decentralchain/mining/Miner.scala:214` message
-- Docs: `/Users/jourlez/Documents/Code/Blockchain/CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` (new incident section), `infra/` incident doc
+- Infra (read): `.github/workflows/export-kubeconfig.yml`, `clusters/testnet/TOPOLOGY.md`
+- Modify: `node/src/main/scala/com/decentralchain/mining/Miner.scala:213` message; new positive test
+- Docs: `/Users/jourlez/Documents/Code/Blockchain/CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` (incident section), infra incident note at repo root
 
-**Interfaces:** none produced; a written root cause consumed by Task 4 (workflow fixes) and Task 8 (relaunch checklist).
+**Verified facts to test against (dev):** an empty committee does NOT halt production — `appender/package.scala:74-78` `raiseWhen(validGenerators.nonEmpty && !generatorSet.contains(minerAddress))` falls back to classic PoS. Finality starvation cannot stop the miner — `validateFinalizationVoting` treats voting as optional (`appender:421-423`) and `tryCollectSelfWithGrace` (`Miner.scala:305-335`) is a bounded 1200 ms poll returning `None`; `authoritative` only raises a reported number. Ranked hypotheses:
+- **H1** generating-balance floor — `Miner.scala:212-213` / `GeneratingBalanceProvider.isMiningAllowed`: the only permanent forge veto; message misleadingly says "not committed".
+- **H2** conflict exclusion — `Miner.scala:215-217` `blockchain.isConflict`: the second permanent veto (a false-positive conflict/equivocation union permanently vetoes a generator).
+- **H3** partially-populated committee excluding this miner — `appender:75-78` fires only when the committee is NON-empty and excludes the miner; the dangerous case is a partial committee, not an empty one.
+- **H4** cumulative 1200 ms/block grace latency under endorsement starvation (degradation, not stall).
+- **H5** peer/network suspension (RC#2 class).
+- **H6** `InvalidStateHash` divergence recurrence.
 
-- [ ] **Step 1 (needs the operator — this is an explicit go-ahead step):** obtain node logs. Options, in order of preference: (a) operator runs `infra`'s `export-kubeconfig.yml` (or supplies kubeconfig) → `kubectl -n <ns> logs dcc-gen-0 --since=48h | grep -Ei "not committed|Quorum|InvalidStateHash|BlockFromFuture|suspend|EQUIVOCATION|HotStuff\] (onQC|castVotes SKIPPED|QUORUM REACHED)|Exception" | tail -300` for gen-0, gen-1, val-0, plus `kubectl describe pod` restart counts; (b) operator runs the same on the VPS via SSH (`journalctl -u dcc-node --since "2026-09-01 08:00" ...`). Verified fact to test against: the code does NOT halt on an empty committee (`appender/package.scala:74-77` falls back to classic PoS); the only permanent forge veto is the generating-balance floor at `Miner.scala:214` (whose message misleadingly says "not committed").
-- [ ] **Step 2:** Write the incident timeline + root cause with quoted log lines into the reference doc. Distinguish: balance-floor veto vs endorsement starvation (`authoritative` + `BlockEndorser.scala:128` suppression + `Miner.scala:320-334` grace polls) vs peer/network vs something new. If the root cause is a code defect, open a follow-up task in this plan (append as Task 3b) before proceeding to Task 8.
-- [ ] **Step 3:** Fix `Miner.scala:214`: the message must state the actual check (`generating balance X below minimal Y at height H`) — RED/GREEN via the existing Miner spec that asserts on this string (grep `"is not committed on"` in tests). Commit: `fix(mining): say what the forge veto actually checks (generating balance floor, not commitment)`.
+- [ ] **Step 1 (⛔ needs the operator):** obtain logs — (a) run `export-kubeconfig.yml` or supply a kubeconfig → `kubectl -n <ns> logs <pod> --since=48h | grep -Ei "not committed|isConflict|conflict|Quorum|InvalidStateHash|BlockFromFuture|suspend|EQUIVOCATION|HotStuff\] (onQC|castVotes SKIPPED|QUORUM REACHED)|Exception" | tail -300` for gen-0/gen-1/val-0 + `kubectl describe pod` restart counts; (b) VPS via SSH: `journalctl -u dcc-node --since "2026-09-01 08:00"` same filter.
+- [ ] **Step 2:** Write timeline + root cause with quoted lines into the reference doc; rank against H1–H6. If a code defect, append Task 3b before Task 8.
+- [ ] **Step 3:** Fix `Miner.scala:213` to state the real check (`generating balance <x> below minimal <y> at height <h>`). The only existing test referencing the string is a NEGATIVE assertion (`MinerWithFinalitySuite.scala:84` … `shouldBe empty`) — it stays green under any rewording, so WRITE a new positive test that triggers the veto and asserts the new message. Commit: `fix(mining): say what the forge veto actually checks (generating balance floor, not commitment)`.
 
 ---
 
 ### Task 4: Make the commit-generator workflows fail loudly and verify the committee
 
-**Files (infra repo `/Users/jourlez/Documents/Code/Blockchain/Ecosystem/infra`):**
-- Modify: `.github/workflows/auto-commit-generators.yml` (:103-108 retry loop, :111 conflation, :145 `continue-on-error`, :169-181 summary)
-- Modify: `.github/workflows/commit-generators-hotstuff.yml` (:103, :146 `continue-on-error`; :128-139 retry loop)
-- Modify: `monitoring/alerts.yml` (new `CommitteeGapUpcoming` alert), `monitoring/exporter.py` (expose committee size for the next period if the node REST offers it — check `/generators` or the committed-generators endpoint the workflows already read)
+**Files (infra repo root):**
+- Modify: `.github/workflows/auto-commit-generators.yml` — retry loop :103-108; `else`-branch echo `"Gen-0: already committed or sign failed"` at :111 (conflates no-op with failure); `continue-on-error: true` at :145 (val-0 ONLY — gen-0/gen-1 have none); `Report finality` SSH probe :169-181 (no `$GITHUB_STEP_SUMMARY` exists in this file)
+- Modify: `.github/workflows/commit-generators-hotstuff.yml` — `continue-on-error` at :103 (gen-0) and :146 (gen-1); retry loop :128-139
+- Modify: `monitoring/alerts.yml` (source) + `monitoring/exporter.py`; the deployed copy is `clusters/testnet/monitoring/` — edit source, let Flux roll it
 
-- [ ] **Step 1:** Rewrite the broadcast loop in both workflows: `set -euo pipefail`; treat sign failure as a hard error (no "already committed or sign failed" string); on broadcast, `break` ONLY when the response JSON contains an `id` (success) or the specific "already committed" error; retry on `not enough connections` AND on network errors; any other error → `exit 1`. Remove all `continue-on-error: true`.
-- [ ] **Step 2:** Add a post-commit verification step: after the broadcast, poll the node until the tx is confirmed (`/transactions/info/<id>`), then assert via REST that the committed-generator set for the NEXT period is non-empty (use whatever endpoint the node exposes — the investigation agent found `committedGeneratorsHash` in headers; find the REST for the set itself, e.g. `/generators/committed?period=`; if none exists, add one to node-scala as Task 4b and reference it). Fail the job if empty.
-- [ ] **Step 3:** Alert: `CommitteeGapUpcoming` — fires when the current period is > 60% elapsed and the next period's committee is still empty. Severity critical. Also close or supersede alert issue #148 with a note.
-- [ ] **Step 4:** Validate YAML (`python3 -c "import yaml,sys;yaml.safe_load(open('...'))"`) and run `promtool check rules` via docker if available. Dispatch the workflow manually once against the CURRENT (dead) chain expecting a LOUD failure — that failure is the proof the fix works. Commit: `fix(ci): commit-generator workflows fail loudly + verify next-period committee (root cause of silent committee gaps)`.
+**Endpoint fact:** `GET /generators/at/{height}` EXISTS (`GeneratorsApiRoute.scala:16`, registered `Application.scala:857`, no API key). It takes a HEIGHT, serves only the CURRENT and NEXT generation period (guard `reqGenerationPeriod <= currGenerationPeriod.next`, :17-18), returns **HTTP 404 with body `[]`** out of range (:30), and folds in un-finalized liquid commits for the next period (`CommonGeneratorsApi:77-87`). Verification MUST check the HTTP status — a naive `jq length` reads 404-`[]` as "0 generators".
 
----
-
-### Task 5: Publish protobuf-schemas 1.6.6 to Maven Central (operator step) and drop the mavenLocal crutch
-
-**Files:** DecentralChain monorepo (workflow), node-scala `build.sbt:253-255` (mavenLocal resolver TODO), `.github/workflows/check-pr.yaml:39-48,78` (monorepo sparse-checkout `mvnw install` step)
-
-- [ ] **Step 1 (operator):** the earlier run `33597222129` was cancelled at the 4h NVD-download timeout (no `NVD_API_KEY`). Run, from `/Users/jourlez/Documents/Code/Blockchain/Ecosystem/DecentralChain`:
-```bash
-gh workflow run publish-protobuf-schemas.yml -f version=1.6.6 -f run-audit-profile=false
-```
-(zero new dependencies in 1.6.6 — the documented condition for skipping the audit profile), then approve the `maven-central-release` environment gate, then poll `curl -s https://repo1.maven.org/maven2/io/decentralchain/protobuf-schemas/maven-metadata.xml | grep 1.6.6` until present (can take ~1h). Optionally add an `NVD_API_KEY` secret so future runs don't time out.
-- [ ] **Step 2 (after Central shows 1.6.6):** in node-scala remove the `Resolver.mavenLocal` addition (`build.sbt:253-255`) and the monorepo sparse-checkout + `mvnw install` steps in `check-pr.yaml`; CI must resolve 1.6.6 from Central. Run `sbt "node/compile"` with a clean ivy cache path if possible (`sbt -Dsbt.ivy.home=/tmp/ivy-check ...`) to prove Central resolution. Commit: `build: resolve protobuf-schemas 1.6.6 from Maven Central; drop mavenLocal + monorepo source build (DCC-269 phase 3)`.
+- [ ] **Step 1:** Rewrite the broadcast loop in both workflows: `set -euo pipefail`; sign failure → hard error (replace the conflating echo with two distinct branches); `break` ONLY on a response containing `"id"` (success) or the specific already-committed error; retry on `not enough connections` and on curl network errors; any other error → `exit 1`. Remove `continue-on-error` (1 line in auto-commit, 2 in hotstuff).
+- [ ] **Step 2:** Post-commit verification: poll `/transactions/info/<id>` until confirmed; then `curl -s -o body -w '%{http_code}' https://<node>/generators/at/<nextPeriodStart>` → require HTTP 200 AND `jq length > 0`; fail the job otherwise.
+- [ ] **Step 3:** Alert `CommitteeGapUpcoming` (critical): current period > 60% elapsed and next-period committee empty — exporter samples `/generators/at/<next period start>` with the same status check. Close or supersede alert issue #148.
+- [ ] **Step 4:** Validate YAML + `promtool check rules` (docker). **⛔ Live dispatch go-ahead needed:** dispatch each workflow once against the CURRENT (dead) chain expecting a LOUD failure — that failure is the proof. Commit: `fix(ci): commit-generator workflows fail loudly + verify next-period committee via /generators/at (root cause of silent committee gaps)`.
 
 ---
 
-### Task 6: scalafmt debt to zero and gate it in CI
+### Task 5: Publish protobuf-schemas 1.6.6 to Maven Central (operator) and remove ONLY the schema source-build step
 
-**Files:** all files failing `scalafmtCheckAll` (~29), `.github/workflows/check-pr.yaml` (add `sbt scalafmtCheckAll` step), `build.sbt` `checkPRRaw` (:309-316 — add `scalafmtCheckAll` to the command)
+**Files:** DecentralChain monorepo (workflow); node-scala `.github/workflows/check-pr.yaml:78` (the `protobuf-schemas` `mvnw install` line ONLY); `build.sbt:252-255` stays
 
-- [ ] **Step 1:** `sbt scalafmtAll scalafmtSbt`; review the diff is whitespace-only (`git diff --stat`, spot-check 3 files with `git diff -w --stat` showing zero non-whitespace changes). Commit: `style: scalafmt the whole tree (29 files were unformatted; CI never gated it)`.
-- [ ] **Step 2:** Add `scalafmtCheckAll` to `checkPRRaw` in `build.sbt` and a dedicated step in `check-pr.yaml`. Push the branch, open a draft PR to confirm the gate runs green (public repo — CI is free). Commit: `ci: gate PRs on scalafmtCheckAll`.
+**Fact:** `check-pr.yaml:39-48` sparse-checks-out FOUR monorepo packages and installs them all into `.m2` (:78 protobuf-schemas, :79 curve25519, :80 blst, :81 groth16, plus a Rust `cargo build` for groth16's JNI lib at :57-73). `build.sbt:252-255`'s `Resolver.mavenLocal` serves all four. Only protobuf-schemas is going to Central now; **removing the sparse-checkout or `mavenLocal` would break CI**.
+
+- [ ] **Step 1 (⛔ operator):** from `/Users/jourlez/Documents/Code/Blockchain/Ecosystem/DecentralChain`: `gh workflow run publish-protobuf-schemas.yml -f version=1.6.6 -f run-audit-profile=false` (1.6.6 adds zero dependencies — the documented condition for skipping the audit; the prior run was cancelled at the 4h NVD-download timeout for lack of `NVD_API_KEY`), approve the `maven-central-release` environment gate, poll `curl -s https://repo1.maven.org/maven2/io/decentralchain/protobuf-schemas/maven-metadata.xml | grep 1.6.6`. Optionally add `NVD_API_KEY`.
+- [ ] **Step 2 (after Central shows 1.6.6):** delete ONLY `check-pr.yaml:78` (the protobuf-schemas install line). Keep the sparse-checkout, the Rust build, the other three installs, and `Resolver.mavenLocal` — remove those only when curve25519/blst/groth16 are also on Central (separate decision). Prove Central resolution: `sbt -Dsbt.ivy.home=/tmp/ivy-check "node/update"` shows protobuf-schemas 1.6.6 fetched from `repo1.maven.org`. Commit: `build(ci): resolve protobuf-schemas 1.6.6 from Maven Central (other io.decentralchain artifacts still source-built)`.
+
+---
+
+### Task 6: scalafmt debt to zero in TEST sources and gate them
+
+**Fact:** CI ALREADY gates `Compile` formatting — `build.sbt:304` `compilePRRaw` runs `scalafmtCheck.all(ScopeFilter(inAnyProject, inConfigurations(Compile)))`, invoked by `check-pr.yaml:89` `sbt --batch checkPR`. The gap is the `Test` configuration only (the ~29 unformatted files are test sources). 1,765 tracked `.scala` files; `.scalafmt.conf` excludes only `lang/.../parser/Parser.scala`.
+
+- [ ] **Step 1:** `sbt scalafmtAll`; confirm whitespace-only (`git diff -w --stat` shows zero non-whitespace changes; spot-check 3 files). Commit: `style: scalafmt test sources (Test configuration was never gated)`.
+- [ ] **Step 2:** In `build.sbt:304` widen the ScopeFilter to `inConfigurations(Compile, Test)` (or switch to `scalafmtCheckAll`). Push the branch, open a draft PR, confirm `checkPR` green. Commit: `ci: gate scalafmt on Test sources too`.
 
 ---
 
 ### Task 7: Docs closure — no document may still describe the gated design
 
-**Files:** `docs/hotstuff-audit-readiness.md` (§7 items 8-9 legacy-DST-forever + 29/30 mentions :152/:156/:259/:273; §8 checklist incl. the stale "1.6.5 published" line; add the "every node from genesis" rule), `docs/hotstuff-bls-crypto-audit-2026-08-31.md` (H2/M2 STATUS → fixed unconditionally, :231 feature-29 mention), `docs/hotstuff-bft-audit-2026-08-31.md`, `docs/superpowers/plans/2026-09-02-bls-crypto-v2.md` + `docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md` + `docs/superpowers/plans/2026-09-01-hotstuff-equivocation-evidence.md` (supersession banners: gates removed by this plan, why), `BlsUtils.scala` scaladoc (already rewritten in Task 1 — verify), `/Users/jourlez/Documents/Code/Blockchain/CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` (checkpoint section: what changed since `49809b487c`, the feature-id decision, the stall root cause from Task 3, the relaunch build tag)
+**Files:** `docs/hotstuff-audit-readiness.md` (§7 items 8-9 "legacy DST forever" :273 + 29/30 mentions :152/:156/:259; §8 checklist incl. the stale "1.6.5 published" line; add the "every node from genesis" rule AND state plainly that deleting the gates removes the loud UNIMPLEMENTED safety net for these two behaviors — a stale node now forks silently instead of shutting down), `docs/hotstuff-bls-crypto-audit-2026-08-31.md` (H2/M2 STATUS → fixed unconditionally; L4 :229-230), `docs/hotstuff-bft-audit-2026-08-31.md`, `docs/superpowers/plans/2026-09-02-bls-crypto-v2.md` + `docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md` + `docs/superpowers/plans/2026-09-01-hotstuff-equivocation-evidence.md` (supersession banners), `node/genesis-dcc-testnet-relaunch.conf` (its comment "no 28, no 30 — both deleted" is stale; its `[1..25]` list must match Task 2's decision on 26), `docs/consensus-divergences-from-upstream.md` (verify Task 2's reward section), `/Users/jourlez/Documents/Code/Blockchain/CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` (checkpoint: changes since `49809b487c`, feature-id decision, stall root cause, relaunch tag), `CHANGELOG`/release notes if the repo has one (grep), `version.sbt` (currently `1.7.0` — bump minor: registry + crypto identity changed)
 
-- [ ] **Step 1:** `git grep -n "feature 29\|feature 30\|feature-29\|feature-30\|BlsCryptoV2\|HotStuffEquivocationEvidence\|legacy DST\|_NUL_" docs/ ../../CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` — every hit is either rewritten or wrapped in a historical-note banner. Zero live-design references remain.
-- [ ] **Step 2:** Commit: `docs(consensus): registry mirrors Waves; DCC improvements unconditional; supersede gated designs`.
-
----
-
-### Task 8: Final whole-branch review, full-suite gate, merge, tag
-
-- [ ] **Step 1:** `scripts/review-package $(git merge-base dev HEAD) HEAD` and dispatch a whole-branch adversarial review (most capable model) with this plan's Global Constraints as the lens. Fix anything Critical/Important; re-review.
-- [ ] **Step 2:** Full gate: `sbt "node/compile" "node-testkit/compile" "node-tests/test"` — must be 0 failed (baseline: 2,943 tests). Then `sbt "node-it/docker"` and run `FourNodeHotStuffTestSuite` + `FourNodeHotStuffAuthoritativeTestSuite` (or on CI if local Docker is constrained). Record counts in the reference doc.
-- [ ] **Step 3:** Merge `feat/testnet-final-source` → `dev` (`--no-ff`), push, tag `testnet-relaunch-<yyyymmdd>`; open PR `dev` → `main` for the release (CI free on public repo).
+- [ ] **Step 1:** `git grep -n "feature 29\|feature 30\|feature-29\|feature-30\|BlsCryptoV2\|HotStuffEquivocationEvidence\|legacy DST\|_NUL_\|kept HERE FOREVER" -- docs node/genesis-dcc-testnet-relaunch.conf ../../CONSENSUS-BUG-INVESTIGATION-REFERENCE.md` — every hit rewritten or wrapped in a historical-note banner.
+- [ ] **Step 2:** Bump `version.sbt`; write the changelog entry. Commit: `docs(consensus): registry mirrors Waves; DCC improvements unconditional; supersede gated designs; bump version`.
 
 ---
 
-### Task 9: Testnet relaunch checklist (operator-executed; this task produces the runbook, not the mutation)
+### Task 8: Final whole-branch review, full-suite gate, image build, merge, tag
 
-**Files:** `infra/docs/RELAUNCH-<date>.md` (new runbook), `infra/node-config/testnet/dcc.conf`, `infra/clusters/testnet/apps/nodes.yaml`
+- [ ] **Step 1:** `/Users/jourlez/.claude/plugins/cache/superpowers-dev/superpowers/6.1.1/skills/subagent-driven-development/scripts/review-package $(git merge-base dev HEAD) HEAD` → whole-branch adversarial review (most capable model) with this plan's Global Constraints as the lens. Fix Critical/Important; re-review.
+- [ ] **Step 2:** Full gate: `sbt "node/compile" "node-testkit/compile" "node-tests/test"` → 0 failed (record count). Then `sbt "node-it/docker"` and run `FourNodeHotStuffTestSuite` + `FourNodeHotStuffAuthoritativeTestSuite` (locally if Docker allows, else on CI). Record in the reference doc.
+- [ ] **Step 3:** Merge `feat/testnet-final-source` → `dev` (`--no-ff`), push, tag `testnet-relaunch-<yyyymmdd>`; open PR `dev` → `main`.
+- [ ] **Step 4:** Build + publish the node image from the tag: `sbt buildTarballsForDocker` (`build.sbt:281-290` → `docker/target/dcc.tgz`) → the repo's image-build workflow (grep `.github/workflows` for the docker publish job; memory: images previously published to ghcr) → record the image digest. Task 9 consumes this digest.
 
-- [ ] **Step 1:** Write the runbook from the verified 2026-08-31 procedure: `sbt generateGenesis node/genesis-dcc-testnet-relaunch.conf` (re-verify every seed via `GenesisBlockGenerator.toFullAddressInfo`) → commit new `timestamp`/`block-timestamp`/`signature` into `dcc.conf` + `nodes.yaml` → pre-activated features `1..26 = 0` (no 27+; verify against Task 2's registry) → image = the Task 8 tag on ALL FOUR nodes (mixed versions = split) → wipe the 4 PVCs → restart → confirm `/node/version` identical on all four, `/activation/status` shows exactly 1–26 → run the fixed Task 4 workflow and confirm the FIRST period's committee is non-empty before period end → reset matcher/BPS/scanner, re-fund faucet + treasury → arm alerts.
-- [ ] **Step 2:** Post-relaunch evidence plan (this is the §8 checklist): 72h soak with recorded crash/partition/committee-rotation/equivocation drills; live epoch transition observed (T10); one live equivocation exercised end to end with `slashing-enabled=true` on ONE node first; then decide `slashing-enabled` fleet-wide. External audit engagement remains the mainnet gate.
+---
+
+### Task 9: Testnet relaunch runbook (operator-executed; this task produces the runbook and the config diff, not the mutation)
+
+**Files (infra repo root):** `RELAUNCH-<date>.md` (new, beside `DEPLOY.md`/`RUNBOOK-*.md`), `node-config/testnet/dcc.conf:23-29` (pre-activated block), `clusters/testnet/apps/nodes.yaml` (THREE pre-activated blocks: :53-59, :200-206, :326-332), image tag/digest references in `nodes.yaml` + VPS deploy config
+
+- [ ] **Step 1:** Write the runbook from the verified 2026-08-31 procedure (there is no workflow; it was manual): `sbt generateGenesis node/genesis-dcc-testnet-relaunch.conf` (re-verify every seed via `GenesisBlockGenerator.toFullAddressInfo`) → commit new `timestamp`/`block-timestamp`/`signature` into `dcc.conf` + `nodes.yaml` → pre-activated features per Task 2's decision (`1..25 = 0`, plus `26` only if decided; never 27+) in all FOUR blocks → image = Task 8's digest on ALL FOUR nodes (mixed versions = silent split — no gate protects this anymore) → wipe the 4 PVCs → restart → confirm `/node/version` identical on all four and `/activation/status` shows exactly the intended set → run the Task 4 workflow and confirm the FIRST period's committee via `/generators/at/<next start>` (HTTP 200, non-empty) before period end → reset matcher/BPS/scanner, re-fund faucet + treasury → arm alerts.
+- [ ] **Step 2:** Post-relaunch evidence plan (= audit-readiness §8): 72h soak with recorded crash/partition/committee-rotation/equivocation drills; live epoch transition observed (T10); one live equivocation exercised end to end with `slashing-enabled=true` on ONE node first; then decide fleet-wide. External audit remains the mainnet gate.
 
 ---
 
 ## Decisions encoded (change the plan if you disagree)
 
-| # | Decision | Rationale |
+| # | Decision | Rationale / caveat |
 |---|---|---|
-| D1 | Port upstream 26; never register a placeholder | `implemented = dict.keySet` is the unknown-feature safety net; a placeholder = silent fork |
-| D2 | Renumber 27/28 to match upstream | Free under fresh genesis (non-votable ids never hit chain); mainnet legacy chain has neither |
-| D3 | No carry-forward committee mechanism | Premise was false — code already falls back to classic PoS; root-cause the real stall first (Task 3) |
-| D4 | `authoritative` floor stays advisory; `slashing-enabled` off at relaunch | Audit F-1 option (b); flip slashing after the first live equivocation drill |
-| D5 | T11 first-boot window stays documented | Operational rule in `slashing-enabled` doc; not worth consensus code |
-| D6 | Rule: every node on a chain runs the binary from genesis | Replaces activation gates for pre-launch fixes; future rule changes on live mainnet still use features |
+| D1 | Register upstream 26 WITH ported logic; never a placeholder | `implemented = dict.keySet` (`BlockchainFeature.scala:73`) is the unknown-feature safety net (`BlockchainUpdaterImpl.scala:130-147`, `:235-241`); placeholder = silent fork. **But** 26's hunks (b)/(c) are a monetary change — porting ≠ activating; see Task 2 Step 1 |
+| D2 | Renumber 27/28 to match upstream | Free under fresh genesis (non-votable, never on-chain); mainnet legacy genesis pre-activates `[1..13,15,16]` only |
+| D3 | No carry-forward committee mechanism | Premise was false — `appender:74-78` already falls back to classic PoS; root-cause the real stall first (Task 3, H1–H6) |
+| D4 | `authoritative` floor stays advisory; `slashing-enabled` off at relaunch | `HotStuffSettings.scala:88/:100`; audit F-1 option (b); flip slashing after the first live drill |
+| D5 | T11 first-boot window stays documented | Operational rule; not worth consensus code |
+| D6 | Rule: every node on a chain runs the binary from genesis | Replaces activation gates for pre-launch fixes. **Explicitly: this removes the loud UNIMPLEMENTED shutdown D1 relies on, for exactly these two behaviors — a stale node forks silently.** Future rule changes on live mainnet still use features |
+
+## Requires the human operator (blocking items marked ⛔)
+
+1. ⛔ **Economic decision on feature 26 hunks (b) `blockRewardBoost` retirement and (c) 20-DCC reward reset** — blocks Task 2 Step 3 and Task 9's genesis feature list.
+2. ⛔ **Node logs** (kubeconfig via `export-kubeconfig.yml`, or SSH) — blocks Task 3.
+3. ⛔ **Maven Central publish** of protobuf-schemas 1.6.6 + environment-gate approval — blocks Task 5 Step 2. Separate decision: publish curve25519/blst/groth16 too (enables removing `mavenLocal`).
+4. Optional `NVD_API_KEY` secret.
+5. Confirm testnet is genuinely disposable (no third party holds testnet state worth preserving) — the unconditional-crypto premise rests on it.
+6. ⛔ Live go-aheads: Task 4 Step 4 workflow dispatch; all of Task 9.
 
 ## Self-Review
 
-- Spec coverage: registry parity (T1, T2), unconditional improvements (T1), stall root cause (T3), automation (T4), schema (T5), format gate (T6), docs (T7), final gate + tag (T8), relaunch + soak (T9). The verified gap list's every bullet maps to a task.
-- Placeholder scan: Task 3 Step 1 and Task 5 Step 1 are operator steps by necessity (credentials/classifier) and say so; Task 4 Step 2 names a possible follow-up (4b) if a REST endpoint is missing rather than assuming one.
-- Type consistency: `popMessage(chainId, sender, endorserPk, periodStart)` (T1) is the signature T2/T5 callers assume; `VoteDst`/`PopDst` constants named identically across T1 and T7.
+- Spec coverage: registry parity (T1, T2), unconditional improvements (T1), stall root cause (T3), automation (T4), schema (T5), format gate (T6), docs + version (T7), final gate + image + tag (T8), relaunch + soak (T9). Every audited gap (E1–E29) is folded in.
+- Placeholder scan: the ⛔ steps are operator gates by necessity (credentials/classifier/economics) and say so; no "TBD".
+- Type consistency: `popMessage(chainId, sender, endorserPk, periodStart)`, `PopDst`, `VoteDst`, the renamed `Bls*DomainSeparationTag` constants are named identically across T1/T7; `/generators/at/{height}` semantics identical in T4 and T9.
