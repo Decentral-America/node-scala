@@ -327,6 +327,23 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         if (s > 0) blockchainUpdater.blockId(s).map(id => (id, s)) else None
       }
 
+      // F-6 fix (audit "self-sealing epoch trap", docs/superpowers/specs/2026-09-02-hotstuff-lag-
+      // reanchor-design.md): bounds how far behind this replica's own live tip a T2 target may lag
+      // before `HotStuffCoordinator.Enabled.tooStale` abandons it and re-anchors near the tip -- see
+      // that class's `maxTargetLag`/`tipHeight` params and their two use sites. The
+      // `max(settledDepth + 1, ...)` floor guarantees the bound can never be tighter than the happy
+      // path's own structural lag (`blockSource`/leader-turn already run `settledDepth` blocks behind
+      // tip) -- else this replica would abandon every target it is ever handed and never make progress.
+      // NOTE: live testnet overrides `generation-period-length` down to 100 (infra/node-config/testnet/
+      // dcc.conf), which would otherwise thin the fraction term to 25 -- the floor is what keeps this
+      // bound sane there.
+      val maxTargetLag: () => Int = () =>
+        math.max(
+          settings.hotStuffSettings.settledDepth + 1,
+          (settings.blockchainSettings.functionalitySettings.generationPeriodLength * settings.hotStuffSettings.maxTargetLagFraction).toInt
+        )
+      val tipHeight: () => Int = () => blockchainUpdater.height
+
       // TESTNET-ONLY opt-in (see HotStuffSettings.authoritative doc + docs/hotstuff-audit-readiness.md):
       // when true, a genuine commit ALSO raises the authoritative feature-25 finalizedHeight via
       // `blockchainUpdater.raiseHotStuffFinalizedHeight`, which independently re-checks the certified
@@ -420,7 +437,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           v => HotStuffLastVotedViewStore.save(hsLastVotedViewPath, v),
           committeeEpoch,
           committeeEpochOf,
-          onAction = hsOnAction
+          onAction = hsOnAction,
+          maxTargetLag = maxTargetLag,
+          tipHeight = tipHeight
         )
       hsCoordinatorRef = hsCoordinator
       hotStuffEquivocations = () => hsCoordinator.detectedEquivocations

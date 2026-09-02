@@ -6,6 +6,7 @@ import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, Quor
 import com.decentralchain.state.{GeneratorSet, Height}
 import com.typesafe.scalalogging.StrictLogging
 import io.decentralchain.protobuf.block.HotStuffPhase
+import kamon.Kamon
 
 /** Side-effect sink injected into the HotStuff coordinator. The real (step 4c-bind) implementation
   * broadcasts via `allChannels`, signs with the node's committed BLS key(s), and applies commits to
@@ -237,7 +238,20 @@ object HotStuffCoordinator {
       // signal this hook exists to provide (see `HotStuffWatchdog`). Defaults to a no-op so every
       // existing call site/test that doesn't pass this observes byte-for-byte the same behaviour as
       // before this hook existed. Does NOT change any existing method signature.
-      onAction: HotStuffAction => Unit = _ => ()
+      onAction: HotStuffAction => Unit = _ => (),
+      // F-6 fix (docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md, audit F-6
+      // "self-sealing epoch trap"): the maximum number of blocks a T2 target may lag THIS replica's own
+      // live tip (`tipHeight` below) before it is considered stale and abandoned -- see `tooStale`.
+      // `Int.MaxValue` default = the check can never fire = today's exact behaviour for every existing
+      // call site/test that doesn't pass this. Production wiring (`Application.scala`) supplies
+      // `max(settledDepth + 1, generationPeriodLength * maxTargetLagFraction)`.
+      maxTargetLag: () => Int = () => Int.MaxValue,
+      // F-6 fix: THIS replica's own live chain tip height, read fresh on every check (mirrors
+      // `committeeEpochProvider`'s "read fresh from the replica's own tip" convention). `0` default
+      // pairs with the `Int.MaxValue` default above to make `tooStale` unconditionally `false` (tip=0
+      // minus any non-negative height is never > Int.MaxValue) -- a genuine no-op for every existing
+      // call site/test. Production wiring supplies `() => blockchainUpdater.height`.
+      tipHeight: () => Int = () => 0
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine =
@@ -246,7 +260,7 @@ object HotStuffCoordinator {
         safety = SafetyState(lockedQC = initialLockedQC, lastVotedView = initialLastVotedView),
         committeeEpoch = committeeEpochProvider()
       )
-    private var pool   = VotePool()
+    private var pool = VotePool()
     // Per-target vote guard (prevents storms/loops), keyed (view, phase, blockId).
     // SAFETY-LOAD-BEARING across `resetLocalSafetyState`: this is the anti-double-vote guard for
     // phase-progression votes (PRE_COMMIT/COMMIT), the counterpart to `lastVotedView` on the
@@ -321,6 +335,41 @@ object HotStuffCoordinator {
 
     private def bid(b: BlockId): String = b.toString.take(8)
 
+    // F-6 fix: observability counter, incremented every time `tooStale` causes this replica to abandon
+    // a stale in-flight branch (use site A, `inFlightBranch` below) -- see that use site for why only
+    // it (and not the defensive `castVotes` guard, use site B) increments this: the guard firing without
+    // the filter ever having fired would itself be surprising and worth its own signal, but in practice
+    // the filter always fires first for a genuinely stale in-flight branch (see the design doc's ordering
+    // note). Same `Kamon.counter(...).withoutTags()` idiom used elsewhere in this package's shell
+    // (`Miner.scala`, `BlockchainUpdaterImpl.scala`).
+    private val staleTargetAbandonedCounter = Kamon.counter("hotstuff.stale-target-abandoned").withoutTags()
+
+    // F-6 fix: incremented every time the `onProposal` stale-target gate declines a whole proposal (use
+    // site B-primary -- see `onProposal`'s doc). Separate from `staleTargetAbandonedCounter` above: that
+    // one counts THIS replica abandoning its OWN in-flight branch as leader, this one counts it
+    // declining an INBOUND stale-epoch proposal without burning `lastVotedView`. Also the test-observable
+    // signal the DST scenario asserts on (via `staleTargetSkippedProposals`).
+    private val staleTargetSkippedProposalCounter = Kamon.counter("hotstuff.stale-target-skipped-proposal").withoutTags()
+
+    // F-6 fix, test observability: Kamon counters are write-only from here, so mirror both stale-target
+    // signals into plain in-process counters the DST/unit specs can assert on directly (a spec must be
+    // able to prove the re-anchor path FIRED, not merely that the outcome improved -- otherwise a
+    // neutralized fix can leave a green test, exactly the vacuity this exposes). Read-only accessors.
+    private var _staleTargetsAbandoned       = 0
+    private var _staleTargetSkippedProposals = 0
+
+    // F-6 fix: is a target at `height` more than `maxTargetLag()` blocks behind THIS replica's own live
+    // tip (`tipHeight()`)? Shared by BOTH use sites (`inFlightBranch` filtering, use site A below, and
+    // the defensive `castVotes` guard, use site B) -- the SAME predicate, deliberately NOT
+    // `HotStuffQuorum.acceptableCommitteeEpoch` (see `castVotes`'s doc for why reusing that function
+    // here would reintroduce exactly the signer's-own-tip-belief coupling the cross-epoch-liveness fix
+    // removed from vote-signing). A stale in-flight branch is never re-proposed (use site A) AND,
+    // independent of `inFlightBranch`, this replica never signs a vote for a target so far behind its
+    // own tip that continuing to chase it is pointless (use site B) -- purely a height comparison, no
+    // epoch semantics involved. See docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md
+    // for the full trap this closes.
+    private def tooStale(height: Int): Boolean = tipHeight() - height > maxTargetLag()
+
     /** Cast this node's vote(s) for a target exactly once, then feed our own vote into our pool.
       *
       * `committeeEpoch` is derived from THIS TARGET's own `height` (`committeeEpochOf(height)`), NOT
@@ -329,34 +378,80 @@ object HotStuffCoordinator {
       * constructor for why: a pure function of the fixed target height is what makes every honest
       * replica voting on the SAME target sign the SAME epoch, regardless of when each replica's own
       * local tip happens to cross a generation-period boundary.
+      *
+      * F-6 fix, use site B (defensive backstop only): skips signing when `tooStale(height)` -- the SAME
+      * height-lag predicate use site A (`inFlightBranch`'s filter) uses, deliberately NOT
+      * `HotStuffQuorum.acceptableCommitteeEpoch` (reusing that would reintroduce the signer's-own-tip-
+      * belief coupling the cross-epoch-liveness fix removed from signing, and does in fact break
+      * `HotStuffCrossEpochLivenessSpecification`: a genuinely stale target and a replica whose own tip
+      * belief merely hasn't caught up yet are different conditions). The check runs BEFORE `voted += key`
+      * so a skipped sign never records a `voted` entry for a target this replica never signed, which
+      * would otherwise permanently block the SAME `(view, phase, blockId)` once re-anchoring makes it
+      * signable again.
+      *
+      * The PRIMARY stale-target gate is in `onProposal`, which returns before `HotStuffEngine.onProposal`
+      * runs -- see that method for why the guard cannot live here alone (`recordVote` burns
+      * `lastVotedView` before `castVotes` is ever reached). This site remains as the backstop for the
+      * `applyQC` phase-progression path, which does NOT go through `onProposal`.
+      *
+      * See docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md for the full trap.
       */
     private def castVotes(view: Int, phase: HotStuffPhase, blockId: BlockId, height: Int): Unit = {
       val key = (view, phase, blockId)
       if (!voted.contains(key)) {
-        voted += key
-        val epoch   = committeeEpochOf(height)
-        val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, epoch)
-        val mine    = effects.myVoterIndexes
-        logger.debug(
-          s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=$epoch"
-        )
-        mine.foreach { idx =>
-          effects.signVote(message, idx) match {
-            case Some(sig) =>
-              val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr, epoch)
-              effects.broadcast(vote)
-              onVote(vote) // count our own vote locally
-            case None => logger.warn(s"[HotStuff] signVote returned None for idx=$idx (no BLS key for this committee slot?)")
+        if (tooStale(height)) {
+          logger.warn(
+            s"[HotStuff] castVotes SKIPPED: target height $height tip=${tipHeight()} maxTargetLag=${maxTargetLag()} " +
+              s"-- stale target, awaiting re-anchor (audit F-6)"
+          )
+        } else {
+          voted += key
+          val epoch   = committeeEpochOf(height)
+          val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, epoch)
+          val mine    = effects.myVoterIndexes
+          logger.debug(
+            s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=$epoch"
+          )
+          mine.foreach { idx =>
+            effects.signVote(message, idx) match {
+              case Some(sig) =>
+                val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr, epoch)
+                effects.broadcast(vote)
+                onVote(vote) // count our own vote locally
+              case None => logger.warn(s"[HotStuff] signVote returned None for idx=$idx (no BLS key for this committee slot?)")
+            }
           }
         }
       }
     }
 
+    /** F-6 fix, use site B-primary: the stale-target gate MUST run before `HotStuffEngine.onProposal`,
+      * not merely before signing in `castVotes`. `HotStuffEngine.onProposal` calls
+      * `HotStuffSafety.recordVote`, which RAISES `safety.lastVotedView` (and this method then PERSISTS
+      * it via `onLastVotedViewPersist`) as soon as it decides `shouldVote` -- strictly BEFORE
+      * `castVotes` gets a chance to skip. So a `castVotes`-only guard would silently burn the monotonic
+      * anti-double-vote bound on a target this replica deliberately declined to sign: the view is
+      * consumed, persisted across restart (M1), and can never be voted in again, while no vote was ever
+      * cast for it. Under a sustained stale-target run (the F-6 trap itself, where every tick re-drives
+      * the same doomed target at ever-higher views) that ratchets `lastVotedView` upward for free and
+      * needlessly narrows the window of views this replica can still legitimately vote in after it
+      * re-anchors. Skipping the WHOLE proposal here keeps both `lastVotedView` and `voted` untouched --
+      * the design's "what state resets on re-anchor: NOTHING" decision applied consistently in the
+      * other direction too. `castVotes` keeps its own defensive copy of this check for the `applyQC`
+      * phase-progression path, which reaches `castVotes` without passing through here.
+      */
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
       if (!proposalValid(proposal.blockId)) {
         logger.debug(
           s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not a block this replica recognizes on its own chain)"
+        )
+      } else if (tooStale(blockHeight)) {
+        staleTargetSkippedProposalCounter.increment()
+        _staleTargetSkippedProposals += 1
+        logger.warn(
+          s"[HotStuff] onProposal SKIPPED: target height $blockHeight tip=${tipHeight()} maxTargetLag=${maxTargetLag()} " +
+            s"-- stale target, awaiting re-anchor; lastVotedView/voted deliberately UNTOUCHED (audit F-6)"
         )
       } else {
         val previousLastVotedView    = engine.safety.lastVotedView
@@ -389,7 +484,7 @@ object HotStuffCoordinator {
           byBlock match {
             case Seq(a, b, _*) =>
               val proof = HotStuffEquivocationProof(a, b)
-              val ok = for {
+              val ok    = for {
                 _ <- proof.consistent
                 _ <- proof.signaturesValid(i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey))
               } yield ()
@@ -511,6 +606,15 @@ object HotStuffCoordinator {
 
     def currentView: Int = engine.pacemaker.view
 
+    /** F-6 fix, test observability: how many times this replica abandoned its own stale in-flight
+      * branch (`inFlightBranch`'s filter, use site A) and how many inbound proposals it declined for a
+      * stale target (`onProposal`'s gate, use site B-primary). Mirrors of the two Kamon counters, which
+      * are write-only. Exists so a spec can assert the re-anchor path actually FIRED rather than
+      * inferring it from an outcome that a neutralized fix could also produce.
+      */
+    def staleTargetsAbandoned: Int       = _staleTargetsAbandoned
+    def staleTargetSkippedProposals: Int = _staleTargetSkippedProposals
+
     /** Task 4 watchdog override: clear this replica's in-memory HotStuff lock (`lockedQC`/`prepareQC`)
       * while PRESERVING `lastVotedView`. Deliberately touches ONLY `engine` (a private `var` of THIS
       * class); there is no `finalizedHeight`, `BlockchainUpdaterImpl`, or any other component reachable
@@ -585,6 +689,42 @@ object HotStuffCoordinator {
       engine.safety.prepareQC
         .filter(_.blockHeight.toInt > engine.committedHeight)
         .map(qc => (qc.blockId, qc.blockHeight.toInt))
+        // F-6 fix, use site A: a target more than `maxTargetLag()` blocks behind this replica's own live
+        // tip is never re-proposed here -- letting `onRoundTimerTick` fall through to `blockSource()`'s
+        // fresh tip instead. Without this, `prepareQC` advances monotonically by view and is never aged
+        // by height, so a target that fell behind while this branch never resolved (e.g. a mid-round
+        // committee change permanently shifted quorum away from it -- the same class of stuck-branch the
+        // `MaxConsecutiveReproposeAttempts` bound above addresses for consecutive-attempt COUNT, not
+        // height LAG) would keep signing an epoch `HotStuffQuorum.acceptableCommitteeEpoch` will never
+        // again accept from this replica's own live tip -- the self-sealing trap this fix closes (audit
+        // F-6). Distinct WARN + counter from the `MaxConsecutiveReproposeAttempts` exhaustion path (that
+        // one fires on repeated identical re-propose attempts; this one fires on height lag alone, on the
+        // FIRST tick the target is found stale -- no repeated attempts required). Also resets
+        // `lastReproposedBlockId`/`reproposeAttempts`, same rationale as the existing reset: a
+        // genuinely-abandoned branch must not leave a stale attempt count to penalize whatever this
+        // replica re-anchors to next.
+        .filter { case (blockId, height) =>
+          // Explicit if/else rather than a side-effecting `filterNot` predicate: the WARN, the counters
+          // and the tracker reset are real effects, and burying them in a boolean predicate makes the
+          // control flow read as pure when it is not.
+          if (tooStale(height)) {
+            staleTargetAbandonedCounter.increment()
+            _staleTargetsAbandoned += 1
+            logger.warn(
+              s"[HotStuff] stale in-flight branch abandoned, re-anchoring: b=${bid(blockId)} height=$height " +
+                s"tip=${tipHeight()} maxTargetLag=${maxTargetLag()} (audit F-6)"
+            )
+            // NOT redundant with `onRoundTimerTick`'s else-branch reset, despite appearances: that reset
+            // only runs when `effectiveInFlight.orElse(blockSource())` yields `Some`. When `blockSource()`
+            // also returns `None` (this replica has nothing settled to re-anchor TO yet), the `case None`
+            // branch runs instead and never touches the tracker -- so without this reset an abandoned
+            // branch's stale attempt count would survive to penalize whatever the replica re-anchors to
+            // later. Verified by reading both paths, not assumed.
+            lastReproposedBlockId = None
+            reproposeAttempts = 0
+            false // stale -> drop the in-flight branch, fall through to blockSource()'s fresh tip
+          } else true
+        }
 
     def onRoundTimerTick(): Unit = {
       refreshCommittee()

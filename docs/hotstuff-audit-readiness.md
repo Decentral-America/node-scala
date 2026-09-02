@@ -201,6 +201,47 @@ laptop (see
    for that one-time event. It remains bounded exactly as before (`HotStuffEngine.onQC`'s monotonic
    commit-height guard applies regardless of how the vote/QC was formed) — a wasted round at worst, never
    a safety break. Do not overclaim this mitigation as "fully closed."
+7. **Self-sealing epoch trap (audit F-6, 2026-08-31) — REPRODUCED AND FIXED 2026-09-02.** The audit
+   filed this MEDIUM as *unverified*, explicitly noting it was "not reproducible in the current DST
+   harness (single shared `epochBelief` var)". It has since been reproduced in that harness (after the
+   per-node tip/epoch change the audit itself called for) and fixed.
+   **The trap.** The signed epoch (`committeeEpochOf(targetHeight)`, a pure function of the target's
+   height) and the accepted epoch (`acceptableCommitteeEpoch` against `committeeEpochProvider()`, the
+   replica's own live tip) are independent by design and correctly so. `settledDepth` keeps them close
+   in the happy path, but nothing bounded the gap: once a T2 target fell more than one generation period
+   behind a replica's own tip, that replica's own honest QCs for it were rejected before `verifyQC` ran,
+   and a rejected QC never advances `EngineState` — so catching up required committing exactly the
+   heights the rejection blocked. Self-sealing, from fully honest behaviour. The watchdog cannot fix it
+   (`resetLocalSafetyState` touches only `engine.safety`; the mismatch is derived from chain height).
+   **The fix** (`docs/superpowers/specs/2026-09-02-hotstuff-lag-reanchor-design.md`) is a height-lag
+   filter on target selection, nothing more — no change to `acceptableCommitteeEpoch` (the one-step
+   window is T10's safety content and stays untouched), nothing on the wire, no block-validation change,
+   no feature gate. `HotStuffSettings.maxTargetLagFraction` (default 0.25) plus
+   `maxTargetLag = max(settledDepth + 1, generationPeriodLength * fraction)` and a `tooStale(height) =
+   tipHeight() - height > maxTargetLag()` predicate at three sites: `inFlightBranch` (a stale in-flight
+   branch is abandoned rather than re-proposed, falling through to `blockSource`'s fresh tip),
+   `onProposal` (a stale-target proposal is declined BEFORE `HotStuffEngine.onProposal` so a skip does
+   not burn the monotonic, M1-persisted `lastVotedView`), and `castVotes` (defensive backstop for the
+   `applyQC` phase-progression path). Observability: `hotstuff.stale-target-abandoned` and
+   `hotstuff.stale-target-skipped-proposal` Kamon counters + distinct WARNs.
+   **How it is tested.** `DstStaleTargetSelfSealScenarioSpecification` runs the realistic F-6 shape — the
+   whole cluster's tips advancing past a stuck T2 target, which is what production does since feature-25
+   finality keeps the chain moving underneath a stalled T2 round on every replica at once — as a paired
+   RED/GREEN scenario: with the fix neutralized the cluster commits the STALE target (height 50) forever;
+   with it active the stale branch is abandoned, the cluster re-anchors and commits at height 92,
+   strictly above the stale target. Companions in the same file: `noEquivocation` across a
+   demonstrated-real re-anchor, and a watchdog comparison where the RED arm reaches recovery exhaustion
+   and the GREEN arm does not. `HotStuffLagReanchorSpecification` covers `tooStale` boundaries, the
+   `settledDepth + 1` floor, the guard's placement (a declined stale proposal leaves `lastVotedView`
+   unadvanced and that view still votable), and a regression case proving the guard does NOT fire on
+   ordinary cross-epoch-liveness skew; `HotStuffSettingsSpecification` covers the setting's `require`.
+   The whole fixed arm is **mutation-verified**: neutralizing the bound turns every fixed-arm assertion
+   RED (the scenario's first version was vacuous under exactly this test and was restaged because of it —
+   see that file's class doc for the recorded evidence and the reason the naive single-node staging
+   cannot exercise the fix).
+   **Still open for this item:** no live multi-node/testnet observation of the trap or of the re-anchor
+   firing in production. The fix is DST- and unit-proven only, and the counters above exist precisely so
+   a real occurrence becomes graphable — same caveat as the T10 item above.
 
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.authoritative = true` on **mainnet** — testnet already has both flags on, see banner)
 - [x] Pure core + engine + shell implemented, gated OFF by default (mainnet)
