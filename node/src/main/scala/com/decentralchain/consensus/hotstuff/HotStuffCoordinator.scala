@@ -253,6 +253,21 @@ object HotStuffCoordinator {
     // PREPARE path. `resetLocalSafetyState` must NEVER clear it -- doing so would let a
     // watchdog-driven recovery re-emit phase votes this replica has already signed. See the audit
     // F-2 note on `resetLocalSafetyState`.
+    //
+    // PRUNED (audit F-9, 2026-08-31), but ONLY by view, alongside `prunePool()`, using the SAME
+    // `view >= pacemaker.view - 1` one-view retention margin the pool uses -- see `prunePool`. This
+    // set is otherwise unbounded (every entry ever added via `castVotes` stayed forever, ~216k
+    // entries/day at a 1200ms round timeout), the same class of leak the vote-pool bounded-growth
+    // work already closed for `pool`/`seenCommittees`, just missed for this field. Pruning by OLD
+    // view is safe and does NOT weaken the anti-double-vote guarantee above: an evicted entry's
+    // target is already outside the live view window, so the pool's own dedup
+    // (`HotStuffVotePool.onVote`/`pruneOlderThan`, same margin) independently prevents that target
+    // from re-forming a QC from stray duplicate votes. Pruning TIGHTER than the pool's margin would
+    // re-admit duplicate votes for a still-live target (re-casting a vote `castVotes` already sent
+    // for the current or immediately-prior view) -- that is why the bound here must never be
+    // narrower than the pool's. This pruning is orthogonal to `resetLocalSafetyState`, which never
+    // touches `voted` at all (by view or otherwise) -- the two removal paths (age-based here,
+    // never-on-reset there) are independent and both required.
     private var voted = Set.empty[(Int, HotStuffPhase, BlockId)]
     // Baseline for stall detection in `onRoundTimerTick`: the pacemaker view as of the PREVIOUS tick,
     // or `None` before the first tick. `None` ensures the very first tick only establishes the
@@ -296,8 +311,13 @@ object HotStuffCoordinator {
     // for correctness: after a PREPARE QC the pacemaker is already at v+1 while this node is still
     // accumulating PRE_COMMIT/COMMIT votes for view v, so we retain `view >= pacemaker.view - 1` to
     // avoid evicting the active view's still-in-flight later phases. Pure reducer; no timers/threads.
-    private def prunePool(): Unit =
-      pool = HotStuffVotePool.pruneOlderThan(pool, engine.pacemaker.view - 1)
+    private def prunePool(): Unit = {
+      val minView = engine.pacemaker.view - 1
+      pool = HotStuffVotePool.pruneOlderThan(pool, minView)
+      // audit F-9: prune `voted` alongside the pool, using the SAME one-view retention margin --
+      // see the field's doc above for why this bound must never be tighter than the pool's.
+      voted = voted.filter { case (view, _, _) => view >= minView }
+    }
 
     private def bid(b: BlockId): String = b.toString.take(8)
 
