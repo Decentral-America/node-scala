@@ -42,7 +42,10 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
     *                 standing up a whole cluster. Mirrors the same device used by
     *                 `HotStuffWatchdogSpecification`'s behavioural lock-clearing test.
     */
-  private def newCoordinator(multiKey: Boolean = false): (HotStuffCoordinator.Enabled, scala.collection.mutable.ListBuffer[HotStuffVote]) = {
+  private def newCoordinator(
+      multiKey: Boolean = false,
+      initialLastVotedView: Int = -1
+  ): (HotStuffCoordinator.Enabled, scala.collection.mutable.ListBuffer[HotStuffVote]) = {
     val cast = scala.collection.mutable.ListBuffer.empty[HotStuffVote]
     val fx   = new HotStuffEffects {
       def broadcast(m: Message): Unit = m match {
@@ -62,7 +65,8 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
       // so a pass/fail here is unambiguously about the view bound this finding is about. It also makes
       // a genuine `lockedQC` strictly blocking for any other block -- which is what lets the
       // lock-clearing test below actually bite (see its comment).
-      extendsBranch = (_, _) => false
+      extendsBranch = (_, _) => false,
+      initialLastVotedView = initialLastVotedView
     )
     (c, cast)
   }
@@ -173,6 +177,34 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
 
     // ...and the very next view above it is admitted, proving the bound is a bound and not a freeze.
     coordinator.onProposal(HotStuffProposal(10, blockB, None), 100)
+    cast.map(_.blockId).toList should contain(blockB)
+  }
+
+  /** M1 (persist `lastVotedView` across restarts) regression coverage: this is the RESTART analogue of
+    * the in-process watchdog scenario above, closing the RESIDUAL GAP that `resetLocalSafetyState`'s doc
+    * used to document as deferred. A restarted replica no longer boots blind at `lastVotedView = -1` --
+    * `Application.scala` seeds `initialLastVotedView` from `HotStuffLastVotedViewStore.load`, so a fresh
+    * `HotStuffCoordinator.Enabled` constructed with a persisted view must refuse to vote again at (or
+    * below) that view, exactly like the in-memory bound already does post-reset.
+    */
+  "a coordinator restarted with a persisted lastVotedView (M1)" should
+    "refuse to vote at the SAME view it already voted in before the restart" in {
+      val v                   = 5
+      val (coordinator, cast) = newCoordinator(initialLastVotedView = v)
+      val blockB              = blockId(9)
+
+      coordinator.onProposal(HotStuffProposal(v, blockB, None), 100)
+
+      cast.map(_.blockId).toList should not contain blockB
+    }
+
+  it should "still admit a proposal at a STRICTLY HIGHER view than the persisted one" in {
+    val v                   = 5
+    val (coordinator, cast) = newCoordinator(initialLastVotedView = v)
+    val blockB               = blockId(9)
+
+    coordinator.onProposal(HotStuffProposal(v + 1, blockB, None), 100)
+
     cast.map(_.blockId).toList should contain(blockB)
   }
 }

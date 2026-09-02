@@ -177,6 +177,19 @@ object HotStuffCoordinator {
       // never constructing an `Enabled` at all, this callback (and any disk I/O it drives) simply never
       // runs when HotStuff is disabled.
       onLockedQCPersist: QuorumCertificate => Unit = _ => (),
+      // M1 fix: closes the "post-restart lastVotedView=-1" double-vote window documented at
+      // `HotStuffLastVotedViewStore`'s doc and `resetLocalSafetyState`'s RESIDUAL GAP note below --
+      // seeds THIS replica's `SafetyState.lastVotedView` from local disk (see
+      // `HotStuffLastVotedViewStore`), instead of always starting from `-1`. `-1` (the default)
+      // preserves today's exact behaviour for every existing call site/test that doesn't pass this.
+      initialLastVotedView: Int = -1,
+      // Fires exactly once per genuine `lastVotedView` advance, with the new view, so the shell can
+      // persist it (see `HotStuffLastVotedViewStore.save` / Application.scala) and survive a future
+      // restart via `initialLastVotedView` above. Defaults to a no-op so existing call sites/tests are
+      // unaffected -- and, per `dcc.hotstuff.enabled=false`'s `Disabled` coordinator never constructing
+      // an `Enabled` at all, this callback (and any disk I/O it drives) simply never runs when HotStuff
+      // is disabled.
+      onLastVotedViewPersist: Int => Unit = _ => (),
       // T10 fix: the committee epoch (see `state.GenerationPeriod`) THIS replica currently believes is
       // active, re-read fresh alongside `committeeProvider` on every event (see `refreshCommittee`).
       // Used ONLY for the transition-gating decision in `HotStuffEngine.onQC`/`onProposal`
@@ -227,7 +240,12 @@ object HotStuffCoordinator {
       onAction: HotStuffAction => Unit = _ => ()
   ) extends HotStuffCoordinator
       with StrictLogging {
-    private var engine = EngineState(committeeProvider(), safety = SafetyState(lockedQC = initialLockedQC), committeeEpoch = committeeEpochProvider())
+    private var engine =
+      EngineState(
+        committeeProvider(),
+        safety = SafetyState(lockedQC = initialLockedQC, lastVotedView = initialLastVotedView),
+        committeeEpoch = committeeEpochProvider()
+      )
     private var pool   = VotePool()
     // Per-target vote guard (prevents storms/loops), keyed (view, phase, blockId).
     // SAFETY-LOAD-BEARING across `resetLocalSafetyState`: this is the anti-double-vote guard for
@@ -321,9 +339,14 @@ object HotStuffCoordinator {
           s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not a block this replica recognizes on its own chain)"
         )
       } else {
+        val previousLastVotedView    = engine.safety.lastVotedView
         val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
         engine = nextEngine
         logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
+        // M1 fix: persist exactly on a genuine advance (mirrors `onLockedQCPersist` in `applyQC` below),
+        // so a later restart can seed `initialLastVotedView` with THIS replica's actual last voted view
+        // instead of `-1` -- see `HotStuffLastVotedViewStore`'s doc for the double-vote window this closes.
+        if (engine.safety.lastVotedView > previousLastVotedView) onLastVotedViewPersist(engine.safety.lastVotedView)
         if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
       }
     }
@@ -497,22 +520,23 @@ object HotStuffCoordinator {
       * `HotStuffSafety.equivocators` exists to detect, emitted by an HONEST node's own recovery path.
       *
       * Preserving it costs the recovery nothing. This method automates the manual `rm locked-qc.dat` +
-      * restart procedure, and `lastVotedView` is not persisted to disk at all, so it has NO equivalent
-      * in the manual procedure being reproduced. Nor does keeping it block legitimate post-recovery
-      * voting: the pacemaker's view lives in a SEPARATE `EngineState` field (`pacemaker`, untouched
-      * here) and `HotStuffPacemaker.onTimeout` bumps it unconditionally on every stalled
-      * `onRoundTimerTick`, so genuine post-recovery traffic always arrives at a view strictly above
-      * `lastVotedView`. The only thing this bound now rejects is a re-vote at a view this replica has
-      * already voted in -- which is never legitimate progress, only the double-vote above. See
-      * `HotStuffResetDoubleVoteSpecification`.
+      * restart procedure; unlike `lockedQC`, `lastVotedView` has no manual-procedure equivalent to
+      * reproduce here at all -- it is preserved in-memory across THIS in-process reset regardless. Nor
+      * does keeping it block legitimate post-recovery voting: the pacemaker's view lives in a SEPARATE
+      * `EngineState` field (`pacemaker`, untouched here) and `HotStuffPacemaker.onTimeout` bumps it
+      * unconditionally on every stalled `onRoundTimerTick`, so genuine post-recovery traffic always
+      * arrives at a view strictly above `lastVotedView`. The only thing this bound now rejects is a
+      * re-vote at a view this replica has already voted in -- which is never legitimate progress, only
+      * the double-vote above. See `HotStuffResetDoubleVoteSpecification`.
       *
-      * RESIDUAL GAP (deferred, stated plainly rather than left implicit): because `lastVotedView` is
-      * in-memory only, a process RESTART still resets it to `-1` and reopens exactly the double-vote
-      * window this fix closes for the watchdog path. A restart is slower than a watchdog reset, so
-      * genuinely in-flight votes are less likely to still be outstanding, but the window is real and
-      * this fix does not close it. Closing it properly requires persisting `lastVotedView` alongside
-      * `locked-qc.dat` and restoring it on startup -- a durability change with its own crash-safety
-      * and format-migration considerations, deliberately out of scope here.
+      * RESIDUAL GAP -- NOW CLOSED for restarts (M1): `lastVotedView` used to be in-memory only, so a
+      * process RESTART reset it to `-1` and reopened exactly the double-vote window this fix closes for
+      * the watchdog path. `HotStuffLastVotedViewStore` now persists it alongside `locked-qc.dat` and
+      * restores it via `initialLastVotedView` on startup (see that store's doc for the full rationale),
+      * so a restart resumes from the replica's actual last voted view instead of `-1`. The ONLY
+      * remaining window is a replica's very first-ever boot, which has nothing persisted yet to load
+      * (T11; see `HotStuffSettings.slashingEnabled`'s OPERATIONAL NOTE) -- a one-time, unavoidable gap
+      * at genesis-of-participation, not a per-restart one.
       */
     override def resetLocalSafetyState(): Unit = {
       engine = engine.copy(safety = SafetyState(lastVotedView = engine.safety.lastVotedView))
