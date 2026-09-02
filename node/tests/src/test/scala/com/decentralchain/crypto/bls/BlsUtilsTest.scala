@@ -28,10 +28,16 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
   private val sig3 = signBasic(privateKey3, message)
 
   "aggregation in verifyAgg" - {
-    "aggregation of two same signatures" in {
+    "rejects a duplicated public key even when the signature aggregate matches it (audit M4)" in {
+      // Before M4, this multiset (pk1, pk2, pk1) against sig1+sig2+sig1 used to VERIFY -- proving
+      // verifyAgg silently double-counted pk1. FastAggregateVerify aggregates public keys, so a
+      // repeated key changes what's actually being asserted; every legitimate caller in this
+      // codebase already guarantees distinctness by construction (see BlsUtils.verifyAgg's
+      // scaladoc), so a duplicate here is always a caller bug or an attacker-supplied multiset, and
+      // must be rejected rather than silently accepted or de-duplicated.
       val aggSig = BlsUtils.aggSign(BlsUtils.aggSign(sig1, sig2).value, sig1).value
 
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1)) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1)) shouldBe a[Left[?, ?]]
       BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Left[?, ?]]
     }
 

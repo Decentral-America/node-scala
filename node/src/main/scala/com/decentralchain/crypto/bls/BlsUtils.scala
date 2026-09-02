@@ -73,7 +73,7 @@ object BlsUtils {
   } yield new blst.P2_Affine(agg).compress()
 
   /** @param aggSigBytes Validated internally
-    * @param blsPks Expected to have validated public keys
+    * @param blsPks Expected to have validated public keys, and MUST be distinct (see below)
     * @see https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#name-fastaggregateverify
     *
     * Defense-in-depth (audit H1): the individual-key validation this function's contract relies on
@@ -85,9 +85,25 @@ object BlsUtils {
     * *aggregate* (one `in_group()`/`is_inf()` pair instead of one per key) rather than trusting the
     * caller's contract, closing the gap for any caller that cannot itself guarantee validated inputs
     * (see C1/H1 in docs/hotstuff-bls-crypto-audit-2026-08-31.md).
+    *
+    * Duplicate-key rejection (audit M4): this is FastAggregateVerify, which aggregates public keys
+    * (not signatures-per-key), so a repeated key changes what the aggregate actually asserts --
+    * `Seq(pk1, pk2, pk1)` verifies `sig1+sig2+sig1`, silently double-counting pk1's vote/stake. We
+    * reject rather than de-duplicate: de-duplicating would silently change the caller's requested
+    * semantics, whereas every legitimate caller in this codebase already guarantees distinctness by
+    * construction and a duplicate here is therefore always a caller bug or an attacker-supplied
+    * multiset. Confirmed callers: the appender's aggregated-endorsement path rejects duplicate
+    * endorser indexes before building the pubkey list (`fv.valid.toSet.size != fv.valid.length` in
+    * `state/appender/package.scala`); the HotStuff vote pool de-duplicates per voter before forming a
+    * QC (`formQC`'s `groupBy(_.voterIndex)`). `HotStuffQuorum.verifyQC`, by contrast, maps
+    * `qc.signerIndexes` -- a wire-deserialized `Seq[Int]` with NO distinctness guarantee of its own --
+    * straight into the pubkey list, so for that caller this rejection is load-bearing, not merely
+    * redundant: a malicious peer could otherwise supply a QC with a repeated signer index to inflate
+    * its apparent signing stake past 2/3 quorum without a matching honest signature count.
     */
   def verifyAgg(aggSigBytes: Array[Byte], message: Array[Byte], blsPks: Iterable[Array[Byte]]): Either[String, Unit] = for {
     _ <- Either.raiseWhen(blsPks.isEmpty)("Empty BLS public key list")
+    _ <- Either.raiseUnless(blsPks.map(_.toSeq).toSet.size == blsPks.size)("Duplicate BLS public keys in aggregate")
     aggPk <- Either
       .catchNonFatal(blsPks.map(new blst.P1(_)).reduce(_.add(_)))
       .leftMap(e => s"Error aggregating BLS public keys: ${e.getMessage}")

@@ -63,4 +63,20 @@ class HotStuffQuorumSpecification extends FlatSpec {
     val forged = QuorumCertificate(view, phase, blockId, height, Seq(0, 1, 2), ByteStr(Array.fill[Byte](96)(0)))
     HotStuffQuorum.verifyQC(forged, committee).isLeft should be(true)
   }
+
+  // audit M4: QuorumCertificate.signerIndexes is a wire-deserialized Seq[Int] with no distinctness
+  // guarantee of its own (unlike formQC's own output, which de-dupes per voter before this point) --
+  // verifyQC maps it straight into BlsUtils.verifyAgg's pubkey list, UN-de-duplicated. hasQuorum, by
+  // contrast, computes stake over signerIndexes.toSet, so a repeated index alone can't inflate the
+  // quorum check itself -- but it DOES change what verifyAgg's aggregated-public-key check actually
+  // asserts (one repeated key's aggregate contribution is counted twice against a signature that
+  // only reflects the real, distinct signers). Signers (0, 1, 2) clear quorum (75 of 100) whether or
+  // not index 0 is repeated, so this specifically isolates verifyAgg's own defense rather than
+  // merely re-exercising the quorum-stake gate above. Confirms the M4 rejection is load-bearing for
+  // this caller, not merely redundant with an upstream guarantee.
+  it should "reject a QC whose signerIndexes contains a repeated signer (wire-crafted duplicate)" in {
+    val aggSig     = Seq(vote(0), vote(1), vote(2)).map(_.signature.arr).reduceLeft((a, b) => BlsUtils.aggSign(a, b).toOption.get)
+    val duplicated = QuorumCertificate(view, phase, blockId, height, Seq(0, 0, 1, 2), ByteStr(aggSig))
+    HotStuffQuorum.verifyQC(duplicated, committee).isLeft should be(true)
+  }
 }
