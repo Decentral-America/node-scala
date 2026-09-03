@@ -61,6 +61,12 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest, TestSchedulerO
 
       override def isLastBlockId(id: ByteStr): Boolean = id == genesis.id() || Option(minedBlock).map(_.id()).contains(id)
 
+      // NG.referencedBlock is abstract (no trait-level default) so every implementor states its
+      // resolution explicitly. This stub only ever runs at height 1 (branch (c) of the real fix's
+      // height-based logic, see BlockDiffer.carryFeeFromPreviousBlock), where liquid-only resolution
+      // is correct -- the persisted-block fallback the real implementors need never triggers here.
+      override def referencedBlock(reference: ByteStr): Option[Block] = liquidBlock(reference)
+
       private val counter = AtomicInt(0)
 
       override def processBlock(
@@ -204,6 +210,12 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest, TestSchedulerO
       )
 
       override def isLastBlockId(id: ByteStr): Boolean = id == genesis.id() || Option(minedBlock).map(_.id()).contains(id)
+
+      // NG.referencedBlock is abstract (no trait-level default) so every implementor states its
+      // resolution explicitly. This stub only ever runs at height 1 (branch (c) of the real fix's
+      // height-based logic, see BlockDiffer.carryFeeFromPreviousBlock), where liquid-only resolution
+      // is correct -- the persisted-block fallback the real implementors need never triggers here.
+      override def referencedBlock(reference: ByteStr): Option[Block] = liquidBlock(reference)
 
       private val counter = AtomicInt(0)
 
@@ -382,6 +394,12 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest, TestSchedulerO
       )
 
       override def isLastBlockId(id: ByteStr): Boolean = id == genesis.id()
+
+      // NG.referencedBlock is abstract (no trait-level default) so every implementor states its
+      // resolution explicitly. This stub only ever runs at height 1 (branch (c) of the real fix's
+      // height-based logic, see BlockDiffer.carryFeeFromPreviousBlock), where liquid-only resolution
+      // is correct -- the persisted-block fallback the real implementors need never triggers here.
+      override def referencedBlock(reference: ByteStr): Option[Block] = liquidBlock(reference)
 
       // Always fails with a non-BlockFromFuture error, so appendTask's Left(err) delayed-retry
       // branch under test fires every time, forever -- the retry chain never terminates on its own,

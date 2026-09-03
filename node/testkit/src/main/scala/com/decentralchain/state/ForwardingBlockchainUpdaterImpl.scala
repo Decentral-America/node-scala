@@ -72,8 +72,8 @@ class ForwardingBlockchainUpdaterImpl(delegate: CompleteBlockchainUpdater) exten
 
   override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = delegate.committedGenerators(at)
 
-  // NG.referencedBlock has a trait-level default (liquidBlock only), so it is already a member here
-  // and cannot be `export`ed. It must still delegate explicitly, or this forwarder would silently
+  // NG.referencedBlock is abstract (no trait-level default), so it must be implemented explicitly
+  // here regardless. It must delegate to the real implementation, or this forwarder would silently
   // lose the delegate's persisted-block fallback and re-introduce the miner/appender carry-fee
   // divergence -- see BlockDiffer.carryFeeFromPreviousBlock.
   override def referencedBlock(reference: ByteStr): Option[Block] = delegate.referencedBlock(reference)

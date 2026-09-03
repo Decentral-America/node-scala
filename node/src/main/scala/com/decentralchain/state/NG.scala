@@ -23,7 +23,7 @@ trait NG {
     * `BlockDiffer.carryFeeFromPreviousBlock` the identical previous block the appender feeds it --
     * see that method's docs and the height-2640 stall it caused when the two disagreed.
     */
-  def referencedBlock(reference: ByteStr): Option[Block] = liquidBlock(reference)
+  def referencedBlock(reference: ByteStr): Option[Block]
 
   def liquidBlockSnapshot(id: ByteStr): Option[StateSnapshot]
 
