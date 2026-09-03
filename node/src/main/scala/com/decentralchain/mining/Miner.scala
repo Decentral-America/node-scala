@@ -341,26 +341,18 @@ class MinerImpl(
   // committedGenerators/conflictGenerators on append (validation/union elsewhere are unconditional).
   private def withHotStuffConflicts(voting: Option[FinalizationVoting]): Option[FinalizationVoting] = {
     val forgeHeight = Height(blockchainUpdater.height + 1)
-    // Validation (appender/package.scala:364, via validateHotStuffEquivocationProofs) rejects any
-    // block whose FinalizationVoting carries hotstuffConflicts before feature 29
-    // (HotStuffEquivocationEvidence) is active AT THE BLOCK HEIGHT -- a strictly later gate than
-    // feature 28 (DeterministicFinality, checked by generationPeriodOf below). Composing proofs
-    // during the 28-active-but-29-inactive window would forge a block this same node's own
-    // appender then rejects on append: a pure self-DoS. Skip the fold entirely until 29 is live.
-    if (!blockchainUpdater.supportsHotStuffEquivocationEvidence(forgeHeight.toInt)) voting
-    else
-      blockchainUpdater.generationPeriodOf(forgeHeight) match {
-        case None         => voting // pre-activation: no periods, no committee, nothing to fold
-        case Some(period) =>
-          Miner.foldHotStuffConflicts(
-            settings.hotStuffSettings.slashingEnabled,
-            hotStuffEquivocations(),
-            voting,
-            period.index,
-            idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
-            () => Miner.clampFinalizedHeight(blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight), blockchainUpdater.height)
-          )
-      }
+    blockchainUpdater.generationPeriodOf(forgeHeight) match {
+      case None         => voting // pre-activation: no periods, no committee, nothing to fold
+      case Some(period) =>
+        Miner.foldHotStuffConflicts(
+          settings.hotStuffSettings.slashingEnabled,
+          hotStuffEquivocations(),
+          voting,
+          period.index,
+          idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
+          () => Miner.clampFinalizedHeight(blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight), blockchainUpdater.height)
+        )
+    }
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =

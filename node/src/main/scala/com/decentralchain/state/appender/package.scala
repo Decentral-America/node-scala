@@ -351,9 +351,8 @@ package object appender {
   } yield ()
 
   /** Deterministic, unconditional re-verification of block-carried HotStuff equivocation proofs
-    * (finding H5 -- no local-flag gating, no `hotStuffSettings`/`slashingEnabled` reference here;
-    * gated purely by the on-chain feature-29 check). All-or-nothing: any failing proof fails the
-    * whole block.
+    * (finding H5 -- no local-flag gating, no `hotStuffSettings`/`slashingEnabled` reference here).
+    * All-or-nothing: any failing proof fails the whole block.
     */
   private def validateHotStuffEquivocationProofs(
       blockchain: Blockchain,
@@ -366,9 +365,6 @@ package object appender {
     if (fv.hotstuffConflicts.isEmpty) Right(())
     else
       for {
-        _ <- Either.raiseUnless(blockchain.supportsHotStuffEquivocationEvidence(blockHeight))(
-          "HotStuff equivocation evidence is not allowed before HotStuff Equivocation Evidence feature activation"
-        )
         voters = fv.hotstuffConflicts.map(_.voterIndex)
         _ <- Either.raiseWhen(voters.toSet.size != voters.length)("Duplicate equivocation-proof voter indexes")
         conflictIdxs = fv.conflict.map(_.endorserIndex.toInt).toSet

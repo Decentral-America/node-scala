@@ -37,11 +37,6 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
   private val withEvidenceFeature =
     DomainPresets.DeterministicFinality
-      .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance, BlockchainFeatures.HotStuffEquivocationEvidence)
-      .configure(_.copy(generationPeriodLength = 2, lightNodeBlockFieldsAbsenceInterval = 0))
-
-  private val withoutEvidenceFeature =
-    DomainPresets.DeterministicFinality
       .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
       .configure(_.copy(generationPeriodLength = 2, lightNodeBlockFieldsAbsenceInterval = 0))
 
@@ -98,21 +93,6 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
         // actually reached `conflictGenerators`, and this test happened to pass against that bug. It
         // must contain the voter -- that is the whole point of a "verified equivocation proof".
         d.blockchain.conflictGenerators(d.blockchain.currentGenerationPeriod.value).all should contain(voterAIdx)
-      }
-
-    "2. hotstuffConflicts non-empty BEFORE feature-29 activation => Left" in
-      withCommittedCommittee(withoutEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, voterAIdx.toInt, periodIndex)
-        val block3 = d.createBlock(
-          version = Block.ProtoBlockVersion,
-          txs = Nil,
-          generator = minerGenerator,
-          strictTime = true,
-          finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof)))
-        )
-        val result = d.appender.appendBlockWithoutFallback(block3)
-        result.isLeft shouldBe true
-        result.left.value.toString should include("HotStuff Equivocation Evidence")
       }
 
     "3. proofs-only FV (valid=[], conflict=[], one valid proof), post-activation => Right" in

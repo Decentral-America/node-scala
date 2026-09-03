@@ -86,9 +86,7 @@ class MultipleConflictEndorserSuite extends BaseFinalizationSpec {
   }
 
   "hotstuff equivocation proof voter survives the key-block boundary [C1 regression]" in {
-    val withEvidenceFeature = defaultSettings.addFeatures(BlockchainFeatures.HotStuffEquivocationEvidence)
-
-    withDomain(withEvidenceFeature, AddrWithBalance.enoughBalances(generators*)) { d =>
+    withDomain(defaultSettings, AddrWithBalance.enoughBalances(generators*)) { d =>
       log.debug("Append block 2 with commitments")
       val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
       val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = validGenerator, strictTime = true)

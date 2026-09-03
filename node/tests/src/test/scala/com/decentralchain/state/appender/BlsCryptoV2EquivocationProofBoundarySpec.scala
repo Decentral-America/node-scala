@@ -41,7 +41,7 @@ class BlsCryptoV2EquivocationProofBoundarySpec extends BaseFinalizationSpec {
   private val prepare                = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
 
   private def settingsWithBlsV2At(h: Int): DCCSettings = DomainPresets.DeterministicFinality
-    .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance, BlockchainFeatures.HotStuffEquivocationEvidence)
+    .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
     .configure(
       _.copy(
         generationPeriodLength = generationPeriodLength,

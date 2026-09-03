@@ -52,7 +52,7 @@ class HotStuffEquivocationEvidenceE2ESpecification extends BaseFinalizationSpec 
 
   private val withEvidenceFeature =
     DomainPresets.DeterministicFinality
-      .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance, BlockchainFeatures.HotStuffEquivocationEvidence)
+      .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
       .configure(_.copy(generationPeriodLength = 2, lightNodeBlockFieldsAbsenceInterval = 0))
 
   /** Task 9 step (d) / Task 8 review carry-over: BlsCryptoV2 PRE-activated (from height 1, alongside
