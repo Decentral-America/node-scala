@@ -210,7 +210,8 @@ class MinerImpl(
         _ <- isAllowedForMiningByAccountScript(address, blockchain)
         balance = blockchain.generatingBalance(address)
         _ <- Either.raiseUnless(GeneratingBalanceProvider.isMiningAllowed(blockchain, newBlockHeight, balance)) {
-          s"$address is not committed on $newBlockHeight. Try to commit to generation on next period"
+          val minBalance = GeneratingBalanceProvider.minMiningBalance(blockchain, newBlockHeight)
+          s"$address generating balance $balance below minimal $minBalance at $newBlockHeight"
         }
         _ <- Either.raiseWhen(blockchain.isConflict(newBlockHeight, address)) {
           s"$address is conflict on $newBlockHeight. Try to commit to generation on next period"
