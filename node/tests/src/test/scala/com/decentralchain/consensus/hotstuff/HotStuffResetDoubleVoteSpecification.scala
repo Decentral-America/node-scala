@@ -79,7 +79,7 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
       blockId,
       Height(height),
       idx,
-      kps(idx).sign(HotStuffQuorum.voteMessage(view, phase, blockId, height), BlsUtils.BlsDomainSeparationTag).byteStr
+      kps(idx).sign(HotStuffQuorum.voteMessage(view, phase, blockId, height), BlsUtils.BlsHsVoteDomainSeparationTag).byteStr
     )
 
   /** Drive `coordinator` to a REAL `lockedQC` on `blockId` at `view`: propose it (the coordinator

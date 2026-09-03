@@ -29,7 +29,6 @@ object BlockchainFeatures {
   val BoostBlockReward                = BlockchainFeature(23, "Boost Block Reward")
   val EcrecoverFix                    = BlockchainFeature(24, "ecrecover fix")
   val DeterministicFinality           = BlockchainFeature(25, "Deterministic Finality & RIDE V9")
-  val BlsCryptoV2                     = BlockchainFeature(30, "BLS domain separation & bound PoP")
 
   // Not exposed
   val ContinuationTransaction = BlockchainFeature(26, "Continuation Transaction")
@@ -63,8 +62,7 @@ object BlockchainFeatures {
     LightNode,
     BoostBlockReward,
     EcrecoverFix,
-    DeterministicFinality,
-    BlsCryptoV2
+    DeterministicFinality
   ).map(f => f.id -> f).toMap
 
   val implemented: Set[Short] = dict.keySet

@@ -47,7 +47,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
     val height  = Height(10)
     val msg     = HotStuffQuorum.voteMessage(view, prepare, blockId, height.toInt, epoch)
     val kp      = BlsKeyPair(signer.privateKey)
-    HotStuffVote(view, prepare, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
+    HotStuffVote(view, prepare, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).arr), epoch)
   }
 
   private def proofFor(signer: KeyPair, voterIndex: Int, epoch: Int, view: Int = 5): HotStuffEquivocationProof =

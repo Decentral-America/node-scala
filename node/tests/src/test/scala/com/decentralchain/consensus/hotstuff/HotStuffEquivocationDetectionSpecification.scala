@@ -31,7 +31,7 @@ class HotStuffEquivocationDetectionSpecification extends FlatSpec {
     val bId    = blockId(b)
     val height = Height(10)
     val msg    = HotStuffQuorum.voteMessage(view, phase, bId, height.toInt, epoch)
-    HotStuffVote(view, phase, bId, height, voter, ByteStr(keyPair.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
+    HotStuffVote(view, phase, bId, height, voter, ByteStr(keyPair.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).arr), epoch)
   }
 
   /** Same shape as a real vote but with a garbage signature -- never verifies against the named

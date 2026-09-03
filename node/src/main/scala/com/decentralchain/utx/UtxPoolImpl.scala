@@ -366,9 +366,7 @@ case class UtxPoolImpl(
                 // its activation height. If `differ` rejects it, `cleanUnconfirmed` (called on the next
                 // block) evicts the stale tx from the pool shortly after, so the failure mode is a
                 // transient one-block mining miss, not a consensus divergence (the on-chain diff at
-                // append time is still the source of truth). BlsCryptoV2 (feature 30) is the newest
-                // gate this bites; see `TransactionsApiRoute.mkTxFactory` and
-                // `UtilApp.blsCryptoV2Era` for the two other call sites that already account for it.
+                // append time is still the source of truth).
                 val updatedBlockchain   = SnapshotBlockchain(blockchain, r.totalSnapshot)
                 val newCheckedAddresses = newScriptedAddresses ++ r.checkedAddresses
                 val e                   = differ(updatedBlockchain, tx).resultE

@@ -25,8 +25,8 @@ class HotStuffLockedQCStoreSpecification extends FlatSpec {
 
   private def realLockQC(view: Int, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, height)
-    val votes = (0 to 2).map(i => HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
-    HotStuffQuorum.formQC(votes, committee, cryptoV2 = false).toOption.get
+    val votes = (0 to 2).map(i => HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PRE_COMMIT, B, Height(height), i, kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr))
+    HotStuffQuorum.formQC(votes, committee).toOption.get
   }
 
   private def tempPath() = {

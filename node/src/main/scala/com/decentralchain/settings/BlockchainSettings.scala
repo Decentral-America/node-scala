@@ -5,7 +5,6 @@ import cats.syntax.traverse.*
 import com.typesafe.config.Config
 import com.decentralchain.account.Address
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.state.Height
 import pureconfig.*
 import pureconfig.generic.semiauto.deriveReader
@@ -151,8 +150,7 @@ object FunctionalitySettings {
     paymentsCheckHeight = 4303300,
     unitsRegistryAddress = None,
     maxValidEndorsers = 128, // BLS has much worse performance from 129
-    generationPeriodLength = 10_000,
-    preActivatedFeatures = Map(BlockchainFeatures.BlsCryptoV2.id -> 1)
+    generationPeriodLength = 10_000
   )
 
   val TESTNET: FunctionalitySettings = apply(
@@ -178,7 +176,7 @@ object FunctionalitySettings {
   val STAGENET: FunctionalitySettings = apply(
     featureCheckBlocksPeriod = 100,
     blocksForFeatureActivation = 40,
-    preActivatedFeatures = ((1 to 13).map(_.toShort -> 0) :+ (BlockchainFeatures.BlsCryptoV2.id -> 1)).toMap,
+    preActivatedFeatures = (1 to 13).map(_.toShort -> 0).toMap,
     doubleFeaturesPeriodsAfterHeight = 1000000000,
     minAssetInfoUpdateInterval = 10,
     estimationOverflowFixHeight = 1078680,

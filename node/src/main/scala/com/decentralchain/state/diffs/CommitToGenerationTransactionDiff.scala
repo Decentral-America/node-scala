@@ -18,19 +18,13 @@ object CommitToGenerationTransactionDiff {
       _ <- Either.raiseUnless(tx.generationPeriodStart == next.start) {
         GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
       }
-      // Gate on the height of the block that CONTAINS this transaction. `blockchain` here is the
-      // SnapshotBlockchain that already includes the new block (TransactionDiffer is driven from
-      // BlockDiffer.apply's currBlockchain), which is why the surrounding code already treats
-      // `blockchain.height`/`currentGenerationPeriod` as "this block". Reading a live tip instead
-      // would break rollback determinism across the activation height.
-      cryptoV2 = blockchain.supportsBlsCryptoV2(blockchain.height)
       _ <- Either.raiseUnless(
         BlsUtils
           .verifyBasic(
             tx.commitmentSignature.arr,
-            CommitToGenerationTransaction.popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2),
+            CommitToGenerationTransaction.popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart),
             tx.endorserPublicKey.arr,
-            CommitToGenerationTransaction.popDst(cryptoV2)
+            CommitToGenerationTransaction.PopDst
           )
           .isRight
       )(GenericError("Invalid commitment signature"))

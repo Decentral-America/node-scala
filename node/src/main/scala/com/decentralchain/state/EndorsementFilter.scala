@@ -9,14 +9,6 @@ import com.decentralchain.state.Height
 import scala.collection.mutable
 
 /** @param normalizedGeneratorSet All, including conflict. Zero balance means it is not enough for mining and endorsing
-  * @param cryptoV2
-  *   Feature-30 era for THIS voting round (task 6), set once by `BlockEndorser.castVote` from the
-  *   height of the block that will actually CARRY this endorsement on-chain (`carrierHeight`), not
-  *   the live-tip `votingHeight` -- the two only coincide for the parent-round. `EndorsementStorage.
-  *   verifySig` reads it from here so the signer and the p2p gossip verifier share one era for a
-  *   given round instead of two independent tip reads that could straddle the activation boundary.
-  *   No default: every call site must state explicitly which era it means, since silently defaulting
-  *   to legacy is exactly the kind of straddling bug this field exists to prevent.
   */
 case class EndorsementFilter(
     maxValidEndorsers: Int,
@@ -26,8 +18,7 @@ case class EndorsementFilter(
     finalizedHeight: Height,
     endorsedId: BlockId,
     normalizedGeneratorSet: IndexedSeq[(Address, BlsPublicKey, Long)],
-    conflict: Set[GeneratorIndex],
-    cryptoV2: Boolean
+    conflict: Set[GeneratorIndex]
 ) {
   private val minerBalance = normalizedGeneratorSet.lift(miner.toInt).fold(0L)(_._3)
   private val totalBalance = normalizedGeneratorSet.foldLeft(BigInt(0L)) { case (r, (_, _, b)) => r + b } -

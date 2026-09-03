@@ -18,7 +18,7 @@ class HotStuffEquivocationProofSpecification extends AnyFreeSpec with Matchers {
     val blockId = ByteStr(Array.fill(32)(blockIdByte))
     val height  = Height(10)
     val msg     = HotStuffQuorum.voteMessage(view, phase, blockId, height.toInt, epoch)
-    HotStuffVote(view, phase, blockId, height, voter, ByteStr(keyPair.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
+    HotStuffVote(view, phase, blockId, height, voter, ByteStr(keyPair.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).arr), epoch)
   }
 
   private val prepare = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
@@ -56,21 +56,21 @@ class HotStuffEquivocationProofSpecification extends AnyFreeSpec with Matchers {
   "signaturesValid" - {
     "accepts when both votes verify against the voter's real key" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsDomainSeparationTag) shouldBe Right(())
+      p.signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsHsVoteDomainSeparationTag) shouldBe Right(())
     }
     "rejects a forged voteB (an attacker cannot frame an honest voter)" in {
       val forged = signedVote(0, 5, prepare, 2, 2, kp).copy(signature = ByteStr(Array.fill(96)(7: Byte)))
       HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), forged)
-        .signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsDomainSeparationTag)
+        .signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsHsVoteDomainSeparationTag)
         .isLeft shouldBe true
     }
     "rejects when the index is outside the committee" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => None, BlsUtils.BlsDomainSeparationTag).isLeft shouldBe true
+      p.signaturesValid(_ => None, BlsUtils.BlsHsVoteDomainSeparationTag).isLeft shouldBe true
     }
     "rejects when signed under the wrong DST" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsHsVoteDomainSeparationTagV2).isLeft shouldBe true
+      p.signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsPopDomainSeparationTag).isLeft shouldBe true
     }
   }
 }

@@ -20,8 +20,8 @@ trait HotStuffEffects {
   /** Committee slots this node holds a BLS signing key for (normally just its own generator index). */
   def myVoterIndexes: Set[Int]
 
-  /** Sign `voteMessage` as committee slot `voterIndex` under domain-separation tag `dst` (Task 7,
-    * audit H2 hard switch -- see `HotStuffQuorum.voteDst`), or None if this node doesn't hold that key.
+  /** Sign `voteMessage` as committee slot `voterIndex` under domain-separation tag `dst` (audit H2,
+    * see `HotStuffQuorum.VoteDst`), or None if this node doesn't hold that key.
     */
   def signVote(voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature]
 
@@ -253,27 +253,14 @@ object HotStuffCoordinator {
       // pairs with the `Int.MaxValue` default above to make `tooStale` unconditionally `false` (tip=0
       // minus any non-negative height is never > Int.MaxValue) -- a genuine no-op for every existing
       // call site/test. Production wiring supplies `() => blockchainUpdater.height`.
-      tipHeight: () => Int = () => 0,
-      // Task 7 (audit H2 hard switch): whether vote/QC signing and verification use the v2 `_HSVOTE_`
-      // domain-separation tag (see `HotStuffQuorum.voteDst`). Same shape and "read fresh on every event"
-      // convention as `committeeEpochOf`/`tipHeight`/`maxTargetLag` above -- NOT height-gated per-message
-      // like PoP/aggregated-endorsement verification, because votes/QCs are ephemeral (never block-
-      // carried, except equivocation proofs -- Task 8's concern). Read at `castVotes` (signing) and via
-      // `refreshCommittee` into `engine.cryptoV2` (verification, `HotStuffEngine.onQC`/`onProposal`) on
-      // every event, so a mid-flight activation is picked up the same way a committee/epoch change is.
-      // Defaults to `false` so every existing call site/test that doesn't pass this observes byte-for-
-      // byte the same behaviour (the legacy shared DST) as before this fix. Production wiring supplies
-      // `() => blockchainUpdater.supportsBlsCryptoV2()` (live tip -- see that method's doc: correct here
-      // specifically because votes are off-chain and never replayed, unlike PoP/endorsement).
-      cryptoV2: () => Boolean = () => false
+      tipHeight: () => Int = () => 0
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine =
       EngineState(
         committeeProvider(),
         safety = SafetyState(lockedQC = initialLockedQC, lastVotedView = initialLastVotedView),
-        committeeEpoch = committeeEpochProvider(),
-        cryptoV2 = cryptoV2()
+        committeeEpoch = committeeEpochProvider()
       )
     private var pool = VotePool()
     // Per-target vote guard (prevents storms/loops), keyed (view, phase, blockId).
@@ -330,7 +317,7 @@ object HotStuffCoordinator {
     // The committed-generator committee rotates per generation period; refresh it from the chain at
     // the start of each event so reducers always see the current period's set.
     private def refreshCommittee(): Unit =
-      engine = engine.copy(committee = committeeProvider(), committeeEpoch = committeeEpochProvider(), cryptoV2 = cryptoV2())
+      engine = engine.copy(committee = committeeProvider(), committeeEpoch = committeeEpochProvider())
 
     // Bounded eviction of superseded pool entries (memory-leak guard, audit finding 2026-07-25). A
     // target never resolves on its own — a losing-fork block, or junk votes broadcast for bogus
@@ -423,7 +410,7 @@ object HotStuffCoordinator {
           voted += key
           val epoch   = committeeEpochOf(height)
           val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, epoch)
-          val dst     = HotStuffQuorum.voteDst(cryptoV2())
+          val dst     = HotStuffQuorum.VoteDst
           val mine    = effects.myVoterIndexes
           logger.debug(
             s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=$epoch"
@@ -484,7 +471,7 @@ object HotStuffCoordinator {
 
     def onVote(vote: HotStuffVote): Unit = {
       refreshCommittee()
-      val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee, engine.cryptoV2)
+      val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
       pool = nextPool
       // T5 rev.2: pool.pending is keyed by the FULL (view, phase, blockId) target, so a double-signer's
       // votes land in different buckets -- gather every bucket sharing (view, phase) before running
@@ -500,18 +487,11 @@ object HotStuffCoordinator {
           byBlock match {
             case Seq(a, b, _*) =>
               val proof = HotStuffEquivocationProof(a, b)
-              // Task 8 (fixes the gap flagged in the 2026-09-02 review of ed0fbcb69c): this is LOCAL
-              // detection/observability, not consensus validation, so it's fine to use the coordinator's
-              // own live cryptoV2 provider (same one castVotes/onQC/onProposal already use) rather than a
-              // containing-block height -- there is no containing block yet, this proof hasn't been
-              // folded into one. The consensus-critical re-verification of a BLOCK-CARRIED proof happens
-              // separately in state/appender/package.scala's validateHotStuffEquivocationProofs, which
-              // MUST derive its dst from the containing block's height instead.
               val ok = for {
                 _ <- proof.consistent
                 _ <- proof.signaturesValid(
                   i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey),
-                  HotStuffQuorum.voteDst(engine.cryptoV2)
+                  HotStuffQuorum.VoteDst
                 )
               } yield ()
               ok match {

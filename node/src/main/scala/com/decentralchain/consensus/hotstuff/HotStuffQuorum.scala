@@ -43,25 +43,11 @@ object HotStuffQuorum {
   private def voteMessageOf(v: HotStuffVote): Array[Byte] =
     voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch)
 
-  /** Task 7 (audit H2 hard switch): the domain-separation tag votes/QCs are signed and verified under.
-    * `voteMessage` itself is UNCHANGED -- the domain, not the message, carries the v1/v2 context, per
-    * the audit's per-context-DST design (see `BlsUtils`'s `_HSVOTE_` tag doc). Votes/QCs are ephemeral
-    * (never block-carried, except equivocation proofs -- Task 8's concern, not this one), so unlike
-    * PoP/endorsement verification this is NOT height-gated per-message; callers select `cryptoV2` from
-    * a coordinator-level "is v2 active" provider (see `HotStuffCoordinator.Enabled`'s `cryptoV2`
-    * parameter and `Application.scala`'s wiring of it to `blockchainUpdater.supportsBlsCryptoV2()`).
-    *
-    * ACTIVATION-BOUNDARY LIVENESS WINDOW (2026-09-02 review): `cryptoV2` is a monotone per-node read
-    * of the node's own live tip, so replicas cross the BlsCryptoV2 activation height at slightly
-    * different times (ordinary block-propagation skew). `formQC`/`verifyQC` require every vote in one
-    * QC to share the same DST; mixed-era votes are dropped by `HotStuffVotePool`'s verify-gate, not
-    * merged. So a view straddling the boundary may briefly see NO QC form at all. This self-heals via
-    * the pacemaker's normal view advance once every replica has crossed the boundary, and is
-    * liveness-only, not a safety issue -- and today is doubly harmless since T2 is observational only
-    * (feature-25 remains the authoritative finality source per docs/hotstuff-audit-readiness.md). This
-    * must be re-evaluated if HotStuff is ever made authoritative (`dcc.hotstuff.authoritative`).
+  /** The domain-separation tag votes/QCs are signed and verified under (audit H2). `voteMessage`
+    * carries no era marker of its own -- the domain alone separates this context from PoP/endorsement.
+    * Unconditional from genesis: this chain never had a prior HotStuff-vote DST to stay compatible with.
     */
-  def voteDst(cryptoV2: Boolean): String = if (cryptoV2) BlsUtils.BlsHsVoteDomainSeparationTagV2 else BlsUtils.BlsDomainSeparationTag
+  val VoteDst: String = BlsUtils.BlsHsVoteDomainSeparationTag
 
   /** The transition-gating rule (T10, design doc §6/§8 follow-up (a)): whether a QC/vote whose signed
     * `committeeEpoch` is `qcEpoch` should be ACCEPTED by a replica that currently believes
@@ -81,9 +67,9 @@ object HotStuffQuorum {
   /** True iff `vote.voterIndex` is a real committee member whose BLS signature over the canonical
     * vote message verifies.
     */
-  def verifyVote(vote: HotStuffVote, committee: GeneratorSet, cryptoV2: Boolean): Boolean =
+  def verifyVote(vote: HotStuffVote, committee: GeneratorSet): Boolean =
     committee.find(_.index.toInt == vote.voterIndex).exists { gi =>
-      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr, voteDst(cryptoV2)).isRight
+      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr, VoteDst).isRight
     }
 
   private def stakeOf(indexes: Set[Int], committee: GeneratorSet): BigInt = {
@@ -102,7 +88,7 @@ object HotStuffQuorum {
     * Rejects mixed targets, unknown/invalid signatures, and vote sets below the 2/3 stake quorum;
     * otherwise aggregates the BLS signatures into a single QC. Votes are de-duplicated per voter.
     */
-  def formQC(votes: Seq[HotStuffVote], committee: GeneratorSet, cryptoV2: Boolean): Either[String, QuorumCertificate] =
+  def formQC(votes: Seq[HotStuffVote], committee: GeneratorSet): Either[String, QuorumCertificate] =
     votes match {
       case Seq()     => Left("no votes")
       case head +: _ =>
@@ -114,7 +100,7 @@ object HotStuffQuorum {
         if (!sameTarget) Left("votes target different (view, phase, block, committeeEpoch)")
         else {
           val distinct = votes.groupBy(_.voterIndex).values.map(_.head).toSeq
-          val invalid  = distinct.filterNot(v => verifyVote(v, committee, cryptoV2))
+          val invalid  = distinct.filterNot(v => verifyVote(v, committee))
           if (invalid.nonEmpty) Left(s"invalid vote(s) from voter index(es): ${invalid.map(_.voterIndex).sorted.mkString(",")}")
           else {
             val signerIndexes = distinct.map(_.voterIndex).sorted
@@ -145,7 +131,7 @@ object HotStuffQuorum {
     * decision is `acceptableCommitteeEpoch` above, applied by the caller (`HotStuffEngine.onQC`/
     * `onProposal`) which alone knows what epoch it currently believes is active.
     */
-  def verifyQC(qc: QuorumCertificate, committee: GeneratorSet, cryptoV2: Boolean): Either[String, Unit] = {
+  def verifyQC(qc: QuorumCertificate, committee: GeneratorSet): Either[String, Unit] = {
     val byIndex   = committee.iterator.map(g => g.index.toInt -> g).toMap
     val signerOpt = qc.signerIndexes.map(byIndex.get)
     if (signerOpt.exists(_.isEmpty)) Left("QC references unknown committee member")
@@ -155,7 +141,7 @@ object HotStuffQuorum {
         qc.aggregatedSignature.arr,
         voteMessage(qc.view, qc.phase, qc.blockId, qc.blockHeight.toInt, qc.committeeEpoch),
         signerOpt.flatten.map(_.blsPublicKey.arr),
-        voteDst(cryptoV2)
+        VoteDst
       )
   }
 }

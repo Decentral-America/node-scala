@@ -236,7 +236,7 @@ class LightNodeTest extends PropSpec with WithDomain {
             periodStart,
             TxHelpers.timestamp,
             TestValues.commitToGenerationFee,
-            CommitToGenerationTransaction.mkPopSignature(otherKp, periodStart, sender.publicKey, AddressScheme.current.chainId, cryptoV2 = false),
+            CommitToGenerationTransaction.mkPopSignature(otherKp, periodStart, sender.publicKey, AddressScheme.current.chainId),
             AddressScheme.current.chainId
           )
           .explicitGet(),
@@ -251,7 +251,7 @@ class LightNodeTest extends PropSpec with WithDomain {
             periodStart,
             TxHelpers.timestamp,
             TestValues.commitToGenerationFee,
-            CommitToGenerationTransaction.mkPopSignature(honestKp, periodStart, sender.publicKey, AddressScheme.current.chainId, cryptoV2 = false),
+            CommitToGenerationTransaction.mkPopSignature(honestKp, periodStart, sender.publicKey, AddressScheme.current.chainId),
             AddressScheme.current.chainId
           )
           .explicitGet()

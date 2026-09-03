@@ -37,15 +37,7 @@ import play.api.libs.json.{JsObject, JsValue}
   * pure DRY cleanup with no functional or security change -- deliberately not done. Flagging per this
   * plan's standing rule rather than silently skipping.
   */
-/** @param cryptoV2 Audit M2: whether feature 30 (`BlockchainFeatures.BlsCryptoV2`) is supported at the
-  *   height a CommitToGeneration transaction signed here is expected to actually be validated at --
-  *   NOT necessarily the current live tip. Callers derive this the same way they derive
-  *   `currentPeriod`: `TransactionsApiRoute` from `blockchain.supportsBlsCryptoV2`, `UtilApp`'s
-  *   offline signer from its explicit `--height`/`--finality-activation-height` CLI options (it has
-  *   no live `Blockchain` to ask). Only consumed by `commitToGeneration`'s auto-sign path
-  *   (`CommitToGenerationRequest.toTxFrom`); every other transaction type ignores it.
-  */
-class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[GenerationPeriod], cryptoV2: Boolean = false) {
+class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[GenerationPeriod]) {
   def transferAsset(request: TransferRequest): Either[ValidationError, TransferTransaction] =
     for {
       _  <- Either.cond(request.sender.nonEmpty, (), GenericError("invalid.sender"))
@@ -310,7 +302,7 @@ class TransactionFactory(wallet: Wallet, time: Time, currentPeriod: Option[Gener
         case None         => Left(GenericError("invalid.sender"))
       }
       signer <- wallet.findPrivateKey(signerAddress)
-      tx     <- request.toTxFrom(sender.publicKey, BlsKeyPair(signer.privateKey), defaultPeriod.start, time.correctedTime(), cryptoV2)
+      tx     <- request.toTxFrom(sender.publicKey, BlsKeyPair(signer.privateKey), defaultPeriod.start, time.correctedTime())
     } yield tx.signWith(signer.privateKey)
   }
 

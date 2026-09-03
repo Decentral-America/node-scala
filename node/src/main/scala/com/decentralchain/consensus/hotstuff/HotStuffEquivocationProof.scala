@@ -36,16 +36,7 @@ case class HotStuffEquivocationProof(voteA: HotStuffVote, voteB: HotStuffVote) {
 
   /** Verify both signatures against the named voter's BLS key, over the SAME canonical bytes real
     * votes sign (`HotStuffQuorum.voteMessage`) — never a reimplementation of the message format.
-    *
-    * `dst` is supplied by the CALLER, never hardcoded here or defaulted, because it is a function of
-    * the PROOF'S CONTAINING BLOCK, not of the proof itself (Task 8, fixing the gap left by Task 7
-    * `ed0fbcb69c`: real votes hard-switch to `_HSVOTE_` once feature 30 activates, so a proof's two
-    * embedded votes must be verified under whichever DST was live when they were cast). Block-carried
-    * callers (`state/appender/package.scala`'s `validateHotStuffEquivocationProofs`) MUST derive it
-    * from `HotStuffQuorum.voteDst(blockchain.supportsBlsCryptoV2(containingBlockHeight))` using the
-    * containing block's height — never the live tip — so verification stays deterministic across
-    * consensus replay/rollback. Local-only callers (`HotStuffCoordinator.onVote`'s detection path) may
-    * use their own live `cryptoV2` provider since that's observability, not consensus validation.
+    * `dst` is supplied by the caller (`HotStuffQuorum.VoteDst`), never hardcoded here.
     */
   def signaturesValid(blsKeyOf: Int => Option[BlsPublicKey], dst: String): Either[String, Unit] = for {
     pk <- blsKeyOf(voterIndex).toRight(s"equivocation proof voter index $voterIndex outside committee")

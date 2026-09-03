@@ -8,22 +8,16 @@ import java.nio.charset.StandardCharsets
 import scala.util.control.NonFatal
 
 object BlsUtils {
-  /** LEGACY domain-separation tag. Non-standard for a PoP (`_NUL_`, not `_POP_`) and shared across
-    * all three signed message types -- exactly audit finding H2. It is kept HERE FOREVER and MUST
-    * NOT be deleted, renamed, or repurposed: every PoP, endorsement, and aggregated endorsement
-    * already on chain was produced under it, and block replay / rollback across the feature-30
-    * activation height re-verifies those bytes. Removing it would be a chain split, not a cleanup.
+  /** Per-context domain-separation tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash
+    * domain per signed message type, so a signature produced in one context is worthless in another
+    * BY DOMAIN rather than by the accidental "the three encodings happen to have distinct lengths"
+    * reasoning H2 flags as a latent trap. Unconditional from genesis: mainnet never activated
+    * feature 25 (no HotStuff history exists under any other tag), so there is no legacy chain bytes
+    * to preserve.
     */
-  val BlsDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
-
-  /** Per-context v2 tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash domain per signed
-    * message type, so a signature produced in one context is worthless in another BY DOMAIN rather
-    * than by the accidental "the three encodings happen to have distinct lengths" reasoning H2
-    * flags as a latent trap. Activated on chain by `BlockchainFeatures.BlsCryptoV2` (feature 30).
-    */
-  val BlsPopDomainSeparationTagV2     = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
-  val BlsEndorseDomainSeparationTagV2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
-  val BlsHsVoteDomainSeparationTagV2  = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
+  val BlsPopDomainSeparationTag     = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+  val BlsEndorseDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
+  val BlsHsVoteDomainSeparationTag  = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
 
   private val BlsKeyGenSalt = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
 
@@ -72,7 +66,7 @@ object BlsUtils {
 
   def mkBlsPublicKey(sk: blst.SecretKey): Array[Byte] = new blst.P1(sk).compress()
 
-  def signBasic(sk: blst.SecretKey, message: Array[Byte], dst: String = BlsDomainSeparationTag): Array[Byte] =
+  def signBasic(sk: blst.SecretKey, message: Array[Byte], dst: String): Array[Byte] =
     new blst.P2()
       .hash_to(message, dst, Array.emptyByteArray)
       .sign_with(sk)
@@ -85,7 +79,7 @@ object BlsUtils {
       blsSigBytes: Array[Byte],
       message: Array[Byte],
       blsPkBytes: Array[Byte],
-      dst: String = BlsDomainSeparationTag
+      dst: String
   ): Either[String, Unit] =
     verify(blsSigBytes, message, new blst.P1_Affine(blsPkBytes), dst)
 
@@ -148,7 +142,7 @@ object BlsUtils {
       aggSigBytes: Array[Byte],
       message: Array[Byte],
       blsPks: Iterable[Array[Byte]],
-      dst: String = BlsDomainSeparationTag
+      dst: String
   ): Either[String, Unit] = for {
     _     <- Either.raiseWhen(blsPks.isEmpty)(ErrEmptyPublicKeyList)
     _     <- Either.raiseUnless(blsPks.map(_.toSeq).toSet.size == blsPks.size)(ErrDuplicatePublicKeys)

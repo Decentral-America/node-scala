@@ -65,7 +65,7 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
 
   private def voteOf(i: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(5, PREPARE, block, height)
-    HotStuffVote(5, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
+    HotStuffVote(5, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr)
   }
 
   "the ORIGINAL committee" should "confirm 60-of-100 stake does NOT reach its own 2/3 quorum (sanity check on the numbers)" in {
@@ -82,41 +82,41 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
 
   "HotStuffVotePool.onVote, when the committee SHRINKS between two votes for the SAME target" should
     "NOT emit a QC using stake below the quorum required by the committee active when accumulation started" in {
-      val (afterFirst, qcAfterFirst) = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4, cryptoV2 = false)
+      val (afterFirst, qcAfterFirst) = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4)
       qcAfterFirst should be(None)
 
       // Generator 3 is removed before vote(1) arrives -- exactly what HotStuffCoordinator.refreshCommittee()
       // would hand to onVote in production, since it re-reads committeeProvider() fresh on every event.
-      val (_, qcAfterSecond) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf3AfterRemoval, cryptoV2 = false)
+      val (_, qcAfterSecond) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf3AfterRemoval)
 
       qcAfterSecond should be(None)
     }
 
   "HotStuffVotePool.onVote, when the committee GROWS between votes for the SAME target" should
     "NOT emit a QC representing less than 2/3 of the CURRENT (grown) committee's stake" in {
-      val (afterFirst, _)  = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4, cryptoV2 = false)
-      val (afterSecond, _) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf4, cryptoV2 = false)
+      val (afterFirst, _)  = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4)
+      val (afterSecond, _) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf4)
 
       // {0,1} = 60 stake already meets the ORIGINAL committee's 67-of-100... no wait, 60 < 67, so a
       // third vote is needed under the original committee. Add it, THEN grow the committee, then check
       // that quorum (now judged against the grown committee too) correctly fails to complete on a 4th
       // vote that would otherwise have been enough for the pre-growth committee alone.
-      val (_, qcAfterThird) = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4, cryptoV2 = false)
+      val (_, qcAfterThird) = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4)
       // {0,1,2} = 80 stake, clears the original committee's 67 threshold.
       qcAfterThird.isDefined should be(true)
-      HotStuffQuorum.verifyQC(qcAfterThird.get, committeeOf4, cryptoV2 = false) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcAfterThird.get, committeeOf4) should be(Right(()))
     }
 
   "HotStuffVotePool.onVote, when the committee GROWS mid-accumulation before quorum is reached" should
     "require the LARGER (grown) threshold too, not just the original one" in {
-      val (afterFirst, qcAfterFirst) = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4, cryptoV2 = false)
+      val (afterFirst, qcAfterFirst) = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4)
       qcAfterFirst should be(None)
 
       // Generator 3's stake grows massively before vote(1)/vote(2) arrive.
-      val (afterSecond, qcAfterSecond) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf4AfterGrowth, cryptoV2 = false)
+      val (afterSecond, qcAfterSecond) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf4AfterGrowth)
       qcAfterSecond should be(None) // {0,1}=60, nowhere near either committee's threshold yet
 
-      val (_, qcAfterThird) = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4AfterGrowth, cryptoV2 = false)
+      val (_, qcAfterThird) = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4AfterGrowth)
       // {0,1,2} = 80 stake: clears the ORIGINAL committee's 67 threshold (a naive "pin to first seen"
       // fix would emit a QC here), but does NOT clear the GROWN committee's 254 threshold, which was
       // also live during this target's accumulation. The correct, safe answer is: no QC yet.
@@ -137,20 +137,20 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
       // not in C1), and formQC rejects the ENTIRE set (Left) forever -> no QC ever forms, even though
       // {0,1,2} is a trivially-safe quorum. The fix filters the bucket against the live committee on
       // each vote, evicting vote(3) the moment C1 takes effect.
-      val (afterV3, qc3) = HotStuffVotePool.onVote(VotePool(), voteOf(3), equalC0, cryptoV2 = false)
+      val (afterV3, qc3) = HotStuffVotePool.onVote(VotePool(), voteOf(3), equalC0)
       qc3 should be(None)
-      val (afterV0, qc0) = HotStuffVotePool.onVote(afterV3, voteOf(0), equalC0, cryptoV2 = false)
+      val (afterV0, qc0) = HotStuffVotePool.onVote(afterV3, voteOf(0), equalC0)
       qc0 should be(None) // {3,0} = 50 stake under C0, below 67
 
       // Generator 3 removed. vote(1) arrives under C1: bucket {3,0,1} filters to {0,1} (3 evicted).
-      val (afterV1, qc1) = HotStuffVotePool.onVote(afterV0, voteOf(1), equalC1, cryptoV2 = false)
+      val (afterV1, qc1) = HotStuffVotePool.onVote(afterV0, voteOf(1), equalC1)
       qc1 should be(None) // {0,1} = 50 stake: clears C1's 50 but NOT C0's 67 (all-snapshots gate)
 
       // vote(2) arrives under C1: {0,1,2} = 75 stake clears BOTH C0's 67 and C1's 50 -> QC forms.
-      val (afterV2, qc2) = HotStuffVotePool.onVote(afterV1, voteOf(2), equalC1, cryptoV2 = false)
+      val (afterV2, qc2) = HotStuffVotePool.onVote(afterV1, voteOf(2), equalC1)
       qc2.isDefined should be(true)                                 // stall is closed: a QC does form
       qc2.get.signerIndexes.sorted should be(Seq(0, 1, 2))          // and the removed signer 3 is NOT in it
-      HotStuffQuorum.verifyQC(qc2.get, equalC1, cryptoV2 = false) should be(Right(()))
+      HotStuffQuorum.verifyQC(qc2.get, equalC1) should be(Right(()))
       afterV2.pending should be(empty)                              // bucket cleared on emit
     }
 
@@ -160,11 +160,11 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
       // where onQC re-verifies via HotStuffQuorum.verifyQC(qc, state.committee) using a freshly-refreshed
       // committee. Since no committee change happens here between formation and this check, the QC must
       // verify -- a node must never form and broadcast a QC it would immediately reject itself.
-      val (afterFirst, _)  = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4, cryptoV2 = false)
-      val (afterSecond, _) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf4, cryptoV2 = false)
-      val (_, qc)          = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4, cryptoV2 = false)
+      val (afterFirst, _)  = HotStuffVotePool.onVote(VotePool(), voteOf(0), committeeOf4)
+      val (afterSecond, _) = HotStuffVotePool.onVote(afterFirst, voteOf(1), committeeOf4)
+      val (_, qc)          = HotStuffVotePool.onVote(afterSecond, voteOf(2), committeeOf4)
 
       qc.isDefined should be(true)
-      HotStuffQuorum.verifyQC(qc.get, committeeOf4, cryptoV2 = false) should be(Right(()))
+      HotStuffQuorum.verifyQC(qc.get, committeeOf4) should be(Right(()))
     }
 }

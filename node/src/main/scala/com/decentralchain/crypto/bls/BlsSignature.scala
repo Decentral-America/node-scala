@@ -14,8 +14,7 @@ object BlsSignature {
     def base58: String   = byteStr.toString
 
     /** `dst` is DELIBERATELY not defaulted (audit H2): every caller must name its signing context,
-      * so adding a new signed message type is a compile error until its domain is chosen. Pass
-      * `BlsUtils.BlsDomainSeparationTag` explicitly on pre-activation/legacy paths.
+      * so adding a new signed message type is a compile error until its domain is chosen.
       */
     def verifyBasic(message: Array[Byte], blsPk: BlsPublicKey, dst: String): Either[String, Unit] =
       BlsUtils.verifyBasic(byteStr.arr, message, blsPk.arr, dst)

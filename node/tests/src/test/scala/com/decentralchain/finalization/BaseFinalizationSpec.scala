@@ -28,15 +28,13 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
       idx: GeneratorIndex,
       endorsedId: BlockId,
       finalizedHeight: Height = GenesisBlockHeight,
-      finalizedId: BlockId = TxHelpers.randomBlockId,
-      cryptoV2: Boolean = false
+      finalizedId: BlockId = TxHelpers.randomBlockId
   ): BlockEndorsement = BlockEndorsement.signed(
     BlsKeyPair(dccAcc.privateKey),
     idx,
     finalizedId,
     finalizedHeight = finalizedHeight,
-    endorsedId = endorsedId,
-    cryptoV2 = cryptoV2
+    endorsedId = endorsedId
   )
 
   protected def bs(height: Int, regularBalance: Long, deposits: Int = 0): BalanceSnapshot =
@@ -48,22 +46,18 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
         idx: GeneratorIndex,
         endorsedId: BlockId,
         finalizedHeight: Height = GenesisBlockHeight,
-        finalizedId: BlockId = TxHelpers.randomBlockId,
-        cryptoV2: Boolean = false
+        finalizedId: BlockId = TxHelpers.randomBlockId
     ): FinalizationVoting =
-      self.copy(conflict = self.conflict :+ mkConflictEndorsement(dccAcc, idx, endorsedId, finalizedHeight, finalizedId, cryptoV2))
+      self.copy(conflict = self.conflict :+ mkConflictEndorsement(dccAcc, idx, endorsedId, finalizedHeight, finalizedId))
 
-    def signed(endorsedId: BlockId, finalizedId: BlockId, validEndorsers: KeyPair*): FinalizationVoting = signed(endorsedId, finalizedId, cryptoV2 = false, validEndorsers*)
-
-    def signed(endorsedId: BlockId, finalizedId: BlockId, cryptoV2: Boolean, validEndorsers: KeyPair*): FinalizationVoting = {
+    def signed(endorsedId: BlockId, finalizedId: BlockId, validEndorsers: KeyPair*): FinalizationVoting = {
       val aggSig = validEndorsers
         .map { kp =>
           BlockEndorsement.sign(
             BlsKeyPair(kp.privateKey),
             finalizedId = finalizedId,
             finalizedHeight = GenesisBlockHeight,
-            endorsedId = endorsedId,
-            cryptoV2 = cryptoV2
+            endorsedId = endorsedId
           )
         }
         .foldLeft(Option.empty[BlsSignature]) {

@@ -24,9 +24,9 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
 
   private val message = "assertion".getBytes()
 
-  private val sig1 = signBasic(privateKey1, message)
-  private val sig2 = signBasic(privateKey2, message)
-  private val sig3 = signBasic(privateKey3, message)
+  private val sig1 = signBasic(privateKey1, message, BlsPopDomainSeparationTag)
+  private val sig2 = signBasic(privateKey2, message, BlsPopDomainSeparationTag)
+  private val sig3 = signBasic(privateKey3, message, BlsPopDomainSeparationTag)
 
   "aggregation in verifyAgg" - {
     "rejects a duplicated public key even when the signature aggregate matches it (audit M4)" in {
@@ -38,20 +38,20 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       // must be rejected rather than silently accepted or de-duplicated.
       val aggSig = BlsUtils.aggSign(BlsUtils.aggSign(sig1, sig2).value, sig1).value
 
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1)) shouldBe a[Left[?, ?]]
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Left[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2, publicKey1), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
     }
 
     "different order of signatures and keys" in {
       val aggSig = BlsUtils.aggSign(sig1, sig2).value
 
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1)) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1), BlsPopDomainSeparationTag) shouldBe a[Right[?, ?]]
     }
 
     "associativity" in {
       val aggSig = Seq(sig1, sig2, sig3).reduceLeft((a, b) => BlsUtils.aggSign(a, b).value)
 
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1, publicKey3)) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey2, publicKey1, publicKey3), BlsPopDomainSeparationTag) shouldBe a[Right[?, ?]]
     }
 
     // audit L1: aggSign must fail closed (Left), never throw, on malformed input.
@@ -71,13 +71,13 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     val zeroSk  = mkDegenerateSecretKey()
     val zeroPk  = new blst.P1(zeroSk)
     val zeroSig = new blst.P2()
-      .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
+      .hash_to(message, BlsPopDomainSeparationTag, Array.emptyByteArray)
       .sign_with(zeroSk)
 
     val okSk  = BlsUtils.mkBlsSecretKey(Array.fill[Byte](32)(0))
     val okPk  = new blst.P1(okSk)
     val okSig = new blst.P2()
-      .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
+      .hash_to(message, BlsPopDomainSeparationTag, Array.emptyByteArray)
       .sign_with(okSk)
 
     "can't create pk from zero bytes" in {
@@ -101,16 +101,16 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
 
     "zeroSig not verified" - {
       "by zeroPk" in {
-        BlsUtils.verifyBasic(zeroSig.serialize(), message, zeroPk.serialize()) shouldBe a[Left[?, ?]]
+        BlsUtils.verifyBasic(zeroSig.serialize(), message, zeroPk.serialize(), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
       }
 
       "by okPk" in {
-        BlsUtils.verifyBasic(zeroSig.serialize(), message, okPk.serialize()) shouldBe a[Left[?, ?]]
+        BlsUtils.verifyBasic(zeroSig.serialize(), message, okPk.serialize(), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
       }
     }
 
     "okSig not verified by zeroPk" in {
-      BlsUtils.verifyBasic(okSig.serialize(), message, zeroPk.serialize()) shouldBe a[Left[?, ?]]
+      BlsUtils.verifyBasic(okSig.serialize(), message, zeroPk.serialize(), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
     }
 
     "aggregated pk" - {
@@ -135,7 +135,7 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
 
     "aggSig verification with zeroSk" in {
       val aggSig = okSig.dup().add(zeroSig)
-      BlsUtils.verifyAgg(aggSig.serialize(), message, Seq(okPk.serialize(), zeroPk.serialize())) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyAgg(aggSig.serialize(), message, Seq(okPk.serialize(), zeroPk.serialize()), BlsPopDomainSeparationTag) shouldBe a[Right[?, ?]]
     }
   }
 
@@ -214,7 +214,7 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       // Pairing.aggregate() specifically returns BLST_PK_IS_INFINITY (not BLST_SUCCESS) when the
       // public key is the point at infinity.
       val infinityPk = new blst.P1(mkDegenerateSecretKey())
-      val ctx        = new blst.Pairing(true, BlsDomainSeparationTag)
+      val ctx        = new blst.Pairing(true, BlsPopDomainSeparationTag)
       val aggResult  = ctx.aggregate(
         new blst.P1_Affine(infinityPk.compress()),
         new blst.P2_Affine(sig1),
@@ -229,7 +229,7 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       // to Left before ever reaching ctx.commit()/ctx.finalverify() -- the discarded-error-code /
       // bare-Boolean-return gap this section originally targeted is closed.
       val infinityPk = new blst.P1(mkDegenerateSecretKey())
-      BlsUtils.verifyBasic(sig1, message, infinityPk.compress()) shouldBe a[Left[?, ?]]
+      BlsUtils.verifyBasic(sig1, message, infinityPk.compress(), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
     }
   }
 
@@ -241,7 +241,7 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
     "rejects an aggregate that sums to the point at infinity (pk + (-pk))" in {
       // publicKey1's negation, compressed: on-curve, in-group, but pk1 + (-pk1) == infinity.
       val negPk1 = new blst.P1(publicKey1).neg().compress()
-      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, negPk1)) shouldBe a[Left[?, ?]]
+      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, negPk1), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
     }
 
     "rejects a public key that is on-curve but not in the correct subgroup" in {
@@ -258,12 +258,12 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
       val candidate = new blst.P1_Affine(notInGroupPkBytes)
       assume(candidate.on_curve(), "test fixture must be on-curve to be a meaningful probe")
       assume(!candidate.in_group(), "test fixture must actually be outside the subgroup to be meaningful")
-      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, notInGroupPkBytes)) shouldBe a[Left[?, ?]]
+      BlsUtils.verifyAgg(sig1, message, Seq(publicKey1, notInGroupPkBytes), BlsPopDomainSeparationTag) shouldBe a[Left[?, ?]]
     }
 
     "still verifies an honest aggregate (no regression)" in {
       val aggSig = BlsUtils.aggSig(Seq(sig1, sig2)).value
-      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2)) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyAgg(aggSig, message, Seq(publicKey1, publicKey2), BlsPopDomainSeparationTag) shouldBe a[Right[?, ?]]
     }
   }
 
@@ -304,52 +304,55 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
   private def mkRandomSecretKey(): SecretKey = mkBlsSecretKey(mkRandomDccKeyPair().privateKey.arr)
   private def mkRandomDccKeyPair(): KeyPair  = KeyPair(Array.fill(32)(ThreadLocalRandom.current().nextInt().toByte))
 
-  // --- H2 (audit): per-context domain separation. The three v2 tags must be pairwise distinct AND
+  // --- H2 (audit): per-context domain separation. The three tags must be pairwise distinct AND
   // pairwise non-interchangeable at verification time. This is the 3x3 matrix the audit asks for:
   // a signature produced in each context must fail verification in the other two, and must fail
   // BY DOMAIN -- not because the messages happen to have different lengths (the accidental,
   // encoding-coincidence protection H2 calls a latent trap). We therefore sign THE SAME BYTES
   // under each tag, so length can play no part.
   "per-context DSTs (audit H2)" - {
-    val v2Tags = Seq(
-      "POP"    -> BlsUtils.BlsPopDomainSeparationTagV2,
-      "ENDORSE" -> BlsUtils.BlsEndorseDomainSeparationTagV2,
-      "HSVOTE"  -> BlsUtils.BlsHsVoteDomainSeparationTagV2
+    val tags = Seq(
+      "POP"     -> BlsUtils.BlsPopDomainSeparationTag,
+      "ENDORSE" -> BlsUtils.BlsEndorseDomainSeparationTag,
+      "HSVOTE"  -> BlsUtils.BlsHsVoteDomainSeparationTag
     )
 
-    "the four tags are pairwise distinct" in {
-      val all = BlsUtils.BlsDomainSeparationTag +: v2Tags.map(_._2)
+    "the three tags are pairwise distinct" in {
+      val all = tags.map(_._2)
       all.distinct.size shouldBe all.size
     }
 
-    "each v2 tag keeps the legacy suite prefix so the ciphersuite is unchanged" in {
-      v2Tags.foreach { case (_, t) => t should startWith("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_") }
+    // With the legacy tag gone, nothing else in this codebase pins these three exact strings --
+    // a typo here would be a silent, uncaught chain-identity change. Assert each tag literally
+    // equals its expected string, not merely "looks plausible."
+    "each surviving tag literally equals its expected string and shares the ciphersuite prefix" in {
+      BlsUtils.BlsPopDomainSeparationTag shouldBe "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+      BlsUtils.BlsEndorseDomainSeparationTag shouldBe "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
+      BlsUtils.BlsHsVoteDomainSeparationTag shouldBe "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
+      tags.foreach { case (_, t) => t should startWith("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_") }
     }
 
-    "3x3 basic-verify matrix: a signature verifies under its own DST and no other" in {
+    "3x3 basic-verify matrix: a signature verifies under its own DST and fails under the other two" in {
       val fixedMessage = "identical-bytes-in-every-context".getBytes(StandardCharsets.UTF_8)
-      v2Tags.foreach { case (signLabel, signTag) =>
+      tags.foreach { case (signLabel, signTag) =>
         val sig = BlsUtils.signBasic(privateKey1, fixedMessage, signTag)
-        v2Tags.foreach { case (verifyLabel, verifyTag) =>
+        tags.foreach { case (verifyLabel, verifyTag) =>
           val result = BlsUtils.verifyBasic(sig, fixedMessage, publicKey1, verifyTag)
           withClue(s"signed under $signLabel, verified under $verifyLabel: ") {
             if (signLabel == verifyLabel) result shouldBe a[Right[?, ?]]
             else result shouldBe a[Left[?, ?]]
           }
         }
-        withClue(s"signed under $signLabel, verified under LEGACY: ") {
-          BlsUtils.verifyBasic(sig, fixedMessage, publicKey1, BlsUtils.BlsDomainSeparationTag) shouldBe a[Left[?, ?]]
-        }
       }
     }
 
-    "3x3 aggregate-verify matrix: an aggregate verifies under its own DST and no other" in {
+    "3x3 aggregate-verify matrix: an aggregate verifies under its own DST and fails under the other two" in {
       val fixedMessage = "identical-bytes-in-every-context".getBytes(StandardCharsets.UTF_8)
-      v2Tags.foreach { case (signLabel, signTag) =>
+      tags.foreach { case (signLabel, signTag) =>
         val agg = BlsUtils
           .aggSig(Seq(BlsUtils.signBasic(privateKey1, fixedMessage, signTag), BlsUtils.signBasic(privateKey2, fixedMessage, signTag)))
           .value
-        v2Tags.foreach { case (verifyLabel, verifyTag) =>
+        tags.foreach { case (verifyLabel, verifyTag) =>
           val result = BlsUtils.verifyAgg(agg, fixedMessage, Seq(publicKey1, publicKey2), verifyTag)
           withClue(s"agg signed under $signLabel, verified under $verifyLabel: ") {
             if (signLabel == verifyLabel) result shouldBe a[Right[?, ?]]
@@ -357,13 +360,6 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
           }
         }
       }
-    }
-
-    "the legacy tag remains the BlsUtils-level default, so pre-activation bytes keep verifying" in {
-      val legacySig = BlsUtils.signBasic(privateKey1, message)
-      BlsUtils.verifyBasic(legacySig, message, publicKey1) shouldBe a[Right[?, ?]]
-      BlsUtils.verifyBasic(legacySig, message, publicKey1, BlsUtils.BlsDomainSeparationTag) shouldBe a[Right[?, ?]]
-      BlsUtils.verifyBasic(legacySig, message, publicKey1, BlsUtils.BlsPopDomainSeparationTagV2) shouldBe a[Left[?, ?]]
     }
   }
 }

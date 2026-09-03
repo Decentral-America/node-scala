@@ -308,17 +308,6 @@ object Blockchain {
 
     def supportsFinalizationVoting(height: Int = blockchain.height): Boolean =
       blockchain.featureActivationHeight(BlockchainFeatures.DeterministicFinality).exists(Height(height) >= _)
-
-    /** Audit H2/M2. Mirrors [[supportsFinalizationVoting]] deliberately: the height is an EXPLICIT
-      * parameter so every consensus-replayed caller can pass the CONTAINING BLOCK's height rather
-      * than the live tip. Passing the tip here would make PoP / endorsement verification depend on
-      * when a node happens to validate a block, which is a rollback-determinism bug (a block that
-      * verified during initial append would fail on replay after a rollback across the activation
-      * height, and vice versa). Off-chain-only callers (p2p endorsement gossip, HotStuff votes) may
-      * legitimately use the default.
-      */
-    def supportsBlsCryptoV2(height: Int = blockchain.height): Boolean =
-      blockchain.featureActivationHeight(BlockchainFeatures.BlsCryptoV2).exists(Height(height) >= _)
   }
 
   def finalizedHeightOrFallback(at: Height, latestFinalized: Option[Height], maxRollbackLength: Int): Height = {

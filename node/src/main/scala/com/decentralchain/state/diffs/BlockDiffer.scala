@@ -611,17 +611,8 @@ object BlockDiffer {
     * reconcile, and therefore no reason to skip. Validating unconditionally closes the hole at zero
     * parity cost, on both the block and microblock snapshot paths.
     *
-    * ==Feature 30 (`BlsCryptoV2`) gating (audit M2)==
-    *
-    * The PoP check below is gated on `blockchain.supportsBlsCryptoV2(blockchain.height)`. On the
-    * key-block path `blockchain` is `blockchainWithNewBlock` -- the `SnapshotBlockchain` that already
-    * includes the block under validation -- and on the microblock path it is the containing key
-    * block's chain; in both cases `.height` IS the containing block's height, which is the only
-    * rollback-deterministic gate source (a live tip would let the same block validate differently
-    * depending on when it happens to be replayed, across the activation height). This mirrors
-    * `CommitToGenerationTransactionDiff` exactly, and both sites must stay gated together: guarding
-    * only one just moves the attack, exactly as the "Why this validates UNCONDITIONALLY" section
-    * above argues for skip-avoidance in general.
+    * The PoP check below (chain/sender-bound message, per-context DST -- audit M2/H2) is
+    * unconditional and mirrors `CommitToGenerationTransactionDiff` exactly.
     */
   private def validateCommitmentsOnSnapshotPath(
       blockchain: Blockchain,
@@ -634,13 +625,6 @@ object BlockDiffer {
         .toRight(ActivationError("DeterministicFinality is not yet activated"))
         .flatMap { current =>
           val next = current.next
-          // Gated on `blockchain.height`, hoisted once since it is constant for this block: on the
-          // key-block path `blockchain` is `blockchainWithNewBlock`, on the microblock path it is the
-          // containing key block's chain -- in both cases `.height` IS the containing block's height,
-          // which is the only rollback-deterministic gate source (see `supportsBlsCryptoV2`'s
-          // scaladoc). Reading a live tip instead would break rollback determinism across the
-          // activation height, exactly as in `CommitToGenerationTransactionDiff`.
-          val cryptoV2 = blockchain.supportsBlsCryptoV2(blockchain.height)
           // `seen` starts from the keys already committed for the next period and grows as we walk
           // this block, so a duplicate *within* a single block is rejected too. The fold stops at
           // the first failure: PoP verification is a pairing check, and a rejected block must not
@@ -658,9 +642,9 @@ object BlockDiffer {
                       .verifyBasic(
                         tx.commitmentSignature.arr,
                         CommitToGenerationTransaction
-                          .popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2),
+                          .popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart),
                         tx.endorserPublicKey.arr,
-                        CommitToGenerationTransaction.popDst(cryptoV2)
+                        CommitToGenerationTransaction.PopDst
                       )
                       .isRight
                   )(GenericError("Invalid commitment signature"))

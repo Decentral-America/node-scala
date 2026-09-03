@@ -51,8 +51,7 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
       voterIndex,
       TxHelpers.randomBlockId,
       finalizedHeight = GenesisBlockHeight,
-      endorsedId = TxHelpers.randomBlockId,
-      cryptoV2 = false
+      endorsedId = TxHelpers.randomBlockId
     )
   }
 

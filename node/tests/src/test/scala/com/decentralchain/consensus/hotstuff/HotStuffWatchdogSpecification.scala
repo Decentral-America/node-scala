@@ -177,7 +177,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
 
       def voteFor(view: Int, phase: io.decentralchain.protobuf.block.HotStuffPhase, blockId: BlockId, height: Int, idx: Int) = {
         val msg = HotStuffQuorum.voteMessage(view, phase, blockId, height)
-        com.decentralchain.network.HotStuffVote(view, phase, blockId, com.decentralchain.state.Height(height), idx, kps(idx).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
+        com.decentralchain.network.HotStuffVote(view, phase, blockId, com.decentralchain.state.Height(height), idx, kps(idx).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr)
       }
 
       // View 0: propose+self-vote b1 (node 0 is self here per myVoterIndexes but only votes for idx it

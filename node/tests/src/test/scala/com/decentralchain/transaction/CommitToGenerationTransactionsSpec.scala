@@ -137,7 +137,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val withPop = baseTx.copy(
           endorserPublicKey = blsKp.publicKey,
           commitmentSignature =
-            CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart, baseTx.sender, baseTx.chainId, cryptoV2 = false)
+            CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart, baseTx.sender, baseTx.chainId)
         )
 
         withPop.copy(proofs = Proofs(crypto.sign(sender.privateKey, withPop.bodyBytes())))
@@ -189,7 +189,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
           .commitToGeneration(periodStart, newGenerator)
           .copy(commitmentSignature =
             CommitToGenerationTransaction
-              .mkPopSignature(otherGeneratorKp, periodStart, newGenerator.publicKey, AddressScheme.current.chainId, cryptoV2 = false)
+              .mkPopSignature(otherGeneratorKp, periodStart, newGenerator.publicKey, AddressScheme.current.chainId)
           )
         val signedTx = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))
 
@@ -206,9 +206,9 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     blsKp.publicKey.byteStr.base64Raw shouldBe "jrugi0W0es2WxuHoptQtchqwactZsldOGucYObZrEIOpxbWmhL8dodvpnzA+2qUf"
 
     CommitToGenerationTransaction
-      .mkPopSignature(blsKp, Height(1001), origTx.sender, AddressScheme.current.chainId, cryptoV2 = false)
+      .mkPopSignature(blsKp, Height(1001), origTx.sender, AddressScheme.current.chainId)
       .byteStr
       .base64Raw shouldBe
-      "sOlLZL2RZZ3c98PmUvKSN960aj+VJwyVGEUygI78mGDwGJflJWLHCwuqiYk1fRG7FOCJKOtKbKOG7tBykQ5iTcRu+7eLWhiodJw47YEfDOZHNwkl8dQwgxAam8+3BEvX"
+      "mLmqbXwT4ONFAEuZKmSh1O157eKmFoJP6HeWgaFMVcXUNztKrvohPDN5SxvQ552mAaLAy/tWiD6ICqGZ97BSrBYePaKAYcvukoH6bKRxEDVtAk/daGrn2/9+2PJsPGf2"
   }
 }
