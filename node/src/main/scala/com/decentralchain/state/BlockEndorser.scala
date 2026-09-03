@@ -194,7 +194,7 @@ object BlockEndorser {
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
         endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
-        msg <- castVote(
+        msg                 <- castVote(
           votingHeight,
           endorsedHeight,
           endorsedBlockHeader.id(),
@@ -215,7 +215,7 @@ object BlockEndorser {
       val endorsedHeight          = votingHeight
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader <- blockchain.blockHeader(votingHeight.toInt).toSeq
-        msg <- castVote(
+        msg               <- castVote(
           votingHeight,
           endorsedHeight,
           votingBlockHeader.id(),

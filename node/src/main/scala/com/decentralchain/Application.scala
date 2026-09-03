@@ -121,7 +121,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   // `detectedEquivocations` once it exists, inside the `hotstuff.enabled` block.
   @volatile
   private var hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
-  private val (blockchainUpdater, rocksDB)  =
+  private val (blockchainUpdater, rocksDB)                                =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
   private val messageObserver = new MessageObserver
@@ -539,7 +539,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
             // the chain has already acted on. Runs once per appended key block (height increment), the
             // same cadence this subscription already drives the coordinator's leader turn on.
             hsCoordinator.pruneEquivocations(
-              idx => blockchainUpdater.currentGenerationPeriod.exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
+              idx =>
+                blockchainUpdater.currentGenerationPeriod
+                  .exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
               blockchainUpdater.currentGenerationPeriod.fold(0)(_.index)
             )
             // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,

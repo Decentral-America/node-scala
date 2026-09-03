@@ -57,9 +57,8 @@ class CommitToGenerationPopV2Spec extends FreeSpec with WithDomain {
       val crossChainTx  = TxHelpers
         .commitToGeneration(periodStart, sender)
         .copy(commitmentSignature = crossChainSig)
-      val resigned = crossChainTx.copy(proofs =
-        com.decentralchain.transaction.Proofs(com.decentralchain.crypto.sign(sender.privateKey, crossChainTx.bodyBytes()))
-      )
+      val resigned =
+        crossChainTx.copy(proofs = com.decentralchain.transaction.Proofs(com.decentralchain.crypto.sign(sender.privateKey, crossChainTx.bodyBytes())))
       d.appendBlockE(resigned) should produce("Invalid commitment signature")
     }
   }
@@ -76,7 +75,16 @@ class CommitToGenerationPopV2Spec extends FreeSpec with WithDomain {
       // PoP minted binding sender A's pubkey, transaction submitted with sender = B -- rejected.
       val liftedSig = CommitToGenerationTransaction.mkPopSignature(endorserKp, periodStart, sender.publicKey, chainId)
       val liftedTx  = CommitToGenerationTransaction
-        .selfSigned(TxVersion.V1, senderB, endorserKp.publicKey, periodStart, TxHelpers.timestamp, TestValues.commitToGenerationFee, liftedSig, chainId)
+        .selfSigned(
+          TxVersion.V1,
+          senderB,
+          endorserKp.publicKey,
+          periodStart,
+          TxHelpers.timestamp,
+          TestValues.commitToGenerationFee,
+          liftedSig,
+          chainId
+        )
         .explicitGet()
       d.appendBlockE(liftedTx) should produce("Invalid commitment signature")
     }

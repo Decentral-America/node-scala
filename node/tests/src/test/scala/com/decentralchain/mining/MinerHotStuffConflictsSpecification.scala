@@ -131,10 +131,14 @@ class MinerHotStuffConflictsSpecification extends AnyFreeSpec with Matchers {
     }
 
     "8. enabled, proof for voter N + voting=Some(fv with conflict endorsement by N) => proof filtered out, fv otherwise unchanged" in {
-      val n = 2
-      val p = proof(n)
+      val n           = 2
+      val p           = proof(n)
       val conflictSig = BlsSignature(
-        ByteStr.decodeBase58("RNMTkL736x3TmXfjQufKnxSgySaaoec3WYnxmujcum9BHEmCdjmwvjoUehghqYCWJcNj5CNfb9QdnujV9o2DRitbLgq2bnLdTU5s1DLBWBkVx8mBayvdfx7rPZ3mtUWeh5L").get
+        ByteStr
+          .decodeBase58(
+            "RNMTkL736x3TmXfjQufKnxSgySaaoec3WYnxmujcum9BHEmCdjmwvjoUehghqYCWJcNj5CNfb9QdnujV9o2DRitbLgq2bnLdTU5s1DLBWBkVx8mBayvdfx7rPZ3mtUWeh5L"
+          )
+          .get
       ).explicitGet()
       val conflictingN = BlockEndorsement(
         endorserIndex = GeneratorIndex(n),

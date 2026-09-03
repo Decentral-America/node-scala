@@ -52,11 +52,11 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
         case v: HotStuffVote => cast += v
         case _               => ()
       }
-      def myVoterIndexes: Set[Int]                                   = if (multiKey) Set(0, 1, 2) else Set(0)
+      def myVoterIndexes: Set[Int]                                                = if (multiKey) Set(0, 1, 2) else Set(0)
       def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] =
         if (multiKey) Some(kps(idx).sign(msg, dst))
         else Option.when(idx == 0)(kps(0).sign(msg, dst))
-      def onCommit(blockId: BlockId, height: Int): Unit = ()
+      def onCommit(blockId: BlockId, height: Int): Unit          = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit = ()
     }
     val c = new HotStuffCoordinator.Enabled(
@@ -202,7 +202,7 @@ class HotStuffResetDoubleVoteSpecification extends FlatSpec {
   it should "still admit a proposal at a STRICTLY HIGHER view than the persisted one" in {
     val v                   = 5
     val (coordinator, cast) = newCoordinator(initialLastVotedView = v)
-    val blockB               = blockId(9)
+    val blockB              = blockId(9)
 
     coordinator.onProposal(HotStuffProposal(v + 1, blockB, None), 100)
 

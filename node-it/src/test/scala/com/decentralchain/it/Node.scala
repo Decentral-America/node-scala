@@ -11,7 +11,17 @@ import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.diffs.FeeValidation
 import com.decentralchain.transaction.TransactionType
 import com.decentralchain.wallet.Wallet
-import io.grpc.{CallOptions, Channel, ClientCall, ClientInterceptor, ForwardingClientCall, ManagedChannel, ManagedChannelBuilder, Metadata, MethodDescriptor}
+import io.grpc.{
+  CallOptions,
+  Channel,
+  ClientCall,
+  ClientInterceptor,
+  ForwardingClientCall,
+  ManagedChannel,
+  ManagedChannelBuilder,
+  Metadata,
+  MethodDescriptor
+}
 import org.asynchttpclient.*
 import org.asynchttpclient.Dsl.{config as clientConfig, *}
 import org.slf4j.LoggerFactory
@@ -64,7 +74,8 @@ abstract class Node(val config: Config) extends AutoCloseable {
 object Node {
 
   /** Attaches the node's API key as X-Api-Key metadata to every gRPC call so the server-side
-    * ApiKeyInterceptor accepts it (mirrors how the REST client sends the key). */
+    * ApiKeyInterceptor accepts it (mirrors how the REST client sends the key).
+    */
   private final class ApiKeyClientInterceptor(apiKey: String) extends ClientInterceptor {
     private val ApiKeyHeader: Metadata.Key[String] = Metadata.Key.of("X-Api-Key", Metadata.ASCII_STRING_MARSHALLER)
 

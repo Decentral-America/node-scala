@@ -79,6 +79,8 @@ object HotStuffLastVotedViewStore extends StrictLogging {
       }
     } catch {
       case NonFatal(e) =>
-        logger.warn(s"[HotStuff] failed to persist lastVotedView to $path (in-memory view is unaffected; will retry on next advance): ${e.getMessage}")
+        logger.warn(
+          s"[HotStuff] failed to persist lastVotedView to $path (in-memory view is unaffected; will retry on next advance): ${e.getMessage}"
+        )
     }
 }

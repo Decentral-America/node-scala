@@ -136,8 +136,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val baseTx  = TxHelpers.commitToGeneration(Height(3001), sender)
         val withPop = baseTx.copy(
           endorserPublicKey = blsKp.publicKey,
-          commitmentSignature =
-            CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart, baseTx.sender, baseTx.chainId)
+          commitmentSignature = CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart, baseTx.sender, baseTx.chainId)
         )
 
         withPop.copy(proofs = Proofs(crypto.sign(sender.privateKey, withPop.bodyBytes())))

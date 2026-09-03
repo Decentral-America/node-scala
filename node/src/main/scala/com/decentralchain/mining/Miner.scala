@@ -505,8 +505,8 @@ object Miner {
 
   val StrictDisabledMiner: Miner & MinerDebugInfo = new Miner with MinerDebugInfo {
     override def scheduleMining(baseBlockchain: Option[Blockchain], cancelMicroBlockMining: Boolean): Unit = {}
-    override def getNextBlockGenerationOffset(account: KeyPair): Either[String, FiniteDuration]        = Left("Disabled")
-    override val state: MinerDebugInfo.State                                                           = MinerDebugInfo.Disabled
+    override def getNextBlockGenerationOffset(account: KeyPair): Either[String, FiniteDuration]            = Left("Disabled")
+    override val state: MinerDebugInfo.State                                                               = MinerDebugInfo.Disabled
   }
 
   def forwardTo(underlying: => Miner): Miner = { (baseBlockchain: Option[Blockchain], cancelMicroBlockMining: Boolean) =>

@@ -41,12 +41,12 @@ class HotStuffEquivocationDetectionSpecification extends FlatSpec {
     HotStuffVote(view, phase, blockId(b), Height(10), voter, ByteStr(Array.fill[Byte](96)(9: Byte)), epoch)
 
   private class RecordingEffects extends HotStuffEffects {
-    var equivocations: Vector[HotStuffEquivocationProof] = Vector.empty
-    def broadcast(m: Message): Unit                                = ()
-    def myVoterIndexes: Set[Int]                                   = Set.empty // purely a receiver in this spec
+    var equivocations: Vector[HotStuffEquivocationProof]                        = Vector.empty
+    def broadcast(m: Message): Unit                                             = ()
+    def myVoterIndexes: Set[Int]                                                = Set.empty // purely a receiver in this spec
     def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = None
-    def onCommit(blockId: BlockId, height: Int): Unit              = ()
-    override def onEquivocation(proof: HotStuffEquivocationProof): Unit = equivocations :+= proof
+    def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+    override def onEquivocation(proof: HotStuffEquivocationProof): Unit         = equivocations :+= proof
   }
 
   private def newCoordinator(fx: RecordingEffects, epoch: Int = 0): HotStuffCoordinator.Enabled =

@@ -46,11 +46,11 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
   }
 
   private class RecordingEffects(self: Int) extends HotStuffEffects {
-    def broadcast(m: Message): Unit                                = ()
-    def myVoterIndexes: Set[Int]                                   = Set(self)
+    def broadcast(m: Message): Unit                                             = ()
+    def myVoterIndexes: Set[Int]                                                = Set(self)
     def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
-    def onCommit(blockId: BlockId, height: Int): Unit              = ()
-    def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+    def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
   }
 
   private def tempLockPath() = {
@@ -126,7 +126,7 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
     // `node/tests/target/.../classes` directory sbt always compiles into) is used to walk up to the repo
     // root, from which the real source path is always resolvable regardless of the invoking CWD.
     val sourcePath = HotStuffWatchdogFinalizedHeightIsolationSpecification.resolveHotStuffWatchdogSource()
-    val rawSrc      = new String(Files.readAllBytes(sourcePath))
+    val rawSrc     = new String(Files.readAllBytes(sourcePath))
     // Strip ScalaDoc/block comments (/** ... */ and /* ... */) and line comments (// ...) before scanning,
     // so this check inspects only actual compiled code, not prose that explains the safety property.
     val codeOnly = rawSrc

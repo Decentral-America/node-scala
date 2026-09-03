@@ -54,17 +54,17 @@ class HotStuffIngressGuardSpecification extends FlatSpec {
 
   it should "prove the Application.scala floor: testnet's raw generationPeriodLength (100) would let " +
     "through a target the floored slack (1000) correctly rejects" in {
-    val rawTestnetGenerationPeriodLength = 100
-    val flooredSlack                     = math.max(rawTestnetGenerationPeriodLength, 1000)
-    flooredSlack should be(1000)
+      val rawTestnetGenerationPeriodLength = 100
+      val flooredSlack                     = math.max(rawTestnetGenerationPeriodLength, 1000)
+      flooredSlack should be(1000)
 
-    val target = currentHeight + rawTestnetGenerationPeriodLength + 1
-    // Without the floor (raw testnet generationPeriodLength as slack), this target would be rejected --
-    // demonstrating the pre-fix margin was 10x thinner than intended.
-    HotStuffIngressGuard.sane(view = 1, target, currentHeight, slack = rawTestnetGenerationPeriodLength) should be(
-      false
-    )
-    // With the floor Application.scala actually applies, the same target is still plausible slack.
-    HotStuffIngressGuard.sane(view = 1, target, currentHeight, slack = flooredSlack) should be(true)
-  }
+      val target = currentHeight + rawTestnetGenerationPeriodLength + 1
+      // Without the floor (raw testnet generationPeriodLength as slack), this target would be rejected --
+      // demonstrating the pre-fix margin was 10x thinner than intended.
+      HotStuffIngressGuard.sane(view = 1, target, currentHeight, slack = rawTestnetGenerationPeriodLength) should be(
+        false
+      )
+      // With the floor Application.scala actually applies, the same target is still plausible slack.
+      HotStuffIngressGuard.sane(view = 1, target, currentHeight, slack = flooredSlack) should be(true)
+    }
 }

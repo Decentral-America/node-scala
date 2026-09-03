@@ -81,12 +81,18 @@ class CancelLeasesToDisabledAliasesSpec extends FlatSpec with WithDomain with Mo
     it should s"not be defined at (and so never call readPatchData for) chain id '$chainId', which has no patch-data resource file" in {
       val activationHeight = 12345
       val blockchain       = mock[Blockchain]
-      (() => blockchain.settings).expects().anyNumberOfTimes().returning(
-        BlockchainSettings(chainId, com.decentralchain.settings.TestFunctionalitySettings.Enabled, null, null)
-      )
-      (() => blockchain.activatedFeatures).expects().anyNumberOfTimes().returning(
-        Map(BlockchainFeatures.SynchronousCalls.id -> Height(activationHeight))
-      )
+      (() => blockchain.settings)
+        .expects()
+        .anyNumberOfTimes()
+        .returning(
+          BlockchainSettings(chainId, com.decentralchain.settings.TestFunctionalitySettings.Enabled, null, null)
+        )
+      (() => blockchain.activatedFeatures)
+        .expects()
+        .anyNumberOfTimes()
+        .returning(
+          Map(BlockchainFeatures.SynchronousCalls.id -> Height(activationHeight))
+        )
       (() => blockchain.height).expects().anyNumberOfTimes().returning(activationHeight)
 
       CancelLeasesToDisabledAliases.isDefinedAt(blockchain) shouldBe false
@@ -96,12 +102,18 @@ class CancelLeasesToDisabledAliasesSpec extends FlatSpec with WithDomain with Mo
   it should "also not be defined at DCC's own mainnet chain id -- this Waves-only historical patch is fully disabled for DCC" in {
     val activationHeight = 12345
     val blockchain       = mock[Blockchain]
-    (() => blockchain.settings).expects().anyNumberOfTimes().returning(
-      BlockchainSettings('?', com.decentralchain.settings.TestFunctionalitySettings.Enabled, null, null)
-    )
-    (() => blockchain.activatedFeatures).expects().anyNumberOfTimes().returning(
-      Map(BlockchainFeatures.SynchronousCalls.id -> Height(activationHeight))
-    )
+    (() => blockchain.settings)
+      .expects()
+      .anyNumberOfTimes()
+      .returning(
+        BlockchainSettings('?', com.decentralchain.settings.TestFunctionalitySettings.Enabled, null, null)
+      )
+    (() => blockchain.activatedFeatures)
+      .expects()
+      .anyNumberOfTimes()
+      .returning(
+        Map(BlockchainFeatures.SynchronousCalls.id -> Height(activationHeight))
+      )
     (() => blockchain.height).expects().anyNumberOfTimes().returning(activationHeight)
 
     CancelLeasesToDisabledAliases.isDefinedAt(blockchain) shouldBe false

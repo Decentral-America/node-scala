@@ -376,10 +376,10 @@ class DstStaleTargetSelfSealScenarioSpecification extends FlatSpec {
         case v: HotStuffVote => restartedVotesSent :+= v
         case _               => ()
       }
-      def myVoterIndexes: Set[Int]                                   = Set(0)
+      def myVoterIndexes: Set[Int]                                                = Set(0)
       def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg, dst)) else None
-      def onCommit(blockId: BlockId, height: Int): Unit              = ()
-      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+      def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
     }
     // A fresh coordinator seeded from disk exactly as `Application.scala` does on a real boot.
     val restarted = new HotStuffCoordinator.Enabled(

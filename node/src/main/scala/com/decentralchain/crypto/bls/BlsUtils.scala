@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets
 import scala.util.control.NonFatal
 
 object BlsUtils {
+
   /** Per-context domain-separation tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash
     * domain per signed message type, so a signature produced in one context is worthless in another
     * BY DOMAIN rather than by the accidental "the three encodings happen to have distinct lengths"

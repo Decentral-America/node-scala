@@ -319,7 +319,7 @@ package object appender {
   )(
       conflictingEndorsement: BlockEndorsement
   ): Either[String, Unit] = for {
-    _ <- Either.raiseWhen(commitedGenerators.isEmpty)("No one committed")
+    _                       <- Either.raiseWhen(commitedGenerators.isEmpty)("No one committed")
     (address, blsPublicKey) <- commitedGenerators
       .lift(conflictingEndorsement.endorserIndex.toInt)
       .toRight(s"Invalid conflicting endorser index ${conflictingEndorsement.endorserIndex}")
@@ -364,7 +364,7 @@ package object appender {
         voters = fv.hotstuffConflicts.map(_.voterIndex)
         _ <- Either.raiseWhen(voters.toSet.size != voters.length)("Duplicate equivocation-proof voter indexes")
         conflictIdxs = fv.conflict.map(_.endorserIndex.toInt).toSet
-        proofDst = HotStuffQuorum.VoteDst
+        proofDst     = HotStuffQuorum.VoteDst
         _ <- fv.hotstuffConflicts.toList.traverse { proof =>
           for {
             _ <- proof.consistent

@@ -66,7 +66,8 @@ class HotStuffQuorumSpecification extends FlatSpec {
   }
 
   it should "reject a vote set signed under the wrong (PoP) domain-separation tag" in {
-    val wrongVotes = Seq(vote(0, BlsUtils.BlsPopDomainSeparationTag), vote(1, BlsUtils.BlsPopDomainSeparationTag), vote(2, BlsUtils.BlsPopDomainSeparationTag))
+    val wrongVotes =
+      Seq(vote(0, BlsUtils.BlsPopDomainSeparationTag), vote(1, BlsUtils.BlsPopDomainSeparationTag), vote(2, BlsUtils.BlsPopDomainSeparationTag))
     HotStuffQuorum.formQC(wrongVotes, committee).isLeft should be(true)
   }
 

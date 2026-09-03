@@ -78,11 +78,11 @@ class BlockEndorsementDstSpec extends BaseFinalizationSpec {
   }.run()
 
   private trait BaseTest {
-    val committedGenerator1     = TxHelpers.signer(0)
-    val committedGenerator1Idx  = GeneratorIndex(0)
+    val committedGenerator1    = TxHelpers.signer(0)
+    val committedGenerator1Idx = GeneratorIndex(0)
 
-    val committedGenerator2     = TxHelpers.signer(1)
-    val committedGenerator2Idx  = GeneratorIndex(1)
+    val committedGenerator2    = TxHelpers.signer(1)
+    val committedGenerator2Idx = GeneratorIndex(1)
 
     val committedGenerator3 = TxHelpers.signer(2)
 

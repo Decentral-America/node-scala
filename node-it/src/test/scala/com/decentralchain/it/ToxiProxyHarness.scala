@@ -119,8 +119,7 @@ object ToxiProxyHarness {
     * node-it actually needs, unchanged in behavior: a `shopify/toxiproxy` container wrapped for
     * testcontainers-scala, exposing named upstream proxies and toxic control.
     */
-  class ConfigurableToxicProxyContainer(image: String, maxExposedPorts: Int = 0)
-      extends GenericContainer(GenericContainer(dockerImage = image)) {
+  class ConfigurableToxicProxyContainer(image: String, maxExposedPorts: Int = 0) extends GenericContainer(GenericContainer(dockerImage = image)) {
 
     private val TOXIPROXY_CONTROL_PORT: Int = 8474
     private val FIRST_PROXIED_PORT: Int     = 8666
@@ -154,8 +153,8 @@ object ToxiProxyHarness {
       val proxy = client
         .getOrElse(throw new IllegalStateException("Cannot get proxy from toxiProxy because client isn't presented"))
         .createProxy(upstream, s"0.0.0.0:$toxiPort", upstream)
-      val mappedPort         = container.getMappedPort(toxiPort)
-      val newContainerProxy  = ContainerProxy(proxy, container.getHost, mappedPort, toxiPort)
+      val mappedPort        = container.getMappedPort(toxiPort)
+      val newContainerProxy = ContainerProxy(proxy, container.getHost, mappedPort, toxiPort)
       proxies.put(upstream, newContainerProxy)
       newContainerProxy
     }
@@ -169,7 +168,7 @@ object ToxiProxyHarness {
 
       private var isCurrentlyCut: Boolean = false
 
-      def getName: String    = toxi.getName
+      def getName: String   = toxi.getName
       def toxics: ToxicList = toxi.toxics
 
       def setConnectionCut(shouldCutConnection: Boolean): Unit =

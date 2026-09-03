@@ -118,7 +118,7 @@ case class NgState(
   def bestLiquidBlock: Block = lastMicroBlock.fold(base) { lastMb =>
     internalCaches.bestBlock match {
       case Some(cachedBlock) => cachedBlock
-      case None =>
+      case None              =>
         val block = Block.create(
           base,
           transactions,

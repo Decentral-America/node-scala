@@ -326,10 +326,10 @@ class BlockchainUpdaterImpl(
                 metrics.forgeBlockTimeStats.measureOptional(ng.liquidBlockOf(block.header.reference)) match {
                   case None => Left(BlockAppendError(s"References incorrect or non-existing block", block))
                   case Some(NgState.LiquidBlock(referencedForgedBlock, discarded, referencedData)) =>
-                    val referencedLiquidSnapshot     = referencedData.snapshot
-                    val carry                        = referencedData.carryFee
-                    val totalFee                      = referencedData.totalFee
-                    val referencedComputedStateHash  = referencedData.liquidStateHash
+                    val referencedLiquidSnapshot    = referencedData.snapshot
+                    val carry                       = referencedData.carryFee
+                    val totalFee                    = referencedData.totalFee
+                    val referencedComputedStateHash = referencedData.liquidStateHash
                     // Block on a new height
                     if (!verify || referencedForgedBlock.signatureValid()) {
                       val referencedForgedBlockParentHeight = Height(rocksdb.heightOf(referencedForgedBlock.header.reference).getOrElse(0))
@@ -455,7 +455,8 @@ class BlockchainUpdaterImpl(
                     cancelLeases(collectLeasesToCancel(newHeight), newHeight),
                     finalizationState = FinalizationState.init(
                       generatorSet,
-                      conflictGenerators = this.generationPeriodOf(newHeight).fold(ConflictGenerators.empty)(blockchain.conflictGenerators).upTo(newHeight),
+                      conflictGenerators =
+                        this.generationPeriodOf(newHeight).fold(ConflictGenerators.empty)(blockchain.conflictGenerators).upTo(newHeight),
                       block,
                       parentHeight = Height(rocksdb.height),
                       finalizedHeight = Blockchain.finalizedHeightOrFallback(

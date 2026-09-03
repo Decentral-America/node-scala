@@ -36,8 +36,9 @@ class BlsVectorRegressionSpec extends FreeSpec with EitherValues {
 
   "PoP vector" - {
     // pk = signer's BLS public key; message = popMessage(chainId='D', senderPk, endorserPk, periodStart=12345)
-    val pk        = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
-    val message   = Base64.decode("RAyiK++EnXPXm3XQjxg1Q4DPaMj+INI+BTqntUwqB9YRsY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFcAAAwOQ==")
+    val pk      = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
+    val message =
+      Base64.decode("RAyiK++EnXPXm3XQjxg1Q4DPaMj+INI+BTqntUwqB9YRsY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFcAAAwOQ==")
     val signature = Base64.decode(
       "pJfGTl4Katu4tU7IOVMUrec0aZ1e2ch+4t0UrKdUoLXrM0KPLii5jaJj9CvIqZSBADc6bmrJ+YLUH760ylqIeern5NcZ/ErRowxU7qYFuh7VZOKfPETdrhwOMEdZuyHh"
     )

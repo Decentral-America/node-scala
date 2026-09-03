@@ -31,7 +31,7 @@ class HotStuffWatchdogCommitStallSpecification extends FlatSpec {
 
   private def newWatchdog(stallThreshold: Int, commitStallThreshold: Int): (HotStuffWatchdog, () => Int) = {
     var resetCount = 0
-    val watchdog = new HotStuffWatchdog(
+    val watchdog   = new HotStuffWatchdog(
       committeeNonEmpty = () => true,
       lockPath = tempLockPath(),
       resetInMemoryState = () => resetCount += 1,
@@ -43,7 +43,7 @@ class HotStuffWatchdogCommitStallSpecification extends FlatSpec {
 
   "a stream of EnteredView-only progress (views advancing, nothing ever committing)" should
     "fire recovery once the commit-specific threshold is exceeded, even though recordProgress() fires every tick" in {
-      val (wd, resets) = newWatchdog(stallThreshold = 5, commitStallThreshold = 10)
+      val (wd, resets)             = newWatchdog(stallThreshold = 5, commitStallThreshold = 10)
       var firedAtTick: Option[Int] = None
       (1 to 15).foreach { tick =>
         wd.recordProgress() // view-based signal: fires EVERY tick, exactly the F-5 hazard (EnteredView only)
@@ -121,8 +121,8 @@ class HotStuffWatchdogCommitStallSpecification extends FlatSpec {
   "the empty-committee case" should
     "reset BOTH the view-based and commit-specific counters, and never fire, exactly as before F-5" in {
       var committeeEmpty = false
-      var resetCount      = 0
-      val wd              = new HotStuffWatchdog(
+      var resetCount     = 0
+      val wd             = new HotStuffWatchdog(
         committeeNonEmpty = () => !committeeEmpty,
         lockPath = tempLockPath(),
         resetInMemoryState = () => resetCount += 1,
@@ -138,7 +138,7 @@ class HotStuffWatchdogCommitStallSpecification extends FlatSpec {
   "existing view-based backoff/suspension behaviour" should
     "be unaffected by a commit-specific threshold that never trips (regression guard for the F-5 refactor)" in {
       val (wd, resets) = newWatchdog(stallThreshold = 2, commitStallThreshold = 1000)
-      var fireTicks     = Vector.empty[Int]
+      var fireTicks    = Vector.empty[Int]
       (1 to 60).foreach { tick =>
         if (wd.check()) fireTicks :+= tick
       }

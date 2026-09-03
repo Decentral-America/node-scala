@@ -487,7 +487,7 @@ object HotStuffCoordinator {
           byBlock match {
             case Seq(a, b, _*) =>
               val proof = HotStuffEquivocationProof(a, b)
-              val ok = for {
+              val ok    = for {
                 _ <- proof.consistent
                 _ <- proof.signaturesValid(
                   i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey),

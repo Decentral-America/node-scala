@@ -415,7 +415,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       val endorsementStorage     = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
       val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
-      val blockEndorser = BlockEndorser.InMemory(
+      val blockEndorser          = BlockEndorser.InMemory(
         d.settings.synchronizationSettings.maxRollback,
         d.blockchain,
         d.wallet,
@@ -423,8 +423,8 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         selfEndorsementStorage,
         channels
       )
-      val utxEvents     = ConcurrentSubject.publish[Unit](using minerScheduler)
-      val minerImpl     = new MinerImpl(
+      val utxEvents = ConcurrentSubject.publish[Unit](using minerScheduler)
+      val minerImpl = new MinerImpl(
         channels,
         d.blockchain,
         d.settings,
@@ -512,7 +512,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       val endorsementStorage     = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
       val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
-      val blockEndorser = BlockEndorser.InMemory(
+      val blockEndorser          = BlockEndorser.InMemory(
         d.settings.synchronizationSettings.maxRollback,
         d.blockchain,
         d.wallet,
@@ -520,7 +520,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         selfEndorsementStorage,
         channels
       )
-      val minerImpl     = new MinerImpl(
+      val minerImpl = new MinerImpl(
         channels,
         d.blockchain,
         d.settings,

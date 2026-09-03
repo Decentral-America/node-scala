@@ -84,8 +84,8 @@ class LightNodeSnapshotPathPopSpec extends PropSpec with WithDomain {
 
       val endorserKp    = com.decentralchain.crypto.bls.BlsKeyPair(sender.privateKey)
       val wrongChainSig = CommitToGenerationTransaction.mkPopSignature(endorserKp, periodStart, sender.publicKey, chainId = 'X'.toByte)
-      val forgedTx       = honestTx.copy(commitmentSignature = wrongChainSig)
-      val forgedBlock     = d.createBlock(Block.ProtoBlockVersion, Seq(forgedTx), stateHash = Some(honestBlock.header.stateHash))
+      val forgedTx      = honestTx.copy(commitmentSignature = wrongChainSig)
+      val forgedBlock   = d.createBlock(Block.ProtoBlockVersion, Seq(forgedTx), stateHash = Some(honestBlock.header.stateHash))
 
       d.appendBlockE(forgedBlock, Some(BlockSnapshot(forgedBlock.id(), txSnapshots))) should beLeft
       d.lastBlock shouldBe prevBlock

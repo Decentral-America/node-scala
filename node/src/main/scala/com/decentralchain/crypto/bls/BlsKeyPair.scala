@@ -24,7 +24,7 @@ object BlsKeyPair {
     * catch it.
     */
   private[bls] def unsafeFromSecretKey(sk: blst.SecretKey): BlsKeyPair = new BlsKeyPair {
-    val publicKey: BlsPublicKey                             = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
+    val publicKey: BlsPublicKey                               = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
     def sign(message: Array[Byte], dst: String): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message, dst)))
   }
 }

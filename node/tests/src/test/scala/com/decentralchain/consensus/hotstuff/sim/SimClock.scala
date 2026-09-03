@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 /** Virtual time in the simulation, in whole milliseconds. Never derived from the wall clock. */
 final case class SimTime(millis: Long) extends Ordered[SimTime] {
-  def +(delta: Long): SimTime    = SimTime(millis + delta)
+  def +(delta: Long): SimTime     = SimTime(millis + delta)
   def compare(that: SimTime): Int = millis.compareTo(that.millis)
 }
 
@@ -16,9 +16,9 @@ private final case class ScheduledEvent(at: SimTime, seq: Long, run: () => Unit)
   * nondeterminism.
   */
 final class SimClock(seed: Long) {
-  private val rng    = new scala.util.Random(seed)
-  private var now     = SimTime(0)
-  private var seqCtr  = 0L
+  private val rng      = new scala.util.Random(seed)
+  private var now      = SimTime(0)
+  private var seqCtr   = 0L
   private val ordering = Ordering.by[ScheduledEvent, (Long, Long)](e => (e.at.millis, e.seq)).reverse
   private val queue    = new mutable.PriorityQueue[ScheduledEvent]()(using ordering)
 

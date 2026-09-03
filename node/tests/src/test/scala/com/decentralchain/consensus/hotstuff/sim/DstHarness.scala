@@ -123,9 +123,9 @@ final class DstHarness(
       }
       network.send(from = self, to = live.toSet)(m) { case (to, msg) => deliver(to, msg) }
     }
-    def myVoterIndexes: Set[Int]                                   = Set(self)
+    def myVoterIndexes: Set[Int]                                                = Set(self)
     def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
-    def onCommit(blockId: BlockId, height: Int): Unit              = {
+    def onCommit(blockId: BlockId, height: Int): Unit                           = {
       commits += CommitObservation(self, blockId, height, clock.currentTime)
       committedTip(self) = (blockId, height)
     }

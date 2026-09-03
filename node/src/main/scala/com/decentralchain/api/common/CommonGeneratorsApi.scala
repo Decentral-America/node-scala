@@ -44,7 +44,7 @@ object CommonGeneratorsApi {
           txnIds.appendAll(txnsKey.parse(dbEntry.getValue))
         }
 
-        val addresses = ArrayBuffer.from(ro.multiGet(addressIds.map(Keys.idToAddress), Address.AddressLength))
+        val addresses                           = ArrayBuffer.from(ro.multiGet(addressIds.map(Keys.idToAddress), Address.AddressLength))
         val balances: Map[GeneratorIndex, Long] =
           if (at.toInt == blockchain.height) blockchain.currentGeneratorSet.fold(Map.empty)(_.map(x => x.index -> x.balance).toMap)
           else ro.get(Keys.generatorBalances(at, rdb.apiHandle)).fold(Map.empty)(_.toMap)
@@ -93,13 +93,14 @@ object CommonGeneratorsApi {
         addresses
           .lazyZip(txIds)
           .lazyZip(Iterator.from(0).take(addresses.size).map(GeneratorIndex(_)).to(Iterable))
-          .collect { case (Some(address), txnId, idx) => // TODO: address=None ?
-            val b = balances.get(idx) match {
-              case None if at.toInt <= blockchain.height => Some(0L)
-              case r                                     => r
-            }
+          .collect {
+            case (Some(address), txnId, idx) => // TODO: address=None ?
+              val b = balances.get(idx) match {
+                case None if at.toInt <= blockchain.height => Some(0L)
+                case r                                     => r
+              }
 
-            GeneratorEntry(address, b, txnId, conflict.heightOf(idx))
+              GeneratorEntry(address, b, txnId, conflict.heightOf(idx))
           }
           .toSeq
       } else {
