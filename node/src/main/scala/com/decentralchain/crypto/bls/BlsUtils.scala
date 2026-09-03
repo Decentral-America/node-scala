@@ -20,6 +20,25 @@ object BlsUtils {
   val BlsEndorseDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
   val BlsHsVoteDomainSeparationTag  = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
 
+  /** LEGACY, VERIFY-ONLY domain-separation tag. This is the exact tag deleted by commit
+    * `448d56557f` ("no BLS bytes exist on any chain we keep, since mainnet never activated feature
+    * 25") -- that premise was factually wrong for the testnet-relaunch chain, which pre-activates
+    * feature 25 (`DeterministicFinality`) at genesis and carries real, already-on-chain signatures
+    * produced under this single shared tag across ALL THREE signed-message contexts (PoP, block
+    * endorsement, HotStuff vote/QC) from early in the chain's history, confirmed by direct replay of
+    * the real chain against the frozen `1bd671f8e6` build (which reproduces the live chain's state
+    * hash byte-for-byte) and by `448d56557f`'s own diff, which shows this ONE tag used to be the sole
+    * DST for all three contexts before the per-context-DST (`_POP_`/`_ENDORSE_`/`_HSVOTE_`) split.
+    *
+    * NEVER used for new signing -- the three v2 tags above are the only DSTs any NEW PoP, endorsement,
+    * or HotStuff vote/QC is produced under (see `CommitToGenerationTransaction.PopDst`,
+    * `BlockEndorsement.Dst`, `HotStuffQuorum.VoteDst`). This constant exists solely so verification
+    * can still validate historical, already-on-chain signatures produced under it, e.g. on a full
+    * resync from genesis. Do not repurpose, and do not delete again without first re-confirming no
+    * chain this codebase still supports carries bytes signed under it.
+    */
+  val BlsLegacyDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
+
   private val BlsKeyGenSalt = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
 
   val PublicKeySizeInBytes = 48

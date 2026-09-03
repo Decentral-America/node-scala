@@ -8,8 +8,7 @@ import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.block.{Block, BlockEndorsement, BlockSnapshot, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
-import com.decentralchain.consensus.hotstuff.HotStuffQuorum
-import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
+import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
 import com.decentralchain.mining.Miner
@@ -364,7 +363,6 @@ package object appender {
         voters = fv.hotstuffConflicts.map(_.voterIndex)
         _ <- Either.raiseWhen(voters.toSet.size != voters.length)("Duplicate equivocation-proof voter indexes")
         conflictIdxs = fv.conflict.map(_.endorserIndex.toInt).toSet
-        proofDst     = HotStuffQuorum.VoteDst
         _ <- fv.hotstuffConflicts.toList.traverse { proof =>
           for {
             _ <- proof.consistent
@@ -380,7 +378,7 @@ package object appender {
             _ <- Either.raiseWhen(conflictIdxs.contains(proof.voterIndex))(
               s"Voter ${proof.voterIndex} already carries a conflicting endorsement in this voting"
             )
-            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2), proofDst)
+            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2))
           } yield ()
         }
       } yield ()
@@ -456,11 +454,10 @@ package object appender {
                   _                <-
                     if (validEndorsers.isEmpty) Either.unit
                     else
-                      BlsUtils.verifyAgg(
+                      BlockEndorsement.verifyAgg(
                         aggregatedEndorsement.arr,
                         BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
-                        validEndorsers.view.map(_._2.arr),
-                        BlockEndorsement.Dst
+                        validEndorsers.view.map(_._2.arr)
                       )
                 } yield ()
           }

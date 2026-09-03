@@ -490,8 +490,7 @@ object HotStuffCoordinator {
               val ok    = for {
                 _ <- proof.consistent
                 _ <- proof.signaturesValid(
-                  i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey),
-                  HotStuffQuorum.VoteDst
+                  i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey)
                 )
               } yield ()
               ok match {

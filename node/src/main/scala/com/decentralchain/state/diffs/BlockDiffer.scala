@@ -4,7 +4,7 @@ import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.decentralchain.account.Address
 import com.decentralchain.crypto
-import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
+import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
@@ -638,15 +638,8 @@ object BlockDiffer {
                     GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
                   }
                   _ <- Either.raiseUnless(
-                    BlsUtils
-                      .verifyBasic(
-                        tx.commitmentSignature.arr,
-                        CommitToGenerationTransaction
-                          .popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart),
-                        tx.endorserPublicKey.arr,
-                        CommitToGenerationTransaction.PopDst
-                      )
-                      .isRight
+                    CommitToGenerationTransaction
+                      .verifyPop(tx.commitmentSignature.arr, tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)
                   )(GenericError("Invalid commitment signature"))
                   _ <- tx.endorserPublicKey.validated.leftMap(GenericError(_))
                   _ <- seen.foldLeft(Either.unit[ValidationError]) {

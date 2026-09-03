@@ -60,6 +60,16 @@ object CommitToGenerationTransaction {
 
   val PopDst: String = BlsUtils.BlsPopDomainSeparationTag
 
+  /** LEGACY, VERIFY-ONLY PoP message layout: `endorserPublicKey(48) ‖ generationPeriodStart(4)`, no
+    * chainId, no sender. This is the layout every `CommitToGenerationTransaction` already on the
+    * testnet-relaunch chain (from height ~12 onward) was actually signed under, before commit
+    * `448d56557f` introduced the chain/sender-bound v2 layout above. Never used to construct new
+    * commitments -- only [[verifyPop]] falls back to it, to keep historical on-chain commitments
+    * re-verifiable (e.g. on a full resync from genesis).
+    */
+  private def legacyPopMessage(endorserPublicKey: BlsPublicKey, generationPeriodStart: Height): Array[Byte] =
+    endorserPublicKey.arr ++ generationPeriodStart.toByteArray
+
   def mkPopSignature(
       blsKeyPair: BlsKeyPair,
       generationPeriodStart: Height,
@@ -67,6 +77,33 @@ object CommitToGenerationTransaction {
       chainId: Byte
   ): BlsSignature =
     blsKeyPair.sign(popMessage(chainId, sender, blsKeyPair.publicKey, generationPeriodStart), PopDst)
+
+  /** Verifies a `CommitToGenerationTransaction`'s BLS proof of possession. Tries the current v2
+    * scheme (chain/sender-bound message + per-context `_POP_` DST) first; if that fails, falls back
+    * to the legacy scheme (bare `endorserPk ‖ periodStart` message + legacy `_NUL_` DST) so
+    * historical on-chain commitments signed before the v2 scheme existed still verify. Signing
+    * (constructing NEW commitments) stays v2-only -- see [[mkPopSignature]]; this fallback exists
+    * purely so already-on-chain, legacy-signed transactions remain verifiable forever, e.g. during a
+    * full resync from genesis.
+    */
+  def verifyPop(
+      signature: Array[Byte],
+      chainId: Byte,
+      sender: PublicKey,
+      endorserPublicKey: BlsPublicKey,
+      generationPeriodStart: Height
+  ): Boolean =
+    BlsUtils
+      .verifyBasic(signature, popMessage(chainId, sender, endorserPublicKey, generationPeriodStart), endorserPublicKey.arr, PopDst)
+      .isRight ||
+      BlsUtils
+        .verifyBasic(
+          signature,
+          legacyPopMessage(endorserPublicKey, generationPeriodStart),
+          endorserPublicKey.arr,
+          BlsUtils.BlsLegacyDomainSeparationTag
+        )
+        .isRight
 
   def create(
       version: TxVersion,

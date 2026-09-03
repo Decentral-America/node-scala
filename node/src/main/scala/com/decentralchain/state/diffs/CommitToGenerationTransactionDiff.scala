@@ -2,7 +2,6 @@ package com.decentralchain.state.diffs
 
 import cats.syntax.either.*
 import com.decentralchain.consensus.GeneratingBalanceProvider
-import com.decentralchain.crypto.bls.BlsUtils
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.*
 import com.decentralchain.transaction.CommitToGenerationTransaction
@@ -19,14 +18,8 @@ object CommitToGenerationTransactionDiff {
         GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
       }
       _ <- Either.raiseUnless(
-        BlsUtils
-          .verifyBasic(
-            tx.commitmentSignature.arr,
-            CommitToGenerationTransaction.popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart),
-            tx.endorserPublicKey.arr,
-            CommitToGenerationTransaction.PopDst
-          )
-          .isRight
+        CommitToGenerationTransaction
+          .verifyPop(tx.commitmentSignature.arr, tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)
       )(GenericError("Invalid commitment signature"))
       // Full curve validation (in-group, not point-at-infinity) at the actual enforcement point: once,
       // when the key is trusted going forward as a committed generator -- not on every deserialization.
