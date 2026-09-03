@@ -437,7 +437,19 @@ class MinerImpl(
               generateBlockTask(account, None)
 
             case Left(err) =>
-              Task.raiseError(new RuntimeException(err.toString))
+              // A forge/append failure here (e.g. a transient InvalidStateHash mismatch) must NOT be
+              // allowed to reach onErrorHandle in scheduleMining: that combinator only logs and then
+              // completes the task, and nothing else ever re-triggers scheduleMining except a block
+              // append or state-change event elsewhere -- if THIS node is the one supposed to be
+              // forging and no such event ever arrives, the miner would go silent forever (the
+              // 2026-09-01 stall). Retrying here -- on the same already-scheduled task, after a
+              // delay -- keeps the miner alive without touching scheduledAttempts/onErrorHandle at
+              // all. noQuorumMiningDelay is reused rather than adding a new setting: it's already the
+              // established "something transient is wrong, don't hammer immediately" backoff in this
+              // same method (see the quorum branch above), and an unconditional retry with no delay
+              // risks a tight loop if nextBlockGenOffsetWithConditions again returns offset=0.
+              log.warn(s"Error appending block forged by ${account.toAddress}: $err, retrying in ${settings.minerSettings.noQuorumMiningDelay}")
+              Task.defer(generateBlockTask(account, None)).delayExecution(settings.minerSettings.noQuorumMiningDelay)
 
             case Right(Applied(score = score)) =>
               log.debug(s"Forged and applied $block with cumulative score $score")
@@ -449,7 +461,13 @@ class MinerImpl(
               Task.unit
 
             case Right(Ignored) =>
-              Task.raiseError(new RuntimeException("Newly created block has already been appended, should not happen"))
+              // Same reasoning as the Left(err) branch above: don't let this reach onErrorHandle and
+              // die silently. This case is expected to be rare ("should not happen"), but if it does,
+              // the miner must keep trying rather than going permanently silent.
+              log.warn(
+                s"Newly created block $block by ${account.toAddress} has already been appended, should not happen; retrying in ${settings.minerSettings.noQuorumMiningDelay}"
+              )
+              Task.defer(generateBlockTask(account, None)).delayExecution(settings.minerSettings.noQuorumMiningDelay)
           }.uncancelable
 
         for {
