@@ -432,7 +432,15 @@ class MinerImpl(
             block: Block,
             totalConstraint: MiningConstraint
         ) = // NOTE: Could accept blockAppender to reduce parameter count — current pattern works correctly
-          BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).flatMap {
+          // Only the append call itself is uncancelable: BlockAppender mutates the blockchain state, so
+          // letting a cancellation land mid-append risks a torn write. The dispatch on its result (below)
+          // must stay cancelable -- it now includes indefinitely-recursing delayed retries (the Left(err)
+          // and Right(Ignored) branches), and those retries are exactly what a fresh scheduleMining() call
+          // needs to be able to cancel via scheduledAttempts when a new block/state-change event supersedes
+          // this attempt. Wrapping the whole flatMap in .uncancelable (as before) would mask cancellation
+          // for the entire recursive retry chain -- including every subsequent re-entry into appendTask --
+          // letting a stale retry chain race a fresh one started by scheduleMining() for the same account.
+          BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).uncancelable.flatMap {
             case Left(BlockFromFuture(_, _)) => // Time was corrected, retry
               generateBlockTask(account, None)
 
@@ -468,7 +476,7 @@ class MinerImpl(
                 s"Newly created block $block by ${account.toAddress} has already been appended, should not happen; retrying in ${settings.minerSettings.noQuorumMiningDelay}"
               )
               Task.defer(generateBlockTask(account, None)).delayExecution(settings.minerSettings.noQuorumMiningDelay)
-          }.uncancelable
+          }
 
         for {
           elapsed <- waitBlockAppendedTask.timed.map(_._1)
