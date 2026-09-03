@@ -1,5 +1,12 @@
 # T5: Deterministic HotStuff Equivocation Evidence — Design (rev. 2)
 
+> **SUPERSEDED 2026-09-02.** Superseded by `docs/superpowers/plans/2026-09-02-testnet-final-source.md`.
+> The design's proof shape, validation rules, and determinism contract are still accurate to production
+> code, but its on-chain activation gate (feature 29 `BlockchainFeatures.HotStuffEquivocationEvidence`,
+> [H4] below) was deleted entirely by the later plan — no chain in this repo's history had ever
+> activated it, so validation/union are unconditional from genesis with no feature check. Kept here for
+> history/citation only.
+
 > **Revision 2 (2026-09-01).** Rewritten after an adversarial design review found four design defects
 > (C1–C4), four false/incomplete premises (H1–H5), and three hardening gaps (M1–M3) in revision 1.
 > Every claim below was re-verified against real code on `dev` @ `49809b487c`. Findings are cited

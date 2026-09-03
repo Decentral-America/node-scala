@@ -1,5 +1,13 @@
 # BlsCryptoV2 — feature 30: per-context BLS domain separation + chain/sender-bound PoP (audit H2 + M2)
 
+> **SUPERSEDED 2026-09-02.** Superseded by `docs/superpowers/plans/2026-09-02-testnet-final-source.md`.
+> This plan's crypto (per-context DSTs, chain/sender-bound PoP) landed and is real production code —
+> the ONLY crypto in production — but its on-chain activation gate (feature 30 `BlsCryptoV2`) was
+> deleted entirely by the later plan, including the legacy `_NUL_` DST this plan kept "forever": no
+> chain in this repo's history had ever activated feature 30, so there was no real legacy-DST history
+> left to protect. Every node now signs/verifies under the v2 DSTs unconditionally from genesis. Kept
+> here for history/citation only — do not execute this file.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close BLS-audit **H2** (one DST shared by three cryptographically distinct message types) and **M2** (PoP binds neither `chainId` nor the committing `sender`) behind a single new on-chain feature **30 "BLS domain separation & bound PoP"**, without invalidating any pre-activation history: every legacy signature that is on chain today must still re-verify byte-for-byte under the legacy DST forever, while every post-activation signature must be produced and verified under a per-context v2 DST — and the PoP message must bind `chainId ‖ senderPublicKey`.

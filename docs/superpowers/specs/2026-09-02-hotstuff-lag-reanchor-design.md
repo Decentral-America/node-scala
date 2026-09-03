@@ -1,5 +1,11 @@
 # F-6: Bound T2 target lag; re-anchor near the tip — Design
 
+> **SUPERSEDED 2026-09-02.** Superseded by `docs/superpowers/plans/2026-09-02-testnet-final-source.md`.
+> This design itself is unaffected by that plan's feature-29/30 deletions (it was already explicitly
+> "no feature gate" — see below) and its fix remains in production; the banner is here only because
+> this file predates, and is now superseded as a planning artifact by, the later plan's consolidated
+> source of truth. Kept here for history/citation only.
+
 > Source: BFT audit 2026-08-31 finding F-6 (self-sealing epoch trap). Design pass 2026-09-02.
 > NOT consensus-breaking: votes/QCs/target selection are local/ephemeral; nothing changes on the
 > wire or in block validation. Independently deployable; no feature gate.
