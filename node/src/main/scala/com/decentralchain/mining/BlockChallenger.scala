@@ -16,7 +16,7 @@ import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.Applied
 import com.decentralchain.state.appender.MaxTimeDrift
 import com.decentralchain.state.diffs.BlockDiffer
-import com.decentralchain.state.{Blockchain, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
+import com.decentralchain.state.{Blockchain, CompleteBlockchainUpdater, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.{BlockchainUpdater, Transaction}
 import com.decentralchain.utils.{ScorexLogging, Time}
@@ -39,7 +39,10 @@ trait BlockChallenger {
 }
 
 class BlockChallengerImpl(
-    blockchainUpdater: BlockchainUpdater & Blockchain,
+    // CompleteBlockchainUpdater (adds NG) rather than BlockchainUpdater & Blockchain, because
+    // BlockDiffer.createInitialBlockSnapshot needs NG.referencedBlock to resolve the previous block
+    // the appender pairs with -- see BlockDiffer.carryFeeFromPreviousBlock.
+    blockchainUpdater: CompleteBlockchainUpdater,
     allChannels: ChannelGroup,
     wallet: Wallet,
     settings: DCCSettings,

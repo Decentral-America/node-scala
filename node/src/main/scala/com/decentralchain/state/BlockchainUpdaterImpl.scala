@@ -79,6 +79,12 @@ class BlockchainUpdaterImpl(
 
   override def liquidBlock(id: ByteStr): Option[Block] = readLock(ngState.flatMap(_.liquidBlockOf(id).map(_.block)))
 
+  override def referencedBlock(reference: ByteStr): Option[Block] = readLock {
+    ngState
+      .flatMap(_.liquidBlockOf(reference).map(_.block))
+      .orElse(rocksdb.lastBlock.filter(_.id() == reference))
+  }
+
   override def liquidBlockSnapshot(id: ByteStr): Option[StateSnapshot] = readLock(ngState.flatMap(_.liquidBlockOf(id).map(_.data.snapshot)))
 
   override def microBlockSnapshot(totalBlockId: ByteStr): Option[StateSnapshot] = readLock(
