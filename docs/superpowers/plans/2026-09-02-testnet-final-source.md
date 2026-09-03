@@ -44,16 +44,17 @@
 **Interfaces:**
 - Produces: `BlsUtils.{BlsPopDomainSeparationTag, BlsEndorseDomainSeparationTag, BlsHsVoteDomainSeparationTag}` (renamed from `…TagV2`); `HotStuffQuorum.VoteDst`; `CommitToGenerationTransaction.{popMessage(chainId, sender, endorserPk, periodStart), PopDst}`; `HotStuffQuorum.verifyVote(vote, committee)` / `formQC(votes, committee)` / `verifyQC(qc, committee)` without `cryptoV2`.
 
-- [ ] **Step 1: Create branch and merge the H2/M2 code**
+- [ ] **Step 1: Create the branch**
+
+**UPDATE 2026-09-02: `feat/bls-crypto-v2` was independently completed (all 10 of its own tasks), reviewed, and merged to `dev` as `b3748eec14` before this plan reached execution. `dev` @ `b3748eec14` already contains the H2/M2 code with its gates (feature 30) intact. No merge step is needed here — branch directly off `dev`.**
 
 ```bash
 cd /Users/jourlez/Documents/Code/Blockchain/Ecosystem/node-scala
 git checkout dev && git pull --ff-only
 git checkout -b feat/testnet-final-source
-git merge --no-ff feat/bls-crypto-v2 -m "Merge branch 'feat/bls-crypto-v2' into feat/testnet-final-source (H2/M2 code; gates removed in following commits)"
 sbt "node/compile" "node-testkit/compile"
 ```
-Expected: clean merge (strict descendant), compile green.
+Expected: compile green. All anchors below (verified against `feat/bls-crypto-v2` pre-merge) should resolve unchanged on `dev` post-merge — spot-check the two or three line-number anchors most likely to have drifted during merge conflict resolution (there were none reported) before proceeding.
 
 - [ ] **Step 2: Write the failing registry test**
 
