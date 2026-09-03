@@ -301,7 +301,7 @@ lazy val compilePRRaw = taskKey[Unit]("Compile the project")
 compilePRRaw := Def
   .sequential(
     clean.all(ScopeFilter(inAnyProject)),
-    scalafmtCheck.all(ScopeFilter(inAnyProject, inConfigurations(Compile))),
+    scalafmtCheck.all(ScopeFilter(inAnyProject, inConfigurations(Compile, Test))),
     compile.all(ScopeFilter(inAnyProject, inConfigurations(Test)))
   )
   .value
