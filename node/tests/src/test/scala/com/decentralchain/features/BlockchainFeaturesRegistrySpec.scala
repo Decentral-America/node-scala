@@ -19,4 +19,13 @@ class BlockchainFeaturesRegistrySpec extends FlatSpec {
   it should "have implemented exactly the dict, and every registered feature is real" in {
     BlockchainFeatures.implemented shouldBe BlockchainFeatures.dict.keySet
   }
+
+  it should "have the registry mirror upstream Waves 1.6.x ids 26-28" in {
+    BlockchainFeatures.feature(26) shouldBe Some(BlockchainFeatures.AdjustedBlockRewardDistribution)
+    BlockchainFeatures.implemented should contain(26.toShort)
+    BlockchainFeatures.ContinuationTransaction.id shouldBe 27
+    BlockchainFeatures.LeaseExpiration.id shouldBe 28
+    BlockchainFeatures.implemented should not contain 27.toShort
+    BlockchainFeatures.implemented should not contain 28.toShort
+  }
 }
