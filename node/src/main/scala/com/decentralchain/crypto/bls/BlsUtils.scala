@@ -8,8 +8,24 @@ import java.nio.charset.StandardCharsets
 import scala.util.control.NonFatal
 
 object BlsUtils {
-  val BlsDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"           // We have a non-standard PoP
-  private val BlsKeyGenSalt  = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
+  /** LEGACY domain-separation tag. Non-standard for a PoP (`_NUL_`, not `_POP_`) and shared across
+    * all three signed message types -- exactly audit finding H2. It is kept HERE FOREVER and MUST
+    * NOT be deleted, renamed, or repurposed: every PoP, endorsement, and aggregated endorsement
+    * already on chain was produced under it, and block replay / rollback across the feature-30
+    * activation height re-verifies those bytes. Removing it would be a chain split, not a cleanup.
+    */
+  val BlsDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
+
+  /** Per-context v2 tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash domain per signed
+    * message type, so a signature produced in one context is worthless in another BY DOMAIN rather
+    * than by the accidental "the three encodings happen to have distinct lengths" reasoning H2
+    * flags as a latent trap. Activated on chain by `BlockchainFeatures.BlsCryptoV2` (feature 30).
+    */
+  val BlsPopDomainSeparationTagV2     = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+  val BlsEndorseDomainSeparationTagV2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
+  val BlsHsVoteDomainSeparationTagV2  = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
+
+  private val BlsKeyGenSalt = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
 
   val PublicKeySizeInBytes = 48
   val SignatureSizeInBytes = 96
@@ -56,17 +72,22 @@ object BlsUtils {
 
   def mkBlsPublicKey(sk: blst.SecretKey): Array[Byte] = new blst.P1(sk).compress()
 
-  def signBasic(sk: blst.SecretKey, message: Array[Byte]): Array[Byte] =
+  def signBasic(sk: blst.SecretKey, message: Array[Byte], dst: String = BlsDomainSeparationTag): Array[Byte] =
     new blst.P2()
-      .hash_to(message, BlsDomainSeparationTag, Array.emptyByteArray)
+      .hash_to(message, dst, Array.emptyByteArray)
       .sign_with(sk)
       .compress()
 
   /** @param blsSigBytes Validated internally https://github.com/supranational/blst#signature-verification
     * @param blsPkBytes Expected to be validated
     */
-  def verifyBasic(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: Array[Byte]): Either[String, Unit] =
-    verify(blsSigBytes, message, new blst.P1_Affine(blsPkBytes))
+  def verifyBasic(
+      blsSigBytes: Array[Byte],
+      message: Array[Byte],
+      blsPkBytes: Array[Byte],
+      dst: String = BlsDomainSeparationTag
+  ): Either[String, Unit] =
+    verify(blsSigBytes, message, new blst.P1_Affine(blsPkBytes), dst)
 
   /** Pairwise signature aggregation (audit L1): the only non-fail-closed primitive in this file until
     * this fix -- it took raw `Array[Byte]` and threw out of `new blst.P2(...)` on malformed input
@@ -123,7 +144,12 @@ object BlsUtils {
     * redundant: a malicious peer could otherwise supply a QC with a repeated signer index to inflate
     * its apparent signing stake past 2/3 quorum without a matching honest signature count.
     */
-  def verifyAgg(aggSigBytes: Array[Byte], message: Array[Byte], blsPks: Iterable[Array[Byte]]): Either[String, Unit] = for {
+  def verifyAgg(
+      aggSigBytes: Array[Byte],
+      message: Array[Byte],
+      blsPks: Iterable[Array[Byte]],
+      dst: String = BlsDomainSeparationTag
+  ): Either[String, Unit] = for {
     _     <- Either.raiseWhen(blsPks.isEmpty)(ErrEmptyPublicKeyList)
     _     <- Either.raiseUnless(blsPks.map(_.toSeq).toSet.size == blsPks.size)(ErrDuplicatePublicKeys)
     aggPk <- Either
@@ -132,7 +158,7 @@ object BlsUtils {
     aggPkAffine = new blst.P1_Affine(aggPk)
     _   <- Either.raiseUnless(aggPkAffine.in_group())(ErrPublicKeyNotInGroup)
     _   <- Either.raiseWhen(aggPkAffine.is_inf())(ErrPublicKeyIsInfinity)
-    res <- verify(aggSigBytes, message, aggPkAffine)
+    res <- verify(aggSigBytes, message, aggPkAffine, dst)
   } yield res
 
   /** Pairing-allocation DoS posture (audit L4): a fresh `blst.Pairing` context is allocated on every
@@ -154,8 +180,8 @@ object BlsUtils {
     * member's vote pays the pairing cost. Rate limiting on the vote-ingress path (also named in the
     * audit) is a networking-layer concern outside this file's scope. No code change here.
     */
-  private def verify(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: blst.P1_Affine): Either[String, Unit] = try {
-    val ctx       = new blst.Pairing(true, BlsDomainSeparationTag)
+  private def verify(blsSigBytes: Array[Byte], message: Array[Byte], blsPkBytes: blst.P1_Affine, dst: String): Either[String, Unit] = try {
+    val ctx       = new blst.Pairing(true, dst)
     val aggResult = ctx.aggregate(blsPkBytes, new blst.P2_Affine(blsSigBytes), message, Array.emptyByteArray)
     if (aggResult != BLST_ERROR.BLST_SUCCESS) ErrPairingAggregate.asLeft
     else {

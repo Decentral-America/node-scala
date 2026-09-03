@@ -377,7 +377,7 @@ class DstStaleTargetSelfSealScenarioSpecification extends FlatSpec {
         case _               => ()
       }
       def myVoterIndexes: Set[Int]                                   = Set(0)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg)) else None
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == 0) Some(kps(0).sign(msg, dst)) else None
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }

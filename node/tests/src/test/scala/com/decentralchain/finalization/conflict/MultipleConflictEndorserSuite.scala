@@ -3,7 +3,7 @@ package com.decentralchain.finalization.conflict
 import com.decentralchain.block.Block
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.hotstuff.{HotStuffEquivocationProof, HotStuffQuorum}
-import com.decentralchain.crypto.bls.BlsKeyPair
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsUtils}
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.finalization.BaseFinalizationSpec
@@ -99,7 +99,7 @@ class MultipleConflictEndorserSuite extends BaseFinalizationSpec {
         val height  = Height(10)
         val msg     = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, height.toInt, epoch)
         val kp      = BlsKeyPair(signer.privateKey)
-        HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, height, voterIndex, ByteStr(kp.sign(msg).arr), epoch)
+        HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
       }
 
       val periodIndex = d.blockchain.generationPeriodOf(Height(3)).value.index

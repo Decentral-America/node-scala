@@ -105,14 +105,14 @@ object HotStuffVotePool {
     * the freshly-formed QC (and clears that bucket + its observed-snapshot set). Invalid votes are
     * ignored.
     */
-  def onVote(pool: VotePool, vote: HotStuffVote, liveCommittee: GeneratorSet): (VotePool, Option[QuorumCertificate]) = {
+  def onVote(pool: VotePool, vote: HotStuffVote, liveCommittee: GeneratorSet, cryptoV2: Boolean): (VotePool, Option[QuorumCertificate]) = {
     val key = (vote.view, vote.phase, vote.blockId)
 
     val priorSeen      = pool.seenCommittees.getOrElse(key, Set.empty)
     val isNewCommittee = !priorSeen.contains(liveCommittee)
     val wouldExceedCap = isNewCommittee && priorSeen.size >= MaxSeenCommitteesPerTarget
 
-    if (!HotStuffQuorum.verifyVote(vote, liveCommittee)) (pool, None) // drop invalid — do not pool it
+    if (!HotStuffQuorum.verifyVote(vote, liveCommittee, cryptoV2)) (pool, None) // drop invalid — do not pool it
     else if (wouldExceedCap) (pool, None)                             // capped (Task 8 Step 3): fail closed, do not grow seenCommittees further
     else {
       val bucket = pool.pending.getOrElse(key, Vector.empty)
@@ -140,7 +140,7 @@ object HotStuffVotePool {
       // still-valid signers exists. Filtering here evicts such votes the instant a committee change
       // invalidates them, so the gate and `formQC` below always see a single self-consistent signer
       // set drawn from the live committee.
-      val updated       = withNew.filter(v => HotStuffQuorum.verifyVote(v, liveCommittee))
+      val updated       = withNew.filter(v => HotStuffQuorum.verifyVote(v, liveCommittee, cryptoV2))
       val seenNow       = priorSeen + liveCommittee
       val withObserved  = pool.copy(seenCommittees = pool.seenCommittees.updated(key, seenNow))
       val signerIndexes = updated.map(_.voterIndex)
@@ -157,7 +157,7 @@ object HotStuffVotePool {
         // committee, formQC cannot reject the set on a stale-signer basis here; the all-snapshots
         // gate above independently guarantees the remaining signers clear quorum under every
         // committee that was ever live while this target accumulated.
-        HotStuffQuorum.formQC(updated, liveCommittee) match {
+        HotStuffQuorum.formQC(updated, liveCommittee, cryptoV2) match {
           case Right(qc) =>
             // quorum → emit + clear this target's bucket AND its observed-snapshot set
             (withObserved.copy(pending = withObserved.pending - key, seenCommittees = withObserved.seenCommittees - key), Some(qc))

@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -74,33 +74,33 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
 
   private def voteFor(i: Int, block: BlockId): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height)
-    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
   }
 
   "two committees with disjoint membership" should
     "each independently certify a DIFFERENT block at the identical (view, height) -- a real fork, using only honest single-signers" in {
       // Epoch A: generators {0,1,2} (75-of-100 stake, clears the 67 threshold) vote for blockA.
-      val (afterA1, noneYet) = HotStuffVotePool.onVote(VotePool(), voteFor(0, blockA), committeeEpochA)
+      val (afterA1, noneYet) = HotStuffVotePool.onVote(VotePool(), voteFor(0, blockA), committeeEpochA, cryptoV2 = false)
       noneYet should be(None)
-      val (afterA2, stillNone) = HotStuffVotePool.onVote(afterA1, voteFor(1, blockA), committeeEpochA)
+      val (afterA2, stillNone) = HotStuffVotePool.onVote(afterA1, voteFor(1, blockA), committeeEpochA, cryptoV2 = false)
       stillNone should be(None)
-      val (_, qcAOpt) = HotStuffVotePool.onVote(afterA2, voteFor(2, blockA), committeeEpochA)
+      val (_, qcAOpt) = HotStuffVotePool.onVote(afterA2, voteFor(2, blockA), committeeEpochA, cryptoV2 = false)
       val qcA         = qcAOpt.getOrElse(fail("expected a QC for blockA under committeeEpochA"))
 
       // Epoch B: generators {4,5,6} (75-of-100 stake under THEIR OWN, entirely disjoint committee)
       // vote for a DIFFERENT block, at the SAME view and height. Nobody in this accumulation ever
       // observes committeeEpochA, and nobody in the epoch-A accumulation above ever observed
       // committeeEpochB -- these are two fully independent VotePool histories.
-      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteFor(4, blockB), committeeEpochB)
-      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteFor(5, blockB), committeeEpochB)
-      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteFor(6, blockB), committeeEpochB)
+      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteFor(4, blockB), committeeEpochB, cryptoV2 = false)
+      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteFor(5, blockB), committeeEpochB, cryptoV2 = false)
+      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteFor(6, blockB), committeeEpochB, cryptoV2 = false)
       val qcB          = qcBOpt.getOrElse(fail("expected a QC for blockB under committeeEpochB"))
 
       // Both QCs independently pass verification against the committee that (honestly) produced
       // them -- exactly what a receiving replica would do if it accepted "the committee for this
       // QC's view" from whichever committee snapshot it happened to have on hand.
-      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(()))
-      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcA, committeeEpochA, cryptoV2 = false) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcB, committeeEpochB, cryptoV2 = false) should be(Right(()))
 
       // The fork condition itself: same view, same height, different blockId.
       qcA.view should be(qcB.view)
@@ -115,8 +115,8 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
       // -- i.e. purely by construction luck of this example, not because the wire format forbids the
       // mismatch. Nothing stops a future, adversarially-chosen pair of committees with overlapping
       // index numbering from making this check pass in both directions.
-      HotStuffQuorum.verifyQC(qcA, committeeEpochB) shouldBe a[Left[?, ?]]
-      HotStuffQuorum.verifyQC(qcB, committeeEpochA) shouldBe a[Left[?, ?]]
+      HotStuffQuorum.verifyQC(qcA, committeeEpochB, cryptoV2 = false) shouldBe a[Left[?, ?]]
+      HotStuffQuorum.verifyQC(qcB, committeeEpochA, cryptoV2 = false) shouldBe a[Left[?, ?]]
     }
 
   "HotStuffSafety.equivocators" should
@@ -138,7 +138,7 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
   // consider live.
   private def voteForEpoch(i: Int, block: BlockId, epoch: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height, epoch)
-    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr, epoch)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr, epoch)
   }
 
   "binding committee epoch into the signed vote message" should
@@ -146,27 +146,27 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
       val epochA = 41
       val epochB = 42
 
-      val (afterA1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(0, blockA, epochA), committeeEpochA)
-      val (afterA2, _) = HotStuffVotePool.onVote(afterA1, voteForEpoch(1, blockA, epochA), committeeEpochA)
-      val (_, qcAOpt)  = HotStuffVotePool.onVote(afterA2, voteForEpoch(2, blockA, epochA), committeeEpochA)
+      val (afterA1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(0, blockA, epochA), committeeEpochA, cryptoV2 = false)
+      val (afterA2, _) = HotStuffVotePool.onVote(afterA1, voteForEpoch(1, blockA, epochA), committeeEpochA, cryptoV2 = false)
+      val (_, qcAOpt)  = HotStuffVotePool.onVote(afterA2, voteForEpoch(2, blockA, epochA), committeeEpochA, cryptoV2 = false)
       val qcA          = qcAOpt.getOrElse(fail("expected a QC for blockA under committeeEpochA/epochA"))
       qcA.committeeEpoch should be(epochA)
 
-      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(4, blockB, epochB), committeeEpochB)
-      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteForEpoch(5, blockB, epochB), committeeEpochB)
-      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteForEpoch(6, blockB, epochB), committeeEpochB)
+      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(4, blockB, epochB), committeeEpochB, cryptoV2 = false)
+      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteForEpoch(5, blockB, epochB), committeeEpochB, cryptoV2 = false)
+      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteForEpoch(6, blockB, epochB), committeeEpochB, cryptoV2 = false)
       val qcB          = qcBOpt.getOrElse(fail("expected a QC for blockB under committeeEpochB/epochB"))
       qcB.committeeEpoch should be(epochB)
 
       // Each QC still verifies fine against its OWN committee (no regression to the happy path).
-      HotStuffQuorum.verifyQC(qcA, committeeEpochA) should be(Right(()))
-      HotStuffQuorum.verifyQC(qcB, committeeEpochB) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcA, committeeEpochA, cryptoV2 = false) should be(Right(()))
+      HotStuffQuorum.verifyQC(qcB, committeeEpochB, cryptoV2 = false) should be(Right(()))
 
       // The tamper-evidence property: relabeling qcA's committeeEpoch to claim it was epochB does NOT
       // make it pass as an epochB QC -- the aggregated BLS signature was computed over bytes that
       // included epochA, so re-verifying against the relabeled epoch's canonical bytes fails.
       val relabeled = qcA.copy(committeeEpoch = epochB)
-      HotStuffQuorum.verifyQC(relabeled, committeeEpochA) shouldBe a[Left[?, ?]]
+      HotStuffQuorum.verifyQC(relabeled, committeeEpochA, cryptoV2 = false) shouldBe a[Left[?, ?]]
     }
 
   "formQC" should
@@ -176,7 +176,7 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
         voteForEpoch(1, blockA, 41),
         voteForEpoch(2, blockA, 42) // same view/phase/block/height, but a DIFFERENT claimed epoch
       )
-      HotStuffQuorum.formQC(mixed, committeeEpochA) shouldBe a[Left[?, ?]]
+      HotStuffQuorum.formQC(mixed, committeeEpochA, cryptoV2 = false) shouldBe a[Left[?, ?]]
     }
 
   "HotStuffQuorum.acceptableCommitteeEpoch (the transition-gating rule)" should
@@ -194,14 +194,14 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
       val epochA = 41
       val epochB = 99 // far outside the one-step transition window from 41
 
-      val (afterA1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(0, blockA, epochA), committeeEpochA)
-      val (afterA2, _) = HotStuffVotePool.onVote(afterA1, voteForEpoch(1, blockA, epochA), committeeEpochA)
-      val (_, qcAOpt)  = HotStuffVotePool.onVote(afterA2, voteForEpoch(2, blockA, epochA), committeeEpochA)
+      val (afterA1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(0, blockA, epochA), committeeEpochA, cryptoV2 = false)
+      val (afterA2, _) = HotStuffVotePool.onVote(afterA1, voteForEpoch(1, blockA, epochA), committeeEpochA, cryptoV2 = false)
+      val (_, qcAOpt)  = HotStuffVotePool.onVote(afterA2, voteForEpoch(2, blockA, epochA), committeeEpochA, cryptoV2 = false)
       val qcA          = qcAOpt.getOrElse(fail("expected a QC for blockA under committeeEpochA"))
 
-      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(4, blockB, epochB), committeeEpochB)
-      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteForEpoch(5, blockB, epochB), committeeEpochB)
-      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteForEpoch(6, blockB, epochB), committeeEpochB)
+      val (afterB1, _) = HotStuffVotePool.onVote(VotePool(), voteForEpoch(4, blockB, epochB), committeeEpochB, cryptoV2 = false)
+      val (afterB2, _) = HotStuffVotePool.onVote(afterB1, voteForEpoch(5, blockB, epochB), committeeEpochB, cryptoV2 = false)
+      val (_, qcBOpt)  = HotStuffVotePool.onVote(afterB2, voteForEpoch(6, blockB, epochB), committeeEpochB, cryptoV2 = false)
       val qcB          = qcBOpt.getOrElse(fail("expected a QC for blockB under committeeEpochB"))
 
       // A replica whose engine currently believes epochA (41) is active and holds committeeEpochA as

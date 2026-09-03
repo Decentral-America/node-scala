@@ -619,6 +619,8 @@ git add -A && git commit -m "feat(hotstuff): hard-switch vote/QC signing and ver
 
 **This is the one place a hard switch would be wrong.** A proof is signed off-chain by whoever detected it, then carried inside a block and re-verified deterministically by every node forever. Its DST must therefore come from the **containing block's height**, and a proof minted during the activation period — where honest replicas may legitimately hold different `supportsBlsCryptoV2()` tip answers while signing — must be refused outright rather than adjudicated.
 
+**HARD PREREQUISITE (2026-09-02 review of Task 7, `ed0fbcb69c`):** until this task lands, `HotStuffEquivocationProof.signaturesValid` still verifies against the legacy DST unconditionally. Feature 30 (BlsCryptoV2) MUST NOT be activated on any chain — testnet included — before this task is merged: the moment real votes sign under `_HSVOTE_` (Task 7's change), every equivocation proof's signature check starts failing, and detection/slashing goes silently inert (fail-closed, but silent — see the comments this review added at `HotStuffEquivocationProof.signaturesValid`, `HotStuffCoordinator.onVote`, and `validateHotStuffEquivocationProofs`).
+
 - [ ] **Step 1 (RED): proof-boundary spec**
 
 New file `node/tests/src/test/scala/com/decentralchain/state/appender/BlsCryptoV2EquivocationProofBoundarySpec.scala`, modelled on `HotStuffEquivocationValidationSpecification` (same `withCommittedCommittee` harness, `generationPeriodLength = 2`):

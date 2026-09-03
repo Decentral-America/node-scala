@@ -32,7 +32,7 @@ class HotStuffSimulationSpecification extends FlatSpec {
     class SimEffects(self: Int) extends HotStuffEffects {
       def broadcast(m: Message): Unit                                = inbox.enqueue((self, m))
       def myVoterIndexes: Set[Int]                                   = Set(self)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
       def onCommit(blockId: BlockId, height: Int): Unit              = committed(self) = Some((blockId, height))
       def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }
@@ -74,7 +74,7 @@ class HotStuffSimulationSpecification extends FlatSpec {
     val fx   = new HotStuffEffects {
       def broadcast(m: Message): Unit                                = sent += m
       def myVoterIndexes: Set[Int]                                   = Set(1)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(1).sign(msg))
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = Some(kps(1).sign(msg, dst))
       def onCommit(blockId: BlockId, height: Int): Unit              = ()
       def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
     }

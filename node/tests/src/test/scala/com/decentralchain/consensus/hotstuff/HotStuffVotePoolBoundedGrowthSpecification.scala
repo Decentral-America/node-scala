@@ -2,7 +2,7 @@ package com.decentralchain.consensus.hotstuff
 
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -59,12 +59,12 @@ class HotStuffVotePoolBoundedGrowthSpecification extends FlatSpec {
       (1 until 500).map(i => GeneratorInfo(GeneratorIndex(i), fillerAddress, fillerKp.publicKey, balance = 1L))
 
   private val msg  = HotStuffQuorum.voteMessage(view, phase, target, height)
-  private val vote = HotStuffVote(view, phase, target, Height(height), voterIndex = 0, signature = realKp.sign(msg).byteStr)
+  private val vote = HotStuffVote(view, phase, target, Height(height), voterIndex = 0, signature = realKp.sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
 
   "HotStuffVotePool.seenCommittees, fed 200 distinct committee snapshots for ONE never-resolving target " +
     "and NO external pruneOlderThan call" should "never retain more than MaxSeenCommitteesPerTarget snapshots" in {
       val finalPool = (0 until 200).foldLeft(VotePool()) { (pool, epoch) =>
-        val (updated, qc) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch))
+        val (updated, qc) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch), cryptoV2 = false)
         qc should be(None)
         updated
       }
@@ -75,7 +75,7 @@ class HotStuffVotePoolBoundedGrowthSpecification extends FlatSpec {
 
   it should "still accept votes and grow up to the cap, not stall on the very first committee change" in {
     val finalPool = (0 until 10).foldLeft(VotePool()) { (pool, epoch) =>
-      val (updated, _) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch))
+      val (updated, _) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch), cryptoV2 = false)
       updated
     }
     finalPool.seenCommittees(targetKey).size should be(10) // well under the cap: normal growth is unaffected
@@ -86,7 +86,7 @@ class HotStuffVotePoolBoundedGrowthSpecification extends FlatSpec {
     // form, and once capped, further distinct committees are simply not admitted (existing pooled votes
     // and previously-observed snapshots are left untouched, so nothing already-checked is forgotten).
     val finalPool = (0 until 200).foldLeft(VotePool()) { (pool, epoch) =>
-      val (updated, qc) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch))
+      val (updated, qc) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch), cryptoV2 = false)
       qc should be(None)
       updated
     }

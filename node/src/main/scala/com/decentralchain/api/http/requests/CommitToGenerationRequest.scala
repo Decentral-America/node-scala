@@ -26,17 +26,33 @@ case class CommitToGenerationRequest(
     commitmentSignature: Option[ByteStr] = None,
     chainId: Option[Byte] = None
 ) {
+
+  /** @param cryptoV2 Which PoP era to sign the auto-generated commitment signature under (audit M2).
+    *   The caller must derive this from the SAME height the transaction will actually be validated
+    *   at -- i.e. `blockchain.supportsBlsCryptoV2` evaluated at (an estimate of) the containing
+    *   block's height, not a hardcoded constant. A mismatch here doesn't corrupt consensus (the
+    *   on-chain gate in `CommitToGenerationTransactionDiff` is still the source of truth and would
+    *   just reject the tx), but it does mean the node would sign a PoP that fails validation the
+    *   moment it lands in a block from the "other" side of the activation height. Ignored when the
+    *   caller supplies an explicit `commitmentSignature` (nothing here to (re)compute).
+    */
   def toTxFrom(
       senderPk: PublicKey,
       defaultEndorserKp: => BlsKeyPair,
       defaultGenerationPeriodStart: Height,
-      defaultTimestamp: => Long
+      defaultTimestamp: => Long,
+      cryptoV2: Boolean
   ): Either[ValidationError, CommitToGenerationTransaction] = {
     val exactGenerationPeriodStart = generationPeriodStart.getOrElse(defaultGenerationPeriodStart)
+    val exactChainId               = chainId.getOrElse(AddressScheme.current.chainId)
     for {
       commitmentSignature <- commitmentSignature match {
         case Some(r) => BlsSignature(r)
-        case None    => Right(CommitToGenerationTransaction.mkPopSignature(defaultEndorserKp, exactGenerationPeriodStart))
+        case None    =>
+          Right(
+            CommitToGenerationTransaction
+              .mkPopSignature(defaultEndorserKp, exactGenerationPeriodStart, senderPk, exactChainId, cryptoV2)
+          )
       }
       endorserPublicKey <- endorserPublicKey match {
         case Some(endorserPublicKey) => BlsPublicKey(endorserPublicKey)

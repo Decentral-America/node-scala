@@ -280,7 +280,8 @@ class BlockChallengeTest
         BlsKeyPair(challengingMiner.privateKey),
         finalizedId = finalizedId,
         finalizedHeight = finalizedHeight,
-        endorsedId = d.lastBlockId
+        endorsedId = d.lastBlockId,
+        cryptoV2 = false
       )
 
       val originalBlock = d.createBlock(
@@ -350,7 +351,8 @@ class BlockChallengeTest
         BlsKeyPair(challengingMiner.privateKey),
         finalizedId = finalizedId,
         finalizedHeight = finalizedHeight,
-        endorsedId = d.lastBlockId
+        endorsedId = d.lastBlockId,
+        cryptoV2 = false
       )
 
       val ts            = d.nextBlockTime(challengedMiner)

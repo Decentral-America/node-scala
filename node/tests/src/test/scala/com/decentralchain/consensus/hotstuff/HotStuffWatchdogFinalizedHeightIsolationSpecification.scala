@@ -48,7 +48,7 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
   private class RecordingEffects(self: Int) extends HotStuffEffects {
     def broadcast(m: Message): Unit                                = ()
     def myVoterIndexes: Set[Int]                                   = Set(self)
-    def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
+    def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
     def onCommit(blockId: BlockId, height: Int): Unit              = ()
     def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
   }

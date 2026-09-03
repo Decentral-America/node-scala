@@ -13,11 +13,15 @@ object BlsSignature {
     def arr: Array[Byte] = byteStr.arr
     def base58: String   = byteStr.toString
 
-    def verifyBasic(message: Array[Byte], blsPk: BlsPublicKey): Either[String, Unit] =
-      BlsUtils.verifyBasic(byteStr.arr, message, blsPk.arr)
+    /** `dst` is DELIBERATELY not defaulted (audit H2): every caller must name its signing context,
+      * so adding a new signed message type is a compile error until its domain is chosen. Pass
+      * `BlsUtils.BlsDomainSeparationTag` explicitly on pre-activation/legacy paths.
+      */
+    def verifyBasic(message: Array[Byte], blsPk: BlsPublicKey, dst: String): Either[String, Unit] =
+      BlsUtils.verifyBasic(byteStr.arr, message, blsPk.arr, dst)
 
-    def verifyAgg(message: Array[Byte], blsPks: Iterable[BlsPublicKey]): Either[String, Unit] =
-      BlsUtils.verifyAgg(byteStr.arr, message, blsPks.map(_.arr))
+    def verifyAgg(message: Array[Byte], blsPks: Iterable[BlsPublicKey], dst: String): Either[String, Unit] =
+      BlsUtils.verifyAgg(byteStr.arr, message, blsPks.map(_.arr), dst)
 
     def append(other: BlsSignature): Either[GenericError, BlsSignature] =
       BlsUtils.aggSign(self.arr, other.arr).left.map(GenericError(_)).flatMap(apply)

@@ -136,7 +136,8 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val baseTx  = TxHelpers.commitToGeneration(Height(3001), sender)
         val withPop = baseTx.copy(
           endorserPublicKey = blsKp.publicKey,
-          commitmentSignature = CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart)
+          commitmentSignature =
+            CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart, baseTx.sender, baseTx.chainId, cryptoV2 = false)
         )
 
         withPop.copy(proofs = Proofs(crypto.sign(sender.privateKey, withPop.bodyBytes())))
@@ -186,7 +187,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val periodStart = Height(3001)
         val unsignedTx  = TxHelpers
           .commitToGeneration(periodStart, newGenerator)
-          .copy(commitmentSignature = CommitToGenerationTransaction.mkPopSignature(otherGeneratorKp, periodStart))
+          .copy(commitmentSignature =
+            CommitToGenerationTransaction
+              .mkPopSignature(otherGeneratorKp, periodStart, newGenerator.publicKey, AddressScheme.current.chainId, cryptoV2 = false)
+          )
         val signedTx = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))
 
         d.appendBlockE(unsignedTx) should produce("Proof doesn't validate as signature")
@@ -201,7 +205,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     val blsKp = BlsKeyPair(dccPk)
     blsKp.publicKey.byteStr.base64Raw shouldBe "jrugi0W0es2WxuHoptQtchqwactZsldOGucYObZrEIOpxbWmhL8dodvpnzA+2qUf"
 
-    CommitToGenerationTransaction.mkPopSignature(blsKp, Height(1001)).byteStr.base64Raw shouldBe
+    CommitToGenerationTransaction
+      .mkPopSignature(blsKp, Height(1001), origTx.sender, AddressScheme.current.chainId, cryptoV2 = false)
+      .byteStr
+      .base64Raw shouldBe
       "sOlLZL2RZZ3c98PmUvKSN960aj+VJwyVGEUygI78mGDwGJflJWLHCwuqiYk1fRG7FOCJKOtKbKOG7tBykQ5iTcRu+7eLWhiodJw47YEfDOZHNwkl8dQwgxAam8+3BEvX"
   }
 }

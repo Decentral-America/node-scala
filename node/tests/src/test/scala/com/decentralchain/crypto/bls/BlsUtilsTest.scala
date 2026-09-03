@@ -303,4 +303,67 @@ class BlsUtilsTest extends FreeSpec with EitherValues {
 
   private def mkRandomSecretKey(): SecretKey = mkBlsSecretKey(mkRandomDccKeyPair().privateKey.arr)
   private def mkRandomDccKeyPair(): KeyPair  = KeyPair(Array.fill(32)(ThreadLocalRandom.current().nextInt().toByte))
+
+  // --- H2 (audit): per-context domain separation. The three v2 tags must be pairwise distinct AND
+  // pairwise non-interchangeable at verification time. This is the 3x3 matrix the audit asks for:
+  // a signature produced in each context must fail verification in the other two, and must fail
+  // BY DOMAIN -- not because the messages happen to have different lengths (the accidental,
+  // encoding-coincidence protection H2 calls a latent trap). We therefore sign THE SAME BYTES
+  // under each tag, so length can play no part.
+  "per-context DSTs (audit H2)" - {
+    val v2Tags = Seq(
+      "POP"    -> BlsUtils.BlsPopDomainSeparationTagV2,
+      "ENDORSE" -> BlsUtils.BlsEndorseDomainSeparationTagV2,
+      "HSVOTE"  -> BlsUtils.BlsHsVoteDomainSeparationTagV2
+    )
+
+    "the four tags are pairwise distinct" in {
+      val all = BlsUtils.BlsDomainSeparationTag +: v2Tags.map(_._2)
+      all.distinct.size shouldBe all.size
+    }
+
+    "each v2 tag keeps the legacy suite prefix so the ciphersuite is unchanged" in {
+      v2Tags.foreach { case (_, t) => t should startWith("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_") }
+    }
+
+    "3x3 basic-verify matrix: a signature verifies under its own DST and no other" in {
+      val fixedMessage = "identical-bytes-in-every-context".getBytes(StandardCharsets.UTF_8)
+      v2Tags.foreach { case (signLabel, signTag) =>
+        val sig = BlsUtils.signBasic(privateKey1, fixedMessage, signTag)
+        v2Tags.foreach { case (verifyLabel, verifyTag) =>
+          val result = BlsUtils.verifyBasic(sig, fixedMessage, publicKey1, verifyTag)
+          withClue(s"signed under $signLabel, verified under $verifyLabel: ") {
+            if (signLabel == verifyLabel) result shouldBe a[Right[?, ?]]
+            else result shouldBe a[Left[?, ?]]
+          }
+        }
+        withClue(s"signed under $signLabel, verified under LEGACY: ") {
+          BlsUtils.verifyBasic(sig, fixedMessage, publicKey1, BlsUtils.BlsDomainSeparationTag) shouldBe a[Left[?, ?]]
+        }
+      }
+    }
+
+    "3x3 aggregate-verify matrix: an aggregate verifies under its own DST and no other" in {
+      val fixedMessage = "identical-bytes-in-every-context".getBytes(StandardCharsets.UTF_8)
+      v2Tags.foreach { case (signLabel, signTag) =>
+        val agg = BlsUtils
+          .aggSig(Seq(BlsUtils.signBasic(privateKey1, fixedMessage, signTag), BlsUtils.signBasic(privateKey2, fixedMessage, signTag)))
+          .value
+        v2Tags.foreach { case (verifyLabel, verifyTag) =>
+          val result = BlsUtils.verifyAgg(agg, fixedMessage, Seq(publicKey1, publicKey2), verifyTag)
+          withClue(s"agg signed under $signLabel, verified under $verifyLabel: ") {
+            if (signLabel == verifyLabel) result shouldBe a[Right[?, ?]]
+            else result shouldBe a[Left[?, ?]]
+          }
+        }
+      }
+    }
+
+    "the legacy tag remains the BlsUtils-level default, so pre-activation bytes keep verifying" in {
+      val legacySig = BlsUtils.signBasic(privateKey1, message)
+      BlsUtils.verifyBasic(legacySig, message, publicKey1) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyBasic(legacySig, message, publicKey1, BlsUtils.BlsDomainSeparationTag) shouldBe a[Right[?, ?]]
+      BlsUtils.verifyBasic(legacySig, message, publicKey1, BlsUtils.BlsPopDomainSeparationTagV2) shouldBe a[Left[?, ?]]
+    }
+  }
 }

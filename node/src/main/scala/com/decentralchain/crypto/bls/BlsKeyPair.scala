@@ -9,8 +9,9 @@ import java.util
 sealed trait BlsKeyPair {
   def publicKey: BlsPublicKey
 
-  def sign(message: Array[Byte]): BlsSignature
-  def verify(message: Array[Byte], signature: BlsSignature): Boolean = publicKey.verify(message, signature)
+  /** No default `dst` (audit H2) -- see BlsSignature.verifyBasic. */
+  def sign(message: Array[Byte], dst: String): BlsSignature
+  def verify(message: Array[Byte], signature: BlsSignature, dst: String): Boolean = publicKey.verify(message, signature, dst)
 }
 
 object BlsKeyPair {
@@ -23,8 +24,8 @@ object BlsKeyPair {
     * catch it.
     */
   private[bls] def unsafeFromSecretKey(sk: blst.SecretKey): BlsKeyPair = new BlsKeyPair {
-    val publicKey: BlsPublicKey                  = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
-    def sign(message: Array[Byte]): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message)))
+    val publicKey: BlsPublicKey                             = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
+    def sign(message: Array[Byte], dst: String): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message, dst)))
   }
 }
 
@@ -32,7 +33,7 @@ private final class BlsSeedKeyPair(private val dccPrivateKey: Array[Byte]) exten
   private lazy val sk: blst.SecretKey = BlsUtils.mkBlsSecretKey(dccPrivateKey)
   lazy val publicKey: BlsPublicKey    = BlsPublicKey.unsafe(ByteStr(BlsUtils.mkBlsPublicKey(sk)))
 
-  def sign(message: Array[Byte]): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message)))
+  def sign(message: Array[Byte], dst: String): BlsSignature = BlsSignature.unsafe(ByteStr(BlsUtils.signBasic(sk, message, dst)))
 
   override def equals(other: Any): Boolean = other match {
     case other: BlsSeedKeyPair => util.Arrays.equals(other.dccPrivateKey, dccPrivateKey)

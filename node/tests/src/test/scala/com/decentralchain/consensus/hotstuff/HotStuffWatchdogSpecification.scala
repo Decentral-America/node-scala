@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsSignature, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsSignature, BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.Message
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet}
 import com.decentralchain.test.FlatSpec
@@ -162,7 +162,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
           case _                                          => ()
         }
         def myVoterIndexes: Set[Int]                                   = Set(0, 1, 2)
-        def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(idx).sign(msg))
+        def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = Some(kps(idx).sign(msg, dst))
         def onCommit(blockId: BlockId, height: Int): Unit              = ()
         def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
       }
@@ -177,7 +177,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
 
       def voteFor(view: Int, phase: io.decentralchain.protobuf.block.HotStuffPhase, blockId: BlockId, height: Int, idx: Int) = {
         val msg = HotStuffQuorum.voteMessage(view, phase, blockId, height)
-        com.decentralchain.network.HotStuffVote(view, phase, blockId, com.decentralchain.state.Height(height), idx, kps(idx).sign(msg).byteStr)
+        com.decentralchain.network.HotStuffVote(view, phase, blockId, com.decentralchain.state.Height(height), idx, kps(idx).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
       }
 
       // View 0: propose+self-vote b1 (node 0 is self here per myVoterIndexes but only votes for idx it

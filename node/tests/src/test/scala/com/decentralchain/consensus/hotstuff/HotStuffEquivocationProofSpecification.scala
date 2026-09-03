@@ -1,7 +1,7 @@
 package com.decentralchain.consensus.hotstuff
 
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsKeyPair, TestBlsKeyPair}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.Height
 import io.decentralchain.protobuf.block.HotStuffPhase
@@ -18,7 +18,7 @@ class HotStuffEquivocationProofSpecification extends AnyFreeSpec with Matchers {
     val blockId = ByteStr(Array.fill(32)(blockIdByte))
     val height  = Height(10)
     val msg     = HotStuffQuorum.voteMessage(view, phase, blockId, height.toInt, epoch)
-    HotStuffVote(view, phase, blockId, height, voter, ByteStr(keyPair.sign(msg).arr), epoch)
+    HotStuffVote(view, phase, blockId, height, voter, ByteStr(keyPair.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
   }
 
   private val prepare = HotStuffPhase.HOTSTUFF_PHASE_PREPARE
@@ -56,15 +56,21 @@ class HotStuffEquivocationProofSpecification extends AnyFreeSpec with Matchers {
   "signaturesValid" - {
     "accepts when both votes verify against the voter's real key" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => Some(kp.publicKey)) shouldBe Right(())
+      p.signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsDomainSeparationTag) shouldBe Right(())
     }
     "rejects a forged voteB (an attacker cannot frame an honest voter)" in {
       val forged = signedVote(0, 5, prepare, 2, 2, kp).copy(signature = ByteStr(Array.fill(96)(7: Byte)))
-      HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), forged).signaturesValid(_ => Some(kp.publicKey)).isLeft shouldBe true
+      HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), forged)
+        .signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsDomainSeparationTag)
+        .isLeft shouldBe true
     }
     "rejects when the index is outside the committee" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => None).isLeft shouldBe true
+      p.signaturesValid(_ => None, BlsUtils.BlsDomainSeparationTag).isLeft shouldBe true
+    }
+    "rejects when signed under the wrong DST" in {
+      val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
+      p.signaturesValid(_ => Some(kp.publicKey), BlsUtils.BlsHsVoteDomainSeparationTagV2).isLeft shouldBe true
     }
   }
 }

@@ -18,8 +18,21 @@ object CommitToGenerationTransactionDiff {
       _ <- Either.raiseUnless(tx.generationPeriodStart == next.start) {
         GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
       }
+      // Gate on the height of the block that CONTAINS this transaction. `blockchain` here is the
+      // SnapshotBlockchain that already includes the new block (TransactionDiffer is driven from
+      // BlockDiffer.apply's currBlockchain), which is why the surrounding code already treats
+      // `blockchain.height`/`currentGenerationPeriod` as "this block". Reading a live tip instead
+      // would break rollback determinism across the activation height.
+      cryptoV2 = blockchain.supportsBlsCryptoV2(blockchain.height)
       _ <- Either.raiseUnless(
-        BlsUtils.verifyBasic(tx.commitmentSignature.arr, tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray, tx.endorserPublicKey.arr).isRight
+        BlsUtils
+          .verifyBasic(
+            tx.commitmentSignature.arr,
+            CommitToGenerationTransaction.popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2),
+            tx.endorserPublicKey.arr,
+            CommitToGenerationTransaction.popDst(cryptoV2)
+          )
+          .isRight
       )(GenericError("Invalid commitment signature"))
       // Full curve validation (in-group, not point-at-infinity) at the actual enforcement point: once,
       // when the key is trusted going forward as a committed generator -- not on every deserialization.
@@ -42,7 +55,7 @@ object CommitToGenerationTransactionDiff {
         nextCommittedGenerators = Seq(tx.sender -> tx.endorserPublicKey)
       )
       generatingBalanceAfterDeposit = SnapshotBlockchain(blockchain, snapshot).generatingBalance(sender)
-      minMiningBalance = GeneratingBalanceProvider.minMiningBalance(blockchain, Height(blockchain.height))
+      minMiningBalance              = GeneratingBalanceProvider.minMiningBalance(blockchain, Height(blockchain.height))
       _ <- Either.raiseUnless(generatingBalanceAfterDeposit >= minMiningBalance)(
         GenericError(
           s"Generating balance $generatingBalanceAfterDeposit is less than $minMiningBalance required for block generation"

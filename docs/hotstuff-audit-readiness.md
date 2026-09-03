@@ -86,14 +86,14 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 ## 4. Threat scenarios to probe (map each to a test / code path)
 | # | Attack | Where it must be stopped | Current handling |
 |---|--------|--------------------------|------------------|
-| T1 | Rogue-key forgery of the fast-aggregate | on-chain PoP | verified `…Diff.scala:22`; ✅ |
+| T1 | Rogue-key forgery of the fast-aggregate | on-chain PoP | verified `…Diff.scala:22`; ✅. **Feature 30 `BlsCryptoV2` (2026-09-02):** the PoP message now binds `chainId ‖ sender` too (`CommitToGenerationTransaction.popMessage`'s v2 layout), not just `endorserPk ‖ generationPeriodStart`, and is signed/verified under its own `_POP_` domain-separation tag (`BlsUtils.BlsPopDomainSeparationTagV2`) instead of the shared legacy `_NUL_` tag — closing audit M2 alongside H2. Height-gated at the containing block; see `docs/hotstuff-bls-crypto-audit-2026-08-31.md` H2/M2 STATUS notes. |
 | T2 | Forged / below-quorum QC | `HotStuffQuorum.verifyQC` | all-signers-∈-committee + 2/3-stake + agg verify; unit-tested |
 | T3 | Unverified QC influencing safety/commit | `HotStuffEngine.onQC/onProposal` | `verifyQC` gate before `update` (`:44`,`:70`); finding #1 ✅ |
 | T4 | Conflicting / out-of-chain COMMIT | `verifyQC` + honest-quorum voting/lock rules | verified COMMIT QC trusted by design (finding #2); forged/below-quorum rejected, same-height re-commit blocked (tested) — audit the safety proof under the honest-≥2/3 assumption |
 | T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | proof-carried, block-validated exclusion wired (feature 29 + `slashing-enabled`, default off); live testnet exercise pending |
 | T6 | Byzantine voter stalls QC formation | `HotStuffVotePool.onVote` | invalid votes dropped on ingress; finding #3 ✅ |
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
-| T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 |
+| T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 (**superseded**, see below). **Feature 30 `BlsCryptoV2` (2026-09-02):** cross-CHAIN and cross-SENDER replay are now closed too (PoP binds `chainId ‖ sender`, per T1 above), and "framing note = finding #4" is superseded by per-context DSTs — `_POP_`/`_ENDORSE_`/`_HSVOTE_` (`BlsUtils.Bls{Pop,Endorse,HsVote}DomainSeparationTagV2`) replace the single shared legacy tag, so a PoP/endorsement/vote signature from one context can no longer be transplanted into another even by encoding coincidence. Proved by the 3x3 cross-DST matrix in `BlsUtilsTest`. |
 | T9 | Crashed leader / partition (liveness + safety) | pacemaker + safety | unit + `FourNodeHotStuffTestSuite`; **needs live soak** |
 | T10 | Cross-committee-epoch fork — two disjoint committees (e.g. a full validator-set rotation between committed-generators periods) each independently form a valid, honestly-signed 2/3-stake QC for a *different* block at the identical (view, height), with zero shared signers | `HotStuffQuorum`/`HotStuffVotePool` — committee identity is now bound into the signed vote/QC bytes | **Narrowed, not fully closed (fork hazard fixed 2026-08-03; a related liveness gap in the same fix found and closed 2026-08-04).** A `committeeEpoch: Int = 0` field (schema 1.6.5, `dcc/block.proto` field 7 `committee_epoch`, reusing the existing `state.GenerationPeriod.index` rotation identifier — no new committee-hash concept) is folded into the canonical signed bytes in `HotStuffQuorum.voteMessage`, carried on the wire on `HotStuffVote`/`QuorumCertificate`, and gated by a new `HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch, currentEpoch)` transition rule (accepts the current epoch or the immediately-preceding one; rejects everything else) applied in `HotStuffEngine.onQC`/`onProposal` *before* cryptographic verification. `HotStuffCrossEpochForkSpecification` proves the fork-hazard fix: labeled votes from disjoint epochs can no longer be relabeled/merged into a cross-epoch QC, and `HotStuffEngine.onQC` demonstrably rejects a QC from an epoch outside the transition window end-to-end. Default `committeeEpoch = 0` is fully backward compatible — a pre-1.6.5 peer's messages simply omit the proto3 field and decode as `0`, matching every existing call site, so this closes cleanly with zero behaviour change for unlabeled traffic. **Adversarial review (2026-08-04) found the fork-hazard fix's OWN wiring introduced a distinct, previously-uncharacterized LIVENESS gap:** `committeeEpoch` was derived from the SIGNING replica's own live chain tip (`blockchainUpdater.currentGenerationPeriod`) rather than the vote's TARGET height, so two fully honest, synced replicas voting the identical `(view, phase, blockId, blockHeight)` target could sign DIFFERENT epochs if their local tip crossed a generation-period boundary at slightly different moments — ordinary propagation skew, not an attack — and `formQC`'s (correctly epoch-sensitive) `sameTarget` check then permanently stalled that target. Fixed by deriving `committeeEpoch` as a PURE function of the target height (`HotStuffCoordinator.Enabled`'s new `committeeEpochOf: Int => Int` parameter, `blockchain.generationPeriodOf(targetHeight).index` in `Application.scala`) at every vote-signing call site, so every honest replica now computes the identical epoch for the identical target regardless of its own local tip; `HotStuffVotePool.onVote`'s per-voter dedup was additionally made epoch-aware (`(voterIndex, committeeEpoch)`, not `voterIndex` alone) as defense-in-depth. See `HotStuffCrossEpochLivenessSpecification` for the reproduction and fix proof. All HotStuff-area unit/DST tests green (`node-tests/testOnly com.decentralchain.consensus.hotstuff.* …`). **Real Docker evidence obtained (2026-08-03, pre-dates the liveness fix above):** built the actual `node-it` Docker image off this
 branch (`sbt node-it/docker`, `.m2`-resolved 1.6.5 schema) and ran `FourNodeHotStuffTestSuite`
@@ -126,6 +126,8 @@ laptop (see
 | `Application.scala` (gated block) | wiring: subscriptions, timer, propose hook, committee provider | med |
 | `network/messages.scala`, `network/BasicMessagesRepo.scala` | wire format + msg codes 39/40/41 | low-med (T8) |
 | `CommitToGenerationTransactionDiff.scala:22` (`transaction/…`) | on-chain BLS PoP | high (T1) |
+| `crypto/bls/BlsUtils.scala` | domain-separation tag SSOT (legacy `_NUL_` + v2 `_POP_`/`_ENDORSE_`/`_HSVOTE_`); sole place a legacy DST default lives | **highest** (T1, T8) — first file a crypto auditor should read |
+| `CommitToGenerationTransaction.popMessage` (`transaction/…`) | PoP message SSOT — legacy and v2 (`chainId ‖ sender ‖ endorserPk ‖ generationPeriodStart`) layouts, constructed in exactly this one function | high (T1) |
 
 ## 6. Evidence index
 - **Design SSOT:** `docs/hotstuff-integration-design.md` (protocol ↔ code map, step-4c seams).
@@ -242,6 +244,44 @@ laptop (see
    **Still open for this item:** no live multi-node/testnet observation of the trap or of the re-anchor
    firing in production. The fix is DST- and unit-proven only, and the counters above exist precisely so
    a real occurrence becomes graphable — same caveat as the T10 item above.
+8. **BlsCryptoV2 (feature 30) activation-boundary no-QC liveness window — expected, self-healing
+   (2026-09-02).** `cryptoV2` (`HotStuffCoordinator.Enabled`, wired from
+   `blockchainUpdater.supportsBlsCryptoV2()` in `Application.scala`) is a monotone per-node read of that
+   node's own live tip, so replicas cross the activation height at slightly different moments (ordinary
+   propagation skew — the same class of boundary behaviour as the T10 liveness gap above, but on the
+   vote/QC signing DST rather than `committeeEpoch`). `formQC`/`verifyQC` require a uniform DST across
+   every vote in one QC (see `HotStuffQuorum.voteDst`'s scaladoc); mixed-era votes are dropped by
+   `HotStuffVotePool`'s verify-gate rather than merged. A view straddling the boundary can therefore see
+   NO QC form for one or more rounds. This self-heals via the pacemaker's normal view advance once every
+   replica has crossed, and is liveness-only — doubly harmless today since T2 is observational-only (item
+   4 above). **Separately, and unlike this liveness window, `HotStuffEquivocationProof.signaturesValid`
+   has an outstanding correctness gap for the same activation**: it still hardcodes the legacy DST and
+   was not updated to a per-containing-block DST (Task 8 in
+   docs/superpowers/plans/2026-09-02-bls-crypto-v2.md, not yet done as of this entry) — until that lands,
+   feature 30 MUST NOT be activated on any chain, or equivocation detection/slashing goes silently inert.
+   Must be re-evaluated (both items) if HotStuff is ever made authoritative.
+   **UPDATE 2026-09-02: Task 8 has since landed.** `HotStuffEquivocationProof.signaturesValid` no longer
+   hardcodes the legacy DST — it derives the vote DST from the CONTAINING block's height
+   (`HotStuffQuorum.voteDst(blockchain.supportsBlsCryptoV2(containingBlockHeight))`), and, since honest
+   signers may legitimately disagree about their live `supportsBlsCryptoV2()` tip during the activation
+   generation period (the same liveness-window class described above, on this path applied to a
+   consensus-replayed artifact rather than a live vote/QC), any proof carried by a block in that period
+   is refused outright by design rather than risking a false-positive/false-negative slash. Proved by
+   `BlsCryptoV2EquivocationProofBoundarySpec` (`state/appender`). The correctness gap this item warned
+   about is closed; the liveness window on votes/QCs described earlier in this item is unaffected (it is
+   explicitly not consensus-replayed and remains self-healing by design).
+9. **What feature 30 (`BlsCryptoV2`) does NOT close.** (a) The legacy DST (`BlsUtils.BlsDomainSeparationTag`,
+   `_NUL_`) remains reachable **forever**, by design — every pre-activation block's PoP/endorsement/vote
+   signatures were produced under it, and history must stay verifiable, so `BlsUtils` keeps it as the one
+   legacy default rather than deleting it. This is not a residual bug; it is the intended shape of a
+   height-gated, non-retroactive consensus change. (b) The off-chain HotStuff vote/QC signing and
+   endorsement paths (`HotStuffCoordinator`, `BlockEndorser`) switch DST on a **live-tip** read
+   (`blockchainUpdater.supportsBlsCryptoV2()`), not a block height — safe *only* because those artifacts
+   are not consensus-replayed (see item 8's activation-boundary liveness-window entry above for the
+   consequence: a transient no-QC window at the boundary, self-healing). The one path that IS
+   consensus-replayed — block-carried equivocation proofs — is exactly the path that needed, and got, the
+   height-gated boundary-refusal rule instead of a live-tip read; conflating the two designs would be a
+   mistake, not an improvement.
 
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.authoritative = true` on **mainnet** — testnet already has both flags on, see banner)
 - [x] Pure core + engine + shell implemented, gated OFF by default (mainnet)
@@ -263,6 +303,13 @@ laptop (see
 - [ ] Live multi-node Docker evidence of an actual committee-epoch (T10) transition — unit/DST-simulation
       only so far
 - [ ] Decision + re-audit if/when HotStuff `authoritative` is proposed for mainnet
+- [ ] **Feature 30 (`BlsCryptoV2`) activated on the target network** — a prerequisite for
+      `dcc.hotstuff.authoritative = true` on mainnet. HotStuff vote/QC signatures and block-carried
+      equivocation proofs both hard-switch DST on feature 30 (see §5's `BlsUtils.scala` entry and §7 item
+      8); running `authoritative` mode against a chain where feature 30 is unactivated means every
+      HotStuff vote/QC is still signed under the shared legacy `_NUL_` tag, forgoing the H2/M2 fixes this
+      package documents as closed. Fresh chains (MAINNET/STAGENET presets) pre-activate feature 30 at
+      genesis; a live network activates it by vote — see the activation-order note below.
 - [ ] **F-1 (audit 2026-08-31): decide advisory vs. enforcing for `authoritative`, and align the naming
       with the answer.** Today the floor is advisory only (no rollback refusal — see the banner's F-1
       callout); the flag's name (`authoritative`) and its raise method's name
@@ -270,3 +317,27 @@ laptop (see
       per the audit's residual-risk section regardless of which way this is decided — if enforcing is
       chosen, that is a separate consensus change (rollback refusal below the floor) needing its own
       design review and audit, not a documentation fix.
+
+## 9. Feature 30 (`BlsCryptoV2`) activation order requirement
+
+**Fresh chains.** Feature 30 must be **pre-activated at genesis, alongside features 25
+(`DeterministicFinality`) and 29 (`HotStuffEquivocationEvidence`)**, so that no legacy-DST signature
+ever exists on the chain and the equivocation-proof activation-boundary rule (§7 item 8's UPDATE, and
+`docs/hotstuff-bls-crypto-audit-2026-08-31.md`'s H2 STATUS note) costs nothing — there is no
+generation period straddling "unactivated" and "activated" for a chain that is activated from block
+one. `FunctionalitySettings.MAINNET` and `FunctionalitySettings.STAGENET` do exactly this
+(`preActivatedFeatures` includes `BlockchainFeatures.BlsCryptoV2.id -> 1`); a fresh private/dev chain
+built from `docker/private/decentralchain.custom.conf` or the `devnet` block in
+`node/src/main/resources/network-defaults.conf` gets the same treatment. Pinned by
+`BlsCryptoV2PreActivationSpec`.
+
+**Live testnet.** Feature 30 activates **by vote**, exactly like any other feature — `TESTNET`'s
+`preActivatedFeatures` is deliberately left unchanged so the chain's existing legacy-DST history stays
+verifiable rather than being retroactively rewritten. Operators should expect the documented
+one-to-few-view no-QC window at the activation boundary (§7 item 8: replicas cross the activation
+height at slightly different moments because `cryptoV2` is a live-tip read, so a view straddling the
+boundary can see no QC form for one or more rounds before the pacemaker's normal view advance
+self-heals it) and should expect that **equivocation proofs carried by a block in the generation period
+containing the activation height are rejected by design**, not merely "sometimes miss a real
+equivocator" — this is the intended boundary-refusal rule (`BlsCryptoV2EquivocationProofBoundarySpec`),
+not a gap to be worked around.

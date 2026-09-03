@@ -5,7 +5,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
 import com.decentralchain.network.EndorseBlock
 import com.decentralchain.state.{EndorsementFilter, EndorsementStorage, GeneratorIndex, Height}
 import com.decentralchain.test.{FreeSpec, NumericExt, produce}
@@ -43,8 +43,9 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
         endorserIndex: GeneratorIndex = activeGeneratorIndex,
         finalizedId: BlockId = expectedFinalizedId,
         finalizedHeight: Height = expectedFinalizedHeight,
-        endorsedId: BlockId = expectedEndorsedId
-    ): BlockEndorsement = BlockEndorsement.signed(endorserAccount, endorserIndex, finalizedId, finalizedHeight, endorsedId)
+        endorsedId: BlockId = expectedEndorsedId,
+        cryptoV2: Boolean = false
+    ): BlockEndorsement = BlockEndorsement.signed(endorserAccount, endorserIndex, finalizedId, finalizedHeight, endorsedId, cryptoV2)
 
     "rebroadcast if" - {
       "valid" in {
@@ -296,7 +297,8 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
         expectedFinalizedHeight,
         expectedEndorsedId,
         normalizedGeneratorSet.map(x => (x.addr, x.blsKp.publicKey, x.balance)),
-        conflict
+        conflict,
+        cryptoV2 = false
       )
     ) shouldBe true
     new ExtendedEndorsementStorage(r, normalizedGeneratorSet)
@@ -313,7 +315,14 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
 
     def addVote(finalizedId: BlockId, generatorIndex: Int): Either[String, Boolean] = tryAddEndorsement(
       BlockEndorsement
-        .signed(generators(generatorIndex).blsKp, GeneratorIndex(generatorIndex), finalizedId, expectedFinalizedHeight, expectedEndorsedId)
+        .signed(
+          generators(generatorIndex).blsKp,
+          GeneratorIndex(generatorIndex),
+          finalizedId,
+          expectedFinalizedHeight,
+          expectedEndorsedId,
+          cryptoV2 = false
+        )
     )
 
     def tryAddEndorsement(msg: BlockEndorsement): Either[String, Boolean] = inner.tryAdd(EndorseBlock.from(msg))
@@ -337,7 +346,8 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
                 else
                   aggEnd.verifyAgg(
                     BlockEndorsement.mkMessage(expectedFinalizedId, expectedFinalizedHeight, endorsedId),
-                    valid.map(generators(_).blsKp.publicKey)
+                    valid.map(generators(_).blsKp.publicKey),
+                    BlsUtils.BlsDomainSeparationTag
                   ) should beRight
             }
           }

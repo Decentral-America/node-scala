@@ -8,7 +8,9 @@ import com.decentralchain.account.{Address, PublicKey}
 import com.decentralchain.block.{Block, BlockEndorsement, BlockSnapshot, FinalizationVoting}
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
+import com.decentralchain.consensus.hotstuff.HotStuffQuorum
 import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
+import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.metrics.*
 import com.decentralchain.mining.Miner
@@ -314,7 +316,8 @@ package object appender {
       validEndorsements: Set[Address],
       minerAddress: Address,
       generatorsWithEnoughBalance: Set[GeneratorIndex],
-      validFinalizedHeight: Height
+      validFinalizedHeight: Height,
+      endorsementDst: String
   )(
       conflictingEndorsement: BlockEndorsement
   ): Either[String, Unit] = for {
@@ -342,7 +345,9 @@ package object appender {
     _ <- Either.raiseWhen(conflictingEndorsement.finalizedId == finalizedBlock.id()) {
       s"Contains expected finalized block: ${conflictingEndorsement.finalizedId}"
     }
-    _ <- conflictingEndorsement.signatureValid(blsPublicKey).leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
+    _ <- conflictingEndorsement
+      .signatureValid(blsPublicKey, endorsementDst)
+      .leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
   } yield ()
 
   /** Deterministic, unconditional re-verification of block-carried HotStuff equivocation proofs
@@ -367,6 +372,29 @@ package object appender {
         voters = fv.hotstuffConflicts.map(_.voterIndex)
         _ <- Either.raiseWhen(voters.toSet.size != voters.length)("Duplicate equivocation-proof voter indexes")
         conflictIdxs = fv.conflict.map(_.endorserIndex.toInt).toSet
+        // Boundary rule (audit H2). A block-carried proof's vote DST is a function of the CONTAINING
+        // block's height, so it is deterministic on replay. But the proof's SIGNER chose its DST
+        // off-chain from its own live tip, and during the generation period that contains feature
+        // 30's activation height two honest replicas can legitimately disagree about that tip. We
+        // refuse every proof carried by a block in the activation period rather than try to accept
+        // either DST there -- accepting both would hand an attacker a free cross-domain oracle for
+        // exactly one period, and accepting one would make honest evidence unusable at random.
+        // Cost is ZERO whenever feature 30 activates at or before feature 29 (e.g. any chain where
+        // both are pre-activated at height 1): no proof can exist in that period at all.
+        _ <- blockchain.featureActivationHeight(BlockchainFeatures.BlsCryptoV2) match {
+          case Some(activationHeight) =>
+            blockchain
+              .generationPeriodOf(activationHeight)
+              .map(_.index)
+              .fold(Either.unit[String]) { activationPeriodIndex =>
+                Either.raiseWhen(blockGenerationPeriodIndex == activationPeriodIndex)(
+                  s"HotStuff equivocation proofs are not accepted in the BlsCryptoV2 activation period " +
+                    s"(period $activationPeriodIndex, activation height $activationHeight)"
+                )
+              }
+          case None => Either.unit
+        }
+        proofDst = HotStuffQuorum.voteDst(blockchain.supportsBlsCryptoV2(blockHeight))
         _ <- fv.hotstuffConflicts.toList.traverse { proof =>
           for {
             _ <- proof.consistent
@@ -382,7 +410,10 @@ package object appender {
             _ <- Either.raiseWhen(conflictIdxs.contains(proof.voterIndex))(
               s"Voter ${proof.voterIndex} already carries a conflicting endorsement in this voting"
             )
-            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2))
+            // Task 8 (fixes the gap flagged in the 2026-09-02 review of ed0fbcb69c): dst is derived from
+            // THIS proof's containing block height (blockHeight, already in scope), never live tip, so
+            // replay/rollback stay deterministic. See HotStuffEquivocationProof.signaturesValid's doc.
+            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2), proofDst)
           } yield ()
         }
       } yield ()
@@ -408,6 +439,12 @@ package object appender {
 
           generatorsWithEnoughBalance = generatorSet.view.map(_._1).toSet
           blockHeight                 = Height(blockchain.height + 1)
+          // Feature-30 era for THIS block. Deliberately derived from the containing block's height,
+          // never the live tip: an endorsement's DST must be a pure function of the block that
+          // carries it, or a rollback across the activation height would re-validate the same block
+          // under a different domain (audit H2).
+          endorsementDst = if (blockchain.supportsBlsCryptoV2(blockHeight.toInt)) BlsUtils.BlsEndorseDomainSeparationTagV2
+                           else BlsUtils.BlsDomainSeparationTag
           blockGenerationPeriod <- blockchain
             .generationPeriodOf(blockHeight)
             .toRight(s"No period for height $blockHeight")
@@ -433,7 +470,8 @@ package object appender {
                 validEndorserAddresses,
                 block.header.generator.toAddress,
                 generatorsWithEnoughBalance,
-                fv.finalizedHeight
+                fv.finalizedHeight,
+                endorsementDst
               )
             )
           _ <- validateHotStuffEquivocationProofs(
@@ -463,7 +501,8 @@ package object appender {
                       BlsUtils.verifyAgg(
                         aggregatedEndorsement.arr,
                         BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
-                        validEndorsers.view.map(_._2.arr)
+                        validEndorsers.view.map(_._2.arr),
+                        endorsementDst
                       )
                 } yield ()
           }

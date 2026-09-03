@@ -54,11 +54,11 @@ final class NodeHotStuffEffects(
   override def myVoterIndexes: Set[Int] =
     committeeProvider().iterator.filter(gi => wallet.privateKeyAccount(gi.address).isRight).map(_.index.toInt).toSet
 
-  override def signVote(voteMessage: Array[Byte], voterIndex: Int): Option[BlsSignature] =
+  override def signVote(voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature] =
     committeeProvider()
       .find(_.index.toInt == voterIndex)
       .flatMap(gi => wallet.privateKeyAccount(gi.address).toOption)
-      .map(account => BlsKeyPair(account.privateKey).sign(voteMessage))
+      .map(account => BlsKeyPair(account.privateKey).sign(voteMessage, dst))
 
   override def onCommit(blockId: BlockId, height: Int): Unit = {
     hotStuffFinalized.updateAndGet(prev => math.max(prev, height))

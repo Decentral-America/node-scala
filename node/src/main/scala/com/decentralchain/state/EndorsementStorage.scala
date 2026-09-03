@@ -64,7 +64,7 @@ object EndorsementStorage {
         _             <- Either.raiseWhen(msg.endorserIndex == filter.miner.toInt)("Miner can't sent endorsements")
         (endorserAddr, endorserPk, balance) = filter.normalizedGeneratorSet(msg.endorserIndex)
         _   <- Either.raiseWhen(balance == 0)(s"Endorser #$endorserIndex $endorserAddr has no enough balance")
-        sig <- verifySig(msg, endorserPk)
+        sig <- verifySig(msg, endorserPk, filter.cryptoV2)
       } yield
         if (sharedWithNeighbors.contains(msg) || conflict.isDefinedAt(msg.endorserIndex) || filter.conflict.contains(endorserIndex)) false
         else {
@@ -178,9 +178,13 @@ object EndorsementStorage {
       voting.map(FinalizationResult(simulationResult.reachedFinalization, _))
     }
 
-    private def verifySig(msg: EndorseBlock, pk: BlsPublicKey): Either[String, BlsSignature] = for {
+    // `cryptoV2` comes from the current voting's `EndorsementFilter`, itself set by `BlockEndorser`
+    // from the same `votingHeight` used to sign -- keeps signer and gossip-verifier on one era for a
+    // given voting round (task 6), instead of two independent tip reads that could straddle the
+    // feature-30 activation boundary.
+    private def verifySig(msg: EndorseBlock, pk: BlsPublicKey, cryptoV2: Boolean): Either[String, BlsSignature] = for {
       sig <- BlsSignature(msg.signature).leftMap(_.err)
-      _   <- sig.verifyBasic(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), pk)
+      _   <- sig.verifyBasic(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), pk, BlockEndorsement.dst(cryptoV2))
     } yield sig
   }
 

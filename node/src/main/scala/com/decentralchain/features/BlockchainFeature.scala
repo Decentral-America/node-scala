@@ -30,6 +30,8 @@ object BlockchainFeatures {
   val EcrecoverFix                    = BlockchainFeature(24, "ecrecover fix")
   val DeterministicFinality           = BlockchainFeature(25, "Deterministic Finality & RIDE V9")
   val HotStuffEquivocationEvidence    = BlockchainFeature(29, "HotStuff Equivocation Evidence")
+  // Id 28 is deliberately BURNED (never assigned on any DCC network) -- do not reuse it.
+  val BlsCryptoV2                     = BlockchainFeature(30, "BLS domain separation & bound PoP")
 
   // Not exposed
   val ContinuationTransaction = BlockchainFeature(26, "Continuation Transaction")
@@ -64,7 +66,8 @@ object BlockchainFeatures {
     BoostBlockReward,
     EcrecoverFix,
     DeterministicFinality,
-    HotStuffEquivocationEvidence
+    HotStuffEquivocationEvidence,
+    BlsCryptoV2
   ).map(f => f.id -> f).toMap
 
   val implemented: Set[Short] = dict.keySet
