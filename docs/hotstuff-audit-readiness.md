@@ -296,6 +296,19 @@ laptop (see
    (`_POP_`/`_ENDORSE_`/`_HSVOTE_`) are the only crypto in production today, used unconditionally by every
    code path from genesis; there is no live-tip-vs-block-height distinction left to draw.
 
+   > **CORRECTION (2026-09-03): the "not reachable at all any more, forever or otherwise" and "only
+   > crypto in production today" claims above are FALSE and have been superseded.** The premise behind
+   > the 2026-09-02 deletion — "no chain in this repo's history had ever activated feature 30/legacy
+   > signatures" — turned out to be wrong for the real testnet-relaunch chain, which pre-activates
+   > feature 25 (`DeterministicFinality`) at genesis and carries real, legitimate BLS signatures produced
+   > under the legacy `_NUL_` tag, confirmed by a live chain replay reaching height 2639. A VERIFY-ONLY
+   > legacy fallback (`BlsUtils.BlsLegacyDomainSeparationTag`) was reintroduced afterward for this reason.
+   > **New signing remains v2-only** — every new PoP, endorsement, and HotStuff vote/QC is still produced
+   > exclusively under the three per-context v2 DSTs described above; only *verification* of pre-existing,
+   > already-on-chain historical signatures falls back to the legacy tag. See
+   > `node/src/main/scala/com/decentralchain/crypto/bls/BlsUtils.scala` (the `BlsLegacyDomainSeparationTag`
+   > scaladoc) for the full explanation.
+
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.authoritative = true` on **mainnet** — testnet already has both flags on, see banner)
 - [x] Pure core + engine + shell implemented, gated OFF by default (mainnet)
 - [x] 45+ unit tests + adversarial cases green (114/114 HotStuff-area tests as of the T10 fix, 2026-08-04)

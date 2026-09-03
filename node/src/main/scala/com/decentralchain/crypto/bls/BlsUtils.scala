@@ -12,9 +12,11 @@ object BlsUtils {
   /** Per-context domain-separation tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash
     * domain per signed message type, so a signature produced in one context is worthless in another
     * BY DOMAIN rather than by the accidental "the three encodings happen to have distinct lengths"
-    * reasoning H2 flags as a latent trap. Unconditional from genesis: mainnet never activated
-    * feature 25 (no HotStuff history exists under any other tag), so there is no legacy chain bytes
-    * to preserve.
+    * reasoning H2 flags as a latent trap. Used unconditionally for all NEW signing and verified first
+    * on every path. (CORRECTED 2026-09-03: this used to claim there is no legacy chain history to
+    * preserve because mainnet never activated feature 25 -- that premise is false for the real
+    * testnet-relaunch chain. See `BlsLegacyDomainSeparationTag` below for why a verify-only legacy
+    * fallback exists.)
     */
   val BlsPopDomainSeparationTag     = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
   val BlsEndorseDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"

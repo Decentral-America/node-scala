@@ -42,6 +42,17 @@ shipped behind was itself deleted later the same day, once it was confirmed no c
 history had ever activated it); see their STATUS notes below. M1/M3/M4 and the LOW/INFO items remain
 open/unaddressed by this task.
 
+> **CORRECTION (2026-09-03):** "the only crypto in production" (H2/M2, above and below) no longer
+> holds without qualification for *verification*. A VERIFY-ONLY legacy BLS domain-separation fallback
+> (`BlsUtils.BlsLegacyDomainSeparationTag`, the `_NUL_` tag) was reintroduced after this audit was
+> written, because the real testnet-relaunch chain pre-activates feature 25 (`DeterministicFinality`)
+> at genesis and carries real, legitimate signatures produced under that legacy tag — confirmed by a
+> live chain replay reaching height 2639, which falsified this audit's original premise that no kept
+> chain had ever activated the relevant feature. **New signing is unaffected and remains v2-only**:
+> every new PoP, endorsement, and HotStuff vote/QC is still produced exclusively under the three
+> per-context v2 DSTs. Only historical verification is bimodal (v2 first, legacy fallback for
+> pre-existing signatures). See the H2 finding below and its own correction note for detail.
+
 ### CRITICAL
 
 #### C1 — Light-node mode entirely bypasses BLS proof-of-possession and curve validation for committed-generator registration
@@ -130,6 +141,19 @@ Note also the scaladoc on `aggSig` — *"@return Not validated, but must be in t
 > (`BlsCryptoV2ActivationHelperSpec`, `BlsCryptoV2SnapshotPathPopSpec`, `BlsCryptoV2RollbackDeterminismSpec`,
 > `BlsCryptoV2EquivocationProofBoundarySpec`, `BlsCryptoV2EndorsementSpec`) were deleted along with the
 > gate — there is no boundary left to test.
+
+> **CORRECTION (2026-09-03): the "ONLY DSTs used anywhere in production" and "not reachable at all any
+> more, not even as a fallback" claims above are FALSE and have been superseded.** The premise that no
+> chain in this repo's history had ever activated the legacy-tag feature turned out to be wrong for the
+> real testnet-relaunch chain: it pre-activates feature 25 (`DeterministicFinality`) at genesis and
+> carries real, legitimate BLS signatures produced under the legacy `_NUL_` tag, confirmed by a live
+> chain replay reaching height 2639. `BlsUtils.BlsLegacyDomainSeparationTag` was reintroduced as a
+> VERIFY-ONLY fallback for this reason — it was not left deleted. **New signing remains v2-only**: the
+> three per-context v2 DSTs above are still the exclusive tags used to produce any new PoP, endorsement,
+> or HotStuff vote/QC. Only verification is bimodal — it tries v2 first and falls back to the legacy tag
+> solely to validate pre-existing, already-on-chain historical signatures (e.g. during a full resync
+> from genesis). See `node/src/main/scala/com/decentralchain/crypto/bls/BlsUtils.scala`'s
+> `BlsLegacyDomainSeparationTag` scaladoc for the full explanation.
 
 **Files:** `BlsUtils.scala:11`; `CommitToGenerationTransaction.scala:50–52`; `BlockEndorsement.scala:31–32`; `HotStuffQuorum.scala:40–41`
 
