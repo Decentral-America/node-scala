@@ -54,11 +54,11 @@ final class NodeHotStuffEffects(
   override def myVoterIndexes: Set[Int] =
     committeeProvider().iterator.filter(gi => wallet.privateKeyAccount(gi.address).isRight).map(_.index.toInt).toSet
 
-  override def signVote(voteMessage: Array[Byte], voterIndex: Int): Option[BlsSignature] =
+  override def signVote(voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature] =
     committeeProvider()
       .find(_.index.toInt == voterIndex)
       .flatMap(gi => wallet.privateKeyAccount(gi.address).toOption)
-      .map(account => BlsKeyPair(account.privateKey).sign(voteMessage))
+      .map(account => BlsKeyPair(account.privateKey).sign(voteMessage, dst))
 
   override def onCommit(blockId: BlockId, height: Int): Unit = {
     hotStuffFinalized.updateAndGet(prev => math.max(prev, height))
@@ -77,5 +77,14 @@ final class NodeHotStuffEffects(
     } else {
       logger.info(s"[HotStuff] observational commit: block $blockId finalized at height $height (feature-25 remains authoritative)")
     }
+  }
+
+  override def onEquivocation(proof: HotStuffEquivocationProof): Unit = {
+    logger.error(
+      s"[HotStuff] EQUIVOCATION DETECTED: voter #${proof.voterIndex} double-signed view=${proof.view} ${proof.phase} " +
+        s"epoch=${proof.committeeEpoch} blocks=${proof.voteA.blockId.trim}/${proof.voteB.blockId.trim} -- " +
+        s"Byzantine actor or protocol-violating bug; investigate immediately"
+    )
+    HotStuffEquivocationObservation.recordEquivocation()
   }
 }

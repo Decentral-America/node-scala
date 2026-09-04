@@ -2106,7 +2106,15 @@ class BlockChallengeTest
   private def createMicroBlockAppender(d: Domain): (Channel, MicroBlock) => Task[Unit] = { (ch, mb) =>
     val channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
-    MicroblockAppender(d.blockchain, d.utxPool, channels, PeerDatabase.NoOp, Some(createBlockChallenger(d, channels)), BlockEndorser.Disabled, appenderScheduler)(
+    MicroblockAppender(
+      d.blockchain,
+      d.utxPool,
+      channels,
+      PeerDatabase.NoOp,
+      Some(createBlockChallenger(d, channels)),
+      BlockEndorser.Disabled,
+      appenderScheduler
+    )(
       ch,
       MicroblockData(None, mb, Coeval.now(Set.empty)),
       None

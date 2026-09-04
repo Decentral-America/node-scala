@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -65,7 +65,7 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
 
   private def voteOf(i: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(5, PREPARE, block, height)
-    HotStuffVote(5, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr)
+    HotStuffVote(5, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr)
   }
 
   "the ORIGINAL committee" should "confirm 60-of-100 stake does NOT reach its own 2/3 quorum (sanity check on the numbers)" in {
@@ -148,10 +148,10 @@ class HotStuffVotePoolCommitteeChangeSpecification extends FlatSpec {
 
       // vote(2) arrives under C1: {0,1,2} = 75 stake clears BOTH C0's 67 and C1's 50 -> QC forms.
       val (afterV2, qc2) = HotStuffVotePool.onVote(afterV1, voteOf(2), equalC1)
-      qc2.isDefined should be(true)                                 // stall is closed: a QC does form
-      qc2.get.signerIndexes.sorted should be(Seq(0, 1, 2))          // and the removed signer 3 is NOT in it
+      qc2.isDefined should be(true)                        // stall is closed: a QC does form
+      qc2.get.signerIndexes.sorted should be(Seq(0, 1, 2)) // and the removed signer 3 is NOT in it
       HotStuffQuorum.verifyQC(qc2.get, equalC1) should be(Right(()))
-      afterV2.pending should be(empty)                              // bucket cleared on emit
+      afterV2.pending should be(empty) // bucket cleared on emit
     }
 
   "a QC formed by HotStuffVotePool" should

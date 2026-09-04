@@ -30,10 +30,11 @@ class HotStuffSimulationSpecification extends FlatSpec {
     live.foreach(committed(_) = None)
 
     class SimEffects(self: Int) extends HotStuffEffects {
-      def broadcast(m: Message): Unit                                = inbox.enqueue((self, m))
-      def myVoterIndexes: Set[Int]                                   = Set(self)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg)) else None
-      def onCommit(blockId: BlockId, height: Int): Unit              = committed(self) = Some((blockId, height))
+      def broadcast(m: Message): Unit                                             = inbox.enqueue((self, m))
+      def myVoterIndexes: Set[Int]                                                = Set(self)
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
+      def onCommit(blockId: BlockId, height: Int): Unit                           = committed(self) = Some((blockId, height))
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
     }
 
     val nodes: Map[Int, HotStuffCoordinator.Enabled] =
@@ -71,10 +72,11 @@ class HotStuffSimulationSpecification extends FlatSpec {
   "the proposalValid guard" should "make a replica reject a non-canonical proposal (no vote) but accept the canonical one" in {
     val sent = mutable.ListBuffer.empty[Message]
     val fx   = new HotStuffEffects {
-      def broadcast(m: Message): Unit                                = sent += m
-      def myVoterIndexes: Set[Int]                                   = Set(1)
-      def signVote(msg: Array[Byte], idx: Int): Option[BlsSignature] = Some(kps(1).sign(msg))
-      def onCommit(blockId: BlockId, height: Int): Unit              = ()
+      def broadcast(m: Message): Unit                                             = sent += m
+      def myVoterIndexes: Set[Int]                                                = Set(1)
+      def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = Some(kps(1).sign(msg, dst))
+      def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
     }
     // Real-world guard: only B is a block this replica recognizes as canonical on its own chain.
     val node = new HotStuffCoordinator.Enabled(() => committee, fx, (_, _) => true, (b: BlockId) => b == B)

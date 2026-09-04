@@ -20,13 +20,13 @@ import java.util.concurrent.atomic.AtomicInteger
   * (covered separately, against a real chain, by `HotStuffAuthoritativeFinalitySpec`).
   */
 class NodeHotStuffEffectsSpecification extends FlatSpec with TestWallet {
-  private def mkChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+  private def mkChannelGroup                     = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
   private val emptyCommittee: () => GeneratorSet = () => Seq.empty
   private def randomBlockId: BlockId             = ByteStr(Array.fill(32)(0: Byte))
 
   "onCommit" should "NOT invoke the authoritative-raise hook when authoritative=false (default; today's observational behaviour)" in {
     val raiseCalls = new AtomicInteger(0)
-    val effects = new NodeHotStuffEffects(
+    val effects    = new NodeHotStuffEffects(
       emptyCommittee,
       testWallet,
       mkChannelGroup,
@@ -41,10 +41,10 @@ class NodeHotStuffEffectsSpecification extends FlatSpec with TestWallet {
   }
 
   it should "invoke the authoritative-raise hook exactly once with the committed (blockId, height) when authoritative=true" in {
-    val raiseCalls                          = new AtomicInteger(0)
-    var seenArgs: Option[(BlockId, Int)]    = None
-    val committedId                          = randomBlockId
-    val effects = new NodeHotStuffEffects(
+    val raiseCalls                       = new AtomicInteger(0)
+    var seenArgs: Option[(BlockId, Int)] = None
+    val committedId                      = randomBlockId
+    val effects                          = new NodeHotStuffEffects(
       emptyCommittee,
       testWallet,
       mkChannelGroup,

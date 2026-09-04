@@ -249,7 +249,7 @@ object CommonValidation {
       case t: ReissueTransaction     => generic1or2Barrier(t)
       case t: BurnTransaction        => generic1or2Barrier(t)
 
-      case _: SponsorFeeTransaction  => activationBarrier(BlockchainFeatures.FeeSponsorship)
+      case _: SponsorFeeTransaction   => activationBarrier(BlockchainFeatures.FeeSponsorship)
       case _: InvokeScriptTransaction => activationBarrier(BlockchainFeatures.Ride4DApps)
 
       case _: UpdateAssetInfoTransaction    => activationBarrier(BlockchainFeatures.BlockV5)

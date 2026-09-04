@@ -14,7 +14,7 @@ import com.decentralchain.features.BlockchainFeatures.{BlockReward, BlockRewardD
 import com.decentralchain.history.Domain.BlockchainUpdaterExt
 import com.decentralchain.lagonaki.mocks.TestBlock
 import com.decentralchain.mining.MiningConstraint
-import com.decentralchain.settings.{Constants, FunctionalitySettings, RewardsSettings}
+import com.decentralchain.settings.{Constants, DCCSettings, FunctionalitySettings, RewardsSettings}
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.state.{BlockRewardCalculator, Blockchain, GenesisBlockHeight, Height}
 import com.decentralchain.test.*
@@ -1440,5 +1440,197 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
           5 * (6.dcc + rewardDelta) * 10 + // 10..14: boosted reward after change
           6.dcc + rewardDelta
       ) // 15: non-boosted after change
+  }
+
+  private val AdjustedDistributionActivationHeight = 8
+
+  private def adjustedDistributionSettings(
+      rewardsSettings: RewardsSettings,
+      boostBlockReward: Boolean = false,
+      ceaseXtnBuyback: Boolean = false
+  ): DCCSettings = {
+    val featureHeights =
+      Seq(
+        BlockchainFeatures.CappedReward                    -> 0,
+        BlockchainFeatures.AdjustedBlockRewardDistribution -> AdjustedDistributionActivationHeight
+      ) ++
+        (if (boostBlockReward) Seq(BlockchainFeatures.BoostBlockReward -> 5) else Nil) ++
+        (if (ceaseXtnBuyback) Seq(BlockchainFeatures.CeaseXtnBuyback -> 0) else Nil)
+
+    val ws = DomainPresets.BlockRewardDistribution
+      .setFeaturesHeight(featureHeights*)
+      .configure(fs =>
+        fs.copy(
+          // the boost period covers the whole scenario: the adjusted distribution must supersede it, not outlive it
+          blockRewardBoostPeriod = 1000,
+          xtnBuybackRewardPeriod = 0,
+          daoAddress = Some(daoAddress.toString),
+          xtnBuybackAddress = Some(xtnBuybackAddress.toString)
+        )
+      )
+    ws.copy(blockchainSettings = ws.blockchainSettings.copy(rewardsSettings = rewardsSettings))
+  }
+
+  /** Appends a block and checks how the reward of that block was split. */
+  private def appendVotingBlock(d: Domain, rewardVote: Long = -1L)(miner: Long, dao: Long, xtn: Long)(implicit pos: Position): Unit = {
+    val minerBalanceBefore = d.balance(blockMiner.toAddress)
+    val daoBalanceBefore   = d.balance(daoAddress)
+    val xtnBalanceBefore   = d.balance(xtnBuybackAddress)
+
+    d.appendBlock(d.createBlock(Block.RewardBlockVersion, Seq.empty, generator = blockMiner, rewardVote = rewardVote))
+
+    withClue(s"height ${d.blockchain.height}: ") {
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (minerBalanceBefore + miner),
+        daoAddress           -> (daoBalanceBefore + dao),
+        xtnBuybackAddress    -> (xtnBalanceBefore + xtn)
+      )
+    }
+  }
+
+  "Adjusted block reward distribution:" - {
+    "replaces the default 2/2/2 distribution with 10 (DAO) / 8 (miner) / 2 (XTN buyback) and supersedes the boost" in withDomain(
+      adjustedDistributionSettings(RewardsSettings(1000, 1000, 6.dcc, 0.5.dcc, 4), boostBlockReward = true),
+      Seq(AddrWithBalance(blockMiner.toAddress, initialMinerBalance))
+    ) { d =>
+      (1 to 6).foreach(_ => d.appendKeyBlock(blockMiner))
+      // heights 2..4: default distribution, heights 5..7: boosted distribution
+      d.blockchain.height shouldBe 7
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 3 * 2.dcc + 3 * 20.dcc),
+        daoAddress           -> (3 * 2.dcc + 3 * 20.dcc),
+        xtnBuybackAddress    -> (3 * 2.dcc + 3 * 20.dcc)
+      )
+      d.blockchain.dccAmount(7) shouldBe BigInt(100_000_000.dcc + 3 * 6.dcc + 3 * 60.dcc)
+
+      d.appendKeyBlock(blockMiner)
+      // height 8: activation height, the block reward is reset to 20 dcc and the boost has no effect anymore
+      d.blockchain.height shouldBe AdjustedDistributionActivationHeight
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 3 * 2.dcc + 3 * 20.dcc + 8.dcc),
+        daoAddress           -> (3 * 2.dcc + 3 * 20.dcc + 10.dcc),
+        xtnBuybackAddress    -> (3 * 2.dcc + 3 * 20.dcc + 2.dcc)
+      )
+
+      d.appendKeyBlock(blockMiner)
+      d.blockchain.height shouldBe 9
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 3 * 2.dcc + 3 * 20.dcc + 2 * 8.dcc),
+        daoAddress           -> (3 * 2.dcc + 3 * 20.dcc + 2 * 10.dcc),
+        xtnBuybackAddress    -> (3 * 2.dcc + 3 * 20.dcc + 2 * 2.dcc)
+      )
+
+      d.blockchain.blockReward(9) shouldBe 20.dcc.some
+      d.blockchain.dccAmount(9) shouldBe BigInt(100_000_000.dcc + 3 * 6.dcc + 3 * 60.dcc + 2 * 20.dcc)
+      RewardApiRoute(d.blockchain).getRewards(Height(9)).explicitGet().currentReward shouldBe 20.dcc
+    }
+
+    "resets the block reward to 20 dcc regardless of its value before the activation" in withDomain(
+      adjustedDistributionSettings(RewardsSettings(1000, 1000, 3.dcc, 0.5.dcc, 4)),
+      Seq(AddrWithBalance(blockMiner.toAddress, initialMinerBalance))
+    ) { d =>
+      (1 to 6).foreach(_ => d.appendKeyBlock(blockMiner))
+      // heights 2..7: 2 dcc to the miner, the remaining 1 dcc is split between the DAO and the XTN buyback addresses
+      d.blockchain.height shouldBe 7
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 6 * 2.dcc),
+        daoAddress           -> (6 * 0.5.dcc),
+        xtnBuybackAddress    -> (6 * 0.5.dcc)
+      )
+
+      d.appendKeyBlock(blockMiner)
+      d.blockchain.height shouldBe AdjustedDistributionActivationHeight
+      d.blockchain.blockReward(AdjustedDistributionActivationHeight) shouldBe 20.dcc.some
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 6 * 2.dcc + 8.dcc),
+        daoAddress           -> (6 * 0.5.dcc + 10.dcc),
+        xtnBuybackAddress    -> (6 * 0.5.dcc + 2.dcc)
+      )
+      d.blockchain.dccAmount(8) shouldBe BigInt(100_000_000.dcc + 6 * 3.dcc + 20.dcc)
+    }
+
+    "gives the XTN buyback share to the miner when XTN buyback has ceased" in withDomain(
+      adjustedDistributionSettings(RewardsSettings(1000, 1000, 6.dcc, 0.5.dcc, 4), boostBlockReward = true, ceaseXtnBuyback = true),
+      Seq(AddrWithBalance(blockMiner.toAddress, initialMinerBalance))
+    ) { d =>
+      (1 to 6).foreach(_ => d.appendKeyBlock(blockMiner))
+      // heights 2..4: 4/2/0, heights 5..7: 40/20/0
+      d.blockchain.height shouldBe 7
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 3 * 4.dcc + 3 * 40.dcc),
+        daoAddress           -> (3 * 2.dcc + 3 * 20.dcc),
+        xtnBuybackAddress    -> 0L
+      )
+
+      d.appendKeyBlock(blockMiner)
+      // height 8: 10 dcc to the miner and 10 dcc to the DAO
+      d.blockchain.height shouldBe AdjustedDistributionActivationHeight
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 3 * 4.dcc + 3 * 40.dcc + 10.dcc),
+        daoAddress           -> (3 * 2.dcc + 3 * 20.dcc + 10.dcc),
+        xtnBuybackAddress    -> 0L
+      )
+      d.blockchain.dccAmount(8) shouldBe BigInt(100_000_000.dcc + 3 * 6.dcc + 3 * 60.dcc + 20.dcc)
+    }
+
+    "keeps the total block reward votable, 20 dcc being only the value the voting restarts from" in withDomain(
+      // a 6 dcc increment makes the whole range of the distribution reachable within a few terms
+      adjustedDistributionSettings(RewardsSettings(5, 5, 6.dcc, 6.dcc, 4)),
+      Seq(AddrWithBalance(blockMiner.toAddress, initialMinerBalance))
+    ) { d =>
+      // heights 2..5: 6 dcc, the default 2/2/2 distribution, nobody votes
+      (1 to 4).foreach(_ => d.appendKeyBlock(blockMiner))
+      d.blockchain.height shouldBe 5
+      d.blockchain.blockReward(5) shouldBe 6.dcc.some
+      assertBalances(
+        d.blockchain,
+        blockMiner.toAddress -> (initialMinerBalance + 4 * 2.dcc),
+        daoAddress           -> (4 * 2.dcc),
+        xtnBuybackAddress    -> (4 * 2.dcc)
+      )
+
+      // heights 6..9 vote for 26 dcc, heights 8..9 are already using the adjusted distribution
+      appendVotingBlock(d, 26.dcc)(2.dcc, 2.dcc, 2.dcc)
+      appendVotingBlock(d, 26.dcc)(2.dcc, 2.dcc, 2.dcc)
+      appendVotingBlock(d, 26.dcc)(8.dcc, 10.dcc, 2.dcc)
+      appendVotingBlock(d, 26.dcc)(8.dcc, 10.dcc, 2.dcc)
+      d.blockchain.height shouldBe 9
+      d.blockchain.blockReward(9) shouldBe 20.dcc.some
+
+      // height 10: the votes are counted, the total reward grows to 26 dcc and the miner takes everything above 20
+      appendVotingBlock(d)(14.dcc, 10.dcc, 2.dcc)
+      d.blockchain.blockReward(10) shouldBe 26.dcc.some
+      d.blockchain.dccAmount(10) shouldBe BigInt(100_000_000.dcc + 4 * 6.dcc + 2 * 6.dcc + 2 * 20.dcc + 26.dcc)
+
+      // heights 11..14 vote the reward back down
+      (1 to 4).foreach(_ => appendVotingBlock(d, 0)(14.dcc, 10.dcc, 2.dcc))
+      // height 15: back to 20 dcc
+      appendVotingBlock(d)(8.dcc, 10.dcc, 2.dcc)
+      d.blockchain.blockReward(15) shouldBe 20.dcc.some
+
+      (1 to 4).foreach(_ => appendVotingBlock(d, 0)(8.dcc, 10.dcc, 2.dcc))
+      // height 20: 14 dcc, the miner keeps its guaranteed 8 dcc and the rest is split 5 to 1
+      appendVotingBlock(d)(8.dcc, 5.dcc, 1.dcc)
+      d.blockchain.blockReward(20) shouldBe 14.dcc.some
+
+      (1 to 4).foreach(_ => appendVotingBlock(d, 0)(8.dcc, 5.dcc, 1.dcc))
+      // height 25: 8 dcc, only the guaranteed miner reward is left
+      appendVotingBlock(d)(8.dcc, 0, 0)
+      d.blockchain.blockReward(25) shouldBe 8.dcc.some
+
+      (1 to 4).foreach(_ => appendVotingBlock(d, 0)(8.dcc, 0, 0))
+      // height 30: 2 dcc, below the guaranteed miner reward
+      appendVotingBlock(d)(2.dcc, 0, 0)
+      d.blockchain.blockReward(30) shouldBe 2.dcc.some
+      RewardApiRoute(d.blockchain).getRewards(Height(30)).explicitGet().currentReward shouldBe 2.dcc
+    }
   }
 }

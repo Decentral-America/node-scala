@@ -2,7 +2,7 @@ package com.decentralchain.consensus.hotstuff
 
 import com.decentralchain.account.KeyPair
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -59,7 +59,8 @@ class HotStuffVotePoolBoundedGrowthSpecification extends FlatSpec {
       (1 until 500).map(i => GeneratorInfo(GeneratorIndex(i), fillerAddress, fillerKp.publicKey, balance = 1L))
 
   private val msg  = HotStuffQuorum.voteMessage(view, phase, target, height)
-  private val vote = HotStuffVote(view, phase, target, Height(height), voterIndex = 0, signature = realKp.sign(msg).byteStr)
+  private val vote =
+    HotStuffVote(view, phase, target, Height(height), voterIndex = 0, signature = realKp.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr)
 
   "HotStuffVotePool.seenCommittees, fed 200 distinct committee snapshots for ONE never-resolving target " +
     "and NO external pruneOlderThan call" should "never retain more than MaxSeenCommitteesPerTarget snapshots" in {

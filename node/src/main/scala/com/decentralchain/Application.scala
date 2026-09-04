@@ -17,6 +17,8 @@ import com.decentralchain.api.http.leasing.LeaseApiRoute
 import com.decentralchain.api.http.utils.UtilsApiRoute
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.PoSSelector
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
+import com.decentralchain.consensus.hotstuff.HotStuffIngressGuard
 import com.decentralchain.database.{DBExt, Keys, RDB}
 import com.decentralchain.events.{BlockchainUpdateTriggers, UtxEvent}
 import com.decentralchain.extensions.{Context, Extension}
@@ -29,7 +31,16 @@ import com.decentralchain.mining.{BlockChallengerImpl, Miner, MinerDebugInfo, Mi
 import com.decentralchain.network.*
 import com.decentralchain.settings.DCCSettings
 import com.decentralchain.state.appender.{BlockAppender, ExtensionAppender, MicroblockAppender}
-import com.decentralchain.state.{BlockEndorser, BlockRewardCalculator, Blockchain, CompleteBlockchainUpdater, EndorsementStorage, Height, TxMeta}
+import com.decentralchain.state.{
+  BlockEndorser,
+  BlockRewardCalculator,
+  Blockchain,
+  CompleteBlockchainUpdater,
+  EndorsementStorage,
+  GeneratorIndex,
+  Height,
+  TxMeta
+}
 import com.decentralchain.transaction.TxValidationError.GenericError
 import com.decentralchain.transaction.smart.script.trace.TracedResult
 import com.decentralchain.transaction.{DiscardedBlocks, Transaction}
@@ -102,7 +113,15 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   private var triggers = Seq.empty[BlockchainUpdateTriggers]
 
   private var miner: Miner & MinerDebugInfo = Miner.StrictDisabledMiner
-  private val (blockchainUpdater, rocksDB)  =
+
+  // T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md §5): read by
+  // MinerImpl at every key-block forge to fold pending HotStuff equivocation proofs into
+  // FinalizationVoting (production-gated by HotStuffSettings.slashingEnabled). Stays the no-op default
+  // when `dcc.hotstuff.enabled = false`; reassigned below to the real coordinator's
+  // `detectedEquivocations` once it exists, inside the `hotstuff.enabled` block.
+  @volatile
+  private var hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
+  private val (blockchainUpdater, rocksDB)                                =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
   private val messageObserver = new MessageObserver
@@ -174,7 +193,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         appenderScheduler,
         utxEvents.collect { case _: UtxEvent.TxAdded =>
           ()
-        }
+        },
+        hotStuffEquivocations = () => hotStuffEquivocations()
       )
 
     val blockChallenger =
@@ -226,7 +246,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     // enabled on mainnet before step 5 + an external audit. Commit is observational only (feature-25
     // stays authoritative).
     if (settings.hotStuffSettings.enabled) {
-      import com.decentralchain.consensus.hotstuff.{HotStuffCoordinator, NodeHotStuffEffects}
+      import com.decentralchain.consensus.hotstuff.{HotStuffAction, HotStuffCoordinator, NodeHotStuffEffects}
       import com.decentralchain.block.Block.BlockId
       import com.decentralchain.state.GeneratorSet
 
@@ -307,6 +327,23 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         if (s > 0) blockchainUpdater.blockId(s).map(id => (id, s)) else None
       }
 
+      // F-6 fix (audit "self-sealing epoch trap", docs/superpowers/specs/2026-09-02-hotstuff-lag-
+      // reanchor-design.md): bounds how far behind this replica's own live tip a T2 target may lag
+      // before `HotStuffCoordinator.Enabled.tooStale` abandons it and re-anchors near the tip -- see
+      // that class's `maxTargetLag`/`tipHeight` params and their two use sites. The
+      // `max(settledDepth + 1, ...)` floor guarantees the bound can never be tighter than the happy
+      // path's own structural lag (`blockSource`/leader-turn already run `settledDepth` blocks behind
+      // tip) -- else this replica would abandon every target it is ever handed and never make progress.
+      // NOTE: live testnet overrides `generation-period-length` down to 100 (infra/node-config/testnet/
+      // dcc.conf), which would otherwise thin the fraction term to 25 -- the floor is what keeps this
+      // bound sane there.
+      val maxTargetLag: () => Int = () =>
+        math.max(
+          settings.hotStuffSettings.settledDepth + 1,
+          (settings.blockchainSettings.functionalitySettings.generationPeriodLength * settings.hotStuffSettings.maxTargetLagFraction).toInt
+        )
+      val tipHeight: () => Int = () => blockchainUpdater.height
+
       // TESTNET-ONLY opt-in (see HotStuffSettings.authoritative doc + docs/hotstuff-audit-readiness.md):
       // when true, a genuine commit ALSO raises the authoritative feature-25 finalizedHeight via
       // `blockchainUpdater.raiseHotStuffFinalizedHeight`, which independently re-checks the certified
@@ -329,10 +366,63 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       import com.decentralchain.consensus.hotstuff.HotStuffLockedQCStore
       val hsLockedQCPath    = java.nio.file.Paths.get(settings.directory, "hotstuff", "locked-qc.dat")
       val hsInitialLockedQC = HotStuffLockedQCStore.load(hsLockedQCPath)
+
+      // M1 fix: closes the "post-restart lastVotedView=-1" double-vote window (see
+      // `HotStuffLastVotedViewStore`'s doc and `HotStuffCoordinator.resetLocalSafetyState`'s RESIDUAL
+      // GAP note) the same way `hsLockedQCPath` above closes the equivalent `lockedQC` window: reload
+      // this replica's last-persisted voted view at startup, and persist every subsequent advance.
+      // Sibling file of `hsLockedQCPath`, same `hotstuff` data directory.
+      import com.decentralchain.consensus.hotstuff.HotStuffLastVotedViewStore
+      val hsLastVotedViewPath    = hsLockedQCPath.resolveSibling("last-voted-view.dat")
+      val hsInitialLastVotedView = HotStuffLastVotedViewStore.load(hsLastVotedViewPath).getOrElse(-1)
       // `heightOf` lets the self-vote path (`onLeaderTurn`) independently re-derive a block's height
       // from its blockId, the same defense-in-depth the receive path below already applies via
       // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
       // literally.
+      // Task 4: automated recovery from a wedged committee (see `HotStuffWatchdog`'s doc for the full
+      // detection/safety/N-sizing design). `hsCoordinator` and `hsWatchdog` are mutually wired
+      // (coordinator -> watchdog via `onAction`'s progress signal, watchdog -> coordinator via
+      // `resetLocalSafetyState()`'s recovery action), so one forward-reference var is unavoidable to
+      // break the construction cycle; it is assigned exactly once, immediately below, before either
+      // object's methods can be invoked (`hotStuffScheduler` hasn't started yet at this point in
+      // `Application` construction).
+      //
+      // SAFETY (review fix, post-initial-landing): `HotStuffWatchdog`'s committee-check parameter is
+      // narrowly typed as `() => Boolean` (see that class's updated doc), NOT `() => GeneratorSet`/
+      // `() => Seq[?]`. `committee` itself (`() => blockchainUpdater.currentCommittedGeneratorSet`) DOES
+      // transitively close over `blockchainUpdater` -- but that full closure is never hand to the
+      // watchdog; only the one-way `.nonEmpty` projection below is. The watchdog's constructor therefore
+      // cannot receive a `blockchainUpdater` reference even in principle, by TYPE, not merely because its
+      // own code happens not to call anything else on one. See `HotStuffWatchdog`'s doc and
+      // `HotStuffWatchdogFinalizedHeightIsolationSpecification` for the precise claim and its proof.
+      var hsCoordinatorRef: HotStuffCoordinator.Enabled = null
+      val hsWatchdog                                    = new com.decentralchain.consensus.hotstuff.HotStuffWatchdog(
+        committeeNonEmpty = () => committee().nonEmpty,
+        lockPath = hsLockedQCPath,
+        resetInMemoryState = () => hsCoordinatorRef.resetLocalSafetyState()
+      )
+      // Review fix (Critical): `onAction` must NOT count a `Rejected` action as progress -- a wedged
+      // replica that keeps receiving/self-forming QCs that fail epoch/crypto verification (stale
+      // committee epoch, the self-verification race noted at `onVote`'s doc, etc.) would otherwise reset
+      // the watchdog's stall counter every tick on `Rejected` alone and NEVER fire, despite genuinely zero
+      // real progress -- exactly the failure mode this watchdog exists to catch. Only `Committed`/
+      // `EnteredView` (both of which `applyQC` only ever includes alongside a QC that PASSED verification
+      // -- see `HotStuffEngine.onQC`) count.
+      //
+      // audit F-5: additionally distinguish `Committed` from `EnteredView` here -- `recordProgress()`
+      // (view-based signal) still fires for both, but ONLY a genuine `Committed` also calls
+      // `recordCommit()` (the second, commit-specific staleness signal -- see `HotStuffWatchdog`'s doc).
+      // This is the wiring the audit's recommendation asks for: collapsing everything non-`Rejected`
+      // into a single `recordProgress()` (the previous wiring) is exactly what made a commit-only stall
+      // invisible to the watchdog.
+      val hsOnAction: HotStuffAction => Unit = {
+        case _: HotStuffAction.Rejected  => ()
+        case _: HotStuffAction.Committed =>
+          hsWatchdog.recordCommit()
+          hsWatchdog.recordProgress()
+        case _ => hsWatchdog.recordProgress()
+      }
+
       val hsCoordinator =
         new HotStuffCoordinator.Enabled(
           committee,
@@ -343,9 +433,16 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           blockchainUpdater.heightOf,
           hsInitialLockedQC,
           qc => HotStuffLockedQCStore.save(hsLockedQCPath, qc),
+          hsInitialLastVotedView,
+          v => HotStuffLastVotedViewStore.save(hsLastVotedViewPath, v),
           committeeEpoch,
-          committeeEpochOf
+          committeeEpochOf,
+          onAction = hsOnAction,
+          maxTargetLag = maxTargetLag,
+          tipHeight = tipHeight
         )
+      hsCoordinatorRef = hsCoordinator
+      hotStuffEquivocations = () => hsCoordinator.detectedEquivocations
 
       // HotStuff messages must reach ALL committed generators, not just directly-connected peers.
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
@@ -363,6 +460,29 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           allChannels.broadcast(msg, Set(sender)) // relay to all other peers (transitive delivery)
           true
         }
+
+      // audit F-8 (LOW): ingress sanity bounds on a wire QC/vote's `view`/`blockHeight`, applied at this
+      // ingress seam (the shell, which has `blockchainUpdater`) rather than inside the pure
+      // `HotStuffEngine`/`HotStuffPacemaker` reducers. The actual bound is the pure, independently unit
+      // tested `HotStuffIngressGuard.sane` -- see that object's doc for the full rationale (why LOW
+      // severity/colluding-quorum-only, why these specific bounds, why `slack` is one
+      // `generationPeriodLength`, floored at 1000 -- see review follow-up note in that object's doc).
+      // This closure only reads live chain state and logs the rejection.
+      def hsIngressSane(kind: String, view: Int, blockHeight: Int): Boolean = {
+        val currentHeight = blockchainUpdater.height
+        // Floored at 1000: live testnet overrides generationPeriodLength down to 100
+        // (infra/node-config/testnet/dcc.conf), which would otherwise thin this guard's margin to a
+        // tenth of what its rationale assumes. The guard exists to prevent a permanent wedge, not to
+        // bound tightly, so a generous floor costs nothing.
+        val slack = math.max(settings.blockchainSettings.functionalitySettings.generationPeriodLength, 1000)
+        val sane  = HotStuffIngressGuard.sane(view, blockHeight, currentHeight, slack)
+        if (!sane)
+          log.warn(
+            s"[HotStuff] ingress sanity check REJECTED $kind: view=$view blockHeight=$blockHeight " +
+              s"(currentHeight=$currentHeight, slack=$slack) -- dropping before it reaches the coordinator (audit F-8)"
+          )
+        sane
+      }
 
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
@@ -388,12 +508,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, v) =>
-          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v)) hsCoordinator.onVote(v)
+          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v) && hsIngressSane("vote", v.view, v.blockHeight.toInt))
+            hsCoordinator.onVote(v)
         }(using hotStuffScheduler)
       messageObserver.hotStuffQCs
         .observeOn(hotStuffScheduler)
         .foreach { case (ch, qc) =>
-          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc)) hsCoordinator.onQC(qc)
+          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc) && hsIngressSane("QC", qc.view, qc.blockHeight.toInt))
+            hsCoordinator.onQC(qc)
         }(using hotStuffScheduler)
 
       // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
@@ -410,6 +532,18 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           val tip = info.height.toInt
           if (tip > hsLastHeight) {
             hsLastHeight = tip
+            // Retention pruning [M2] (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md
+            // §5): drop proofs already reflected on-chain (voter excluded via committedGenerators/
+            // conflictGenerators union) or aged out of the current committee epoch, so
+            // `detectedEquivocations` doesn't grow unboundedly and doesn't keep re-offering evidence
+            // the chain has already acted on. Runs once per appended key block (height increment), the
+            // same cadence this subscription already drives the coordinator's leader turn on.
+            hsCoordinator.pruneEquivocations(
+              idx =>
+                blockchainUpdater.currentGenerationPeriod
+                  .exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
+              blockchainUpdater.currentGenerationPeriod.fold(0)(_.index)
+            )
             // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,
             // not a liquid tip that still differs across nodes) before it is proposed — else the
             // canonical-block guard rejects and votes never converge. See HotStuffSettings.settledDepth.
@@ -455,7 +589,18 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // today. It cannot fabricate a commit, and cannot regress feature-25. This must still be re-audited
       // (docs/hotstuff-audit-readiness.md) before HotStuff is ever made mainnet-authoritative.
       val rt = settings.hotStuffSettings.roundTimeout.toMillis
-      hotStuffScheduler.scheduleWithFixedDelay(rt, rt, java.util.concurrent.TimeUnit.MILLISECONDS, () => hsCoordinator.onRoundTimerTick())
+      // Task 4: `hsWatchdog.check()` runs on the SAME scheduled callback, immediately after
+      // `onRoundTimerTick()`, on the SAME single `hotStuffScheduler` thread the coordinator itself is
+      // confined to -- satisfying `HotStuffWatchdog`'s threading contract without a second scheduler.
+      hotStuffScheduler.scheduleWithFixedDelay(
+        rt,
+        rt,
+        java.util.concurrent.TimeUnit.MILLISECONDS,
+        () => {
+          hsCoordinator.onRoundTimerTick()
+          hsWatchdog.check()
+        }
+      )
       val hsModeLabel = if (settings.hotStuffSettings.authoritative) "AUTHORITATIVE" else "observational"
       log.info(
         s"T2 HotStuff coordinator ENABLED ($hsModeLabel; view=settled height, settled-depth=${settings.hotStuffSettings.settledDepth}). Not audited/soaked — testnet only."

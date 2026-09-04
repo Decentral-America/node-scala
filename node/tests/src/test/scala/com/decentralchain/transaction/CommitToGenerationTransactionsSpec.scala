@@ -115,7 +115,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
   "Can't commit" - {
     "zero public key" in withDomain(DeterministicFinality, AddrWithBalance.enoughBalances(sender)) { d =>
       log.info("First")
-      val zeroBlsKp = TestBlsKeyPair.unsafe(Array.emptyByteArray)
+      // TestBlsKeyPair.zero() bypasses BlsUtils.mkBlsSecretKey's own seed guard (audit M3) by
+      // construction, so this keeps exercising the on-chain rejection (PoP verify / `.validated`)
+      // as its own independent defense, regardless of that guard.
+      val zeroBlsKp = TestBlsKeyPair.zero()
       val txn       = TxHelpers.commitToGenerationWithEndorserKey(Height(3001), zeroBlsKp, sender)
       d.appendBlockE(txn) should produce("Invalid commitment signature")
     }
@@ -133,7 +136,7 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val baseTx  = TxHelpers.commitToGeneration(Height(3001), sender)
         val withPop = baseTx.copy(
           endorserPublicKey = blsKp.publicKey,
-          commitmentSignature = CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart)
+          commitmentSignature = CommitToGenerationTransaction.mkPopSignature(blsKp, baseTx.generationPeriodStart, baseTx.sender, baseTx.chainId)
         )
 
         withPop.copy(proofs = Proofs(crypto.sign(sender.privateKey, withPop.bodyBytes())))
@@ -183,7 +186,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
         val periodStart = Height(3001)
         val unsignedTx  = TxHelpers
           .commitToGeneration(periodStart, newGenerator)
-          .copy(commitmentSignature = CommitToGenerationTransaction.mkPopSignature(otherGeneratorKp, periodStart))
+          .copy(commitmentSignature =
+            CommitToGenerationTransaction
+              .mkPopSignature(otherGeneratorKp, periodStart, newGenerator.publicKey, AddressScheme.current.chainId)
+          )
         val signedTx = unsignedTx.copy(proofs = Proofs(crypto.sign(newGenerator.privateKey, unsignedTx.bodyBytes())))
 
         d.appendBlockE(unsignedTx) should produce("Proof doesn't validate as signature")
@@ -198,7 +204,10 @@ class CommitToGenerationTransactionsSpec extends FreeSpec with WithDomain {
     val blsKp = BlsKeyPair(dccPk)
     blsKp.publicKey.byteStr.base64Raw shouldBe "jrugi0W0es2WxuHoptQtchqwactZsldOGucYObZrEIOpxbWmhL8dodvpnzA+2qUf"
 
-    CommitToGenerationTransaction.mkPopSignature(blsKp, Height(1001)).byteStr.base64Raw shouldBe
-      "sOlLZL2RZZ3c98PmUvKSN960aj+VJwyVGEUygI78mGDwGJflJWLHCwuqiYk1fRG7FOCJKOtKbKOG7tBykQ5iTcRu+7eLWhiodJw47YEfDOZHNwkl8dQwgxAam8+3BEvX"
+    CommitToGenerationTransaction
+      .mkPopSignature(blsKp, Height(1001), origTx.sender, AddressScheme.current.chainId)
+      .byteStr
+      .base64Raw shouldBe
+      "mLmqbXwT4ONFAEuZKmSh1O157eKmFoJP6HeWgaFMVcXUNztKrvohPDN5SxvQ552mAaLAy/tWiD6ICqGZ97BSrBYePaKAYcvukoH6bKRxEDVtAk/daGrn2/9+2PJsPGf2"
   }
 }

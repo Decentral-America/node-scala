@@ -2,7 +2,6 @@ package com.decentralchain.state.diffs
 
 import cats.syntax.either.*
 import com.decentralchain.consensus.GeneratingBalanceProvider
-import com.decentralchain.crypto.bls.BlsUtils
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.state.*
 import com.decentralchain.transaction.CommitToGenerationTransaction
@@ -19,7 +18,8 @@ object CommitToGenerationTransactionDiff {
         GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
       }
       _ <- Either.raiseUnless(
-        BlsUtils.verifyBasic(tx.commitmentSignature.arr, tx.endorserPublicKey.arr ++ tx.generationPeriodStart.toByteArray, tx.endorserPublicKey.arr).isRight
+        CommitToGenerationTransaction
+          .verifyPop(tx.commitmentSignature.arr, tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)
       )(GenericError("Invalid commitment signature"))
       // Full curve validation (in-group, not point-at-infinity) at the actual enforcement point: once,
       // when the key is trusted going forward as a committed generator -- not on every deserialization.
@@ -42,7 +42,7 @@ object CommitToGenerationTransactionDiff {
         nextCommittedGenerators = Seq(tx.sender -> tx.endorserPublicKey)
       )
       generatingBalanceAfterDeposit = SnapshotBlockchain(blockchain, snapshot).generatingBalance(sender)
-      minMiningBalance = GeneratingBalanceProvider.minMiningBalance(blockchain, Height(blockchain.height))
+      minMiningBalance              = GeneratingBalanceProvider.minMiningBalance(blockchain, Height(blockchain.height))
       _ <- Either.raiseUnless(generatingBalanceAfterDeposit >= minMiningBalance)(
         GenericError(
           s"Generating balance $generatingBalanceAfterDeposit is less than $minMiningBalance required for block generation"

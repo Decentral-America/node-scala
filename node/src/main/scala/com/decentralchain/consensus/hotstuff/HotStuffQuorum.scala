@@ -43,6 +43,29 @@ object HotStuffQuorum {
   private def voteMessageOf(v: HotStuffVote): Array[Byte] =
     voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch)
 
+  /** The domain-separation tag votes/QCs are signed and verified under (audit H2). `voteMessage`
+    * carries no era marker of its own -- the domain alone separates this context from PoP/endorsement.
+    */
+  val VoteDst: String = BlsUtils.BlsHsVoteDomainSeparationTag
+
+  /** Verify-only bimodal check for a single vote signature: current `_HSVOTE_` DST first, then the
+    * legacy `_NUL_` DST as a fallback (audit follow-up to the PoP fix -- commit `448d56557f` deleted
+    * the legacy fallback `voteDst(cryptoV2: Boolean)` used to provide, on the same now-falsified
+    * premise that this chain never had a prior HotStuff-vote DST to stay compatible with; direct
+    * replay of the real testnet-relaunch chain proves otherwise -- `voteMessage`'s layout was never
+    * changed by that commit, only the DST selection was). Never used for new vote signing.
+    */
+  def verifyVoteSignature(signatureBytes: Array[Byte], message: Array[Byte], blsPublicKeyBytes: Array[Byte]): Boolean =
+    BlsUtils.verifyBasic(signatureBytes, message, blsPublicKeyBytes, VoteDst).isRight ||
+      BlsUtils.verifyBasic(signatureBytes, message, blsPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag).isRight
+
+  /** Same v2-then-legacy fallback as [[verifyVoteSignature]], for an aggregated QC signature. */
+  private def verifyQCSignature(aggSignatureBytes: Array[Byte], message: Array[Byte], blsPublicKeys: Iterable[Array[Byte]]): Either[String, Unit] =
+    BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, VoteDst) match {
+      case Right(())   => Right(())
+      case Left(_)     => BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
+    }
+
   /** The transition-gating rule (T10, design doc §6/§8 follow-up (a)): whether a QC/vote whose signed
     * `committeeEpoch` is `qcEpoch` should be ACCEPTED by a replica that currently believes
     * `currentEpoch` is the active committee epoch. Accepts the current epoch, or the immediately
@@ -63,7 +86,7 @@ object HotStuffQuorum {
     */
   def verifyVote(vote: HotStuffVote, committee: GeneratorSet): Boolean =
     committee.find(_.index.toInt == vote.voterIndex).exists { gi =>
-      BlsUtils.verifyBasic(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr).isRight
+      verifyVoteSignature(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr)
     }
 
   private def stakeOf(indexes: Set[Int], committee: GeneratorSet): BigInt = {
@@ -131,7 +154,7 @@ object HotStuffQuorum {
     if (signerOpt.exists(_.isEmpty)) Left("QC references unknown committee member")
     else if (!hasQuorum(qc.signerIndexes, committee)) Left("QC signing stake below 2/3 quorum")
     else
-      BlsUtils.verifyAgg(
+      verifyQCSignature(
         qc.aggregatedSignature.arr,
         voteMessage(qc.view, qc.phase, qc.blockId, qc.blockHeight.toInt, qc.committeeEpoch),
         signerOpt.flatten.map(_.blsPublicKey.arr)

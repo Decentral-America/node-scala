@@ -22,15 +22,27 @@ class HotStuffQuorumSpecification extends FlatSpec {
     GeneratorInfo(GeneratorIndex(i), KeyPair(ByteStr(Array.fill[Byte](32)((100 + i).toByte))).toAddress, kp.publicKey, balance = 25L)
   }
 
-  private def vote(i: Int): HotStuffVote = {
+  private def vote(i: Int, dst: String = BlsUtils.BlsHsVoteDomainSeparationTag): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, phase, blockId, height.toInt)
-    HotStuffVote(view, phase, blockId, height, i, kps(i).sign(msg).byteStr)
+    HotStuffVote(view, phase, blockId, height, i, kps(i).sign(msg, dst).byteStr)
   }
 
   "verifyVote" should "accept a valid vote and reject tampering / unknown voters" in {
     HotStuffQuorum.verifyVote(vote(0), committee) should be(true)
     HotStuffQuorum.verifyVote(vote(0).copy(blockId = ByteStr(Array.fill[Byte](32)(1))), committee) should be(false)
     HotStuffQuorum.verifyVote(vote(0).copy(voterIndex = 99), committee) should be(false)
+  }
+
+  it should "reject a vote signed under the wrong (PoP) domain-separation tag" in {
+    val wrongDst = vote(0, BlsUtils.BlsPopDomainSeparationTag)
+    HotStuffQuorum.verifyVote(wrongDst, committee) should be(false)
+  }
+
+  it should "reject a v2 PoP signature offered as a vote signature over the same bytes (transplant, audit H2)" in {
+    val msg          = HotStuffQuorum.voteMessage(view, phase, blockId, height.toInt)
+    val popSignature = kps(0).sign(msg, BlsUtils.BlsPopDomainSeparationTag)
+    val transplanted = HotStuffVote(view, phase, blockId, height, 0, popSignature.byteStr)
+    HotStuffQuorum.verifyVote(transplanted, committee) should be(false)
   }
 
   "formQC" should "build a verifiable QC at >= 2/3 stake" in {
@@ -53,8 +65,14 @@ class HotStuffQuorumSpecification extends FlatSpec {
     HotStuffQuorum.formQC(Seq(vote(0), other, vote(2)), committee).isLeft should be(true)
   }
 
+  it should "reject a vote set signed under the wrong (PoP) domain-separation tag" in {
+    val wrongVotes =
+      Seq(vote(0, BlsUtils.BlsPopDomainSeparationTag), vote(1, BlsUtils.BlsPopDomainSeparationTag), vote(2, BlsUtils.BlsPopDomainSeparationTag))
+    HotStuffQuorum.formQC(wrongVotes, committee).isLeft should be(true)
+  }
+
   "verifyQC" should "reject a QC whose signer set is below quorum" in {
-    val aggSig = Seq(vote(0), vote(1)).map(_.signature.arr).reduceLeft(BlsUtils.aggSign)
+    val aggSig = Seq(vote(0), vote(1)).map(_.signature.arr).reduceLeft((a, b) => BlsUtils.aggSign(a, b).toOption.get)
     val badQc  = QuorumCertificate(view, phase, blockId, height, Seq(0, 1), ByteStr(aggSig))
     HotStuffQuorum.verifyQC(badQc, committee).isLeft should be(true)
   }
@@ -62,5 +80,21 @@ class HotStuffQuorumSpecification extends FlatSpec {
   it should "reject a QC with a forged aggregate signature" in {
     val forged = QuorumCertificate(view, phase, blockId, height, Seq(0, 1, 2), ByteStr(Array.fill[Byte](96)(0)))
     HotStuffQuorum.verifyQC(forged, committee).isLeft should be(true)
+  }
+
+  // audit M4: QuorumCertificate.signerIndexes is a wire-deserialized Seq[Int] with no distinctness
+  // guarantee of its own (unlike formQC's own output, which de-dupes per voter before this point) --
+  // verifyQC maps it straight into BlsUtils.verifyAgg's pubkey list, UN-de-duplicated. hasQuorum, by
+  // contrast, computes stake over signerIndexes.toSet, so a repeated index alone can't inflate the
+  // quorum check itself -- but it DOES change what verifyAgg's aggregated-public-key check actually
+  // asserts (one repeated key's aggregate contribution is counted twice against a signature that
+  // only reflects the real, distinct signers). Signers (0, 1, 2) clear quorum (75 of 100) whether or
+  // not index 0 is repeated, so this specifically isolates verifyAgg's own defense rather than
+  // merely re-exercising the quorum-stake gate above. Confirms the M4 rejection is load-bearing for
+  // this caller, not merely redundant with an upstream guarantee.
+  it should "reject a QC whose signerIndexes contains a repeated signer (wire-crafted duplicate)" in {
+    val aggSig     = Seq(vote(0), vote(1), vote(2)).map(_.signature.arr).reduceLeft((a, b) => BlsUtils.aggSign(a, b).toOption.get)
+    val duplicated = QuorumCertificate(view, phase, blockId, height, Seq(0, 0, 1, 2), ByteStr(aggSig))
+    HotStuffQuorum.verifyQC(duplicated, committee).isLeft should be(true)
   }
 }

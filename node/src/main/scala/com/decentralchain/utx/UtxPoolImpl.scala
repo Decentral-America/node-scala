@@ -359,6 +359,14 @@ case class UtxPoolImpl(
               val newScriptedAddresses = scriptedAddresses(tx)
               if (!priority && r.checkedAddresses.intersect(newScriptedAddresses).nonEmpty) r
               else {
+                // Pre-existing, generic one-block era off-by-one: `differ` validates this tx against
+                // `updatedBlockchain`, which sits at the current tip (`blockchain.height`), but the
+                // block actually being mined lands at `blockchain.height + 1` -- any height-gated
+                // feature can therefore accept/reject a tx here based on the wrong era right around
+                // its activation height. If `differ` rejects it, `cleanUnconfirmed` (called on the next
+                // block) evicts the stale tx from the pool shortly after, so the failure mode is a
+                // transient one-block mining miss, not a consensus divergence (the on-chain diff at
+                // append time is still the source of truth).
                 val updatedBlockchain   = SnapshotBlockchain(blockchain, r.totalSnapshot)
                 val newCheckedAddresses = newScriptedAddresses ++ r.checkedAddresses
                 val e                   = differ(updatedBlockchain, tx).resultE

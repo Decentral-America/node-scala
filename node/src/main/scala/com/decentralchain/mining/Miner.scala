@@ -5,6 +5,7 @@ import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block.*
 import com.decentralchain.block.{Block, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
+import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
 import com.decentralchain.crypto
@@ -64,7 +65,8 @@ class MinerImpl(
     val minerScheduler: Scheduler,
     val appenderScheduler: Scheduler,
     transactionAdded: Observable[Unit],
-    maxTimeDrift: Long = appender.MaxTimeDrift
+    maxTimeDrift: Long = appender.MaxTimeDrift,
+    hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
 ) extends Miner
     with MinerDebugInfo
     with ScorexLogging {
@@ -208,7 +210,8 @@ class MinerImpl(
         _ <- isAllowedForMiningByAccountScript(address, blockchain)
         balance = blockchain.generatingBalance(address)
         _ <- Either.raiseUnless(GeneratingBalanceProvider.isMiningAllowed(blockchain, newBlockHeight, balance)) {
-          s"$address is not committed on $newBlockHeight. Try to commit to generation on next period"
+          val minBalance = GeneratingBalanceProvider.minMiningBalance(blockchain, newBlockHeight)
+          s"$address generating balance $balance below minimal $minBalance at $newBlockHeight"
         }
         _ <- Either.raiseWhen(blockchain.isConflict(newBlockHeight, address)) {
           s"$address is conflict on $newBlockHeight. Try to commit to generation on next period"
@@ -272,7 +275,7 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = tryCollectSelfWithGrace(reference),
+            finalizationVoting = withHotStuffConflicts(tryCollectSelfWithGrace(reference)),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
@@ -331,6 +334,26 @@ class MinerImpl(
     }
     log.debug(s"tryCollectSelfWithGrace($endorsedId): attempts=$attempts result=$result")
     result
+  }
+
+  // T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md §5):
+  // production-side slashingEnabled gate. Folds pending HotStuff equivocation proofs detected by
+  // this replica's coordinator into the key block's FinalizationVoting, so they get union'd into
+  // committedGenerators/conflictGenerators on append (validation/union elsewhere are unconditional).
+  private def withHotStuffConflicts(voting: Option[FinalizationVoting]): Option[FinalizationVoting] = {
+    val forgeHeight = Height(blockchainUpdater.height + 1)
+    blockchainUpdater.generationPeriodOf(forgeHeight) match {
+      case None         => voting // pre-activation: no periods, no committee, nothing to fold
+      case Some(period) =>
+        Miner.foldHotStuffConflicts(
+          settings.hotStuffSettings.slashingEnabled,
+          hotStuffEquivocations(),
+          voting,
+          period.index,
+          idx => blockchainUpdater.conflictGenerators(period).upTo(forgeHeight).contains(GeneratorIndex(idx)),
+          () => Miner.clampFinalizedHeight(blockchainUpdater.finalizedHeight.getOrElse(GenesisBlockHeight), blockchainUpdater.height)
+        )
+    }
   }
 
   private def checkQuorumAvailable(): Either[String, Int] =
@@ -409,12 +432,32 @@ class MinerImpl(
             block: Block,
             totalConstraint: MiningConstraint
         ) = // NOTE: Could accept blockAppender to reduce parameter count — current pattern works correctly
-          BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).flatMap {
+          // Only the append call itself is uncancelable: BlockAppender mutates the blockchain state, so
+          // letting a cancellation land mid-append risks a torn write. The dispatch on its result (below)
+          // must stay cancelable -- it now includes indefinitely-recursing delayed retries (the Left(err)
+          // and Right(Ignored) branches), and those retries are exactly what a fresh scheduleMining() call
+          // needs to be able to cancel via scheduledAttempts when a new block/state-change event supersedes
+          // this attempt. Wrapping the whole flatMap in .uncancelable (as before) would mask cancellation
+          // for the entire recursive retry chain -- including every subsequent re-entry into appendTask --
+          // letting a stale retry chain race a fresh one started by scheduleMining() for the same account.
+          BlockAppender(blockchainUpdater, timeService, utx, pos, blockEndorser, appenderScheduler)(block, None).uncancelable.flatMap {
             case Left(BlockFromFuture(_, _)) => // Time was corrected, retry
               generateBlockTask(account, None)
 
             case Left(err) =>
-              Task.raiseError(new RuntimeException(err.toString))
+              // A forge/append failure here (e.g. a transient InvalidStateHash mismatch) must NOT be
+              // allowed to reach onErrorHandle in scheduleMining: that combinator only logs and then
+              // completes the task, and nothing else ever re-triggers scheduleMining except a block
+              // append or state-change event elsewhere -- if THIS node is the one supposed to be
+              // forging and no such event ever arrives, the miner would go silent forever (the
+              // 2026-09-01 stall). Retrying here -- on the same already-scheduled task, after a
+              // delay -- keeps the miner alive without touching scheduledAttempts/onErrorHandle at
+              // all. noQuorumMiningDelay is reused rather than adding a new setting: it's already the
+              // established "something transient is wrong, don't hammer immediately" backoff in this
+              // same method (see the quorum branch above), and an unconditional retry with no delay
+              // risks a tight loop if nextBlockGenOffsetWithConditions again returns offset=0.
+              log.warn(s"Error appending block forged by ${account.toAddress}: $err, retrying in ${settings.minerSettings.noQuorumMiningDelay}")
+              Task.defer(generateBlockTask(account, None)).delayExecution(settings.minerSettings.noQuorumMiningDelay)
 
             case Right(Applied(score = score)) =>
               log.debug(s"Forged and applied $block with cumulative score $score")
@@ -426,8 +469,14 @@ class MinerImpl(
               Task.unit
 
             case Right(Ignored) =>
-              Task.raiseError(new RuntimeException("Newly created block has already been appended, should not happen"))
-          }.uncancelable
+              // Same reasoning as the Left(err) branch above: don't let this reach onErrorHandle and
+              // die silently. This case is expected to be rare ("should not happen"), but if it does,
+              // the miner must keep trying rather than going permanently silent.
+              log.warn(
+                s"Newly created block $block by ${account.toAddress} has already been appended, should not happen; retrying in ${settings.minerSettings.noQuorumMiningDelay}"
+              )
+              Task.defer(generateBlockTask(account, None)).delayExecution(settings.minerSettings.noQuorumMiningDelay)
+          }
 
         for {
           elapsed <- waitBlockAppendedTask.timed.map(_._1)
@@ -483,8 +532,8 @@ object Miner {
 
   val StrictDisabledMiner: Miner & MinerDebugInfo = new Miner with MinerDebugInfo {
     override def scheduleMining(baseBlockchain: Option[Blockchain], cancelMicroBlockMining: Boolean): Unit = {}
-    override def getNextBlockGenerationOffset(account: KeyPair): Either[String, FiniteDuration]        = Left("Disabled")
-    override val state: MinerDebugInfo.State                                                           = MinerDebugInfo.Disabled
+    override def getNextBlockGenerationOffset(account: KeyPair): Either[String, FiniteDuration]            = Left("Disabled")
+    override val state: MinerDebugInfo.State                                                               = MinerDebugInfo.Disabled
   }
 
   def forwardTo(underlying: => Miner): Miner = { (baseBlockchain: Option[Blockchain], cancelMicroBlockMining: Boolean) =>
@@ -497,4 +546,58 @@ object Miner {
       (),
       s"Account($address) is scripted and not allowed to forge blocks"
     )
+
+  /** T5 rev.2: fold pending verified equivocation proofs into the key block's FinalizationVoting.
+    * PRODUCTION-side gate only (spec §5): validation/union on receipt are unconditional elsewhere.
+    * Filters: epoch must equal the forge height's generation-period index (validation would reject
+    * anything else -- rule 3), voter not already excluded on-chain (validation rule 5), dedup by voter.
+    * `fallbackFinalizedHeight` is evaluated only when synthesizing an FV from nothing.
+    */
+  private[mining] def foldHotStuffConflicts(
+      slashingEnabled: Boolean,
+      pending: Seq[HotStuffEquivocationProof],
+      voting: Option[FinalizationVoting],
+      forgeHeightPeriodIndex: Int,
+      alreadyExcluded: Int => Boolean,
+      fallbackFinalizedHeight: () => Height
+  ): Option[FinalizationVoting] = {
+    // No voterIndex-vs-committee-size bounds filter here (appender/package.scala:376-378, rule 4):
+    // unnecessary today because the coordinator that ultimately appends this block re-validates
+    // every folded proof against that same period's committee anyway, and committees never shrink
+    // within a period (Caches.committedGenerators only grows a period's generator set), so a
+    // voterIndex in-bounds now stays in-bounds through append.
+    val usable =
+      if (!slashingEnabled) Seq.empty
+      else
+        pending
+          .filter(p => p.committeeEpoch == forgeHeightPeriodIndex && !alreadyExcluded(p.voterIndex))
+          .distinctBy(_.voterIndex)
+    if (usable.isEmpty) voting
+    else
+      voting match {
+        case Some(fv) =>
+          // Validation rejects any hotstuffConflicts proof whose voterIndex already carries a T0
+          // conflicting endorsement in the SAME voting (appender/package.scala:382-384, rule 6) --
+          // fv.conflict is populated by the endorsement-collection path this fold runs after, so a
+          // proof for a voter already present there must be dropped here too, or the composed block
+          // fails that same validator rule on this node's own append.
+          val conflictingVoters = fv.conflict.map(_.endorserIndex.toInt).toSet
+          val stillUsable       = usable.filterNot(p => conflictingVoters.contains(p.voterIndex))
+          if (stillUsable.isEmpty) voting
+          else Some(fv.copy(hotstuffConflicts = (fv.hotstuffConflicts ++ stillUsable).distinctBy(_.voterIndex)))
+        case None => Some(FinalizationVoting(Seq.empty, fallbackFinalizedHeight(), None, Seq.empty, usable))
+      }
+  }
+
+  /** Validation requires `fv.finalizedHeight.toInt < blockchain.height` (appender/package.scala:401,
+    * evaluated while the chain tip is still at the parent height H that the miner read at forge
+    * time) -- i.e. the synthesized value must land in `[GenesisBlockHeight, H-1]`. The raw
+    * `blockchainUpdater.finalizedHeight` fallback can equal H itself once `hotstuff.authoritative`
+    * has raised the finalized floor to the tip, which would forge a block this node's own appender
+    * then rejects. Extracted as a small pure function (private[mining] for direct unit coverage)
+    * rather than folded inline, since the pure `foldHotStuffConflicts` fold must stay agnostic to
+    * "current chain height" and just pass through whatever fallback it's given.
+    */
+  private[mining] def clampFinalizedHeight(rawFallback: Height, currentHeight: Int): Height =
+    Height(rawFallback.toInt.min(currentHeight - 1).max(GenesisBlockHeight.toInt))
 }

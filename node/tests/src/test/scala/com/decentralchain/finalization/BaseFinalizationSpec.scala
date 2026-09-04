@@ -3,6 +3,7 @@ package com.decentralchain.finalization
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{BlockEndorsement, FinalizationVoting}
+import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
 import com.decentralchain.db.WithDomain
 import com.decentralchain.history.Domain
@@ -46,7 +47,8 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
         endorsedId: BlockId,
         finalizedHeight: Height = GenesisBlockHeight,
         finalizedId: BlockId = TxHelpers.randomBlockId
-    ): FinalizationVoting = self.copy(conflict = self.conflict :+ mkConflictEndorsement(dccAcc, idx, endorsedId, finalizedHeight, finalizedId))
+    ): FinalizationVoting =
+      self.copy(conflict = self.conflict :+ mkConflictEndorsement(dccAcc, idx, endorsedId, finalizedHeight, finalizedId))
 
     def signed(endorsedId: BlockId, finalizedId: BlockId, validEndorsers: KeyPair*): FinalizationVoting = {
       val aggSig = validEndorsers
@@ -60,7 +62,7 @@ trait BaseFinalizationSpec extends FreeSpec, WithDomain, WithResourceManager, Ei
         }
         .foldLeft(Option.empty[BlsSignature]) {
           case (None, s)    => Some(s)
-          case (Some(r), s) => Some(r.append(s))
+          case (Some(r), s) => Some(r.append(s).explicitGet())
         }
 
       self.copy(aggregatedEndorsement = aggSig)

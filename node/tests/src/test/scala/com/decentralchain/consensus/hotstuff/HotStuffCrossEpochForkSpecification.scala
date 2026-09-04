@@ -3,7 +3,7 @@ package com.decentralchain.consensus.hotstuff
 import com.decentralchain.account.KeyPair
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.TestBlsKeyPair
+import com.decentralchain.crypto.bls.{BlsUtils, TestBlsKeyPair}
 import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
@@ -74,7 +74,7 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
 
   private def voteFor(i: Int, block: BlockId): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height)
-    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr)
   }
 
   "two committees with disjoint membership" should
@@ -138,7 +138,7 @@ class HotStuffCrossEpochForkSpecification extends FlatSpec {
   // consider live.
   private def voteForEpoch(i: Int, block: BlockId, epoch: Int): HotStuffVote = {
     val msg = HotStuffQuorum.voteMessage(view, PREPARE, block, height, epoch)
-    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg).byteStr, epoch)
+    HotStuffVote(view, PREPARE, block, Height(height), i, kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr, epoch)
   }
 
   "binding committee epoch into the signed vote message" should

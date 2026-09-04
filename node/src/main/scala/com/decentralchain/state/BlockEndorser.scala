@@ -194,7 +194,15 @@ object BlockEndorser {
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
         endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
-        msg <- castVote(votingHeight, endorsedHeight, endorsedBlockHeader.id(), votingBlockHeader, generatorSet, endorsementStorage, "vote")
+        msg                 <- castVote(
+          votingHeight,
+          endorsedHeight,
+          endorsedBlockHeader.id(),
+          votingBlockHeader,
+          generatorSet,
+          endorsementStorage,
+          "vote"
+        )
       } yield msg)
 
       msgs.foreach(m => allChannels.broadcast(m))
@@ -207,7 +215,15 @@ object BlockEndorser {
       val endorsedHeight          = votingHeight
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader <- blockchain.blockHeader(votingHeight.toInt).toSeq
-        msg <- castVote(votingHeight, endorsedHeight, votingBlockHeader.id(), votingBlockHeader, generatorSet, selfEndorsementStorage, "voteSelf")
+        msg               <- castVote(
+          votingHeight,
+          endorsedHeight,
+          votingBlockHeader.id(),
+          votingBlockHeader,
+          generatorSet,
+          selfEndorsementStorage,
+          "voteSelf"
+        )
       } yield msg)
 
       msgs.foreach(m => allChannels.broadcast(m))

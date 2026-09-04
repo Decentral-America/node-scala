@@ -255,7 +255,50 @@ case class SnapshotBlockchain(
   override def committedGenerators(at: GenerationPeriod): IndexedSeq[(Address, BlsPublicKey)] = {
     val base   = inner.committedGenerators(at)
     val atNext = this.currentGenerationPeriod.exists(_.next == at)
-    if (atNext) base ++ snapshot.nextCommittedGenerators.map { case (pk, blsPk) => pk.toAddress -> blsPk } else base
+    if (atNext) base ++ liveNextCommittedGenerators.map { case (pk, blsPk) => pk.toAddress -> blsPk } else base
+  }
+
+  /** `nextCommittedGenerators` entries actually backed by a non-elided `CommitToGenerationTransaction`
+    * in this same snapshot.
+    *
+    * This is an ALLOWLIST, deliberately, not a filter that subtracts bad entries. `nextCommittedGenerators`
+    * is a peer-supplied snapshot field that the fold merges unconditionally
+    * ([[StateSnapshot.monoid]]), and it is a SEPARATE source from the transaction bodies that
+    * `BlockDiffer`'s commitment guard validates. Keying on anything less than "a matching, non-elided
+    * commitment transaction is present here" leaves two holes:
+    *
+    *   - an ELIDED commitment's entry (its effects are discarded by definition), and
+    *   - a PHANTOM entry with no backing transaction at all -- a peer can attach one to any other
+    *     transaction's snapshot, in a block containing no commitment, so the guard's work list is
+    *     empty and it never runs. A subtract-the-elided filter cannot see this case, because there is
+    *     no backing transaction of any status to subtract.
+    *
+    * Requiring positive backing closes both with one rule. The exposure is bounded to the liquid
+    * window -- `Caches.append` persists from `txn.endorserPublicKey` on real transaction bodies, so a
+    * phantom never reaches persisted state -- but this path feeds endorsement validation and the
+    * `committedGeneratorsHash` computation while the block is liquid.
+    */
+  private def liveNextCommittedGenerators: Seq[(PublicKey, BlsPublicKey)] = {
+    // An in-progress snapshot built by a transaction differ carries `nextCommittedGenerators` before
+    // any transaction has been attached to it (see `CommitToGenerationTransactionDiff`, which then
+    // reads `generatingBalance` back through this class to size the deposit). Such a snapshot has no
+    // transactions at all, so there is nothing to reconcile against and nothing peer-supplied to
+    // distrust -- reconciliation applies only once the snapshot actually carries transactions.
+    if (snapshot.transactions.isEmpty) snapshot.nextCommittedGenerators
+    else {
+      val backed: Set[(PublicKey, BlsPublicKey)] = snapshot.transactions.values
+        .collect {
+          case nti if nti.status != TxMeta.Status.Elided =>
+            nti.transaction match {
+              case tx: CommitToGenerationTransaction => Some(tx.sender -> tx.endorserPublicKey)
+              case _                                 => None
+            }
+        }
+        .flatten
+        .toSet
+
+      snapshot.nextCommittedGenerators.filter(backed.contains)
+    }
   }
 
   override def conflictGenerators(at: GenerationPeriod): ConflictGenerators = {
@@ -267,8 +310,8 @@ case class SnapshotBlockchain(
         val extraConflictIndexes = for {
           (blockMeta, _) <- blockMeta.toSeq
           v              <- blockMeta.header.finalizationVoting.toSeq
-          c              <- v.conflict
-        } yield c.endorserIndex
+          idx            <- v.allConflictGeneratorIndexes
+        } yield idx
 
         base.appendAll(Height(height), extraConflictIndexes*)
       }

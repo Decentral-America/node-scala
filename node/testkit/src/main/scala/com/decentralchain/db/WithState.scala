@@ -361,7 +361,7 @@ trait WithState extends BeforeAndAfterAll with DBCacheSettings with Matchers wit
   def blockWithComputedStateHash(
       blockWithoutStateHash: Block,
       signer: KeyPair,
-      blockchain: BlockchainUpdater & Blockchain
+      blockchain: CompleteBlockchainUpdater
   ): TracedResult[ValidationError, Block] = {
     (if (blockchain.supportsLightNodeBlockFields(blockchain.height + 1)) {
        val compBlockchain =

@@ -7,7 +7,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.explicitGet
 import com.decentralchain.common.utils.{Base58, Base64, FastBase58}
 import com.decentralchain.crypto.{P256Curve, Sha256}
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.features.EstimatorProvider.*
 import com.decentralchain.lang.script.{Script, ScriptReader}
@@ -39,7 +39,11 @@ object UtilApp {
   case class SignOptions(privateKey: PrivateKey = null.asInstanceOf[PrivateKey])
   case class VerifyOptions(publicKey: PublicKey = null.asInstanceOf[PublicKey], signature: ByteStr = ByteStr.empty, checkWeakPk: Boolean = false)
   case class HashOptions(mode: String = "fast")
-  case class SignTxOptions(signerAddress: String = "", currentHeight: Height = Height(1), finalityActivationHeight: Option[Height] = None)
+  case class SignTxOptions(
+      signerAddress: String = "",
+      currentHeight: Height = Height(1),
+      finalityActivationHeight: Option[Height] = None
+  )
   case class KeyPairOptions(seedType: String = "account", nonce: Int = 0)
 
   enum Input {
@@ -200,7 +204,9 @@ object UtilApp {
               .text("Signer address (requires corresponding key in wallet.dat)")
               .action((a, c) => c.copy(signTxOptions = c.signTxOptions.copy(signerAddress = a))),
             opt[Int]('h', "current-height")
-              .text("Current height, required for signing CommitToGeneration transaction")
+              .text(
+                "Current height the node is at (the tx itself will land at current-height + 1), required for signing CommitToGeneration transaction"
+              )
               .optional()
               .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(currentHeight = Height(h)))),
             opt[Int]('f', "finality-activation-height")
@@ -370,15 +376,15 @@ object UtilApp {
       val blsSK1bs = new Array[Byte](32)
       Random.nextBytes(blsSK1bs)
       val blsSK1  = BlsKeyPair(PrivateKey(blsSK1bs))
-      val blsSig1 = blsSK1.sign(message)
+      val blsSig1 = blsSK1.sign(message, BlsUtils.BlsEndorseDomainSeparationTag)
 
       val blsSK2bs = new Array[Byte](32)
       Random.nextBytes(blsSK2bs)
       val blsSK2  = BlsKeyPair(PrivateKey(blsSK2bs))
-      val blsSig2 = blsSK2.sign(message)
+      val blsSig2 = blsSK2.sign(message, BlsUtils.BlsEndorseDomainSeparationTag)
 
       val aggSig = BlsSignature.agg(Seq(blsSig1, blsSig2)).explicitGet()
-      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey)).explicitGet()
+      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey), BlsUtils.BlsEndorseDomainSeparationTag).explicitGet()
 
       Right(Array.emptyByteArray)
     }

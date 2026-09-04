@@ -491,7 +491,7 @@ object TxHelpers {
       generationPeriodStart,
       timestamp,
       fee,
-      CommitToGenerationTransaction.mkPopSignature(endorserKp, generationPeriodStart),
+      CommitToGenerationTransaction.mkPopSignature(endorserKp, generationPeriodStart, sender.publicKey, chainId),
       chainId
     )
     .explicitGet()

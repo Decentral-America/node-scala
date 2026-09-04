@@ -391,7 +391,12 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
         addressTransactions.put(addressIdWithFallback(addr, newAddressIds), TransactionId(nti.transaction.id()))
 
       nti.transaction match {
-        case txn: CommitToGenerationTransaction =>
+        // An elided transaction's effects are discarded by definition, so it must not seat a
+        // committed generator. Without the status check this matched on transaction type alone and
+        // seated the key of a commitment that had been elided precisely because it failed validation
+        // (e.g. a bad BLS proof-of-possession) -- and `nextCommittedGenerators` is excluded from the
+        // per-tx state hash by design, so nothing downstream would have caught it.
+        case txn: CommitToGenerationTransaction if nti.status != TxMeta.Status.Elided =>
           val address   = txn.sender.toAddress
           val addressId = addressIdWithFallback(address, newAddressIds)
           nextCommittedGeneratorsWithAddr = nextCommittedGeneratorsWithAddr.appended(address -> txn.endorserPublicKey)
@@ -402,9 +407,9 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     }
 
     val conflictGenerators = for {
-      v <- block.header.finalizationVoting.toSeq
-      e <- v.conflict
-    } yield e.endorserIndex
+      v   <- block.header.finalizationVoting.toSeq
+      idx <- v.allConflictGeneratorIndexes
+    } yield idx
 
     this.generationPeriodOf(current.height) match {
       case None =>

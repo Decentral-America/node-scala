@@ -251,7 +251,8 @@ case class TransactionsApiRoute(
       .mapEval(txMetaEnriched(address, _))
   }
 
-  private def mkTxFactory = TransactionFactory(wallet, time, blockchain.currentGenerationPeriod)
+  private def mkTxFactory =
+    TransactionFactory(wallet, time, blockchain.currentGenerationPeriod)
 }
 
 object TransactionsApiRoute {
