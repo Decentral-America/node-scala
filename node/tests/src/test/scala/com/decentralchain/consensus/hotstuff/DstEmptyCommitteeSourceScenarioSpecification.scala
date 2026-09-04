@@ -98,8 +98,8 @@ class DstEmptyCommitteeSourceScenarioSpecification extends FlatSpec {
   "a 4-node cluster whose committee source goes empty at a period boundary (no CommitToGenerationTransaction landed), then returns a real committee again" should
     "stay safe throughout, and reproduce whether or not it self-resumes committing once given a real committee again" in {
       var firstSafetyFailure: Option[(Long, String)] = None
-      var falseCommitDuringEmptyWindow                = false
-      var resumedCount                                = 0
+      var falseCommitDuringEmptyWindow               = false
+      var resumedCount                               = 0
 
       (0 until SeedCount).foreach { seed =>
         val harness = new DstHarness(seed, nodeCount = 4, FaultProfile(minDelayMillis = 1, maxDelayMillis = 3))

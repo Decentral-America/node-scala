@@ -42,8 +42,7 @@ object UtilApp {
   case class SignTxOptions(
       signerAddress: String = "",
       currentHeight: Height = Height(1),
-      finalityActivationHeight: Option[Height] = None,
-      blsCryptoV2ActivationHeight: Option[Height] = None
+      finalityActivationHeight: Option[Height] = None
   )
   case class KeyPairOptions(seedType: String = "account", nonce: Int = 0)
 
@@ -213,14 +212,7 @@ object UtilApp {
             opt[Int]('f', "finality-activation-height")
               .text("Finality activation height, required for signing CommitToGeneration transaction. From preActivatedFeatures setting by default")
               .optional()
-              .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(finalityActivationHeight = Some(Height(h))))),
-            opt[Int]("bls-crypto-v2-activation-height")
-              .text(
-                "BlsCryptoV2 (feature 30) activation height, used to pick the PoP era for signing CommitToGeneration transaction. " +
-                  "From preActivatedFeatures setting by default"
-              )
-              .optional()
-              .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(blsCryptoV2ActivationHeight = Some(Height(h)))))
+              .action((h, c) => c.copy(signTxOptions = c.signTxOptions.copy(finalityActivationHeight = Some(Height(h)))))
           ),
         cmd("sign-with-sk")
           .text("Sign JSON transaction with private key")
@@ -240,28 +232,6 @@ object UtilApp {
       })
     )
   }
-
-  /** Audit M2 offline-signer helper. This tool has no live `Blockchain` to ask `supportsBlsCryptoV2`,
-    * so it re-derives the same answer from settings, but must compare against the height the tx will
-    * actually land at, not the operator-supplied `currentHeight` itself: exactly like
-    * `TransactionsApiRoute.mkTxFactory` (`blockchain.supportsBlsCryptoV2(blockchain.height + 1)`), a
-    * CommitToGeneration tx signed here lands, at the earliest, in the NEXT block -- `currentHeight + 1`.
-    *
-    * `explicitActivationHeight` is an operator-supplied CLI override (`--bls-crypto-v2-activation-height`),
-    * mirroring the existing `-f/--finality-activation-height` override: it wins whenever present, so a
-    * VOTE-activated chain (no `preActivatedFeatures` entry) can still be signed for offline, by having
-    * the operator pass the activation height they observed on-chain. When absent, falls back to the
-    * `preActivatedFeatures` setting, matching `supportsBlsCryptoV2`'s `Height(height) >= activation`
-    * (i.e. active from the activation height onward, inclusive).
-    */
-  private[utils] def blsCryptoV2Era(
-      currentHeight: Height,
-      explicitActivationHeight: Option[Height],
-      settingsActivationHeight: Option[Height]
-  ): Boolean =
-    explicitActivationHeight
-      .orElse(settingsActivationHeight)
-      .exists(activation => currentHeight.next >= activation)
 
   // noinspection TypeAnnotation
   private final class NodeState(c: Command) {
@@ -351,19 +321,13 @@ object UtilApp {
         currentPeriod <- GenerationPeriod.from(c.signTxOptions.currentHeight, finalityActivationHeight, ns.settings)
       } yield currentPeriod
 
-      val cryptoV2 = blsCryptoV2Era(
-        c.signTxOptions.currentHeight,
-        c.signTxOptions.blsCryptoV2ActivationHeight,
-        ns.settings.blockchainSettings.functionalitySettings.preActivatedFeatures.get(BlockchainFeatures.BlsCryptoV2.id).map(Height.apply)
-      )
-
       val signedTx = for {
         tpe           <- (unsignedTx \ "type").validate[Int].asEither.left.map { _ => s"Can't parse as transaction request: $unsignedTx" }
         currentPeriod <-
           if (tpe == TransactionType.CommitToGeneration.id)
             currentPeriod.toRight("Finality activation height is required for signing CommitToGeneration transaction")
           else Right(GenerationPeriod(Height(1), Height(1), 1))
-        factory = TransactionFactory(ns.wallet, ns.time, Some(currentPeriod), cryptoV2)
+        factory = TransactionFactory(ns.wallet, ns.time, Some(currentPeriod))
         signedTx <- factory.parseRequestAndSign(c.signTxOptions.signerAddress, unsignedTx)
       } yield signedTx
 
@@ -412,15 +376,15 @@ object UtilApp {
       val blsSK1bs = new Array[Byte](32)
       Random.nextBytes(blsSK1bs)
       val blsSK1  = BlsKeyPair(PrivateKey(blsSK1bs))
-      val blsSig1 = blsSK1.sign(message, BlsUtils.BlsDomainSeparationTag)
+      val blsSig1 = blsSK1.sign(message, BlsUtils.BlsEndorseDomainSeparationTag)
 
       val blsSK2bs = new Array[Byte](32)
       Random.nextBytes(blsSK2bs)
       val blsSK2  = BlsKeyPair(PrivateKey(blsSK2bs))
-      val blsSig2 = blsSK2.sign(message, BlsUtils.BlsDomainSeparationTag)
+      val blsSig2 = blsSK2.sign(message, BlsUtils.BlsEndorseDomainSeparationTag)
 
       val aggSig = BlsSignature.agg(Seq(blsSig1, blsSig2)).explicitGet()
-      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey), BlsUtils.BlsDomainSeparationTag).explicitGet()
+      aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey), BlsUtils.BlsEndorseDomainSeparationTag).explicitGet()
 
       Right(Array.emptyByteArray)
     }

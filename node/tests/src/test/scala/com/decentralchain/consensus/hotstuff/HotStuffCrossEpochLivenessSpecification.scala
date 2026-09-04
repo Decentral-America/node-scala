@@ -78,11 +78,11 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
       sent: mutable.ListBuffer[Message]
   ): HotStuffCoordinator.Enabled = {
     val fx = new HotStuffEffects {
-      def broadcast(m: Message): Unit                                = sent += m
-      def myVoterIndexes: Set[Int]                                   = Set(voterIdx)
+      def broadcast(m: Message): Unit                                             = sent += m
+      def myVoterIndexes: Set[Int]                                                = Set(voterIdx)
       def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == voterIdx) Some(kps(voterIdx).sign(msg, dst)) else None
-      def onCommit(blockId: BlockId, height: Int): Unit              = ()
-      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+      def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
     }
     new HotStuffCoordinator.Enabled(
       committeeProvider = () => committee,
@@ -130,7 +130,15 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
 
       // A third replica votes the same (now-consistent) epoch to reach the 2-of-3 quorum.
       val msgC  = HotStuffQuorum.voteMessage(view, PREPARE, blockId, height, committeeEpochOf(height))
-      val voteC = HotStuffVote(view, PREPARE, blockId, Height(height), 2, kps(2).sign(msgC, BlsUtils.BlsDomainSeparationTag).byteStr, committeeEpochOf(height))
+      val voteC = HotStuffVote(
+        view,
+        PREPARE,
+        blockId,
+        Height(height),
+        2,
+        kps(2).sign(msgC, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr,
+        committeeEpochOf(height)
+      )
 
       // formQC now SUCCEEDS -- the mixed-local-belief scenario that used to permanently stall this
       // target no longer applies to ordinary honest propagation skew, because the signed epoch never
@@ -138,7 +146,7 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
       // `formQC` rejection test proves the genuinely-different-epoch/Byzantine case is still correctly
       // enforced -- this fix narrows WHEN two honest votes can legitimately differ in epoch at all, it
       // does not weaken `sameTarget`'s check itself.)
-      HotStuffQuorum.formQC(Seq(voteA, voteB, voteC), committee, cryptoV2 = false) shouldBe a[Right[?, ?]]
+      HotStuffQuorum.formQC(Seq(voteA, voteB, voteC), committee) shouldBe a[Right[?, ?]]
     }
 
   "HotStuffVotePool.onVote's per-voter dedup" should
@@ -148,16 +156,16 @@ class HotStuffCrossEpochLivenessSpecification extends FlatSpec {
 
       def voteFor(voterIdx: Int, epoch: Int): HotStuffVote = {
         val msg = HotStuffQuorum.voteMessage(view, PREPARE, blockId, height, epoch)
-        HotStuffVote(view, PREPARE, blockId, Height(height), voterIdx, kps(voterIdx).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr, epoch)
+        HotStuffVote(view, PREPARE, blockId, Height(height), voterIdx, kps(voterIdx).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr, epoch)
       }
 
       // Voter 0's FIRST vote for this target lands under a stale epoch (e.g. a genuinely Byzantine
       // relabeled-epoch vote, or any other remaining edge case the root-cause fix doesn't itself rule
       // out at the pool layer).
-      val (afterStale, _) = HotStuffVotePool.onVote(VotePool(), voteFor(0, oldEpoch), committee, cryptoV2 = false)
+      val (afterStale, _) = HotStuffVotePool.onVote(VotePool(), voteFor(0, oldEpoch), committee)
 
       // Voter 0 later casts a GENUINE vote for the SAME target under the current epoch.
-      val (afterGenuine, _) = HotStuffVotePool.onVote(afterStale, voteFor(0, newEpoch), committee, cryptoV2 = false)
+      val (afterGenuine, _) = HotStuffVotePool.onVote(afterStale, voteFor(0, newEpoch), committee)
 
       val key    = (view, PREPARE, blockId)
       val bucket = afterGenuine.pending.getOrElse(key, Vector.empty)

@@ -106,21 +106,9 @@ object BlockEndorser {
     /** Shared endorsement-casting logic for both the parent-target (`vote`) and self-target (`voteSelf`)
       * rounds -- identical except which (endorsedHeight, endorsedId) pair and which EndorsementStorage
       * instance they target.
-      *
-      * `carrierHeight` exists to fix a real off-by-one class of bug: the endorsement's feature-30 era
-      * must be derived from the height of the block that will actually CARRY this voting on-chain, not
-      * from `votingHeight` (the live tip at signing time). For the parent-round (`vote`), the carrier
-      * is a microblock/liquid block extending the current tip, so carrier == votingHeight. For the
-      * self-round (`voteSelf`), the endorsement is instead embedded in the NEXT key block (the one that
-      * seals this tip), so carrier == votingHeight + 1. Signing with `votingHeight`'s era there would
-      * straddle the BlsCryptoV2 activation boundary -- a legacy-signed endorsement landing in a v2-era
-      * carrying block -- and `validateFinalizationVoting`'s `verifyAgg` (which derives its own era from
-      * the carrying block's height, see `state/appender/package.scala`) would reject the whole block.
-      * Do not remove this parameter or fold it back into `votingHeight`.
       */
     private def castVote(
         votingHeight: Height,
-        carrierHeight: Height,
         endorsedHeight: Height,
         endorsedId: BlockId,
         votingBlockHeader: SignedBlockHeader,
@@ -151,14 +139,6 @@ object BlockEndorser {
             case x if blockchain.isGeneratingBalanceValid(votingHeight, votingBlockHeader.header, x.balance) => x.address -> x.balance
           }.toMap
 
-          // Feature-30 era for THIS voting round, derived from carrierHeight -- the height of the
-          // block that will actually CARRY this endorsement on-chain, not votingHeight (the live tip
-          // at signing time; the two only coincide for the parent-round). Set once here and carried
-          // on the EndorsementFilter so EndorsementStorage.verifySig (the p2p gossip verifier) shares
-          // the exact same era as the signer below, instead of two independent tip reads that could
-          // straddle the activation boundary within one round (task 6).
-          cryptoV2 = blockchain.supportsBlsCryptoV2(carrierHeight.toInt)
-
           filter = {
             val normalizedEndorsers = committed.map { case (address, blsPk) =>
               (address, blsPk, balances.getOrElse(address, 0L))
@@ -173,8 +153,7 @@ object BlockEndorser {
               finalizedHeight,
               endorsedId,
               normalizedEndorsers,
-              conflict,
-              cryptoV2
+              conflict
             )
           }
           _ = logger.debug(
@@ -192,7 +171,7 @@ object BlockEndorser {
               if balances.contains(committedAddr)
             } yield (pk, GeneratorIndex(idx))
 
-          endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId, cryptoV2)
+          endorsement = BlockEndorsement.signed(BlsKeyPair(account.privateKey), idx, finalizedId, finalizedHeight, endorsedId)
           networkMsg  = EndorseBlock.from(endorsement)
           broadcast <- storage.tryAdd(networkMsg) match {
             case Right(r)  => Some(r)
@@ -215,10 +194,7 @@ object BlockEndorser {
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader   <- blockchain.blockHeader(votingHeight.toInt).toSeq
         endorsedBlockHeader <- blockchain.blockHeader(endorsedHeight.toInt).toSeq
-        // Parent-round: carried in a microblock/liquid block extending the tip at votingHeight, so
-        // carrier == votingHeight.
-        msg <- castVote(
-          votingHeight,
+        msg                 <- castVote(
           votingHeight,
           endorsedHeight,
           endorsedBlockHeader.id(),
@@ -239,11 +215,8 @@ object BlockEndorser {
       val endorsedHeight          = votingHeight
       val msgs: Seq[EndorseBlock] = (for {
         votingBlockHeader <- blockchain.blockHeader(votingHeight.toInt).toSeq
-        // Self-round: carried in the NEXT key block (the one sealing this tip), so
-        // carrier == votingHeight + 1 -- not votingHeight itself. See castVote's scaladoc.
-        msg <- castVote(
+        msg               <- castVote(
           votingHeight,
-          Height(votingHeight.toInt + 1),
           endorsedHeight,
           votingBlockHeader.id(),
           votingBlockHeader,

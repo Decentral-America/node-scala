@@ -216,10 +216,10 @@ final class HotStuffWatchdog(
   // `consecutiveIneffectiveRecoveries` counts recoveries in a row that were each followed by another
   // full stall with zero progress; once it reaches `maxConsecutiveRecoveries`, auto-recovery is
   // permanently suspended (this run) until real progress is next observed.
-  private var effectiveThreshold: Long                 = stallThreshold.toLong
-  private var consecutiveIneffectiveRecoveries: Int    = 0
-  private var awaitingResultOfLastRecovery: Boolean    = false
-  private var autoRecoverySuspended: Boolean           = false
+  private var effectiveThreshold: Long              = stallThreshold.toLong
+  private var consecutiveIneffectiveRecoveries: Int = 0
+  private var awaitingResultOfLastRecovery: Boolean = false
+  private var autoRecoverySuspended: Boolean        = false
 
   /** Wire to `HotStuffCoordinator.Enabled`'s `onAction` hook: any action reaching here means a QC was
     * genuinely verified/accepted this tick -- real progress, not a bare-timeout view bump. Safe to call
@@ -303,7 +303,7 @@ final class HotStuffWatchdog(
         val viewStalled = consecutiveStalledTicks >= effectiveThreshold
         if (viewStalled || commitStalled) {
           val ticksElapsed = if (viewStalled) consecutiveStalledTicks else consecutiveTicksSinceCommit
-          val reason        = if (viewStalled) "zero progress despite a non-empty committee" else "commit-specific stall (audit F-5)"
+          val reason       = if (viewStalled) "zero progress despite a non-empty committee" else "commit-specific stall (audit F-5)"
           fireForWedge(ticksElapsed, reason)
         } else false
       }

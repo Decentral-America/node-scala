@@ -8,22 +8,38 @@ import java.nio.charset.StandardCharsets
 import scala.util.control.NonFatal
 
 object BlsUtils {
-  /** LEGACY domain-separation tag. Non-standard for a PoP (`_NUL_`, not `_POP_`) and shared across
-    * all three signed message types -- exactly audit finding H2. It is kept HERE FOREVER and MUST
-    * NOT be deleted, renamed, or repurposed: every PoP, endorsement, and aggregated endorsement
-    * already on chain was produced under it, and block replay / rollback across the feature-30
-    * activation height re-verifies those bytes. Removing it would be a chain split, not a cleanup.
-    */
-  val BlsDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
-  /** Per-context v2 tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash domain per signed
-    * message type, so a signature produced in one context is worthless in another BY DOMAIN rather
-    * than by the accidental "the three encodings happen to have distinct lengths" reasoning H2
-    * flags as a latent trap. Activated on chain by `BlockchainFeatures.BlsCryptoV2` (feature 30).
+  /** Per-context domain-separation tags (audit H2). Same BLS12-381 G2 ciphersuite, different hash
+    * domain per signed message type, so a signature produced in one context is worthless in another
+    * BY DOMAIN rather than by the accidental "the three encodings happen to have distinct lengths"
+    * reasoning H2 flags as a latent trap. Used unconditionally for all NEW signing and verified first
+    * on every path. (CORRECTED 2026-09-03: this used to claim there is no legacy chain history to
+    * preserve because mainnet never activated feature 25 -- that premise is false for the real
+    * testnet-relaunch chain. See `BlsLegacyDomainSeparationTag` below for why a verify-only legacy
+    * fallback exists.)
     */
-  val BlsPopDomainSeparationTagV2     = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
-  val BlsEndorseDomainSeparationTagV2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
-  val BlsHsVoteDomainSeparationTagV2  = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
+  val BlsPopDomainSeparationTag     = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+  val BlsEndorseDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_ENDORSE_"
+  val BlsHsVoteDomainSeparationTag  = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_HSVOTE_"
+
+  /** LEGACY, VERIFY-ONLY domain-separation tag. This is the exact tag deleted by commit
+    * `448d56557f` ("no BLS bytes exist on any chain we keep, since mainnet never activated feature
+    * 25") -- that premise was factually wrong for the testnet-relaunch chain, which pre-activates
+    * feature 25 (`DeterministicFinality`) at genesis and carries real, already-on-chain signatures
+    * produced under this single shared tag across ALL THREE signed-message contexts (PoP, block
+    * endorsement, HotStuff vote/QC) from early in the chain's history, confirmed by direct replay of
+    * the real chain against the frozen `1bd671f8e6` build (which reproduces the live chain's state
+    * hash byte-for-byte) and by `448d56557f`'s own diff, which shows this ONE tag used to be the sole
+    * DST for all three contexts before the per-context-DST (`_POP_`/`_ENDORSE_`/`_HSVOTE_`) split.
+    *
+    * NEVER used for new signing -- the three v2 tags above are the only DSTs any NEW PoP, endorsement,
+    * or HotStuff vote/QC is produced under (see `CommitToGenerationTransaction.PopDst`,
+    * `BlockEndorsement.Dst`, `HotStuffQuorum.VoteDst`). This constant exists solely so verification
+    * can still validate historical, already-on-chain signatures produced under it, e.g. on a full
+    * resync from genesis. Do not repurpose, and do not delete again without first re-confirming no
+    * chain this codebase still supports carries bytes signed under it.
+    */
+  val BlsLegacyDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
   private val BlsKeyGenSalt = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
 
@@ -72,7 +88,7 @@ object BlsUtils {
 
   def mkBlsPublicKey(sk: blst.SecretKey): Array[Byte] = new blst.P1(sk).compress()
 
-  def signBasic(sk: blst.SecretKey, message: Array[Byte], dst: String = BlsDomainSeparationTag): Array[Byte] =
+  def signBasic(sk: blst.SecretKey, message: Array[Byte], dst: String): Array[Byte] =
     new blst.P2()
       .hash_to(message, dst, Array.emptyByteArray)
       .sign_with(sk)
@@ -85,7 +101,7 @@ object BlsUtils {
       blsSigBytes: Array[Byte],
       message: Array[Byte],
       blsPkBytes: Array[Byte],
-      dst: String = BlsDomainSeparationTag
+      dst: String
   ): Either[String, Unit] =
     verify(blsSigBytes, message, new blst.P1_Affine(blsPkBytes), dst)
 
@@ -148,7 +164,7 @@ object BlsUtils {
       aggSigBytes: Array[Byte],
       message: Array[Byte],
       blsPks: Iterable[Array[Byte]],
-      dst: String = BlsDomainSeparationTag
+      dst: String
   ): Either[String, Unit] = for {
     _     <- Either.raiseWhen(blsPks.isEmpty)(ErrEmptyPublicKeyList)
     _     <- Either.raiseUnless(blsPks.map(_.toSeq).toSet.size == blsPks.size)(ErrDuplicatePublicKeys)

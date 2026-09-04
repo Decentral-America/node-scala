@@ -272,13 +272,16 @@ object Blockchain {
         .featureActivationHeight(BlockchainFeatures.LightNode)
         .exists(Height(height) >= _ + blockchain.settings.functionalitySettings.lightNodeBlockFieldsAbsenceInterval)
 
+    // AdjustedBlockRewardDistribution supersedes BoostBlockReward: the block reward it votes on is already the full amount issued per block
     def blockRewardBoost(height: Height): Int =
-      blockchain
-        .featureActivationHeight(BlockchainFeatures.BoostBlockReward)
-        .filter { boostHeight =>
-          boostHeight <= height && height < boostHeight + blockchain.settings.functionalitySettings.blockRewardBoostPeriod
-        }
-        .fold(1)(_ => BlockRewardCalculator.RewardBoost)
+      if (isFeatureActivated(BlockchainFeatures.AdjustedBlockRewardDistribution, height.toInt)) 1
+      else
+        blockchain
+          .featureActivationHeight(BlockchainFeatures.BoostBlockReward)
+          .filter { boostHeight =>
+            boostHeight <= height && height < boostHeight + blockchain.settings.functionalitySettings.blockRewardBoostPeriod
+          }
+          .fold(1)(_ => BlockRewardCalculator.RewardBoost)
 
     /** @return None, if DeterministicFinality is not activated for provided height
       */
@@ -308,20 +311,6 @@ object Blockchain {
 
     def supportsFinalizationVoting(height: Int = blockchain.height): Boolean =
       blockchain.featureActivationHeight(BlockchainFeatures.DeterministicFinality).exists(Height(height) >= _)
-
-    def supportsHotStuffEquivocationEvidence(height: Int = blockchain.height): Boolean =
-      blockchain.featureActivationHeight(BlockchainFeatures.HotStuffEquivocationEvidence).exists(Height(height) >= _)
-
-    /** Audit H2/M2. Mirrors [[supportsFinalizationVoting]] deliberately: the height is an EXPLICIT
-      * parameter so every consensus-replayed caller can pass the CONTAINING BLOCK's height rather
-      * than the live tip. Passing the tip here would make PoP / endorsement verification depend on
-      * when a node happens to validate a block, which is a rollback-determinism bug (a block that
-      * verified during initial append would fail on replay after a rollback across the activation
-      * height, and vice versa). Off-chain-only callers (p2p endorsement gossip, HotStuff votes) may
-      * legitimately use the default.
-      */
-    def supportsBlsCryptoV2(height: Int = blockchain.height): Boolean =
-      blockchain.featureActivationHeight(BlockchainFeatures.BlsCryptoV2).exists(Height(height) >= _)
   }
 
   def finalizedHeightOrFallback(at: Height, latestFinalized: Option[Height], maxRollbackLength: Int): Height = {

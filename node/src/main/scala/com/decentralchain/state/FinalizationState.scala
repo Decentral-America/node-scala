@@ -55,7 +55,7 @@ case class FinalizationState(
 }
 
 object FinalizationState extends ScorexLogging {
-  def notActivated(base: Block): FinalizationState = notActivated(base.header.generator.toAddress)
+  def notActivated(base: Block): FinalizationState    = notActivated(base.header.generator.toAddress)
   def notActivated(miner: Address): FinalizationState = new FinalizationState(
     miner,
     generatorSet = Nil,
@@ -101,9 +101,9 @@ object FinalizationState extends ScorexLogging {
       parentHeight: Height,
       finalizedPreviously: Boolean
   ): Boolean = generatorSet.nonEmpty && {
-    val votedIndexes       = voting.fold(Seq.empty)(_.valid)
-    val votedIndexesSet    = votedIndexes.toSet
-    val allConflictIndexes = knownConflict ++ voting.fold(Set.empty[GeneratorIndex])(_.allConflictGeneratorIndexes.toSet)
+    val votedIndexes                              = voting.fold(Seq.empty)(_.valid)
+    val votedIndexesSet                           = votedIndexes.toSet
+    val allConflictIndexes                        = knownConflict ++ voting.fold(Set.empty[GeneratorIndex])(_.allConflictGeneratorIndexes.toSet)
     val (totalBalance, endorsedBalance, minerIdx) = generatorSet.foldLeft((BigInt(0), BigInt(0), -1)) {
       case (orig @ (totalBalance, endorsedBalance, minerIdx), x) =>
         val gi = x.index

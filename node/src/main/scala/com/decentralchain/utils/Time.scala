@@ -61,7 +61,7 @@ class NTP(ntpServer: String) extends Time with ScorexLogging {
       retry(ExpirationTimeout)
     } catch {
       case _: SocketTimeoutException => retry(RetryDelay)
-      case t: Throwable =>
+      case t: Throwable              =>
         log.warn("Problems with NTP", t)
         retry(RetryDelay)
     } finally {

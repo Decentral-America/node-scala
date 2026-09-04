@@ -10,7 +10,15 @@ import org.scalatest.matchers.should.Matchers
 class PBHotStuffEquivocationProofsSpecification extends AnyFreeSpec with Matchers {
 
   private def vote(voter: Int, view: Int, blockIdByte: Byte, epoch: Int): HotStuffVote =
-    HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, ByteStr(Array.fill(32)(blockIdByte)), Height(10), voter, ByteStr(Array.fill(96)(1: Byte)), epoch)
+    HotStuffVote(
+      view,
+      HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+      ByteStr(Array.fill(32)(blockIdByte)),
+      Height(10),
+      voter,
+      ByteStr(Array.fill(96)(1: Byte)),
+      epoch
+    )
 
   private val proof = HotStuffEquivocationProof(vote(3, 7, 1, 2), vote(3, 7, 2, 2))
 

@@ -100,8 +100,7 @@ class GeneratorsApiRouteSpec extends RouteSpec("/generators") with RestAPISettin
               GeneratorIndex(1),
               otherFinalizedBlockId,
               finalizedHeight = Height(1),
-              endorsedId = domain.blockchain.lastBlockId.value,
-              cryptoV2 = false
+              endorsedId = domain.blockchain.lastBlockId.value
             )
           )
         )

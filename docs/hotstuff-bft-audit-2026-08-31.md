@@ -221,6 +221,21 @@ equivocation even if a scenario produced it.
 
 ### F-3 — **[MEDIUM]** `HotStuffSafety.equivocators` is dead code. Nothing in production ever calls it.
 
+> **STATUS (2026-09-02): FIXED.** `HotStuffCoordinator.Enabled` now calls `equivocators` from its own
+> vote pool and retains verified conflicts as `HotStuffEquivocationProof`s (`onEquivocation` fires
+> unconditionally); the miner folds them into a block's `FinalizationVoting` when `slashing-enabled` is
+> set, and every receiving node independently re-verifies and unions the offender into
+> `conflictGenerators` — unconditionally from genesis (the on-chain activation gate this originally
+> shipped behind, feature 29 `HotStuffEquivocationEvidence`, was deleted 2026-09-02 once it was
+> confirmed no chain in this repo's history had ever activated it). Proved end-to-end, including the
+> wire hop, by `HotStuffEquivocationEvidenceE2ESpecification`, `HotStuffEquivocationDetectionSpecification`,
+> `HotStuffEquivocationProofSpecification`, and `HotStuffEquivocationValidationSpecification` (all now
+> present in `node/tests/src/test/`) — see `docs/hotstuff-audit-readiness.md` §7 item 3 for the current
+> production posture (`slashing-enabled` itself still defaults off pending live testnet exercise).
+
+The finding below is preserved as originally written, since the reasoning that motivated wiring
+`equivocators` in remains good context for why this mattered:
+
 ```
 $ grep -rn "equivocators" node/src/main/scala/
 node/src/main/scala/com/decentralchain/consensus/hotstuff/HotStuffSafety.scala:96:  def equivocators(...)

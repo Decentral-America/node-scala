@@ -47,43 +47,63 @@ object CommitToGenerationTransaction {
   implicit def signed(tx: CommitToGenerationTransaction, privateKey: PrivateKey): CommitToGenerationTransaction =
     tx.copy(proofs = Proofs(crypto.sign(privateKey, tx.bodyBytes())))
 
-  /** The single source of truth for the bytes a proof of possession covers. Previously constructed
+  /** Canonical PoP message: chainId ‖ senderPublicKey ‖ endorserPublicKey ‖ generationPeriodStart (85 bytes).
+    * chainId defeats cross-chain PoP replay (BLS audit M2); sender defeats mempool PoP lifting (M2).
+    *
+    * The single source of truth for the bytes a proof of possession covers. Previously constructed
     * by hand in THREE places (`mkPopSignature`, `CommitToGenerationTransactionDiff`,
     * `BlockDiffer.validateCommitmentsOnSnapshotPath`); a divergence between any two of them is a
     * consensus split, so there is now exactly one implementation.
-    *
-    * `cryptoV2 = false` reproduces the legacy layout `endorserPk(48) ‖ periodStart(4)` byte-for-byte
-    * -- it MUST keep doing so forever, because that is what every PoP already on chain signed.
-    *
-    * `cryptoV2 = true` is the audit-M2 layout `chainId(1) ‖ senderPk(32) ‖ endorserPk(48) ‖
-    * periodStart(4)`, which binds the PoP to BOTH the network and the registering account: a PoP
-    * harvested from testnet is no longer a valid mainnet PoP, and a PoP lifted out of the mempool
-    * cannot be resubmitted under a different sender to front-run the original registration.
-    * Verification pairs this with the `_POP_` DST (H2), so a v2 PoP is also unusable in the
-    * endorsement or HotStuff-vote contexts.
     */
-  def popMessage(
-      chainId: Byte,
-      sender: PublicKey,
-      endorserPublicKey: BlsPublicKey,
-      generationPeriodStart: Height,
-      cryptoV2: Boolean
-  ): Array[Byte] =
-    if (cryptoV2) Array(chainId) ++ sender.arr ++ endorserPublicKey.arr ++ generationPeriodStart.toByteArray
-    else endorserPublicKey.arr ++ generationPeriodStart.toByteArray
+  def popMessage(chainId: Byte, sender: PublicKey, endorserPublicKey: BlsPublicKey, generationPeriodStart: Height): Array[Byte] =
+    Array(chainId) ++ sender.arr ++ endorserPublicKey.arr ++ generationPeriodStart.toByteArray
 
-  /** The DST a PoP is produced/verified under, for the given era. */
-  def popDst(cryptoV2: Boolean): String =
-    if (cryptoV2) BlsUtils.BlsPopDomainSeparationTagV2 else BlsUtils.BlsDomainSeparationTag
+  val PopDst: String = BlsUtils.BlsPopDomainSeparationTag
+
+  /** LEGACY, VERIFY-ONLY PoP message layout: `endorserPublicKey(48) ‖ generationPeriodStart(4)`, no
+    * chainId, no sender. This is the layout every `CommitToGenerationTransaction` already on the
+    * testnet-relaunch chain (from height ~12 onward) was actually signed under, before commit
+    * `448d56557f` introduced the chain/sender-bound v2 layout above. Never used to construct new
+    * commitments -- only [[verifyPop]] falls back to it, to keep historical on-chain commitments
+    * re-verifiable (e.g. on a full resync from genesis).
+    */
+  private def legacyPopMessage(endorserPublicKey: BlsPublicKey, generationPeriodStart: Height): Array[Byte] =
+    endorserPublicKey.arr ++ generationPeriodStart.toByteArray
 
   def mkPopSignature(
       blsKeyPair: BlsKeyPair,
       generationPeriodStart: Height,
       sender: PublicKey,
-      chainId: Byte,
-      cryptoV2: Boolean
+      chainId: Byte
   ): BlsSignature =
-    blsKeyPair.sign(popMessage(chainId, sender, blsKeyPair.publicKey, generationPeriodStart, cryptoV2), popDst(cryptoV2))
+    blsKeyPair.sign(popMessage(chainId, sender, blsKeyPair.publicKey, generationPeriodStart), PopDst)
+
+  /** Verifies a `CommitToGenerationTransaction`'s BLS proof of possession. Tries the current v2
+    * scheme (chain/sender-bound message + per-context `_POP_` DST) first; if that fails, falls back
+    * to the legacy scheme (bare `endorserPk ‖ periodStart` message + legacy `_NUL_` DST) so
+    * historical on-chain commitments signed before the v2 scheme existed still verify. Signing
+    * (constructing NEW commitments) stays v2-only -- see [[mkPopSignature]]; this fallback exists
+    * purely so already-on-chain, legacy-signed transactions remain verifiable forever, e.g. during a
+    * full resync from genesis.
+    */
+  def verifyPop(
+      signature: Array[Byte],
+      chainId: Byte,
+      sender: PublicKey,
+      endorserPublicKey: BlsPublicKey,
+      generationPeriodStart: Height
+  ): Boolean =
+    BlsUtils
+      .verifyBasic(signature, popMessage(chainId, sender, endorserPublicKey, generationPeriodStart), endorserPublicKey.arr, PopDst)
+      .isRight ||
+      BlsUtils
+        .verifyBasic(
+          signature,
+          legacyPopMessage(endorserPublicKey, generationPeriodStart),
+          endorserPublicKey.arr,
+          BlsUtils.BlsLegacyDomainSeparationTag
+        )
+        .isRight
 
   def create(
       version: TxVersion,

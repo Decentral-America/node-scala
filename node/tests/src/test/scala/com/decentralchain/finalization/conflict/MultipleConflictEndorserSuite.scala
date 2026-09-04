@@ -86,9 +86,7 @@ class MultipleConflictEndorserSuite extends BaseFinalizationSpec {
   }
 
   "hotstuff equivocation proof voter survives the key-block boundary [C1 regression]" in {
-    val withEvidenceFeature = defaultSettings.addFeatures(BlockchainFeatures.HotStuffEquivocationEvidence)
-
-    withDomain(withEvidenceFeature, AddrWithBalance.enoughBalances(generators*)) { d =>
+    withDomain(defaultSettings, AddrWithBalance.enoughBalances(generators*)) { d =>
       log.debug("Append block 2 with commitments")
       val txs                   = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
       val block2WithCommitments = d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = validGenerator, strictTime = true)
@@ -99,11 +97,19 @@ class MultipleConflictEndorserSuite extends BaseFinalizationSpec {
         val height  = Height(10)
         val msg     = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, height.toInt, epoch)
         val kp      = BlsKeyPair(signer.privateKey)
-        HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
+        HotStuffVote(
+          view,
+          HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+          blockId,
+          height,
+          voterIndex,
+          ByteStr(kp.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).arr),
+          epoch
+        )
       }
 
       val periodIndex = d.blockchain.generationPeriodOf(Height(3)).value.index
-      val proof = HotStuffEquivocationProof(
+      val proof       = HotStuffEquivocationProof(
         signedVote(conflictGenerator1, conflictGenerator1Idx.toInt, view = 5, blockIdByte = 1, epoch = periodIndex),
         signedVote(conflictGenerator1, conflictGenerator1Idx.toInt, view = 5, blockIdByte = 2, epoch = periodIndex)
       )

@@ -1,5 +1,13 @@
 # HotStuff Equivocation Evidence (T5, rev. 2) Implementation Plan
 
+> **SUPERSEDED 2026-09-02.** Superseded by `docs/superpowers/plans/2026-09-02-testnet-final-source.md`.
+> This plan's implementation landed and is real production code (`HotStuffEquivocationProof`, the
+> coordinator-side detection, the miner-side fold, receive-side validation and `conflictGenerators`
+> union — all still in production), but its on-chain activation gate (feature 29
+> `HotStuffEquivocationEvidence`) was deleted entirely by the later plan once it was confirmed no chain
+> in this repo's history had ever activated it: validation and union are unconditional from genesis now,
+> with no feature-29 check anywhere. Kept here for history/citation only — do not execute this file.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Detected T2 HotStuff equivocations become portable, block-carried, independently-verified evidence that deterministically excludes the offender's stake via the existing `conflictGenerators` mechanism — closing audit item T5 and BFT-audit finding F-3.

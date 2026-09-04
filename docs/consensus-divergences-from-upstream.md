@@ -192,3 +192,75 @@ Also checked: `node/testkit/.../ForwardingBlockchainUpdaterImpl.scala:68`
 forwards `currentGeneratorSet` to a wrapped `delegate` as part of a bulk,
 mechanical forwarding-method list (a test-fixture wrapper) — it has no logic
 of its own and isn't a real consumer.
+
+## 7. Feature 26 (`AdjustedBlockRewardDistribution`) — reward distribution ported faithfully; DAO/XTN split is inert by design
+
+Ported from upstream Waves `f1bedddb2e` ("Adjusted block reward distribution
+(#4086)") as an operator-approved, real monetary-policy change — **not** a
+bookkeeping default. Four hunks, all ported byte-for-byte against upstream's
+logic (naming differences only: `Dcc`/`dcc` in place of `Wave`/`waves`):
+
+- `state/BlockRewardCalculator.scala` — adds `RewardDistribution`,
+  `DefaultDistribution` (the pre-26 2/2/2 split at the 6-DCC-equivalent
+  reward) and `AdjustedDistribution` (the post-26 10/8/2 split at
+  `AdjustedFullReward = 20 * Constants.UnitsInDcc`), and switches
+  `getBlockRewardShares` to pick between them by
+  `featureActivationHeight(AdjustedBlockRewardDistribution)`.
+- `state/Blockchain.scala` — `blockRewardBoost` now returns `1`
+  unconditionally once feature 26 is active, superseding feature 23's
+  `BoostBlockReward` 10x multiplier (DCC's `blockRewardBoostPeriod`: 300,000
+  mainnet / 2,000 testnet).
+- `state/BlockchainUpdaterImpl.scala` — `computeNextReward` force-sets the
+  voted block reward to `AdjustedFullReward` (20 DCC-equivalent) exactly once,
+  at the activation height; voting continues from that new baseline
+  afterwards (the reward stays votable, it is not fixed at 20 forever).
+- `state/diffs/EthereumTransactionDiff.scala` /
+  `state/diffs/ExchangeTransactionDiff.scala` — the existing
+  `DeterministicFinality` (feature 25) validation gates are widened to
+  `DeterministicFinality || AdjustedBlockRewardDistribution`. This is a
+  no-op on any chain where 25 is already active (true for every DCC preset
+  that can reach 26), ported only for byte-for-byte parity with upstream.
+
+**Real, intentional effect on DCC:** once feature 26 activates, DCC's block
+reward resets from its current 6-DCC-equivalent (with a live 10x boost period
+from feature 23) to 20-DCC-equivalent, and the 10x boost retires permanently.
+This is the monetary-policy change the operator approved (decision recorded
+2026-09-02); it is not a side effect of a mechanical port.
+
+**Why the DAO/XTN buyback split (hunk a) is inert on DCC today:** the ported
+`RewardDistribution` split table sends the DAO address 10 DCC-equivalent and
+the XTN buyback address 2 DCC-equivalent once the reward is at or above the
+20-DCC `AdjustedFullReward`. But `FunctionalitySettings.MAINNET`,
+`.TESTNET`, and `.STAGENET` all set `daoAddress = None` and
+`xtnBuybackAddress = None` (see the inline comments at
+`BlockchainSettings.scala:145-147`, `:166-168`, and `:185-187`: "DCC: Waves
+DAO/XTN buyback addresses removed — these protocols don't exist on DCC").
+`getBlockRewardShares`'s `daoAddress.fold(0L)(...)` /
+`xtnBuybackAddress.fold(0L)(...)` guards mean every DAO/XTN share folds to
+`0` on all three presets, and **100% of the 20-unit reward goes to the
+miner** — no DAO/buyback split actually happens in production. The split
+table itself is ported as-is (faithful parity with upstream, and it is
+exercised by real, non-trivial values in `DomainPresets.BlockRewardDistribution`,
+the test preset that does set both addresses), but its production behavior
+on DCC is, by design, "miner keeps everything." This is deliberate, not an
+oversight: DCC has no DAO or XTN-buyback protocol, so there is nothing for
+that split to pay out to. A future sync pass should not "fix" this by
+inventing DCC DAO/buyback addresses — that would be a separate,
+much larger policy decision, not a consensus-parity bug.
+
+**Activation path (not completed in this change):** feature 26 is
+deliberately **not** added to any preset's `preActivatedFeatures` map — it
+activates strictly by vote, the same way every other votable DCC feature
+does. The per-node opt-in mechanism is `decentralchain.features.supported`
+(a `List[Short]` of feature ids, `node/src/main/resources/application.conf`
+under the `features` block, backed by `FeaturesSettings` in
+`settings/FeaturesSettings.scala`), counted against
+`functionality.feature-check-blocks-period` /
+`functionality.blocks-for-feature-activation` (chain-level voting-window and
+threshold settings, e.g. `custom-defaults.conf`/`network-defaults.conf`).
+Getting the operator's approved change to actually run on the relaunched
+testnet requires adding `26` to `supported` on enough of testnet's nodes to
+clear the activation threshold — that is infra-repo config
+(`infra/node-config/testnet/dcc.conf` and the `infra/clusters/testnet/apps/nodes.yaml`
+blocks, a sibling repo to this one, not touched by this change) and is
+explicitly deferred to the relaunch runbook task, not silently dropped.

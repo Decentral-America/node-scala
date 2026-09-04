@@ -251,14 +251,8 @@ case class TransactionsApiRoute(
       .mapEval(txMetaEnriched(address, _))
   }
 
-  // Audit M2: a tx signed here lands, at the earliest, in the NEXT block -- `blockchain.height + 1` --
-  // so that (not the current live tip) is the era `mkPopSignature` should sign the auto-generated PoP
-  // under. A late-arriving tx that crosses the activation height between signing and mining would
-  // still fail on-chain (the gate in `CommitToGenerationTransactionDiff` is the real source of truth),
-  // but this keeps the common case -- signed and mined promptly -- from needlessly minting a PoP for
-  // the wrong era.
   private def mkTxFactory =
-    TransactionFactory(wallet, time, blockchain.currentGenerationPeriod, blockchain.supportsBlsCryptoV2(blockchain.height + 1))
+    TransactionFactory(wallet, time, blockchain.currentGenerationPeriod)
 }
 
 object TransactionsApiRoute {

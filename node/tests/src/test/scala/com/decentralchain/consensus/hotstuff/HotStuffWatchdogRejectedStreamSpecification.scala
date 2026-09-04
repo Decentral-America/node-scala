@@ -53,17 +53,25 @@ class HotStuffWatchdogRejectedStreamSpecification extends FlatSpec {
   private def perpetuallyRejectedQC(view: Int, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, height, committeeEpoch = 99)
     val votes = (0 to 2).map(i =>
-      HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, B, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr, committeeEpoch = 99)
+      HotStuffVote(
+        view,
+        HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+        B,
+        Height(height),
+        i,
+        kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr,
+        committeeEpoch = 99
+      )
     )
-    HotStuffQuorum.formQC(votes, committee, cryptoV2 = false).toOption.get
+    HotStuffQuorum.formQC(votes, committee).toOption.get
   }
 
   private class SilentEffects extends HotStuffEffects {
-    def broadcast(m: Message): Unit                                = ()
-    def myVoterIndexes: Set[Int]                                   = Set.empty // never this replica's own turn -- purely a receiver in this spec
+    def broadcast(m: Message): Unit = ()
+    def myVoterIndexes: Set[Int]    = Set.empty // never this replica's own turn -- purely a receiver in this spec
     def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = None
-    def onCommit(blockId: BlockId, height: Int): Unit              = ()
-    def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+    def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
   }
 
   "a Rejected-only QC stream, with the FIXED onAction filter" should
@@ -100,7 +108,7 @@ class HotStuffWatchdogRejectedStreamSpecification extends FlatSpec {
         if (fired && firedAtTick.isEmpty) firedAtTick = Some(tick)
       }
 
-      firedAtTick should be(Some(5)) // the fix works: Rejected never resets the counter, so it still fires at N
+      firedAtTick should be(Some(5))         // the fix works: Rejected never resets the counter, so it still fires at N
       watchdog.totalRecoveries should be(2L) // fires at tick 5 and tick 10 (counter resets after each firing)
     }
 
@@ -110,7 +118,7 @@ class HotStuffWatchdogRejectedStreamSpecification extends FlatSpec {
     // `HotStuffEngine.onQC` directly, so this exercises the actual `applyQC`/`onAction` wiring inside
     // `HotStuffCoordinator.Enabled`, not just the pure reducer in isolation.
     var recordedProgress = 0
-    val coordinator       = new HotStuffCoordinator.Enabled(
+    val coordinator      = new HotStuffCoordinator.Enabled(
       committeeProvider = () => committee,
       effects = new SilentEffects,
       extendsBranch = (_, _) => true,

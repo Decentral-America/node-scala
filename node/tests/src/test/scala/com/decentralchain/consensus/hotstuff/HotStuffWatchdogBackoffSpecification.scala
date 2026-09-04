@@ -23,7 +23,7 @@ class HotStuffWatchdogBackoffSpecification extends FlatSpec {
 
   private def newWatchdog(threshold: Int = 3, maxConsecutiveRecoveries: Int = 3): (HotStuffWatchdog, () => Int) = {
     var resetCount = 0
-    val watchdog = new HotStuffWatchdog(
+    val watchdog   = new HotStuffWatchdog(
       committeeNonEmpty = () => true,
       lockPath = tempLockPath(),
       resetInMemoryState = () => resetCount += 1,
@@ -35,7 +35,7 @@ class HotStuffWatchdogBackoffSpecification extends FlatSpec {
 
   "an unfixable wedge (zero progress ever, forever)" should
     "back off exponentially after each ineffective recovery, doubling the ticks required before the next one" in {
-      val (wd, _) = newWatchdog(threshold = 2, maxConsecutiveRecoveries = 10) // high cap -- isolate backoff timing alone
+      val (wd, _)   = newWatchdog(threshold = 2, maxConsecutiveRecoveries = 10) // high cap -- isolate backoff timing alone
       var fireTicks = Vector.empty[Int]
       (1 to 60).foreach { tick =>
         if (wd.check()) fireTicks :+= tick
@@ -69,7 +69,7 @@ class HotStuffWatchdogBackoffSpecification extends FlatSpec {
     val (wd, resets) = newWatchdog(threshold = 2, maxConsecutiveRecoveries = 2)
     (1 to 30).foreach { _ => wd.check() }
     wd.isAutoRecoverySuspended should be(true)
-    val resetsAtSuspension = resets()
+    val resetsAtSuspension     = resets()
     val recoveriesAtSuspension = wd.totalRecoveries
 
     // Drive MANY more ticks past suspension -- if suspension didn't actually stop the recovery action,
@@ -85,15 +85,15 @@ class HotStuffWatchdogBackoffSpecification extends FlatSpec {
     // Drive to the very edge of suspension: one ineffective recovery, then progress arrives (the
     // recovery WORKED this time) before the second one would be judged.
     wd.check() should be(false) // tick 1, stalled
-    wd.check() should be(true) // tick 2, fires (attempt 1)
-    wd.recordProgress() // the recovery worked -- real progress observed on the very next tick
+    wd.check() should be(true)  // tick 2, fires (attempt 1)
+    wd.recordProgress()         // the recovery worked -- real progress observed on the very next tick
     wd.check() should be(false) // progress consumed here; backoff/suspension state resets to a clean slate
     wd.isAutoRecoverySuspended should be(false)
 
     // A LATER, completely unrelated wedge must get the ORIGINAL threshold again (2), not an inherited
     // doubled one, and a fresh consecutive-failure budget.
     wd.check() should be(false) // stalled tick 1 (fresh)
-    wd.check() should be(true) // stalled tick 2 (fresh) -- fires at the ORIGINAL threshold, not doubled
+    wd.check() should be(true)  // stalled tick 2 (fresh) -- fires at the ORIGINAL threshold, not doubled
     resets() should be(2)
   }
 

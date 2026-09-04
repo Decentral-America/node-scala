@@ -72,7 +72,7 @@ class MicroBlockSpecification extends FunSuite {
     val endorsedId                                         = ByteStr(Array.fill(Block.BlockIdLength)(3.toByte))
     val blsEndorser                                        = BlsKeyPair(TxHelpers.signer(7).privateKey)
     val conflictEndorsements: IndexedSeq[BlockEndorsement] =
-      IndexedSeq(BlockEndorsement.signed(blsEndorser, GeneratorIndex(7), finalizedId, finalizedHeight, endorsedId, cryptoV2 = false))
+      IndexedSeq(BlockEndorsement.signed(blsEndorser, GeneratorIndex(7), finalizedId, finalizedHeight, endorsedId))
 
     val finalizationVoting = Some(
       FinalizationVoting(

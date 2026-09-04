@@ -8,7 +8,7 @@ import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
-import com.decentralchain.mining.{Miner, MinerImpl}
+import com.decentralchain.mining.{ForgeAttemptResult, Miner, MinerImpl}
 import com.decentralchain.network.EndorseBlock
 import com.decentralchain.state.*
 import com.decentralchain.test.DomainPresets.DCCSettingsOps
@@ -385,6 +385,93 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         d.lastBlockId shouldBe lastBlockId // Not changed
       }
     }
+
+    "if generating balance is below minimal" in withManager { manager =>
+      val minerScheduler    = TestScheduler()
+      val appenderScheduler = TestScheduler()
+
+      val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
+      var miner    = Miner.StrictDisabledMiner
+      withDomain(
+        defaultSettings,
+        AddrWithBalance.enoughBalances(otherNodeAcc) ++ Seq(
+          AddrWithBalance(
+            thisNodeAcc.toAddress,
+            MinimalEffectiveBalanceForGenerator2 + TestValues.commitToGenerationFee + CommitToGenerationTransaction.DepositInDcclets
+          )
+        ),
+        miner = Miner.forwardTo(miner)
+      ) { d =>
+        d.wallet.generateNewAccounts(1)
+
+        val minerImpl = new MinerImpl(
+          channels,
+          d.blockchain,
+          d.settings,
+          d.testTime,
+          d.utxPool,
+          BlockEndorser.Disabled,
+          EndorsementStorage.Disabled,
+          d.wallet,
+          d.posSelector,
+          minerScheduler,
+          appenderScheduler,
+          Observable.empty
+        ) with CatchLogs
+        miner = minerImpl
+
+        log.debug("Append block2 with commitments, so thisNode is committed and only the balance floor can veto it")
+        val block2 = d.createBlock(
+          version = Block.ProtoBlockVersion,
+          txs = Seq(otherNodeAcc, thisNodeAcc).map(x => TxHelpers.commitToGeneration(Height(3), sender = x)),
+          generator = otherNodeAcc,
+          strictTime = true
+        )
+        d.appender.appendBlock(block2)
+
+        log.debug("Append block3 draining thisNode's generating balance below the minimal threshold")
+        // thisNode's wallet balance can never drop below its locked generation deposit (spending
+        // below it is rejected as "trying to spend a deposit" -- the deposit is a hold on the wallet
+        // balance, not a separate pool), so the most that can be transferred out is
+        // balance - deposit, minus the fee reserved for the transfer itself. A small amount (1 dcc)
+        // is left behind on purpose: draining to exactly zero would make an unrelated PoS delay
+        // calculation divide by zero elsewhere -- a tiny positive balance is enough to still land
+        // below the minimal generating balance and safely trigger the veto under test.
+        val depositHeld = d.blockchain.generationDeposit(thisNodeAcc.toAddress)
+        val block3 = d.createBlock(
+          version = Block.ProtoBlockVersion,
+          txs = Seq(
+            TxHelpers.transfer(
+              thisNodeAcc,
+              otherNodeAcc.toAddress,
+              amount = d.blockchain.balance(thisNodeAcc.toAddress) - depositHeld - 1.dcc - 1.dcc,
+              fee = 1.dcc
+            )
+          ),
+          generator = otherNodeAcc,
+          strictTime = true
+        )
+        d.appender.appendBlock(block3)
+
+        val remainingBalance = d.blockchain.generatingBalance(thisNodeAcc.toAddress)
+        remainingBalance should be < MinimalEffectiveBalanceForGenerator2
+        remainingBalance should be > 0L
+
+        // Drive forgeBlock directly rather than through the async scheduleMining loop: with the
+        // balance already below the minimal threshold, nextBlockGenerationTime's own (separate,
+        // unrelated to this fix) balance gate refuses to schedule anything at all, so the
+        // scheduler's task queue would stay empty forever and there'd be nothing for
+        // MinerImpl.scheduleMining to ever get to. forgeBlock is the exact call site of the veto
+        // message under test, and it's a plain public method -- call it directly.
+        log.debug("Attempt thisNode forging directly -- balance floor should veto it")
+        val result = minerImpl.forgeBlock(thisNodeAcc)
+
+        d.lastBlockId shouldBe block3.id() // Not changed -- thisNode never got to forge block 4
+        result shouldBe ForgeAttemptResult.PermanentFailure(
+          s"${thisNodeAcc.toAddress} generating balance $remainingBalance below minimal $MinimalEffectiveBalanceForGenerator2 at 4"
+        )
+      }
+    }
   }
 
   "Finalization on miner" in withManager { manager =>
@@ -415,7 +502,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       val endorsementStorage     = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
       val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
-      val blockEndorser = BlockEndorser.InMemory(
+      val blockEndorser          = BlockEndorser.InMemory(
         d.settings.synchronizationSettings.maxRollback,
         d.blockchain,
         d.wallet,
@@ -423,8 +510,8 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         selfEndorsementStorage,
         channels
       )
-      val utxEvents     = ConcurrentSubject.publish[Unit](using minerScheduler)
-      val minerImpl     = new MinerImpl(
+      val utxEvents = ConcurrentSubject.publish[Unit](using minerScheduler)
+      val minerImpl = new MinerImpl(
         channels,
         d.blockchain,
         d.settings,
@@ -460,7 +547,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedId = genesisBlockId,
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
-          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
+          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
         )
       ) should beRight
 
@@ -512,7 +599,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
 
       val endorsementStorage     = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
       val selfEndorsementStorage = EndorsementStorage.InMemory((blockId, h) => blockId == d.blockchain.blockId(h.toInt))
-      val blockEndorser = BlockEndorser.InMemory(
+      val blockEndorser          = BlockEndorser.InMemory(
         d.settings.synchronizationSettings.maxRollback,
         d.blockchain,
         d.wallet,
@@ -520,7 +607,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         selfEndorsementStorage,
         channels
       )
-      val minerImpl     = new MinerImpl(
+      val minerImpl = new MinerImpl(
         channels,
         d.blockchain,
         d.settings,
@@ -556,7 +643,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedId = genesisBlockId,
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
-          signature = BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
+          signature = BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
         )
       ) should beRight
       d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))
@@ -574,7 +661,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
           signature =
-            BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), otherFinalizedBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
+            BlockEndorsement.sign(BlsKeyPair(generator1.privateKey), otherFinalizedBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
         )
       ) should beRight
       d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))
@@ -591,7 +678,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
           finalizedId = genesisBlockId,
           finalizedHeight = GenesisBlockHeight,
           endorsedId = block2WithCommitments.id(),
-          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id(), cryptoV2 = false).byteStr
+          signature = BlockEndorsement.sign(BlsKeyPair(generator3.privateKey), genesisBlockId, GenesisBlockHeight, block2WithCommitments.id()).byteStr
         )
       ) should beRight
       d.utxPool.putIfNew(TxHelpers.transfer(generator1, generator2Addr))

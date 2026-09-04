@@ -37,11 +37,6 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
   private val withEvidenceFeature =
     DomainPresets.DeterministicFinality
-      .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance, BlockchainFeatures.HotStuffEquivocationEvidence)
-      .configure(_.copy(generationPeriodLength = 2, lightNodeBlockFieldsAbsenceInterval = 0))
-
-  private val withoutEvidenceFeature =
-    DomainPresets.DeterministicFinality
       .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
       .configure(_.copy(generationPeriodLength = 2, lightNodeBlockFieldsAbsenceInterval = 0))
 
@@ -52,7 +47,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
     val height  = Height(10)
     val msg     = HotStuffQuorum.voteMessage(view, prepare, blockId, height.toInt, epoch)
     val kp      = BlsKeyPair(signer.privateKey)
-    HotStuffVote(view, prepare, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsDomainSeparationTag).arr), epoch)
+    HotStuffVote(view, prepare, blockId, height, voterIndex, ByteStr(kp.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).arr), epoch)
   }
 
   private def proofFor(signer: KeyPair, voterIndex: Int, epoch: Int, view: Int = 5): HotStuffEquivocationProof =
@@ -84,7 +79,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
     "1. valid proof (same epoch as block period, real signatures, fresh voter) => Right, excludes the voter" in
       withCommittedCommittee(withEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, voterAIdx.toInt, periodIndex)
+        val proof  = proofFor(voterA, voterAIdx.toInt, periodIndex)
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -100,24 +95,9 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
         d.blockchain.conflictGenerators(d.blockchain.currentGenerationPeriod.value).all should contain(voterAIdx)
       }
 
-    "2. hotstuffConflicts non-empty BEFORE feature-29 activation => Left" in
-      withCommittedCommittee(withoutEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, voterAIdx.toInt, periodIndex)
-        val block3 = d.createBlock(
-          version = Block.ProtoBlockVersion,
-          txs = Nil,
-          generator = minerGenerator,
-          strictTime = true,
-          finalizationVoting = Some(mkFinalizationVoting().copy(hotstuffConflicts = Seq(proof)))
-        )
-        val result = d.appender.appendBlockWithoutFallback(block3)
-        result.isLeft shouldBe true
-        result.left.value.toString should include("HotStuff Equivocation Evidence")
-      }
-
     "3. proofs-only FV (valid=[], conflict=[], one valid proof), post-activation => Right" in
       withCommittedCommittee(withEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, voterAIdx.toInt, periodIndex)
+        val proof  = proofFor(voterA, voterAIdx.toInt, periodIndex)
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -130,7 +110,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
     "4. proof whose committeeEpoch != block period index => Left" in
       withCommittedCommittee(withEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, voterAIdx.toInt, periodIndex + 1)
+        val proof  = proofFor(voterA, voterAIdx.toInt, periodIndex + 1)
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -145,7 +125,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
     "4b. proof whose voterIndex is negative (-1) => Left, no exception (GeneratorIndex.apply guard at conflictingEndorsers)" in
       withCommittedCommittee(withEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, -1, periodIndex)
+        val proof  = proofFor(voterA, -1, periodIndex)
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -194,7 +174,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
     "7. voter index out of committee bounds => Left" in
       withCommittedCommittee(withEvidenceFeature) { (d, _) =>
-        val proof = proofFor(voterA, 999, periodIndex)
+        val proof  = proofFor(voterA, 999, periodIndex)
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -235,7 +215,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
         )
         d.appender.appendBlockWithoutFallback(blockWithConflict) should beRight
 
-        val proof = proofFor(voterB, voterBIdx.toInt, periodIndex)
+        val proof     = proofFor(voterB, voterBIdx.toInt, periodIndex)
         val nextBlock = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -250,7 +230,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
 
     "10. voter also present in fv.conflict's endorser indexes (same block) => Left" in
       withCommittedCommittee(withEvidenceFeature) { (d, block2) =>
-        val proof = proofFor(voterC, voterCIdx.toInt, periodIndex)
+        val proof  = proofFor(voterC, voterCIdx.toInt, periodIndex)
         val block3 = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
@@ -271,7 +251,7 @@ class HotStuffEquivocationValidationSpecification extends BaseFinalizationSpec {
       withCommittedCommittee(withEvidenceFeature) { (d, _) =>
         val minerIdx = GeneratorIndex(0)
         val proof    = proofFor(minerGenerator, minerIdx.toInt, periodIndex)
-        val block3 = d.createBlock(
+        val block3   = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Nil,
           generator = minerGenerator,

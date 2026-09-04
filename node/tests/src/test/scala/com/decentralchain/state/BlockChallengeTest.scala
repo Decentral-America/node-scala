@@ -280,8 +280,7 @@ class BlockChallengeTest
         BlsKeyPair(challengingMiner.privateKey),
         finalizedId = finalizedId,
         finalizedHeight = finalizedHeight,
-        endorsedId = d.lastBlockId,
-        cryptoV2 = false
+        endorsedId = d.lastBlockId
       )
 
       val originalBlock = d.createBlock(
@@ -351,8 +350,7 @@ class BlockChallengeTest
         BlsKeyPair(challengingMiner.privateKey),
         finalizedId = finalizedId,
         finalizedHeight = finalizedHeight,
-        endorsedId = d.lastBlockId,
-        cryptoV2 = false
+        endorsedId = d.lastBlockId
       )
 
       val ts            = d.nextBlockTime(challengedMiner)
@@ -2108,7 +2106,15 @@ class BlockChallengeTest
   private def createMicroBlockAppender(d: Domain): (Channel, MicroBlock) => Task[Unit] = { (ch, mb) =>
     val channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
-    MicroblockAppender(d.blockchain, d.utxPool, channels, PeerDatabase.NoOp, Some(createBlockChallenger(d, channels)), BlockEndorser.Disabled, appenderScheduler)(
+    MicroblockAppender(
+      d.blockchain,
+      d.utxPool,
+      channels,
+      PeerDatabase.NoOp,
+      Some(createBlockChallenger(d, channels)),
+      BlockEndorser.Disabled,
+      appenderScheduler
+    )(
       ch,
       MicroblockData(None, mb, Coeval.now(Set.empty)),
       None

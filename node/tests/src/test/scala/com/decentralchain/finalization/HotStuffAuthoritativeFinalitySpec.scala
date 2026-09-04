@@ -31,9 +31,9 @@ class HotStuffAuthoritativeFinalitySpec extends BaseFinalizationSpec {
       AddrWithBalance.enoughBalances(node0Acc)
     ) { d =>
       (1 to 5).foreach(_ => d.appendBlock())
-      val floorBefore    = d.blockchain.finalizedHeight.fold(0)(_.toInt)
-      val targetHeight   = Height(d.blockchain.height)
-      val targetBlockId  = d.blockchain.blockId(targetHeight.toInt).value
+      val floorBefore   = d.blockchain.finalizedHeight.fold(0)(_.toInt)
+      val targetHeight  = Height(d.blockchain.height)
+      val targetBlockId = d.blockchain.blockId(targetHeight.toInt).value
 
       val applied = d.blockchainUpdater.raiseHotStuffFinalizedHeight(targetBlockId, targetHeight)
 
@@ -47,9 +47,9 @@ class HotStuffAuthoritativeFinalitySpec extends BaseFinalizationSpec {
       AddrWithBalance.enoughBalances(node0Acc)
     ) { d =>
       (1 to 5).foreach(_ => d.appendBlock())
-      val floorBefore     = d.blockchain.finalizedHeight
-      val targetHeight    = Height(d.blockchain.height)
-      val foreignBlockId  = TxHelpers.randomBlockId // NOT the real block at targetHeight
+      val floorBefore    = d.blockchain.finalizedHeight
+      val targetHeight   = Height(d.blockchain.height)
+      val foreignBlockId = TxHelpers.randomBlockId // NOT the real block at targetHeight
 
       val applied = d.blockchainUpdater.raiseHotStuffFinalizedHeight(foreignBlockId, targetHeight)
 
@@ -70,7 +70,10 @@ class HotStuffAuthoritativeFinalitySpec extends BaseFinalizationSpec {
 
       val lowHeight  = Height(highHeight.toInt - 5)
       val lowBlockId = d.blockchain.blockId(lowHeight.toInt).value
-      d.blockchainUpdater.raiseHotStuffFinalizedHeight(lowBlockId, lowHeight) // may return true (it's a real, agreeing block) or be a genuine no-op; either way must never regress
+      d.blockchainUpdater.raiseHotStuffFinalizedHeight(
+        lowBlockId,
+        lowHeight
+      ) // may return true (it's a real, agreeing block) or be a genuine no-op; either way must never regress
 
       d.blockchain.finalizedHeight.value shouldBe afterHigh
 
@@ -85,12 +88,12 @@ class HotStuffAuthoritativeFinalitySpec extends BaseFinalizationSpec {
     ) { d =>
       (1 to 10).foreach(_ => d.appendBlock())
 
-      val raisedHeight = Height(11)
+      val raisedHeight  = Height(11)
       val raisedBlockId = d.blockchain.blockId(raisedHeight.toInt).value
       d.blockchainUpdater.raiseHotStuffFinalizedHeight(raisedBlockId, raisedHeight) shouldBe true
       d.blockchain.finalizedHeight.value shouldBe raisedHeight
 
-      val rollbackTarget = Height(6)
+      val rollbackTarget  = Height(6)
       val rollbackBlockId = d.blockchain.blockId(rollbackTarget.toInt).value
       d.blockchainUpdater.removeAfter(rollbackBlockId).explicitGet()
 

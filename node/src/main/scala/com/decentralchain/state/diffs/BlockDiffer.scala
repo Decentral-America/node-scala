@@ -4,7 +4,7 @@ import cats.implicits.{catsSyntaxOption, catsSyntaxSemigroup, toFoldableOps}
 import cats.syntax.either.*
 import com.decentralchain.account.Address
 import com.decentralchain.crypto
-import com.decentralchain.crypto.bls.{BlsPublicKey, BlsUtils}
+import com.decentralchain.crypto.bls.BlsPublicKey
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{Block, BlockSnapshot, FinalizationVoting, MicroBlock, MicroBlockSnapshot}
 import com.decentralchain.common.state.ByteStr
@@ -26,7 +26,6 @@ import com.decentralchain.transaction.transfer.{MassTransferTransaction, Transfe
 import com.decentralchain.transaction.{
   Asset,
   Authorized,
-  BlockchainUpdater,
   CommitToGenerationTransaction,
   GenesisTransaction,
   PaymentTransaction,
@@ -128,53 +127,10 @@ object BlockDiffer {
     val heightWithNewBlock = stateHeight + 1
 
     // height switch is next after activation
-    val ngHeight          = blockchain.featureActivationHeight(BlockchainFeatures.NG).getOrElse(Height(Int.MaxValue))
-    val sponsorshipHeight = Sponsorship.sponsoredFeesSwitchHeight(blockchain)
+    val ngHeight = blockchain.featureActivationHeight(BlockchainFeatures.NG).getOrElse(Height(Int.MaxValue))
 
-    val feeFromPreviousBlockE =
-      if (stateHeight >= sponsorshipHeight) {
-        Right(Portfolio(balance = blockchain.carryFee(None)))
-      } else if (stateHeight > ngHeight) maybePrevBlock.fold(Portfolio.empty.asRight[String]) { pb =>
-        // it's important to combine tx fee fractions (instead of getting a fraction of the combined tx fee)
-        // so that we end up with the same value as when computing per-transaction fee part
-        // during microblock processing below
-        //
-        // CommitToGenerationTransaction fees are excluded from the NG carry-over for the same
-        // reason their commitment data is excluded from the state hash (see
-        // TxStateSnapshotHashBuilder.scala): letting the 60% carry-share participate in the
-        // normal split would make the amount carried into the NEXT block depend on which
-        // block position the commitment tx landed at -- the same position-dependent-state
-        // hazard Feature 21 guards against for the state hash itself.
-        //
-        // Precise effect (confirmed against canonical): the committing block's OWN miner still
-        // gets the normal 40% immediate cut (unchanged, via minerPortfolio in apply() below --
-        // this filter does not touch that); this exclusion only zeroes the OTHER 60% that would
-        // otherwise carry to the next block. Net result for a CommitToGenerationTransaction fee
-        // is 40% to the block that includes it, 0% to the next block -- the remaining 60% is not
-        // credited to anyone (removed from circulation for accounting purposes, though the fee
-        // itself was already debited from the sender by CommitToGenerationTransactionDiff, so no
-        // extra amount is actually burned beyond the fee itself). Verified against the real
-        // testnet chain's canonical history at height 1799 (the block immediately after the
-        // chain's first CommitToGenerationTransaction commitments) and confirmed by a fresh-
-        // genesis replay matching canonical stateHash through height ~3300.
-        //
-        // NOTE (investigated while chasing the height-3325 divergence): this branch cannot be
-        // simplified to read blockchain.carryFee(None) the way the sponsorship branch above does.
-        // computeTxFeeInfo's carry is gated on hasSponsorship, so rocksdb.carryFee is always 0
-        // pre-sponsorship by design -- it must keep recomputing from the previous block's own tx
-        // data instead. Confirmed empirically: height 3325 is past sponsorshipHeight (~2700 on
-        // testnet) and goes through the branch above, which was already correct; this branch was
-        // not the source of that bug.
-        pb.transactionData
-          .filterNot(_.isInstanceOf[CommitToGenerationTransaction])
-          .map { t =>
-            val pf = Portfolio.build(t.assetFee)
-            pf.minus(pf.multiply(CurrentBlockFeePart))
-          }
-          .foldM(Portfolio.empty)(_.combine(_))
-      }
-      else
-        Right(Portfolio.empty)
+    // Shared with the miner's createInitialBlockSnapshot -- see carryFeeFromPreviousBlock.
+    val feeFromPreviousBlockE = carryFeeFromPreviousBlock(blockchain, maybePrevBlock)
 
     val initialFeeFromThisBlockE =
       if (stateHeight < ngHeight) {
@@ -430,13 +386,93 @@ object BlockDiffer {
       case _ => transactionFee
     }
 
+  /** The carry-fee ("60% of the previous block's fees") portfolio credited to the miner of the block
+    * being built on top of `maybePrevBlock`.
+    *
+    * SINGLE SOURCE OF TRUTH. This must be called by BOTH the appender (`fromBlockTraced`) and the
+    * miner (`createInitialBlockSnapshot`) or the two will compute different initial-block snapshots
+    * and therefore different state hashes for the very same block.
+    *
+    * History: the miner used to read `blockchain.carryFee(Some(reference))` unconditionally while
+    * the appender branched three ways here. That is a real, height-gated divergence, and it is the
+    * root cause of the 2026-09-01 testnet stall at height 2640 (102 consecutive
+    * `InvalidStateHash` failures sealing the key block). Below `sponsorshipHeight` the stored carry
+    * is structurally 0 -- `computeTxFeeInfo`'s carry is gated on `hasSponsorship` -- while the
+    * recompute below is non-zero for any fee-paying previous block, so the miner credited 0 and the
+    * appender credited the real carry. On the live relaunch chain FeeSponsorship is pre-activated
+    * at height 0 with `feature-check-blocks-period = 3000`, putting `sponsorshipHeight` at 3000 --
+    * above the stall height of 2639, which is exactly why the chain ran fine for 2639 blocks and
+    * then wedged. See `.superpowers/sdd/task-8b-step4-report.md`.
+    */
+  def carryFeeFromPreviousBlock(blockchain: Blockchain, maybePrevBlock: Option[Block]): Either[String, Portfolio] = {
+    val stateHeight = Height(blockchain.height)
+    // height switch is next after activation
+    val ngHeight          = blockchain.featureActivationHeight(BlockchainFeatures.NG).getOrElse(Height(Int.MaxValue))
+    val sponsorshipHeight = Sponsorship.sponsoredFeesSwitchHeight(blockchain)
+
+    if (stateHeight >= sponsorshipHeight) {
+      Right(Portfolio(balance = blockchain.carryFee(None)))
+    } else if (stateHeight > ngHeight) maybePrevBlock.fold(Portfolio.empty.asRight[String]) { pb =>
+      // it's important to combine tx fee fractions (instead of getting a fraction of the combined tx fee)
+      // so that we end up with the same value as when computing per-transaction fee part
+      // during microblock processing below
+      //
+      // CommitToGenerationTransaction fees are excluded from the NG carry-over for the same
+      // reason their commitment data is excluded from the state hash (see
+      // TxStateSnapshotHashBuilder.scala): letting the 60% carry-share participate in the
+      // normal split would make the amount carried into the NEXT block depend on which
+      // block position the commitment tx landed at -- the same position-dependent-state
+      // hazard Feature 21 guards against for the state hash itself.
+      //
+      // Precise effect (confirmed against canonical): the committing block's OWN miner still
+      // gets the normal 40% immediate cut (unchanged, via minerPortfolio in apply() below --
+      // this filter does not touch that); this exclusion only zeroes the OTHER 60% that would
+      // otherwise carry to the next block. Net result for a CommitToGenerationTransaction fee
+      // is 40% to the block that includes it, 0% to the next block -- the remaining 60% is not
+      // credited to anyone (removed from circulation for accounting purposes, though the fee
+      // itself was already debited from the sender by CommitToGenerationTransactionDiff, so no
+      // extra amount is actually burned beyond the fee itself). Verified against the real
+      // testnet chain's canonical history at height 1799 (the block immediately after the
+      // chain's first CommitToGenerationTransaction commitments) and confirmed by a fresh-
+      // genesis replay matching canonical stateHash through height ~3300.
+      //
+      // NOTE (investigated while chasing the height-3325 divergence): this branch cannot be
+      // simplified to read blockchain.carryFee(None) the way the sponsorship branch above does.
+      // computeTxFeeInfo's carry is gated on hasSponsorship, so rocksdb.carryFee is always 0
+      // pre-sponsorship by design -- it must keep recomputing from the previous block's own tx
+      // data instead. Confirmed empirically: height 3325 is past sponsorshipHeight (3000 on
+      // testnet) and goes through the branch above, which was already correct; this branch was
+      // not the source of that bug.
+      pb.transactionData
+        .filterNot(_.isInstanceOf[CommitToGenerationTransaction])
+        .map { t =>
+          val pf = Portfolio.build(t.assetFee)
+          pf.minus(pf.multiply(CurrentBlockFeePart))
+        }
+        .foldM(Portfolio.empty)(_.combine(_))
+    }
+    else
+      Right(Portfolio.empty)
+  }
+
   def createInitialBlockSnapshot(
-      blockchainUpdater: BlockchainUpdater & Blockchain,
+      blockchainUpdater: CompleteBlockchainUpdater,
       reference: ByteStr,
       miner: Address
   ): Either[ValidationError, StateSnapshot] = {
-    val blockchain           = blockchainUpdater.referencedBlockchain(reference)
-    val feeFromPreviousBlock = Portfolio.dcc(blockchain.carryFee(Some(reference)))
+    val blockchain = blockchainUpdater.referencedBlockchain(reference)
+
+    // The appender computes the very same quantity via `carryFeeFromPreviousBlock` against the same
+    // pinned blockchain and the block that `reference` names, so the miner MUST use the identical
+    // formula -- including the pre-sponsorship recompute branch. Reading
+    // `blockchain.carryFee(Some(reference))` here instead (as this did until 2026-09-03) silently
+    // credited 0 below `sponsorshipHeight` while the appender credited the real carry, which is the
+    // root cause of the height-2640 stall. See `carryFeeFromPreviousBlock`'s docs.
+    //
+    // `referencedBlock` resolves exactly what the appender passes as `maybePrevBlock`: a block in
+    // the open liquid period (the usual case -- `Miner.forgeBlock` references the last microblock's
+    // `totalBlockId`), else the last persisted block when `reference` names it.
+    val referencedBlock = blockchainUpdater.referencedBlock(reference)
 
     val daoAddress        = blockchain.settings.functionalitySettings.daoAddressParsed.toOption.flatten
     val xtnBuybackAddress = blockchain.settings.functionalitySettings.xtnBuybackAddressParsed.toOption.flatten
@@ -450,7 +486,8 @@ object BlockDiffer {
     )
 
     for {
-      minerReward <- Portfolio.dcc(rewardShares.miner).combine(feeFromPreviousBlock).leftMap(GenericError(_))
+      feeFromPreviousBlock <- carryFeeFromPreviousBlock(blockchain, referencedBlock).leftMap(GenericError(_))
+      minerReward          <- Portfolio.dcc(rewardShares.miner).combine(feeFromPreviousBlock).leftMap(GenericError(_))
       resultPf = Map(miner -> minerReward) ++
         daoAddress.map(_ -> Portfolio.dcc(rewardShares.daoAddress)) ++
         xtnBuybackAddress.map(_ -> Portfolio.dcc(rewardShares.xtnBuybackAddress))
@@ -611,17 +648,8 @@ object BlockDiffer {
     * reconcile, and therefore no reason to skip. Validating unconditionally closes the hole at zero
     * parity cost, on both the block and microblock snapshot paths.
     *
-    * ==Feature 30 (`BlsCryptoV2`) gating (audit M2)==
-    *
-    * The PoP check below is gated on `blockchain.supportsBlsCryptoV2(blockchain.height)`. On the
-    * key-block path `blockchain` is `blockchainWithNewBlock` -- the `SnapshotBlockchain` that already
-    * includes the block under validation -- and on the microblock path it is the containing key
-    * block's chain; in both cases `.height` IS the containing block's height, which is the only
-    * rollback-deterministic gate source (a live tip would let the same block validate differently
-    * depending on when it happens to be replayed, across the activation height). This mirrors
-    * `CommitToGenerationTransactionDiff` exactly, and both sites must stay gated together: guarding
-    * only one just moves the attack, exactly as the "Why this validates UNCONDITIONALLY" section
-    * above argues for skip-avoidance in general.
+    * The PoP check below (chain/sender-bound message, per-context DST -- audit M2/H2) is
+    * unconditional and mirrors `CommitToGenerationTransactionDiff` exactly.
     */
   private def validateCommitmentsOnSnapshotPath(
       blockchain: Blockchain,
@@ -634,13 +662,6 @@ object BlockDiffer {
         .toRight(ActivationError("DeterministicFinality is not yet activated"))
         .flatMap { current =>
           val next = current.next
-          // Gated on `blockchain.height`, hoisted once since it is constant for this block: on the
-          // key-block path `blockchain` is `blockchainWithNewBlock`, on the microblock path it is the
-          // containing key block's chain -- in both cases `.height` IS the containing block's height,
-          // which is the only rollback-deterministic gate source (see `supportsBlsCryptoV2`'s
-          // scaladoc). Reading a live tip instead would break rollback determinism across the
-          // activation height, exactly as in `CommitToGenerationTransactionDiff`.
-          val cryptoV2 = blockchain.supportsBlsCryptoV2(blockchain.height)
           // `seen` starts from the keys already committed for the next period and grows as we walk
           // this block, so a duplicate *within* a single block is rejected too. The fold stops at
           // the first failure: PoP verification is a pairing check, and a rejected block must not
@@ -654,15 +675,8 @@ object BlockDiffer {
                     GenericError(s"Expected the next period start height (${next.start}), got ${tx.generationPeriodStart}")
                   }
                   _ <- Either.raiseUnless(
-                    BlsUtils
-                      .verifyBasic(
-                        tx.commitmentSignature.arr,
-                        CommitToGenerationTransaction
-                          .popMessage(tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart, cryptoV2),
-                        tx.endorserPublicKey.arr,
-                        CommitToGenerationTransaction.popDst(cryptoV2)
-                      )
-                      .isRight
+                    CommitToGenerationTransaction
+                      .verifyPop(tx.commitmentSignature.arr, tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)
                   )(GenericError("Invalid commitment signature"))
                   _ <- tx.endorserPublicKey.validated.leftMap(GenericError(_))
                   _ <- seen.foldLeft(Either.unit[ValidationError]) {

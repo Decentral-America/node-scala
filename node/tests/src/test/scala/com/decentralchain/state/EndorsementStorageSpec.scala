@@ -5,7 +5,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.BlockEndorsement
 import com.decentralchain.common.state.ByteStr
-import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, BlsUtils}
+import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature}
 import com.decentralchain.network.EndorseBlock
 import com.decentralchain.state.{EndorsementFilter, EndorsementStorage, GeneratorIndex, Height}
 import com.decentralchain.test.{FreeSpec, NumericExt, produce}
@@ -43,9 +43,8 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
         endorserIndex: GeneratorIndex = activeGeneratorIndex,
         finalizedId: BlockId = expectedFinalizedId,
         finalizedHeight: Height = expectedFinalizedHeight,
-        endorsedId: BlockId = expectedEndorsedId,
-        cryptoV2: Boolean = false
-    ): BlockEndorsement = BlockEndorsement.signed(endorserAccount, endorserIndex, finalizedId, finalizedHeight, endorsedId, cryptoV2)
+        endorsedId: BlockId = expectedEndorsedId
+    ): BlockEndorsement = BlockEndorsement.signed(endorserAccount, endorserIndex, finalizedId, finalizedHeight, endorsedId)
 
     "rebroadcast if" - {
       "valid" in {
@@ -297,8 +296,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
         expectedFinalizedHeight,
         expectedEndorsedId,
         normalizedGeneratorSet.map(x => (x.addr, x.blsKp.publicKey, x.balance)),
-        conflict,
-        cryptoV2 = false
+        conflict
       )
     ) shouldBe true
     new ExtendedEndorsementStorage(r, normalizedGeneratorSet)
@@ -320,8 +318,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
           GeneratorIndex(generatorIndex),
           finalizedId,
           expectedFinalizedHeight,
-          expectedEndorsedId,
-          cryptoV2 = false
+          expectedEndorsedId
         )
     )
 
@@ -347,7 +344,7 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
                   aggEnd.verifyAgg(
                     BlockEndorsement.mkMessage(expectedFinalizedId, expectedFinalizedHeight, endorsedId),
                     valid.map(generators(_).blsKp.publicKey),
-                    BlsUtils.BlsDomainSeparationTag
+                    BlockEndorsement.Dst
                   ) should beRight
             }
           }

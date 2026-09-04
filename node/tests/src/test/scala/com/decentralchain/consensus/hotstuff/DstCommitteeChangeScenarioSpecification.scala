@@ -92,17 +92,17 @@ class DstCommitteeChangeScenarioSpecification extends FlatSpec {
         // Calibrated to genuinely straddle first-QC-formation (see docstring above): ~55% of seeds
         // switch before any QC forms, ~45% switch after one has already formed under the old committee.
         harness.run(maxEvents = 4 + harness.clock.random.nextInt(6))
-        harness.setCommittee(committeeOf(Seq(25L, 25L, 25L, 100L)))  // stake redistribution mid-round
+        harness.setCommittee(committeeOf(Seq(25L, 25L, 25L, 100L))) // stake redistribution mid-round
         harness.run()
 
         SafetyInvariants.checkAll(harness.commits.toSeq, harness.votes.toSeq) match {
           case Left(reason) if firstFailure.isEmpty => firstFailure = Some((seed, reason))
-          case _                                     => ()
+          case _                                    => ()
         }
       }
 
       firstFailure match {
-        case None                  => succeed
+        case None                 => succeed
         case Some((seed, reason)) =>
           fail(
             s"DST found a committee-mid-round-change safety violation at seed=$seed: $reason\n" +

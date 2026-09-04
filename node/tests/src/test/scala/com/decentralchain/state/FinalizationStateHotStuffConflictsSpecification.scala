@@ -42,7 +42,13 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
       conflict: Seq[com.decentralchain.block.BlockEndorsement] = Nil,
       hotstuffConflicts: Seq[HotStuffEquivocationProof] = Nil
   ): FinalizationVoting =
-    FinalizationVoting(valid = Nil, finalizedHeight = GenesisBlockHeight, aggregatedEndorsement = None, conflict = conflict, hotstuffConflicts = hotstuffConflicts)
+    FinalizationVoting(
+      valid = Nil,
+      finalizedHeight = GenesisBlockHeight,
+      aggregatedEndorsement = None,
+      conflict = conflict,
+      hotstuffConflicts = hotstuffConflicts
+    )
 
   private def mkConflictEndorsement(voterIndex: GeneratorIndex): com.decentralchain.block.BlockEndorsement = {
     val kp = TxHelpers.signer(voterIndex.toInt)
@@ -51,16 +57,15 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
       voterIndex,
       TxHelpers.randomBlockId,
       finalizedHeight = GenesisBlockHeight,
-      endorsedId = TxHelpers.randomBlockId,
-      cryptoV2 = false
+      endorsedId = TxHelpers.randomBlockId
     )
   }
 
   "FinalizationState.append" - {
     "1. a verified hotstuff equivocation proof for voter 2 lands in conflictGenerators" in {
       val generatorSet = Seq(mkGenerator(0, 1000L), mkGenerator(1, 1000L), mkGenerator(2, 1000L))
-      val state         = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
-      val fv            = mkFv(hotstuffConflicts = Seq(proofFor(2)))
+      val state        = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
+      val fv           = mkFv(hotstuffConflicts = Seq(proofFor(2)))
 
       val (updatedState, _, _) = state.append(TxHelpers.randomBlockId, Some(fv), generatorSet)
 
@@ -74,21 +79,21 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
       // the denominator drops to the 3 remaining generators' balance (3): 2/3 exactly => finalized.
       // This isolates the denominator effect from the numerator: voter3 never endorses either way.
       val generatorSet = Seq(mkGenerator(0, 1L), mkGenerator(1, 1L), mkGenerator(2, 1L), mkGenerator(3, 3L))
-      val state         = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
+      val state        = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
 
-      val fvWithoutProof = mkFv().copy(valid = Seq(GeneratorIndex(1)))
+      val fvWithoutProof            = mkFv().copy(valid = Seq(GeneratorIndex(1)))
       val (withoutProofState, _, _) = state.append(TxHelpers.randomBlockId, Some(fvWithoutProof), generatorSet)
       withoutProofState.parentFinalized shouldBe false
 
-      val fvWithProof = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
+      val fvWithProof            = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
       val (withProofState, _, _) = state.append(TxHelpers.randomBlockId, Some(fvWithProof), generatorSet)
       withProofState.parentFinalized shouldBe true
     }
 
     "3. composition: a T0 conflict (voter 1) and a hotstuff proof (voter 2) both land in conflictGenerators" in {
       val generatorSet = Seq(mkGenerator(0, 1000L), mkGenerator(1, 1000L), mkGenerator(2, 1000L))
-      val state         = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
-      val fv = mkFv(
+      val state        = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
+      val fv           = mkFv(
         conflict = Seq(mkConflictEndorsement(GeneratorIndex(1))),
         hotstuffConflicts = Seq(proofFor(2))
       )
@@ -113,9 +118,9 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
       // With voter3 excluded via a proofs-only hotstuff equivocation proof (no T0 conflict at all),
       // the denominator drops to 3: 2/3 exactly => finalized, in this same append.
       val generatorSet = Seq(mkGenerator(0, 1L), mkGenerator(1, 1L), mkGenerator(2, 1L), mkGenerator(3, 3L))
-      val state         = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
+      val state        = FinalizationState.notActivated(miner).copy(generatorSet = generatorSet)
 
-      val fvProofsOnly = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
+      val fvProofsOnly         = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
       val (updatedState, _, _) = state.append(TxHelpers.randomBlockId, Some(fvProofsOnly), generatorSet)
 
       updatedState.parentFinalized shouldBe true
@@ -144,12 +149,12 @@ class FinalizationStateHotStuffConflictsSpecification extends FreeSpec {
         b.copy(header = b.header.copy(finalizationVoting = Some(fv)))
       }
 
-      val fvProofsOnly = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
+      val fvProofsOnly   = mkFv(hotstuffConflicts = Seq(proofFor(3))).copy(valid = Seq(GeneratorIndex(1)))
       val withProofState =
         FinalizationState.init(generatorSet, conflictGenerators = Set.empty, base = baseBlockWith(fvProofsOnly))
       withProofState.parentFinalized shouldBe true
 
-      val fvWithoutProof = mkFv().copy(valid = Seq(GeneratorIndex(1)))
+      val fvWithoutProof    = mkFv().copy(valid = Seq(GeneratorIndex(1)))
       val withoutProofState =
         FinalizationState.init(generatorSet, conflictGenerators = Set.empty, base = baseBlockWith(fvWithoutProof))
       withoutProofState.parentFinalized shouldBe false

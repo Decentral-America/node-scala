@@ -54,7 +54,7 @@ object EndorsementStorage {
     override def tryAdd(msg: EndorseBlock): Either[String, Boolean] = synced {
       for {
         filter <- currentFilter.toRight("Voting hasn't started")
-        _ <- Either.raiseWhen(msg.finalizedHeight < GenesisBlockHeight || msg.finalizedHeight > filter.finalizedHeight) {
+        _      <- Either.raiseWhen(msg.finalizedHeight < GenesisBlockHeight || msg.finalizedHeight > filter.finalizedHeight) {
           s"Expected finalized height >= $GenesisBlockHeight and <= ${filter.finalizedHeight}"
         }
         _ <- Either.raiseWhen(msg.endorserIndex >= filter.normalizedGeneratorSet.size)(
@@ -64,11 +64,11 @@ object EndorsementStorage {
         _             <- Either.raiseWhen(msg.endorserIndex == filter.miner.toInt)("Miner can't sent endorsements")
         (endorserAddr, endorserPk, balance) = filter.normalizedGeneratorSet(msg.endorserIndex)
         _   <- Either.raiseWhen(balance == 0)(s"Endorser #$endorserIndex $endorserAddr has no enough balance")
-        sig <- verifySig(msg, endorserPk, filter.cryptoV2)
+        sig <- verifySig(msg, endorserPk)
       } yield
         if (sharedWithNeighbors.contains(msg) || conflict.isDefinedAt(msg.endorserIndex) || filter.conflict.contains(endorserIndex)) false
         else {
-          val isValid = msg.finalizedHeight == filter.finalizedHeight && msg.finalizedId == filter.finalizedId
+          val isValid    = msg.finalizedHeight == filter.finalizedHeight && msg.finalizedId == filter.finalizedId
           val isConflict = !isValid && {
             msg.finalizedHeight == filter.finalizedHeight && msg.finalizedId != filter.finalizedId ||
             msg.finalizedHeight < filter.finalizedHeight && !blockAtHeight(msg.finalizedId, msg.finalizedHeight)
@@ -178,13 +178,9 @@ object EndorsementStorage {
       voting.map(FinalizationResult(simulationResult.reachedFinalization, _))
     }
 
-    // `cryptoV2` comes from the current voting's `EndorsementFilter`, itself set by `BlockEndorser`
-    // from the same `votingHeight` used to sign -- keeps signer and gossip-verifier on one era for a
-    // given voting round (task 6), instead of two independent tip reads that could straddle the
-    // feature-30 activation boundary.
-    private def verifySig(msg: EndorseBlock, pk: BlsPublicKey, cryptoV2: Boolean): Either[String, BlsSignature] = for {
+    private def verifySig(msg: EndorseBlock, pk: BlsPublicKey): Either[String, BlsSignature] = for {
       sig <- BlsSignature(msg.signature).leftMap(_.err)
-      _   <- sig.verifyBasic(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), pk, BlockEndorsement.dst(cryptoV2))
+      _   <- sig.verifyBasic(BlockEndorsement.mkMessage(msg.finalizedId, msg.finalizedHeight, msg.endorsedId), pk, BlockEndorsement.Dst)
     } yield sig
   }
 

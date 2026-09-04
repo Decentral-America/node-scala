@@ -121,7 +121,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
   // `detectedEquivocations` once it exists, inside the `hotstuff.enabled` block.
   @volatile
   private var hotStuffEquivocations: () => Seq[HotStuffEquivocationProof] = () => Seq.empty
-  private val (blockchainUpdater, rocksDB)  =
+  private val (blockchainUpdater, rocksDB)                                =
     StorageFactory(settings, rdb, time, BlockchainUpdateTriggers.combined(triggers), Miner.forwardTo(miner))
 
   private val messageObserver = new MessageObserver
@@ -344,16 +344,6 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         )
       val tipHeight: () => Int = () => blockchainUpdater.height
 
-      // Task 7 (audit H2 hard switch): whether HotStuff vote/QC signing and verification use the v2
-      // `_HSVOTE_` domain-separation tag (see `HotStuffQuorum.voteDst`). Live tip is correct here --
-      // unlike PoP/aggregated-endorsement verification (which is height-gated per-message on the
-      // CARRYING block's height, since those are consensus-replayed and must be rollback-deterministic
-      // -- see `supportsBlsCryptoV2`'s doc), HotStuff votes/QCs are off-chain and never replayed: a
-      // vote signed/verified under whatever DST is active at the moment it is cast is never re-checked
-      // later against a different chain state. Read fresh on every coordinator event, same convention
-      // as `committeeEpoch`/`maxTargetLag`/`tipHeight` above.
-      val cryptoV2: () => Boolean = () => blockchainUpdater.supportsBlsCryptoV2()
-
       // TESTNET-ONLY opt-in (see HotStuffSettings.authoritative doc + docs/hotstuff-audit-readiness.md):
       // when true, a genuine commit ALSO raises the authoritative feature-25 finalizedHeight via
       // `blockchainUpdater.raiseHotStuffFinalizedHeight`, which independently re-checks the certified
@@ -449,8 +439,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           committeeEpochOf,
           onAction = hsOnAction,
           maxTargetLag = maxTargetLag,
-          tipHeight = tipHeight,
-          cryptoV2 = cryptoV2
+          tipHeight = tipHeight
         )
       hsCoordinatorRef = hsCoordinator
       hotStuffEquivocations = () => hsCoordinator.detectedEquivocations
@@ -550,7 +539,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
             // the chain has already acted on. Runs once per appended key block (height increment), the
             // same cadence this subscription already drives the coordinator's leader turn on.
             hsCoordinator.pruneEquivocations(
-              idx => blockchainUpdater.currentGenerationPeriod.exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
+              idx =>
+                blockchainUpdater.currentGenerationPeriod
+                  .exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
               blockchainUpdater.currentGenerationPeriod.fold(0)(_.index)
             )
             // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,

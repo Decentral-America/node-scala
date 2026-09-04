@@ -14,43 +14,29 @@ class CommitToGenerationPopMessageSpec extends FlatSpec {
   private val start      = Height(3000)
   private val chainId    = 'T'.toByte
 
-  "popMessage" should "reproduce the legacy layout byte-for-byte when cryptoV2 = false" in {
-    val legacy = CommitToGenerationTransaction.popMessage(chainId, sender.publicKey, endorserKp.publicKey, start, cryptoV2 = false)
-    legacy shouldBe (endorserKp.publicKey.arr ++ start.toByteArray)
-    legacy.length shouldBe 52
+  "popMessage" should "bind chainId and sender (audit M2)" in {
+    val msg = CommitToGenerationTransaction.popMessage(chainId, sender.publicKey, endorserKp.publicKey, start)
+    msg shouldBe (Array(chainId) ++ sender.publicKey.arr ++ endorserKp.publicKey.arr ++ start.toByteArray)
+    msg.length shouldBe 85
   }
 
-  it should "bind chainId and sender when cryptoV2 = true (audit M2)" in {
-    val v2 = CommitToGenerationTransaction.popMessage(chainId, sender.publicKey, endorserKp.publicKey, start, cryptoV2 = true)
-    v2 shouldBe (Array(chainId) ++ sender.publicKey.arr ++ endorserKp.publicKey.arr ++ start.toByteArray)
-    v2.length shouldBe 85
+  it should "differ across chain ids and across senders" in {
+    def msg(cid: Byte, s: com.decentralchain.account.PublicKey) =
+      CommitToGenerationTransaction.popMessage(cid, s, endorserKp.publicKey, start).toSeq
+
+    msg('T'.toByte, sender.publicKey) should not be msg('W'.toByte, sender.publicKey)
+    msg('T'.toByte, sender.publicKey) should not be msg('T'.toByte, TxHelpers.signer(9).publicKey)
   }
 
-  it should "differ across chain ids and across senders under v2, and NOT under legacy" in {
-    def v2(cid: Byte, s: com.decentralchain.account.PublicKey) =
-      CommitToGenerationTransaction.popMessage(cid, s, endorserKp.publicKey, start, cryptoV2 = true).toSeq
-    def legacy(cid: Byte, s: com.decentralchain.account.PublicKey) =
-      CommitToGenerationTransaction.popMessage(cid, s, endorserKp.publicKey, start, cryptoV2 = false).toSeq
-
-    v2('T'.toByte, sender.publicKey) should not be v2('W'.toByte, sender.publicKey)
-    v2('T'.toByte, sender.publicKey) should not be v2('T'.toByte, TxHelpers.signer(9).publicKey)
-    // This equality IS the M2 finding, pinned so the legacy path can never drift:
-    legacy('T'.toByte, sender.publicKey) shouldBe legacy('W'.toByte, TxHelpers.signer(9).publicKey)
+  "PopDst" should "be the POP domain-separation tag" in {
+    CommitToGenerationTransaction.PopDst shouldBe BlsUtils.BlsPopDomainSeparationTag
   }
 
-  "popDst" should "map cryptoV2 = false to the legacy DST" in {
-    CommitToGenerationTransaction.popDst(false) shouldBe BlsUtils.BlsDomainSeparationTag
-  }
+  "mkPopSignature" should "verify under PopDst/popMessage and fail under a different domain" in {
+    val signature = CommitToGenerationTransaction.mkPopSignature(endorserKp, start, sender.publicKey, chainId)
+    val message   = CommitToGenerationTransaction.popMessage(chainId, sender.publicKey, endorserKp.publicKey, start)
 
-  it should "map cryptoV2 = true to the v2 POP DST" in {
-    CommitToGenerationTransaction.popDst(true) shouldBe BlsUtils.BlsPopDomainSeparationTagV2
-  }
-
-  "mkPopSignature(cryptoV2 = true)" should "verify under popDst(true)/popMessage(v2) and fail under the legacy DST" in {
-    val signature = CommitToGenerationTransaction.mkPopSignature(endorserKp, start, sender.publicKey, chainId, cryptoV2 = true)
-    val v2Message = CommitToGenerationTransaction.popMessage(chainId, sender.publicKey, endorserKp.publicKey, start, cryptoV2 = true)
-
-    endorserKp.publicKey.verify(v2Message, signature, CommitToGenerationTransaction.popDst(true)) shouldBe true
-    endorserKp.publicKey.verify(v2Message, signature, CommitToGenerationTransaction.popDst(false)) shouldBe false
+    endorserKp.publicKey.verify(message, signature, CommitToGenerationTransaction.PopDst) shouldBe true
+    endorserKp.publicKey.verify(message, signature, BlsUtils.BlsEndorseDomainSeparationTag) shouldBe false
   }
 }

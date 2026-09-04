@@ -48,10 +48,10 @@ class HotStuffVotedSetPruningSpecification extends FlatSpec {
       // phase-progression call actually signs+broadcasts a PRE_COMMIT vote for this spec to observe;
       // with an empty `myVoterIndexes`, `castVotes`'s `mine.foreach` never iterates and nothing is ever
       // cast, regardless of `voted`'s state.
-      def myVoterIndexes: Set[Int]                                   = Set(3)
+      def myVoterIndexes: Set[Int]                                                = Set(3)
       def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = Option.when(idx == 3)(kps(3).sign(msg, dst))
-      def onCommit(blockId: BlockId, height: Int): Unit              = ()
-      def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+      def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+      def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
     }
     val c = new HotStuffCoordinator.Enabled(
       committeeProvider = () => committee,
@@ -68,8 +68,17 @@ class HotStuffVotedSetPruningSpecification extends FlatSpec {
     */
   private def prepareQC(view: Int, blockId: BlockId, height: Int): QuorumCertificate = {
     val msg   = HotStuffQuorum.voteMessage(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, height)
-    val votes = (0 to 2).map(i => HotStuffVote(view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId, Height(height), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr))
-    HotStuffQuorum.formQC(votes, committee, cryptoV2 = false).toOption.get
+    val votes = (0 to 2).map(i =>
+      HotStuffVote(
+        view,
+        HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+        blockId,
+        Height(height),
+        i,
+        kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr
+      )
+    )
+    HotStuffQuorum.formQC(votes, committee).toOption.get
   }
 
   private def preCommitVotesFor(cast: scala.collection.mutable.ListBuffer[HotStuffVote], view: Int, blockId: BlockId): Int =

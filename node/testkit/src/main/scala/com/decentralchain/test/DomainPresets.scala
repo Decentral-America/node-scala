@@ -117,6 +117,9 @@ object DomainPresets {
 
   val DeterministicFinality: DCCSettings = TransactionStateSnapshot.addFeatures(BlockchainFeatures.DeterministicFinality)
 
+  val AdjustedBlockRewardDistribution: DCCSettings =
+    DeterministicFinality.addFeatures(BlockchainFeatures.AdjustedBlockRewardDistribution)
+
   def settingsForRide(version: StdLibVersion): DCCSettings =
     version match {
       case V1 => RideV3

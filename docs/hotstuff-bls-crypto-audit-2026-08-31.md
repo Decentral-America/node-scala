@@ -35,9 +35,23 @@
 
 ## 2. Findings by severity
 
-**Status summary (2026-09-02):** C1 remains open. H2 and M2 are **FIXED** — feature 30 `BlsCryptoV2`
-(per-context DSTs + chain-id/sender-bound PoP, both height-gated); see their STATUS notes below. M1/M3/M4
-and the LOW/INFO items remain open/unaddressed by this task.
+**Status summary (2026-09-02, updated same day):** C1 remains open. H2 and M2 are **FIXED, and
+unconditional** — per-context DSTs + chain-id/sender-bound PoP are the only crypto in production on
+every network, with no activation gate at all (the feature-30 `BlsCryptoV2` gate this fix originally
+shipped behind was itself deleted later the same day, once it was confirmed no chain in this repo's
+history had ever activated it); see their STATUS notes below. M1/M3/M4 and the LOW/INFO items remain
+open/unaddressed by this task.
+
+> **CORRECTION (2026-09-03):** "the only crypto in production" (H2/M2, above and below) no longer
+> holds without qualification for *verification*. A VERIFY-ONLY legacy BLS domain-separation fallback
+> (`BlsUtils.BlsLegacyDomainSeparationTag`, the `_NUL_` tag) was reintroduced after this audit was
+> written, because the real testnet-relaunch chain pre-activates feature 25 (`DeterministicFinality`)
+> at genesis and carries real, legitimate signatures produced under that legacy tag — confirmed by a
+> live chain replay reaching height 2639, which falsified this audit's original premise that no kept
+> chain had ever activated the relevant feature. **New signing is unaffected and remains v2-only**:
+> every new PoP, endorsement, and HotStuff vote/QC is still produced exclusively under the three
+> per-context v2 DSTs. Only historical verification is bimodal (v2 first, legacy fallback for
+> pre-existing signatures). See the H2 finding below and its own correction note for detail.
 
 ### CRITICAL
 
@@ -104,30 +118,42 @@ Note also the scaladoc on `aggSig` — *"@return Not validated, but must be in t
 
 #### H2 — One domain-separation tag is shared across three cryptographically distinct message types
 
-> **Status (2026-09-02): FIXED — feature 30 `BlsCryptoV2`.** Three per-context DSTs replace the shared
-> legacy `_NUL_` tag: `BlsUtils.BlsPopDomainSeparationTagV2` (`..._POP_`),
-> `BlsUtils.BlsEndorseDomainSeparationTagV2` (`..._ENDORSE_`), and `BlsUtils.BlsHsVoteDomainSeparationTagV2`
-> (`..._HSVOTE_`) — the legacy `BlsDomainSeparationTag` (`_NUL_`) remains only as the pre-activation
-> default, and no wrapper (`BlsSignature`/`BlsPublicKey`/`BlsKeyPair`) defaults `dst` any more; `BlsUtils`
-> is the sole place a legacy default exists. The switch is a hard, unconditional height-gate at each of
-> the two on-chain verification sites — `CommitToGenerationTransactionDiff` (PoP,
-> `cryptoV2 = blockchain.supportsBlsCryptoV2(blockchain.height)`) and `state/appender/package.scala`'s
-> `validateFinalizationVoting`/`validateConflictingEndorsement` (endorsement, gated at the height of the
-> block CARRYING the voting) — both keyed off the CONTAINING block's height, never the live tip, so
-> replay/rollback is deterministic. HotStuff vote/QC verification (`HotStuffQuorum.voteDst`,
-> `HotStuffEngine`, `HotStuffCoordinator`) hard-switches on the same feature but reads it off each node's
-> own live tip, which is safe because votes/QCs are not consensus-replayed. Block-carried equivocation
-> proofs ARE consensus-replayed, so `HotStuffEquivocationProof`'s validator derives the DST from the
-> CONTAINING block's height and — the boundary rule — refuses any proof carried by a block in the same
-> generation period as the activation height outright, since honest signers may legitimately disagree
-> about their live tip during that period. Proved by: the 3x3 cross-DST matrix
-> (`BlsUtilsTest` — `"3x3 basic-verify matrix..."` / `"3x3 aggregate-verify matrix..."`), pinned legacy
-> vectors (`BlsLegacyVectorRegressionSpec`), the activation-height helper
-> (`BlsCryptoV2ActivationHelperSpec`), the on-chain PoP gate and its light-node snapshot-path twin
-> (`CommitToGenerationPopV2Spec`, `BlsCryptoV2SnapshotPathPopSpec`), the endorsement gate
-> (`BlsCryptoV2EndorsementSpec`), rollback-across-activation determinism
-> (`BlsCryptoV2RollbackDeterminismSpec`), and the equivocation-proof generation-period boundary refusal
-> (`BlsCryptoV2EquivocationProofBoundarySpec`, appender-package variant).
+> **Status (2026-09-02): FIXED, unconditionally — was feature 30 `BlsCryptoV2`, since deleted.** Three
+> per-context DSTs are the ONLY DSTs used anywhere in production: `BlsUtils.BlsPopDomainSeparationTagV2`
+> (`..._POP_`), `BlsUtils.BlsEndorseDomainSeparationTagV2` (`..._ENDORSE_`), and
+> `BlsUtils.BlsHsVoteDomainSeparationTagV2` (`..._HSVOTE_`). This fix originally shipped behind an
+> on-chain activation gate (feature 30 `BlsCryptoV2`, height-gated at the containing block for the two
+> consensus-replayed sites, live-tip-read for the off-chain HotStuff vote/QC path). That gate was deleted
+> entirely later on 2026-09-02, once it was confirmed that no chain in this repo's history — testnet
+> included — had ever activated it, meaning there was no real (non-disposable) legacy-DST history
+> anywhere that a gate needed to protect. The legacy shared tag (`BlsDomainSeparationTag`, `_NUL_`) was
+> deleted from production code at the same time — it is not reachable at all any more, not even as a
+> fallback. Every node signs and verifies PoP, block endorsements, and HotStuff votes/QCs under their own
+> per-context v2 DST from genesis, on every network, with no activation step and no boundary window.
+> Proved by: the 3x3 cross-DST matrix (`BlsUtilsTest` — `"3x3 basic-verify matrix..."` /
+> `"3x3 aggregate-verify matrix..."`), the rewritten vector regression spec (`BlsVectorRegressionSpec`,
+> pinning v2-only vectors; the legacy-only predecessor `BlsLegacyVectorRegressionSpec` was retired along
+> with the legacy tag), the on-chain PoP gate and its light-node snapshot-path twin
+> (`CommitToGenerationPopV2Spec` — kept, testing the now-unconditional v2 PoP layout despite its "V2"
+> filename, which is now just a spec-file identifier, not a reference to a live gate), and the endorsement
+> path tests (`BlockEndorsementDstSpec`). The activation-boundary, snapshot-path, rollback-determinism,
+> and equivocation-proof-boundary specs that existed only to prove the gate itself
+> (`BlsCryptoV2ActivationHelperSpec`, `BlsCryptoV2SnapshotPathPopSpec`, `BlsCryptoV2RollbackDeterminismSpec`,
+> `BlsCryptoV2EquivocationProofBoundarySpec`, `BlsCryptoV2EndorsementSpec`) were deleted along with the
+> gate — there is no boundary left to test.
+
+> **CORRECTION (2026-09-03): the "ONLY DSTs used anywhere in production" and "not reachable at all any
+> more, not even as a fallback" claims above are FALSE and have been superseded.** The premise that no
+> chain in this repo's history had ever activated the legacy-tag feature turned out to be wrong for the
+> real testnet-relaunch chain: it pre-activates feature 25 (`DeterministicFinality`) at genesis and
+> carries real, legitimate BLS signatures produced under the legacy `_NUL_` tag, confirmed by a live
+> chain replay reaching height 2639. `BlsUtils.BlsLegacyDomainSeparationTag` was reintroduced as a
+> VERIFY-ONLY fallback for this reason — it was not left deleted. **New signing remains v2-only**: the
+> three per-context v2 DSTs above are still the exclusive tags used to produce any new PoP, endorsement,
+> or HotStuff vote/QC. Only verification is bimodal — it tries v2 first and falls back to the legacy tag
+> solely to validate pre-existing, already-on-chain historical signatures (e.g. during a full resync
+> from genesis). See `node/src/main/scala/com/decentralchain/crypto/bls/BlsUtils.scala`'s
+> `BlsLegacyDomainSeparationTag` scaladoc for the full explanation.
 
 **Files:** `BlsUtils.scala:11`; `CommitToGenerationTransaction.scala:50–52`; `BlockEndorsement.scala:31–32`; `HotStuffQuorum.scala:40–41`
 
@@ -170,21 +196,22 @@ The assertions themselves are correct and now pass, so this is not a functional 
 
 #### M2 — Proof of possession binds neither chain id nor the committing account
 
-> **Status (2026-09-02): FIXED — feature 30 `BlsCryptoV2`.** `CommitToGenerationTransaction.popMessage`
-> now has a v2 layout — `chainId(1) ‖ senderPk(32) ‖ endorserPk(48) ‖ generationPeriodStart(4)` — built
-> in exactly this one function (`cryptoV2 = true` branch), replacing the legacy `endorserPk ‖
-> generationPeriodStart` bytes; the message is signed/verified under the new `_POP_` DST from H2
-> (`CommitToGenerationTransaction.popDst`). A PoP is therefore no longer replayable across chains or
-> transplantable onto a different sender's registration once activated. The switch is height-gated at
-> the two on-chain verification sites named in H2's status note — `CommitToGenerationTransactionDiff`
-> for full nodes and its light-node counterpart inside `BlockDiffer` (`validateCommitmentsOnSnapshotPath`)
-> — both keyed off the block CONTAINING the transaction, not the live tip, so activation-boundary and
-> post-rollback behavior is deterministic. Proved by: `CommitToGenerationPopV2Spec` (full-node PoP gate:
-> chain-id and sender binding, both pre- and post-activation), `BlsCryptoV2SnapshotPathPopSpec` (the
-> light-node snapshot-path twin — same cases, same gate, C1's original bypass surface), and
-> `BlsCryptoV2RollbackDeterminismSpec` (a v2 commitment exactly at the activation height accepted / a
-> legacy one at that height rejected, and the mirror image one block earlier — each with its legacy-path
-> counterpart pinned in the same spec).
+> **Status (2026-09-02): FIXED, unconditionally — was feature 30 `BlsCryptoV2`, since deleted.**
+> `CommitToGenerationTransaction.popMessage` has one layout only —
+> `chainId(1) ‖ senderPk(32) ‖ endorserPk(48) ‖ generationPeriodStart(4)`, built in exactly this one
+> function — replacing the legacy `endorserPk ‖ generationPeriodStart` bytes entirely; the message is
+> signed/verified under the `_POP_` DST from H2 (`CommitToGenerationTransaction.popDst`, now a constant,
+> no `cryptoV2` parameter). A PoP is therefore never replayable across chains or transplantable onto a
+> different sender's registration, on any network, from genesis. This fix originally shipped
+> height-gated at the two on-chain verification sites (`CommitToGenerationTransactionDiff` for full nodes,
+> `BlockDiffer.validateCommitmentsOnSnapshotPath` for light nodes); the gate was deleted the same day once
+> it was confirmed no chain in this repo's history had ever activated it, so both sites now apply the v2
+> layout unconditionally with no legacy branch left to keep deterministic across rollback. Proved by:
+> `CommitToGenerationPopV2Spec` (full-node PoP: chain-id and sender binding) and its light-node
+> counterpart folded into the same file's snapshot-path coverage (C1's original bypass surface). The
+> activation-boundary and rollback-determinism specs that existed only to prove the gate itself
+> (`BlsCryptoV2SnapshotPathPopSpec` as a separate file, `BlsCryptoV2RollbackDeterminismSpec`) were deleted
+> along with the gate.
 
 **Files:** `CommitToGenerationTransaction.scala:50–52`; `CommitToGenerationTransactionDiff.scala:21–23`
 
@@ -255,7 +282,7 @@ Stated honestly rather than asserted as sound:
 ## 4. Recommended order of remediation
 
 1. **C1** — close the light-node validation bypass (or disable light mode until closed). Nothing else matters while a peer can seat arbitrary committee keys.
-2. **H2 / M2** — per-context DSTs and a chain-id/sender-bound PoP. Both are consensus-breaking and must land *before* `dcc.hotstuff.enabled` or `DeterministicFinality` is enabled on mainnet. **FIXED 2026-09-02** — feature 30 `BlsCryptoV2`; see the STATUS notes on H2 and M2 above.
+2. **H2 / M2** — per-context DSTs and a chain-id/sender-bound PoP. **FIXED 2026-09-02, and unconditional** — shipped initially behind feature 30 `BlsCryptoV2`, which was deleted the same day once no real (non-disposable) legacy-DST history was found anywhere; every network runs this crypto from genesis now, so the original "must land before mainnet enablement" framing no longer applies (there is nothing left to enable). See the STATUS notes on H2 and M2 above.
 3. **H1 / L1** — defense-in-depth subgroup + infinity checks in `verifyAgg`, `Either`-ify `aggSign`. Non-breaking, cheap.
 4. **M3 / L2** — reject degenerate seeds; make `unsafe` constructors symmetric. Local.
 5. **M1** — de-stale the security test file so the next reviewer is not misled.

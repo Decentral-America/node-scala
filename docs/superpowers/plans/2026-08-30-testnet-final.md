@@ -1,5 +1,12 @@
 # Testnet Final Implementation Plan
 
+> **SUPERSEDED 2026-09-02.** Superseded by `docs/superpowers/plans/2026-09-02-testnet-final-source.md`,
+> which deletes features 29 (`HotStuffEquivocationEvidence`) and 30 (`BlsCryptoV2`) entirely rather than
+> keeping them as activation gates, registers upstream feature 26 (`AdjustedBlockRewardDistribution`)
+> with its reward-economics logic ported faithfully, and fixes the real state-hash non-determinism
+> defect this plan's Task F wipe-and-relaunch premise did not address. Kept here for history/citation
+> only — do not execute this file.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Bring node-scala's testnet to its final, long-term state: every real upstream-sync gap closed, every real DCC-authored bug fixed, both dangerous/unjustified features deleted, zero new features added, then wipe testnet's chain and relaunch clean. This is the frozen baseline that stagenet and eventually mainnet build from.

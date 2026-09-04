@@ -28,12 +28,12 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
   private val B: BlockId = ByteStr(Array.fill[Byte](32)(7))
 
   private class RecordingEffects(self: Int) extends HotStuffEffects {
-    val sent: mutable.ListBuffer[Message]                          = mutable.ListBuffer.empty
-    def broadcast(m: Message): Unit                                = sent += m
-    def myVoterIndexes: Set[Int]                                   = Set(self)
+    val sent: mutable.ListBuffer[Message]                                       = mutable.ListBuffer.empty
+    def broadcast(m: Message): Unit                                             = sent += m
+    def myVoterIndexes: Set[Int]                                                = Set(self)
     def signVote(msg: Array[Byte], idx: Int, dst: String): Option[BlsSignature] = if (idx == self) Some(kps(self).sign(msg, dst)) else None
-    def onCommit(blockId: BlockId, height: Int): Unit              = ()
-    def onEquivocation(proof: HotStuffEquivocationProof): Unit     = ()
+    def onCommit(blockId: BlockId, height: Int): Unit                           = ()
+    def onEquivocation(proof: HotStuffEquivocationProof): Unit                  = ()
   }
 
   // ---- tooStale boundaries (via the inFlightBranch use site, the only externally observable read) ----
@@ -67,7 +67,14 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
     val proposal = fx.sent.collect { case p: HotStuffProposal => p }.head
     Seq(0, 1).foreach { i => // + self (2) = 3 distinct signers of 4 -- reaches the 2/3 stake quorum
       val msg  = HotStuffQuorum.voteMessage(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, h)
-      val vote = HotStuffVote(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, Height(h), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
+      val vote = HotStuffVote(
+        proposal.view,
+        HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+        proposal.blockId,
+        Height(h),
+        i,
+        kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr
+      )
       node.onVote(vote)
     }
     // A PREPARE QC formed (3-of-4): SafetyState.prepareQC is now Some(qc at height h), committedHeight
@@ -113,7 +120,14 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
     val proposal = fx.sent.collect { case p: HotStuffProposal => p }.head
     Seq(0, 1).foreach { i => // + self (2) = 3 distinct signers of 4
       val msg  = HotStuffQuorum.voteMessage(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, h)
-      val vote = HotStuffVote(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, Height(h), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
+      val vote = HotStuffVote(
+        proposal.view,
+        HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+        proposal.blockId,
+        Height(h),
+        i,
+        kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr
+      )
       node.onVote(vote)
     }
     fx.sent.clear()
@@ -189,7 +203,14 @@ class HotStuffLagReanchorSpecification extends FlatSpec {
       noException should be thrownBy {
         (0 to 2).foreach { i =>
           val msg  = HotStuffQuorum.voteMessage(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, 500)
-          val vote = HotStuffVote(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, Height(500), i, kps(i).sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
+          val vote = HotStuffVote(
+            proposal.view,
+            HotStuffPhase.HOTSTUFF_PHASE_PREPARE,
+            proposal.blockId,
+            Height(500),
+            i,
+            kps(i).sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr
+          )
           node.onVote(vote)
         }
       }

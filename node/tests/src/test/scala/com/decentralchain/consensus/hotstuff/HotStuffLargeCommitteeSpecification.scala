@@ -126,10 +126,11 @@ class HotStuffLargeCommitteeSpecification extends FlatSpec {
           (1 until 500).map(i => GeneratorInfo(GeneratorIndex(i), fillerAddress, fillerKp.publicKey, balance = 1L))
 
       val msg  = HotStuffQuorum.voteMessage(view, phase, target, height)
-      val vote = HotStuffVote(view, phase, target, Height(height), voterIndex = 0, signature = realKp.sign(msg, BlsUtils.BlsDomainSeparationTag).byteStr)
+      val vote =
+        HotStuffVote(view, phase, target, Height(height), voterIndex = 0, signature = realKp.sign(msg, BlsUtils.BlsHsVoteDomainSeparationTag).byteStr)
 
       val finalPool = (0 until 50).foldLeft(VotePool()) { (pool, epoch) =>
-        val (updated, qc) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch), cryptoV2 = false)
+        val (updated, qc) = HotStuffVotePool.onVote(pool, vote, committeeEpoch(epoch))
         qc should be(None) // a single ~2%-stake voter never reaches 2/3 of any of these committees
         updated
       }

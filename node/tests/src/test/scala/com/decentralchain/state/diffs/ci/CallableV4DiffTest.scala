@@ -110,7 +110,7 @@ class CallableV4DiffTest extends PropSpec with WithDomain with EitherValues {
       // These are therefore two different case classes describing the same underlying failure, not
       // structurally equal values -- compare the semantically-relevant fields instead of the whole object.
       val lastTraceError = assetTrace.last.errorOpt.get.asInstanceOf[FailedTransactionError]
-      val finalError      = r.resultE.left.value.asInstanceOf[TransactionValidationError].cause.asInstanceOf[ScriptExecutionError]
+      val finalError     = r.resultE.left.value.asInstanceOf[TransactionValidationError].cause.asInstanceOf[ScriptExecutionError]
       lastTraceError.message shouldBe finalError.message
       lastTraceError.assetId shouldBe finalError.assetId
     }
