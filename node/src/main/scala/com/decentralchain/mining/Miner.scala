@@ -34,6 +34,7 @@ import monix.execution.cancelables.{CompositeCancelable, SerialCancelable}
 import monix.reactive.Observable
 
 import java.time.LocalTime
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.*
 
 trait Miner {
@@ -78,6 +79,16 @@ class MinerImpl(
 
   private val scheduledAttempts = SerialCancelable()
   private val microBlockAttempt = SerialCancelable()
+
+  // Per-account guard against re-dispatching a self-commit attempt on every `forgeBlock` re-entry
+  // at the same period boundary (generateBlockTask recurses into forgeBlock on TemporaryFailure/
+  // Ignored/no-quorum paths -- see the retry branches below -- and each re-entry would otherwise
+  // re-run maybeSelfCommit). Tracks only the LAST period.next attempted per account: a single value
+  // per account naturally supersedes itself as periods advance, so this needs no separate cleanup
+  // and cannot grow unboundedly. This is NOT a substitute for the on-chain
+  // committedGenerators(period.next) gate -- it only suppresses redundant same-process dispatch of
+  // an already-attempted period; a fresh process restart legitimately attempts again.
+  private val lastSelfCommitAttempt = new AtomicReference[Map[Address, GenerationPeriod]](Map.empty)
 
   @volatile
   private var debugStateRef: MinerDebugInfo.State = MinerDebugInfo.Disabled
@@ -291,20 +302,47 @@ class MinerImpl(
     }.merge
   }
 
+  /** Checked-and-set BEFORE dispatching the async self-commit `Task`: returns true (and records the
+    * claim) only the FIRST time a given (account, period.next) pair is seen by this process, so a
+    * `forgeBlock` re-entry at the same period boundary (retries recurse back into `forgeBlock` at
+    * the same height/period -- see `generateBlockTask`'s TemporaryFailure/Ignored/no-quorum retry
+    * branches) does not re-dispatch a second commit attempt with a fresh timestamp/tx id. Not a
+    * correctness gate (the on-chain `committedGenerators` check and
+    * `CommitToGenerationTransactionDiff`'s on-append rejection are what actually prevent a double
+    * commit from landing) -- this exists purely to avoid UTX-pool churn and duplicate log noise from
+    * repeated in-process attempts at the same boundary.
+    */
+  private def claimSelfCommitAttempt(address: Address, period: GenerationPeriod): Boolean = {
+    val target  = period.next
+    var claimed = false
+    lastSelfCommitAttempt.updateAndGet { attempts =>
+      if (attempts.get(address).contains(target)) attempts
+      else {
+        claimed = true
+        attempts.updated(address, target)
+      }
+    }
+    claimed
+  }
+
   /** In-process replacement for the external auto-commit-generators/commit-generators-hotstuff
     * GH Actions crons (docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md).
     * Called from `forgeBlock` at a period boundary, where `committedGenerators(period.next)` is
-    * already being read to build `committedGeneratorsHash` -- this reuses that same read rather
-    * than a second blockchain query. Dispatched fire-and-forget on `appenderScheduler` (NOT
-    * `minerScheduler`, which `forgeBlock` itself runs on -- see the executeOn call above) so a slow
-    * BLS sign or UTX pool contention never delays block forging, which must stay fast.
+    * also read (a second time) to build `committedGeneratorsHash`. This is a second call to that
+    * method, not a reuse of a single read -- it's cheap only because `Caches.scala` memoizes
+    * `committedGenerators`, so the extra call does not mean an extra real blockchain query.
+    * Dispatched fire-and-forget on `appenderScheduler` (NOT `minerScheduler`, which `forgeBlock`
+    * itself runs on -- see the executeOn call above) so a slow BLS sign or UTX pool contention never
+    * delays block forging, which must stay fast.
     * Never constructs PoP bytes by hand -- goes through `CommitToGenerationTransaction.mkPopSignature`
     * exclusively, per the single-source-of-truth requirement documented at
     * `CommitToGenerationTransaction.scala:50-57`.
+    * Guarded per-account by `claimSelfCommitAttempt` so a `forgeBlock` re-entry at the same period
+    * boundary (via generateBlockTask's retry paths) does not redundantly re-dispatch.
     */
   private[mining] def maybeSelfCommit(account: KeyPair, blockchain: Blockchain, period: GenerationPeriod): Unit = {
     val alreadyCommitted = blockchain.committedGenerators(period.next).exists(_._1 == account.toAddress)
-    if (Miner.shouldSelfCommit(minerSettings.selfCommitToGeneration, alreadyCommitted)) {
+    if (Miner.shouldSelfCommit(minerSettings.selfCommitToGeneration, alreadyCommitted) && claimSelfCommitAttempt(account.toAddress, period)) {
       Task {
         val blsKeyPair = BlsKeyPair(account.privateKey)
         val chainId    = AddressScheme.current.chainId
