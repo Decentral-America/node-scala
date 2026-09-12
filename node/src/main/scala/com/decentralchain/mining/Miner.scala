@@ -1,7 +1,7 @@
 package com.decentralchain.mining
 
 import cats.syntax.either.*
-import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
+import com.decentralchain.account.{Address, AddressScheme, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block.*
 import com.decentralchain.block.{Block, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
@@ -9,6 +9,7 @@ import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
 import com.decentralchain.crypto
+import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.metrics.{BlockStats, Instrumented, *}
 import com.decentralchain.mining.Miner.*
@@ -19,6 +20,7 @@ import com.decentralchain.state.*
 import com.decentralchain.state.BlockchainUpdaterImpl.BlockApplyResult.{Applied, Ignored}
 import com.decentralchain.state.appender.BlockAppender
 import com.decentralchain.state.diffs.BlockDiffer
+import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.transaction.*
 import com.decentralchain.transaction.TxValidationError.BlockFromFuture
 import com.decentralchain.utils.{ScorexLogging, Time}
@@ -33,6 +35,7 @@ import monix.execution.cancelables.{CompositeCancelable, SerialCancelable}
 import monix.reactive.Observable
 
 import java.time.LocalTime
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.*
 
 trait Miner {
@@ -77,6 +80,16 @@ class MinerImpl(
 
   private val scheduledAttempts = SerialCancelable()
   private val microBlockAttempt = SerialCancelable()
+
+  // Per-account guard against re-dispatching a self-commit attempt on every `forgeBlock` re-entry
+  // at the same period boundary (generateBlockTask recurses into forgeBlock on TemporaryFailure/
+  // Ignored/no-quorum paths -- see the retry branches below -- and each re-entry would otherwise
+  // re-run maybeSelfCommit). Tracks only the LAST period.next attempted per account: a single value
+  // per account naturally supersedes itself as periods advance, so this needs no separate cleanup
+  // and cannot grow unboundedly. This is NOT a substitute for the on-chain
+  // committedGenerators(period.next) gate -- it only suppresses redundant same-process dispatch of
+  // an already-attempted period; a fresh process restart legitimately attempts again.
+  private val lastSelfCommitAttempt = new AtomicReference[Map[Address, GenerationPeriod]](Map.empty)
 
   @volatile
   private var debugStateRef: MinerDebugInfo.State = MinerDebugInfo.Disabled
@@ -205,6 +218,24 @@ class MinerImpl(
 
     val address = account.toAddress
 
+    // Self-commit is attempted on EVERY key-block forge within the generation period, NOT only at the
+    // period boundary. A CommitToGenerationTransaction is only accepted while
+    // `blockchain.currentGenerationPeriod.next.start == tx.generationPeriodStart`
+    // (CommitToGenerationTransactionDiff) -- i.e. it is valid for the WHOLE of `period` and becomes
+    // permanently invalid (and gets evicted by UTX revalidation) the moment the chain enters
+    // `period.next`. Attempting only at `period.end` gave the tx a single liquid period's microblock
+    // window to land, with no retry -- and since `packTransactionsForKeyBlock` has already run by then,
+    // it could never even make the block being forged at that moment. That single-shot pattern was
+    // observed failing live 4/4 times in this codebase's history, which is exactly why the external
+    // auto-commit-generators cron this replaces fired every 5-10 minutes across the entire ~100-block
+    // period instead of once. Placed here, deliberately OUTSIDE the stopReasons/retryReasons
+    // Either-chain: it is a pure fire-and-forget side effect (see maybeSelfCommit) and must never be
+    // able to fail, delay, or otherwise perturb block forging. Cheap to call every forge --
+    // maybeSelfCommit short-circuits on the memoized on-chain committedGenerators(period.next) gate
+    // and on the per-(account, period.next) in-process claim before doing any work, so all but the
+    // first call per period are no-ops.
+    blockchain.generationPeriodOf(newBlockHeight).foreach(period => maybeSelfCommit(account, blockchain, period))
+
     metrics.blockBuildTimeStats.measureSuccessful {
       val stopReasons = for {
         _ <- isAllowedForMiningByAccountScript(address, blockchain)
@@ -248,6 +279,16 @@ class MinerImpl(
           // entirely and this would silently never validate.
           blockchain.generationPeriodOf(newBlockHeight).filter(_.end == newBlockHeight).map { period =>
             val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
+            // Observability alarm for the self-commit feature. The likely real failure mode is silent:
+            // the tx was built and accepted into the UTX pool, then evicted by revalidation or simply
+            // never mined -- producing no log line at all and looking exactly like "already committed,
+            // nothing to do". This is the last height at which the upcoming period's committee can
+            // still be influenced, so an absent address here IS the operator-actionable condition.
+            // `validators` is already computed right here for the committee hash, so this costs nothing.
+            if (minerSettings.selfCommitToGeneration && !validators.exists(_._1 == address))
+              log.warn(
+                s"$address failed to self-commit to generation period ${period.next}: not in the committed generators at period end $newBlockHeight"
+              )
             ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
           }
         }
@@ -287,6 +328,97 @@ class MinerImpl(
           retryReasons(balance).leftMap(ForgeAttemptResult.TemporaryFailure.apply)
         }
     }.merge
+  }
+
+  /** Checked-and-set BEFORE dispatching the async self-commit `Task`: returns true (and records the
+    * claim) only the FIRST time a given (account, period.next) pair is seen by this process. Keyed on
+    * `period.next` rather than on height, which is what makes calling `maybeSelfCommit` on EVERY
+    * key-block forge throughout the period (see `forgeBlock`) safe: the many forges within one period
+    * all resolve to the same `period.next`, so exactly one attempt is dispatched per period per
+    * account, no matter how many times we are called or how often `generateBlockTask` recurses back
+    * into `forgeBlock` at the same height (its TemporaryFailure/Ignored/no-quorum retry branches).
+    * Without it, every forge would mint a distinct tx id -- CommitToGenerationTransaction's id is a
+    * FastHashId over bodyBytes, which includes a freshly minted `timestamp` -- and so would sail past
+    * the UTX pool's containsKey-by-id dedup, filling the pool with near-duplicate commits.
+    *
+    * Not a correctness gate (the on-chain `committedGenerators` check and
+    * `CommitToGenerationTransactionDiff`'s on-append rejection are what actually prevent a double
+    * commit from landing) -- purely a UTX-churn and log-noise suppressor. It deliberately does NOT
+    * expire within a period: if an attempt is dispatched and then silently lost, the operator alarm is
+    * the `period.end` warn in `forgeBlock`, not a blind re-submission; the tx is still live in the UTX
+    * pool for the whole period and re-minting it with a fresh timestamp would not make it land sooner.
+    * The map tracks only the LAST `period.next` attempted per account, so entries supersede themselves
+    * as periods advance -- no cleanup needed, and it cannot grow unboundedly. A fresh process restart
+    * legitimately attempts again.
+    */
+  private def claimSelfCommitAttempt(address: Address, period: GenerationPeriod): Boolean = {
+    val target  = period.next
+    var claimed = false
+    lastSelfCommitAttempt.updateAndGet { attempts =>
+      if (attempts.get(address).contains(target)) attempts
+      else {
+        claimed = true
+        attempts.updated(address, target)
+      }
+    }
+    claimed
+  }
+
+  /** In-process replacement for the external auto-commit-generators/commit-generators-hotstuff
+    * GH Actions crons (docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md).
+    * Called from `forgeBlock` on EVERY key-block forge for which the height falls inside a generation
+    * period -- not just at the period boundary -- mirroring the every-5-to-10-minutes cadence of the
+    * cron it replaces, because the transaction is valid for the whole of `period` and a single-shot
+    * attempt was observed failing live 4/4 times. Its two short-circuit gates (the on-chain
+    * `committedGenerators(period.next)` membership check and `claimSelfCommitAttempt`) make all but
+    * the first call per period a cheap no-op; `committedGenerators` is memoized in `Caches.scala`, so
+    * even the repeated reads do not mean repeated real blockchain queries.
+    * Dispatched fire-and-forget on `appenderScheduler` (NOT `minerScheduler`, which `forgeBlock`
+    * itself runs on -- see the executeOn call above) so a slow BLS sign or UTX pool contention never
+    * delays block forging, which must stay fast.
+    * Never constructs PoP bytes by hand -- goes through `CommitToGenerationTransaction.mkPopSignature`
+    * exclusively, per the single-source-of-truth requirement documented at
+    * `CommitToGenerationTransaction.scala:50-57`.
+    * Guarded per-account by `claimSelfCommitAttempt` so the many forges within one period (and
+    * `forgeBlock` re-entries at the same height via generateBlockTask's retry paths) dispatch exactly
+    * one attempt per period.
+    */
+  private[mining] def maybeSelfCommit(account: KeyPair, blockchain: Blockchain, period: GenerationPeriod): Unit = {
+    val alreadyCommitted = blockchain.committedGenerators(period.next).exists(_._1 == account.toAddress)
+    if (Miner.shouldSelfCommit(minerSettings.selfCommitToGeneration, alreadyCommitted) && claimSelfCommitAttempt(account.toAddress, period)) {
+      Task {
+        val blsKeyPair = BlsKeyPair(account.privateKey)
+        val chainId    = AddressScheme.current.chainId
+        val signature  = CommitToGenerationTransaction.mkPopSignature(blsKeyPair, period.next.start, account.publicKey, chainId)
+        CommitToGenerationTransaction.selfSigned(
+          version = TxVersion.V1,
+          sender = account,
+          endorserPublicKey = blsKeyPair.publicKey,
+          generationPeriodStart = period.next.start,
+          timestamp = timeService.correctedTime(),
+          // The standard fee constant for this transaction type -- NOT `DepositInDcclets`. Those are
+          // two different economic concepts: `DepositInDcclets` (100 DCC) is the generation DEPOSIT,
+          // derived implicitly from committee membership by BalanceDiffValidation/BlockDiffer, never
+          // paid as a fee. This matches exactly what the REST construction path
+          // (`CommitToGenerationRequest.toTxFrom`) defaults to, so the in-process and HTTP paths
+          // cannot silently disagree on the economics of the same transaction type.
+          feeInDcc = FeeConstants(TransactionType.CommitToGeneration) * FeeUnit,
+          commitmentSignature = signature,
+          chainId = chainId
+        ) match {
+          case Right(tx) =>
+            utx.putIfNew(tx).resultE match {
+              case Right(true)  => log.info(s"Self-committed ${account.toAddress} to generation period ${period.next}")
+              case Right(false) => log.debug(s"Self-commit for ${account.toAddress} at period ${period.next}: already in UTX pool")
+              case Left(err)    => log.warn(s"Self-commit for ${account.toAddress} at period ${period.next} rejected: $err")
+            }
+          case Left(err) =>
+            log.warn(s"Failed to build self-commit tx for ${account.toAddress} at period ${period.next}: $err")
+        }
+      }.onErrorHandle(err => log.warn(s"Self-commit for ${account.toAddress} failed: ${err.getMessage}"))
+        .runAsyncLogErr(using appenderScheduler)
+      ()
+    }
   }
 
   // The self-target round's endorsedId is a brand new candidate every key block (unlike the
@@ -600,4 +732,13 @@ object Miner {
     */
   private[mining] def clampFinalizedHeight(rawFallback: Height, currentHeight: Int): Height =
     Height(rawFallback.toInt.min(currentHeight - 1).max(GenesisBlockHeight.toInt))
+
+  /** Decision for the in-process self-commit-to-generation replacement of the external
+    * auto-commit-generators/commit-generators-hotstuff GH Actions crons (see
+    * docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md). Kept as a pure,
+    * directly-testable predicate rather than inlined into `forgeBlock`'s already-dense stopReasons
+    * chain, matching this file's existing convention for `foldHotStuffConflicts`/`clampFinalizedHeight`.
+    */
+  private[mining] def shouldSelfCommit(enabled: Boolean, alreadyCommitted: Boolean): Boolean =
+    enabled && !alreadyCommitted
 }
