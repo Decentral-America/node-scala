@@ -7,10 +7,11 @@ import com.decentralchain.db.WithState.AddrWithBalance
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.history.Domain
 import com.decentralchain.settings.{DCCSettings, WalletSettings}
+import com.decentralchain.state.diffs.FeeValidation.{FeeConstants, FeeUnit}
 import com.decentralchain.state.{BlockEndorser, Height}
 import com.decentralchain.test.*
 import com.decentralchain.test.DomainPresets.*
-import com.decentralchain.transaction.{CommitToGenerationTransaction, TxHelpers}
+import com.decentralchain.transaction.{CommitToGenerationTransaction, TransactionType, TxHelpers}
 import com.decentralchain.utx.UtxPoolImpl
 import com.decentralchain.wallet.Wallet
 import io.netty.channel.group.DefaultChannelGroup
@@ -48,14 +49,12 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
     DeterministicFinality
       .configure(_.copy(generationPeriodLength = generationPeriodLength))
       .setFeaturesHeight(BlockchainFeatures.DeterministicFinality -> 1)
-      .copy(minerSettings =
-        DeterministicFinality.minerSettings.copy(quorum = 0, selfCommitToGeneration = enabled)
-      )
+      .copy(minerSettings = DeterministicFinality.minerSettings.copy(quorum = 0, selfCommitToGeneration = enabled))
 
   private def withMiner(dccSettings: DCCSettings)(f: (MinerImpl, Domain, UtxPoolImpl) => Unit): Unit =
     withDomain(dccSettings, AddrWithBalance.enoughBalances(minerAcc)) { d =>
-      val time              = TestTime()
-      val utx               = new UtxPoolImpl(
+      val time = TestTime()
+      val utx  = new UtxPoolImpl(
         time,
         d.blockchainUpdater,
         dccSettings.utxSettings,
@@ -144,6 +143,139 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
         val committed = utx.all.collect { case tx: CommitToGenerationTransaction => tx }
         committed should have size 1
         committed.head.sender.toAddress shouldBe minerAcc.toAddress
+      }
+    }
+
+    // Fee must be the standard transaction fee for this type, NOT `DepositInDcclets` (100 DCC).
+    // `DepositInDcclets` is the generation DEPOSIT, derived implicitly from committee membership by
+    // BalanceDiffValidation/BlockDiffer -- it is never paid as a fee. Pinning the exact same
+    // expression the REST construction path (`CommitToGenerationRequest.toTxFrom`) defaults to, so
+    // the two construction paths for one transaction type cannot silently drift apart economically.
+    "uses the standard transaction fee, not the generation deposit" in {
+      withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+        val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height)).get
+        miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+
+        val deadline = System.currentTimeMillis() + 5000
+        while (utx.all.isEmpty && System.currentTimeMillis() < deadline) Thread.sleep(50)
+
+        val committed = utx.all.collect { case tx: CommitToGenerationTransaction => tx }
+        committed should have size 1
+        committed.head.fee.value shouldBe FeeConstants(TransactionType.CommitToGeneration) * FeeUnit
+        committed.head.fee.value should not be CommitToGenerationTransaction.DepositInDcclets
+      }
+    }
+  }
+
+  "forgeBlock self-commit call site" - {
+    // THE regression test for the critical timing finding. `maybeSelfCommit` used to be called only
+    // from inside `.filter(_.end == newBlockHeight)` -- i.e. at the single height that is the LAST of a
+    // generation period. That gave the transaction one liquid period's microblock window to land (and
+    // not even the block being forged, since `packTransactionsForKeyBlock` has already run by that
+    // point), with no retry ever. A CommitToGenerationTransaction is valid for the WHOLE of `period`
+    // (CommitToGenerationTransactionDiff checks `tx.generationPeriodStart ==
+    // currentGenerationPeriod.next.start`), so the attempt belongs on EVERY key-block forge within the
+    // period -- matching the every-5-to-10-minutes cadence of the GH Actions cron this replaces, which
+    // was built that way precisely because single-shot attempts were observed failing live 4/4 times.
+    //
+    // Asserted by forging at a height that is deliberately NOT the period boundary and requiring a
+    // commit to appear. `forgeBlock`'s own Either-chain result is intentionally ignored: the new call
+    // site sits OUTSIDE `metrics.blockBuildTimeStats`/`stopReasons`/`retryReasons` as a pure side
+    // effect, so self-commit must fire even when the forge attempt itself fails (no quorum, PoS delay,
+    // ...). That independence is itself part of what is being asserted here.
+    "dispatches a self-commit at a NON-boundary height within the period" in {
+      withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+        // Walk forward until the block we are about to forge is strictly inside the period, never its
+        // last height -- the exact case the old boundary-only call site could not handle.
+        val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height + 1)).get
+        while (
+          d.blockchain.generationPeriodOf(Height(d.blockchain.height + 1)).contains(period) &&
+          Height(d.blockchain.height + 1) == period.end
+        ) d.appendBlock()
+
+        val forgeHeight = Height(d.blockchain.height + 1)
+        val forgePeriod = d.blockchain.generationPeriodOf(forgeHeight).get
+        withClue(s"precondition: forge height $forgeHeight must not be the period end of $forgePeriod") {
+          forgeHeight should not be forgePeriod.end
+        }
+        d.blockchain.committedGenerators(forgePeriod.next).exists(_._1 == minerAcc.toAddress) shouldBe false
+
+        miner.forgeBlock(minerAcc)
+
+        val deadline = System.currentTimeMillis() + 5000
+        while (utx.all.isEmpty && System.currentTimeMillis() < deadline) Thread.sleep(50)
+
+        val committed = utx.all.collect { case tx: CommitToGenerationTransaction => tx }
+        withClue("self-commit must be attempted at every forge within the period, not only at period.end: ") {
+          committed should have size 1
+        }
+        committed.head.sender.toAddress shouldBe minerAcc.toAddress
+        // It must target the NEXT period -- i.e. the value `CommitToGenerationTransactionDiff` will
+        // compare against `currentGenerationPeriod.next.start` for the rest of this period.
+        committed.head.generationPeriodStart shouldBe forgePeriod.next.start
+      }
+    }
+
+    // The counterpart risk of "call it at every forge": now that the same period is visited many
+    // times, the per-(account, period.next) claim guard is what stops the UTX pool filling with
+    // near-duplicate commits. It cannot be left to `utx.putIfNew`, whose dedup is by transaction id --
+    // and CommitToGenerationTransaction's id is a FastHashId over bodyBytes, which includes a freshly
+    // minted `timestamp` per attempt, so every re-dispatch would mint a DISTINCT id and be accepted.
+    // Exercised across many forges at several distinct heights of one period, which is the real
+    // production shape (previously only same-height re-entry was covered).
+    "dispatches exactly one self-commit across many forges at many heights in the same period" in {
+      withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+        val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height + 1)).get
+
+        var forges = 0
+        // Stay strictly within `period`: crossing into `period.next` would legitimately entitle the
+        // account to a fresh attempt for a different target, which is not what this test is about.
+        while (d.blockchain.generationPeriodOf(Height(d.blockchain.height + 1)).contains(period)) {
+          miner.forgeBlock(minerAcc)
+          miner.forgeBlock(minerAcc) // same height twice: the generateBlockTask retry-re-entry shape
+          forges += 2
+          if (forges == 2) {
+            // Also pins the TIMING property here, not just the dedup one: after the very FIRST forge
+            // of the period -- many heights before `period.end` -- the commit must already be in
+            // flight. Under the old boundary-only call site the pool is still empty at this point.
+            val d0 = System.currentTimeMillis() + 5000
+            while (utx.all.isEmpty && System.currentTimeMillis() < d0) Thread.sleep(50)
+            withClue(s"commit must be in flight after the first forge of $period, not deferred to period.end: ") {
+              utx.all.collect { case tx: CommitToGenerationTransaction => tx } should have size 1
+            }
+          }
+          d.appendBlock()
+        }
+        withClue("test must actually exercise multiple forges: ") { forges should be > 2 }
+
+        val deadline = System.currentTimeMillis() + 5000
+        while (utx.all.isEmpty && System.currentTimeMillis() < deadline) Thread.sleep(50)
+        // Give any wrongly re-dispatched task a real chance to run before asserting it did not.
+        Thread.sleep(300)
+
+        val committed = utx.all.collect { case tx: CommitToGenerationTransaction => tx }
+        withClue(s"after $forges forges in period $period: ") { committed should have size 1 }
+        committed.head.generationPeriodStart shouldBe period.next.start
+      }
+    }
+
+    // The on-chain gate, not the in-process claim guard, is what must suppress the attempt for an
+    // account that is ALREADY a committed generator for the upcoming period -- proven here with a
+    // fresh miner instance (empty claim map), so only `committedGenerators(period.next)` can be doing
+    // the work. This is the gate that keeps "call at every forge" cheap in production, where a node
+    // restarts mid-period with its commit already on chain.
+    "does not re-commit when the account is already an on-chain committed generator for the next period" in {
+      withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+        val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height + 1)).get
+        d.appendBlock(
+          TxHelpers.commitToGeneration(period.next.start, minerAcc)
+        )
+        d.blockchain.committedGenerators(period.next).exists(_._1 == minerAcc.toAddress) shouldBe true
+
+        miner.forgeBlock(minerAcc)
+        Thread.sleep(500)
+
+        utx.all.collect { case tx: CommitToGenerationTransaction => tx } shouldBe empty
       }
     }
   }
