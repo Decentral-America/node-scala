@@ -15,6 +15,15 @@ trait PeerDatabase {
   def isBlacklisted(address: InetAddress): Boolean
   def clearBlacklist(): Unit
 
+  /** Clears the transient suspension cache ONLY — never touches blacklist. Suspension fires on
+    * every connection close for any reason (see `PeerDatabaseImpl.suspend`'s doc comment) and is
+    * NOT a for-cause ban, unlike blacklist (which is reason-carrying and deliberate). This exists
+    * for `NetworkServer`'s in-process stall-detection self-heal
+    * (docs/superpowers/plans/2026-09-12-inprocess-peer-stall-detection.md) — auto-clearing
+    * blacklist instead would re-admit peers banned for cause, which must never happen automatically.
+    */
+  def clearSuspension(): Unit
+
   def knownPeers: Map[InetSocketAddress, Long]
 
   def detailedBlacklist: Map[InetAddress, (Long, String)]
@@ -39,6 +48,8 @@ object PeerDatabase {
     override def detailedBlacklist: Map[InetAddress, (Long, String)] = Map.empty
 
     override def clearBlacklist(): Unit = ()
+
+    override def clearSuspension(): Unit = ()
 
     override def suspend(host: InetSocketAddress): Unit = {}
 

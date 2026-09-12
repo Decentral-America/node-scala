@@ -181,6 +181,8 @@ class PeerDatabaseImpl(settings: NetworkSettings, ticker: Ticker = Ticker.system
     reasons.clear()
   }
 
+  def clearSuspension(): Unit = suspension.invalidateAll()
+
   override def close(): Unit = settings.file.foreach { f =>
     val rawPeers = knownPeers.keySet.map(address => s"${address.getAddress.getHostAddress}:${address.getPort}")
 
