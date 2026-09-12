@@ -1,7 +1,7 @@
 package com.decentralchain.mining
 
 import cats.syntax.either.*
-import com.decentralchain.account.{Address, KeyPair, PKKeyPair}
+import com.decentralchain.account.{Address, AddressScheme, KeyPair, PKKeyPair}
 import com.decentralchain.block.Block.*
 import com.decentralchain.block.{Block, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.common.state.ByteStr
@@ -9,6 +9,7 @@ import com.decentralchain.consensus.hotstuff.HotStuffEquivocationProof
 import com.decentralchain.consensus.nxt.NxtLikeConsensusBlockData
 import com.decentralchain.consensus.{GeneratingBalanceProvider, PoSSelector}
 import com.decentralchain.crypto
+import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.metrics.{BlockStats, Instrumented, *}
 import com.decentralchain.mining.Miner.*
@@ -247,6 +248,7 @@ class MinerImpl(
           // non-zero, non-period-aligned height, plain modulo arithmetic checks the wrong heights
           // entirely and this would silently never validate.
           blockchain.generationPeriodOf(newBlockHeight).filter(_.end == newBlockHeight).map { period =>
+            maybeSelfCommit(account, blockchain, period)
             val validators = blockchain.committedGenerators(period.next).sortBy(_._1.toString)
             ByteStr(crypto.fastHash(validators.flatMap { case (addr, blsKey) => addr.bytes ++ blsKey.arr }.toArray))
           }
@@ -287,6 +289,49 @@ class MinerImpl(
           retryReasons(balance).leftMap(ForgeAttemptResult.TemporaryFailure.apply)
         }
     }.merge
+  }
+
+  /** In-process replacement for the external auto-commit-generators/commit-generators-hotstuff
+    * GH Actions crons (docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md).
+    * Called from `forgeBlock` at a period boundary, where `committedGenerators(period.next)` is
+    * already being read to build `committedGeneratorsHash` -- this reuses that same read rather
+    * than a second blockchain query. Dispatched fire-and-forget on `appenderScheduler` (NOT
+    * `minerScheduler`, which `forgeBlock` itself runs on -- see the executeOn call above) so a slow
+    * BLS sign or UTX pool contention never delays block forging, which must stay fast.
+    * Never constructs PoP bytes by hand -- goes through `CommitToGenerationTransaction.mkPopSignature`
+    * exclusively, per the single-source-of-truth requirement documented at
+    * `CommitToGenerationTransaction.scala:50-57`.
+    */
+  private[mining] def maybeSelfCommit(account: KeyPair, blockchain: Blockchain, period: GenerationPeriod): Unit = {
+    val alreadyCommitted = blockchain.committedGenerators(period.next).exists(_._1 == account.toAddress)
+    if (Miner.shouldSelfCommit(minerSettings.selfCommitToGeneration, alreadyCommitted)) {
+      Task {
+        val blsKeyPair = BlsKeyPair(account.privateKey)
+        val chainId    = AddressScheme.current.chainId
+        val signature  = CommitToGenerationTransaction.mkPopSignature(blsKeyPair, period.next.start, account.publicKey, chainId)
+        CommitToGenerationTransaction.selfSigned(
+          version = TxVersion.V1,
+          sender = account,
+          endorserPublicKey = blsKeyPair.publicKey,
+          generationPeriodStart = period.next.start,
+          timestamp = timeService.correctedTime(),
+          feeInDcc = CommitToGenerationTransaction.DepositInDcclets,
+          commitmentSignature = signature,
+          chainId = chainId
+        ) match {
+          case Right(tx) =>
+            utx.putIfNew(tx).resultE match {
+              case Right(true)  => log.info(s"Self-committed ${account.toAddress} to generation period ${period.next}")
+              case Right(false) => log.debug(s"Self-commit for ${account.toAddress} at period ${period.next}: already in UTX pool")
+              case Left(err)    => log.warn(s"Self-commit for ${account.toAddress} at period ${period.next} rejected: $err")
+            }
+          case Left(err) =>
+            log.warn(s"Failed to build self-commit tx for ${account.toAddress} at period ${period.next}: $err")
+        }
+      }.onErrorHandle(err => log.warn(s"Self-commit for ${account.toAddress} failed: ${err.getMessage}"))
+        .runAsyncLogErr(using appenderScheduler)
+      ()
+    }
   }
 
   // The self-target round's endorsedId is a brand new candidate every key block (unlike the
