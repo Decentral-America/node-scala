@@ -600,4 +600,13 @@ object Miner {
     */
   private[mining] def clampFinalizedHeight(rawFallback: Height, currentHeight: Int): Height =
     Height(rawFallback.toInt.min(currentHeight - 1).max(GenesisBlockHeight.toInt))
+
+  /** Decision for the in-process self-commit-to-generation replacement of the external
+    * auto-commit-generators/commit-generators-hotstuff GH Actions crons (see
+    * docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md). Kept as a pure,
+    * directly-testable predicate rather than inlined into `forgeBlock`'s already-dense stopReasons
+    * chain, matching this file's existing convention for `foldHotStuffConflicts`/`clampFinalizedHeight`.
+    */
+  private[mining] def shouldSelfCommit(enabled: Boolean, alreadyCommitted: Boolean): Boolean =
+    enabled && !alreadyCommitted
 }
