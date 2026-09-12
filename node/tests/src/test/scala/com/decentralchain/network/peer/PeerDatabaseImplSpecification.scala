@@ -170,17 +170,22 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       database.detailedBlacklist.keySet should contain(address2.getAddress)
     }
 
-    "clearSuspension() removes a suspended address, leaving blacklist untouched" in withDatabase(settings1) { database =>
+    "clearSuspension() removes a suspended address, leaving blacklist untouched, and returns the cleared count" in withDatabase(settings1) { database =>
       database.suspend(address1)
       database.asInstanceOf[PeerDatabaseImpl].isSuspended(address1.getAddress) shouldBe true
 
       database.blacklist(address2.getAddress, "test reason")
       database.isBlacklisted(address2.getAddress) shouldBe true
 
-      database.clearSuspension()
+      database.clearSuspension() shouldBe 1
 
       database.asInstanceOf[PeerDatabaseImpl].isSuspended(address1.getAddress) shouldBe false
       database.isBlacklisted(address2.getAddress) shouldBe true // unaffected
+    }
+
+    "clearSuspension() returns 0 when the suspension cache is already empty" in withDatabase(settings1) { database =>
+      database.detailedSuspended shouldBe empty
+      database.clearSuspension() shouldBe 0
     }
 
     "nextCandidate returns a previously-suspended address after clearSuspension()" in withDatabase(settings1) { database =>
@@ -189,7 +194,7 @@ class PeerDatabaseImplSpecification extends FreeSpec {
       database.suspend(address1)
       database.nextCandidate(Set()) shouldBe empty // still suspended
 
-      database.clearSuspension()
+      database.clearSuspension() shouldBe 1
       database.nextCandidate(Set()) should contain(address1)
     }
   }

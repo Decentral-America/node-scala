@@ -37,11 +37,17 @@ case class NetworkSettings(
     suspensionResidenceTime: FiniteDuration,
     // Consecutive scheduleConnectTask ticks with zero connections AND no available candidate
     // before the in-process stall detector self-heals by clearing suspension (never blacklist).
-    // Default 900: this loop's tick interval is ~1-5s (AverageHandshakePeriod when disconnected,
-    // see NetworkServer.scheduleConnectTask), so 900 ticks is roughly the same ~15-minute window
-    // as the external peer-watchdog.yml's debounce it replaces -- see
+    // Default 900: while the detector is actively counting (hasConnections == false, i.e. a real
+    // stall), scheduleConnectTask's delay ALWAYS resolves to AverageHandshakePeriod (~1s +/- jitter,
+    // see NetworkServer.scheduleConnectTask/AverageHandshakePeriod) -- the 5-second branch there only
+    // applies when connections already exist, which can't be true while this counter is incrementing.
+    // So the tick interval during any counted stall is ~1s, not a "1-5s" range, and 900 ticks is
+    // ~15 minutes, matching the external peer-watchdog.yml debounce it replaces -- see
     // docs/superpowers/plans/2026-09-12-inprocess-peer-stall-detection.md. Deliberately at least
-    // as conservative as what it replaces, not more aggressive.
+    // as conservative as what it replaces, not more aggressive. NOTE: this threshold's real-world
+    // time window is coupled to AverageHandshakePeriod's value in NetworkServer.scala -- if that
+    // constant ever changes, this threshold's effective window changes silently with it (no compile
+    // error), so keep the two in sync when tuning either one.
     peerStallThreshold: Int = 900,
     receivedTxsCacheTimeout: FiniteDuration,
     trafficLogger: TrafficLogger.Settings

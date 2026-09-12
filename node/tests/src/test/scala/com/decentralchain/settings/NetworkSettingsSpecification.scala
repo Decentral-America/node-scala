@@ -87,7 +87,7 @@ class NetworkSettingsSpecification extends FlatSpec {
     }
   }
 
-  it should "default peer-stall-threshold to 900 (matches the former 15-min external watchdog debounce, at ~1 tick/sec worst case)" in {
+  it should "default peer-stall-threshold to 900 (matches the former 15-min external watchdog debounce -- ~1 tick/sec is the only case while actively counting a real stall, not a worst case among a range)" in {
     val config          = loadConfig(ConfigFactory.empty())
     val networkSettings = ConfigSource.fromConfig(config).at("dcc.network").loadOrThrow[NetworkSettings]
 

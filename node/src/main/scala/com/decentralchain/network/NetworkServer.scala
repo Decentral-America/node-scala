@@ -268,12 +268,24 @@ object NetworkServer extends ScorexLogging {
         // PeerStallDetector.tick only returns true once, on the tick where the threshold is newly
         // crossed, so this log line/self-heal is inherently gated on genuine sustained exhaustion,
         // not on every empty-candidate tick.
+        //
+        // clearSuspension() returning 0 (nothing to clear) is expected and harmless on a node
+        // deliberately configured with known-peers=[] + peers-exchange=no (e.g. the main node) --
+        // gate the WARN on "was anything actually cleared" so that legitimate quiet configuration
+        // doesn't produce a log line that reads as an alarm.
         if (stallDetector.tick(hasConnections, candidateFound)) {
-          log.warn(
-            s"Peer reconnection stalled: 0 connections and no candidate for ${networkSettings.peerStallThreshold} consecutive attempts. " +
-              "Clearing suspension cache only (blacklist untouched) to allow retrying previously-suspended peers."
-          )
-          peerDatabase.clearSuspension()
+          val cleared = peerDatabase.clearSuspension()
+          if (cleared > 0) {
+            log.warn(
+              s"Peer reconnection stalled: 0 connections and no candidate for ${networkSettings.peerStallThreshold} consecutive attempts. " +
+                s"Cleared $cleared suspended peer(s) (blacklist untouched) to allow retrying previously-suspended peers."
+            )
+          } else {
+            log.debug(
+              s"Peer reconnection stalled: 0 connections and no candidate for ${networkSettings.peerStallThreshold} consecutive attempts, " +
+                "but suspension cache was already empty -- nothing to clear (expected on a deliberately peerless configuration)."
+            )
+          }
         }
 
         scheduleConnectTask()

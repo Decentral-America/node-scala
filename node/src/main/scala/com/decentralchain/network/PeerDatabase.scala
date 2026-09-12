@@ -21,8 +21,13 @@ trait PeerDatabase {
     * for `NetworkServer`'s in-process stall-detection self-heal
     * (docs/superpowers/plans/2026-09-12-inprocess-peer-stall-detection.md) — auto-clearing
     * blacklist instead would re-admit peers banned for cause, which must never happen automatically.
+    *
+    * @return the number of entries actually invalidated. Callers (e.g. `NetworkServer`) use this to
+    *         gate their stall-fired log at WARN vs DEBUG -- clearing an already-empty cache (e.g. a
+    *         node deliberately configured with known-peers=[] + peers-exchange=no) is harmless but
+    *         must not read as an alarm.
     */
-  def clearSuspension(): Unit
+  def clearSuspension(): Int
 
   def knownPeers: Map[InetSocketAddress, Long]
 
@@ -49,7 +54,7 @@ object PeerDatabase {
 
     override def clearBlacklist(): Unit = ()
 
-    override def clearSuspension(): Unit = ()
+    override def clearSuspension(): Int = 0
 
     override def suspend(host: InetSocketAddress): Unit = {}
 
