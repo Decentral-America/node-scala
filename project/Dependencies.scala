@@ -4,10 +4,11 @@ import sbt.{Def, *}
 import scalapb.compiler.Version.scalapbVersion
 
 object Dependencies {
-  // 4.2.16.Final patches CVE-2026-59901 (Bzip2Decoder infinite loop), CVE-2026-55831/55833
-  // (HTTP codec), CVE-2026-56745 (SpdyHttpDecoder ByteBuf leak) -- all HIGH, on top of the
-  // earlier CVE-2026-44249 patch already applied at 4.2.15.Final.
-  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.16.Final"
+  // 4.2.17.Final patches CVE-2026-75595 (CRITICAL, netty-handler), on top of 4.2.16.Final's
+  // CVE-2026-59901 (Bzip2Decoder infinite loop), CVE-2026-55831/55833 (HTTP codec),
+  // CVE-2026-56745 (SpdyHttpDecoder ByteBuf leak) -- all HIGH, and the earlier CVE-2026-44249
+  // patch already applied at 4.2.15.Final.
+  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.17.Final"
 
   val gProtoVersion = "4.35.1"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
