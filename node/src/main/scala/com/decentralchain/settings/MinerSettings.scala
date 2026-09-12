@@ -15,7 +15,13 @@ case class MinerSettings(
     minimalBlockGenerationOffset: FiniteDuration,
     maxTransactionsInMicroBlock: Int,
     minMicroBlockAge: FiniteDuration,
-    privateKeys: Seq[PrivateKey]
+    privateKeys: Seq[PrivateKey],
+    // In-process replacement for the external auto-commit-generators/commit-generators-hotstuff
+    // GH Actions crons: when true, MinerImpl self-checks committee membership at every key-block
+    // forge and self-submits a CommitToGenerationTransaction if it's about to fall out of the next
+    // period's committee. Default false until a testnet soak confirms it; see
+    // docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md.
+    selfCommitToGeneration: Boolean = false
 ) derives ConfigReader {
   require(maxTransactionsInMicroBlock <= Miner.MaxTransactionsPerMicroblock)
 }

@@ -21,6 +21,7 @@ class MinerSettingsSpecification extends FlatSpec {
                       |    minimal-block-generation-offset: 500ms
                       |    max-transactions-in-micro-block: 400
                       |    min-micro-block-age: 3s
+                      |    self-commit-to-generation: no
                       |    private-keys: ["${TxHelpers.defaultSigner.privateKey}"]
                       |  }
                       |}
@@ -36,6 +37,24 @@ class MinerSettingsSpecification extends FlatSpec {
     settings.minimalBlockGenerationOffset should be(500.millis)
     settings.maxTransactionsInMicroBlock should be(400)
     settings.minMicroBlockAge should be(3.seconds)
+    settings.selfCommitToGeneration should be(false)
     settings.privateKeys should be(Seq(TxHelpers.defaultSigner.privateKey))
+  }
+
+  it should "self-commit-to-generation default to false" in {
+    val config = ConfigFactory.parseString("""dcc.miner {
+                                              |  enable = yes
+                                              |}""".stripMargin).withFallback(ConfigFactory.load()).resolve()
+    val settings = ConfigSource.fromConfig(config).at("dcc.miner").loadOrThrow[MinerSettings]
+    settings.selfCommitToGeneration should be(false)
+  }
+
+  it should "self-commit-to-generation can be enabled explicitly" in {
+    val config = ConfigFactory.parseString("""dcc.miner {
+                                              |  enable = yes
+                                              |  self-commit-to-generation = yes
+                                              |}""".stripMargin).withFallback(ConfigFactory.load()).resolve()
+    val settings = ConfigSource.fromConfig(config).at("dcc.miner").loadOrThrow[MinerSettings]
+    settings.selfCommitToGeneration should be(true)
   }
 }
