@@ -238,17 +238,42 @@ object NetworkServer extends ScorexLogging {
       )
     }
 
+    val stallDetector = new PeerStallDetector(networkSettings.peerStallThreshold)
+
     def scheduleConnectTask(): Unit = if (!shutdownInitiated) {
       val delay = (if (peerConnectionsMap.isEmpty || networkSettings.minConnections.exists(_ > peerConnectionsMap.size())) AverageHandshakePeriod
                    else 5.seconds) +
         (ThreadLocalRandom.current().nextInt(1000) - 500).millis // add some noise so that nodes don't attempt to connect to each other simultaneously
 
       workerGroup.schedule(delay) {
+        val hasConnections = !peerConnectionsMap.isEmpty
+        var candidateFound = false
         if (outgoingChannels.size() < networkSettings.maxOutboundConnections) {
           val all = peerInfo.values().iterator().asScala.flatMap(_.remoteAddress.cast[InetSocketAddress])
           peerDatabase
             .nextCandidate(excluded = excludedAddresses ++ all)
-            .foreach(doConnect)
+            .foreach { candidate =>
+              candidateFound = true
+              doConnect(candidate)
+            }
+        }
+
+        // In-process replacement for peer-watchdog.yml's external SSH+docker-restart remedy
+        // (docs/superpowers/plans/2026-09-12-inprocess-peer-stall-detection.md). Fires only on a
+        // genuine, sustained stall (0 connections AND no candidate at all for `peerStallThreshold`
+        // consecutive ticks) -- clears suspension ONLY, never blacklist. A candidate existing but
+        // still mid-handshake is not a stall (candidateFound is derived from nextCandidate
+        // returning Some(...), not from a live connection), and this branch never fires on a node
+        // that simply has no candidates configured at all in a way that reads as an alarm --
+        // PeerStallDetector.tick only returns true once, on the tick where the threshold is newly
+        // crossed, so this log line/self-heal is inherently gated on genuine sustained exhaustion,
+        // not on every empty-candidate tick.
+        if (stallDetector.tick(hasConnections, candidateFound)) {
+          log.warn(
+            s"Peer reconnection stalled: 0 connections and no candidate for ${networkSettings.peerStallThreshold} consecutive attempts. " +
+              "Clearing suspension cache only (blacklist untouched) to allow retrying previously-suspended peers."
+          )
+          peerDatabase.clearSuspension()
         }
 
         scheduleConnectTask()

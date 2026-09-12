@@ -35,6 +35,14 @@ case class NetworkSettings(
     peersBroadcastInterval: FiniteDuration,
     handshakeTimeout: FiniteDuration,
     suspensionResidenceTime: FiniteDuration,
+    // Consecutive scheduleConnectTask ticks with zero connections AND no available candidate
+    // before the in-process stall detector self-heals by clearing suspension (never blacklist).
+    // Default 900: this loop's tick interval is ~1-5s (AverageHandshakePeriod when disconnected,
+    // see NetworkServer.scheduleConnectTask), so 900 ticks is roughly the same ~15-minute window
+    // as the external peer-watchdog.yml's debounce it replaces -- see
+    // docs/superpowers/plans/2026-09-12-inprocess-peer-stall-detection.md. Deliberately at least
+    // as conservative as what it replaces, not more aggressive.
+    peerStallThreshold: Int = 900,
     receivedTxsCacheTimeout: FiniteDuration,
     trafficLogger: TrafficLogger.Settings
 ) derives ConfigReader {
