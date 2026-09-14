@@ -1,7 +1,7 @@
 # To build: docker build -t ghcr.io/decentral-america/ride-runner:latest -f docker/Dockerfile docker
 # JDK for now, because I need jmap, e.g. ijmap -dump:format=b,file=heap-dump.hprof
 # renovate: image=eclipse-temurin tag=25-jdk-noble
-FROM eclipse-temurin:25-jdk-noble@sha256:76dfe92b7a1af973928c04cf9be0d682120d88ece81a830755e093d062222309
+FROM eclipse-temurin:25-jdk-noble@sha256:aba9fea9abc4f8ee284a119afc8a2a56588232e4a2b58656907133a637cc709d
 
 SHELL ["/bin/bash", "-c"]
 
