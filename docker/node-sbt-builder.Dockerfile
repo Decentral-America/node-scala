@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jdk-noble
+FROM eclipse-temurin:25-jdk-noble@sha256:264fafc3390db78c93dc51da0109a0d66ad1fb59f7a893f12b7e3df1f15e52da
 
 ARG DCC_VERSION
 ARG SBT_VERSION
