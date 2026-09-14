@@ -12,7 +12,7 @@ Seq(
   "org.scala-js"       % "sbt-scalajs"               % "1.22.0",
   "org.scalameta"      % "sbt-scalafmt"              % "2.6.1",
   "org.scoverage"      % "sbt-scoverage"             % "2.4.4",
-  "ch.epfl.scala"      % "sbt-scalafix"              % "0.14.7",
+  "ch.epfl.scala"      % "sbt-scalafix"              % "0.14.9",
   "com.github.cb372"   % "sbt-explicit-dependencies" % "0.3.1",
   "org.xerial.sbt"     % "sbt-sonatype"              % "3.12.2",
   "pl.project13.scala" % "sbt-jmh"                   % "0.4.8"
