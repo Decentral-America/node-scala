@@ -23,14 +23,7 @@ import com.decentralchain.transaction.smart.InvokeScriptTransaction
 import com.decentralchain.transaction.smart.script.trace.TracedResult
 import com.decentralchain.transaction.transfer.MassTransferTransaction.ParsedTransfer
 import com.decentralchain.transaction.transfer.{MassTransferTransaction, TransferTransaction}
-import com.decentralchain.transaction.{
-  Asset,
-  Authorized,
-  CommitToGenerationTransaction,
-  GenesisTransaction,
-  PaymentTransaction,
-  Transaction
-}
+import com.decentralchain.transaction.{Asset, Authorized, CommitToGenerationTransaction, GenesisTransaction, PaymentTransaction, Transaction}
 
 import scala.collection.immutable.VectorMap
 

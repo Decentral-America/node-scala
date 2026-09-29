@@ -6,7 +6,6 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.common.utils.EitherExt2.*
 import com.decentralchain.db.WithDomain
 import com.decentralchain.db.WithState.AddrWithBalance
-import com.decentralchain.features.BlockchainFeature
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.state.diffs.BlockDiffer.CurrentBlockFeePart
 import com.decentralchain.state.{Blockchain, Portfolio, Sponsorship, StateSnapshot, TxStateSnapshotHashBuilder}

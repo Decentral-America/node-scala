@@ -8,17 +8,17 @@ object Dependencies {
   // CVE-2026-59901 (Bzip2Decoder infinite loop), CVE-2026-55831/55833 (HTTP codec),
   // CVE-2026-56745 (SpdyHttpDecoder ByteBuf leak) -- all HIGH, and the earlier CVE-2026-44249
   // patch already applied at 4.2.15.Final.
-  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.17.Final"
+  private def nettyModule(module: String) = "io.netty" % s"netty-$module" % "4.2.18.Final"
 
-  val gProtoVersion = "4.35.1"
+  val gProtoVersion = "4.36.2"
   val gProto        = "com.google.protobuf" % "protobuf-java" % Dependencies.gProtoVersion
   val overrides     = Def.setting(
     Seq(
       "org.scala-lang"           %% "scala3-library" % scalaVersion.value,
       "com.google.code.gson"      % "gson"           % "2.14.0",
-      "com.squareup.okio"         % "okio-jvm"       % "3.17.0",
+      "com.squareup.okio"         % "okio-jvm"       % "3.18.2",
       "org.apache.httpcomponents" % "httpclient"     % "4.5.14",
-      "org.slf4j"                 % "slf4j-api"      % "2.0.18",
+      "org.slf4j"                 % "slf4j-api"      % "2.0.20",
       "org.msgpack"               % "msgpack-core"   % "0.9.12",
       nettyModule("codec-http2"),
       nettyModule("codec-http"),
@@ -33,8 +33,8 @@ object Dependencies {
       // Force tools.jackson.core 3.2.1 (fixes GHSA-2m67-wjpj-xhg9 HIGH CVE, 3.1.0 baseline;
       // transitive via pekko-http, document length constraint bypass) and GHSA-r7wm-3cxj-wff9
       // HIGH CVE (incomplete fix in the 3.2.0/2.22.0 baseline).
-      "tools.jackson.core" % "jackson-core"     % "3.2.1",
-      "tools.jackson.core" % "jackson-databind" % "3.2.1",
+      "tools.jackson.core" % "jackson-core"     % "3.2.3",
+      "tools.jackson.core" % "jackson-databind" % "3.2.3",
       gProto
     )
   )
@@ -43,27 +43,27 @@ object Dependencies {
   lazy val protoSchemasLib =
     "io.decentralchain" % "protobuf-schemas" % "1.6.6" classifier "protobuf-src" intransitive ()
 
-  private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.6.0"
+  private def pekkoModule(module: String) = "org.apache.pekko" %% s"pekko-$module" % "1.7.0"
 
-  private def pekkoHttpModule(module: String, version: String = "1.3.0") = "org.apache.pekko" %% module % version
+  private def pekkoHttpModule(module: String, version: String = "1.4.0") = "org.apache.pekko" %% module % version
 
   private def kamonModule(module: String) = "io.kamon" %% s"kamon-$module" % "2.8.1"
 
   // 2.22.1 fixes GHSA-r7wm-3cxj-wff9 HIGH CVE (incomplete fix in 2.22.0)
-  private def jacksonModule(group: String, module: String, version: String = "2.22.1") =
+  private def jacksonModule(group: String, module: String, version: String = "2.22.3") =
     s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
   private def web3jModule(module: String) = "org.web3j" % module % "6.0.0" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
-  def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.4.1")
+  def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.5.0")
 
-  private def grpcModule(module: String) = "io.grpc" % module % "1.82.1"
+  private def grpcModule(module: String) = "io.grpc" % module % "1.84.0"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
-  val googleGuava     = "com.google.guava"    % "guava"             % "33.6.0-jre"
+  val googleGuava     = "com.google.guava"    % "guava"             % "33.7.2-jre"
   val kamonCore       = kamonModule("core")
-  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.5.37"
-  val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.11"
+  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.6.4"
+  val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.14"
   val curve25519      = "io.decentralchain"   % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
 
@@ -83,11 +83,11 @@ object Dependencies {
 
   val cryptoProviders = Seq(
     // Windows x86_64, Windows x86, macOS x86_64, linux x86_64
-    "org.conscrypt" % "conscrypt-openjdk-uber" % "2.5.2",
+    "org.conscrypt" % "conscrypt-openjdk-uber" % "2.7.0",
     // macOS aarch64
     amazonCorretto("osx-aarch_64"),
     // fallback Java
-    "org.bouncycastle" % "bcprov-jdk18on" % "1.84"
+    "org.bouncycastle" % "bcprov-jdk18on" % "1.86"
   )
 
   val lang = Def.setting(
@@ -116,18 +116,20 @@ object Dependencies {
 
   lazy val it = scalaTest +: Seq(
     logback,
-    "com.github.jnr"         % "jnr-unixsocket"                    % "0.39.1", // To support Apple ARM
+    "com.github.jnr"         % "jnr-unixsocket"                    % "0.39.5", // To support Apple ARM
     "com.github.docker-java" % "docker-java-core"                  % "3.7.1",
     "com.github.docker-java" % "docker-java-transport-httpclient5" % "3.7.1",
-    jacksonModule("dataformat", "dataformat-properties", "2.22.1"),
+    jacksonModule("dataformat", "dataformat-properties", "2.22.3"),
     asyncHttpClient
   ).map(_ % Test)
 
   lazy val test = scalaTest +: Seq(
     logback,
-    "org.scalatestplus" %% "scalacheck-1-19" % "3.2.20.0",
-    "org.scalacheck"    %% "scalacheck"      % "1.19.0",
-    "org.scalamock"     %% "scalamock"       % "7.5.5"
+    "org.scalatestplus" %% "scalacheck-1-20" % "3.2.20.0",
+    "org.scalacheck"    %% "scalacheck"      % "1.20.0",
+    "org.scalamock"     %% "scalamock"       % "7.6.0",
+    // scalamock 7.6.0 moved org.scalamock.scalatest into its own artifact
+    "org.scalamock" %% "scalamock-scalatest" % "7.6.0"
   ).map(_ % Test)
 
   lazy val logDeps = Seq(
@@ -145,7 +147,7 @@ object Dependencies {
       "commons-net"            % "commons-net"               % "3.13.0",
       "com.github.pureconfig" %% "pureconfig-core"           % "0.17.10",
       "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.10",
-      "net.logstash.logback"   % "logstash-logback-encoder"  % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
+      "net.logstash.logback"   % "logstash-logback-encoder"  % "9.0" % Runtime, // 9.x is built on Jackson 3 (tools.jackson), already on the classpath
       kamonCore,
       kamonModule("pekko-http"),
       kamonModule("executors"),
@@ -194,13 +196,13 @@ object Dependencies {
   lazy val rideRunner = Def.setting(
     Seq(
       rocksdb,
-      "com.github.ben-manes.caffeine" % "caffeine"                 % "3.2.4",
-      "net.logstash.logback"          % "logstash-logback-encoder" % "8.1" % Runtime, // 9.0 requires Jackson 3; stay on 8.1 (Jackson 2.x compatible)
+      "com.github.ben-manes.caffeine" % "caffeine" % "3.3.0",
+      "net.logstash.logback" % "logstash-logback-encoder" % "9.0" % Runtime, // 9.x is built on Jackson 3 (tools.jackson), already on the classpath
       kamonModule("caffeine"),
       kamonModule("prometheus"),
       sttp3,
       sttp3Monix,
-      "org.scala-lang.modules"             %% "scala-xml"              % "2.4.0", // JUnit reports
+      "org.scala-lang.modules"             %% "scala-xml"              % "2.5.0", // JUnit reports
       pekkoHttpModule("pekko-http-testkit") % Test,
       "com.softwaremill.diffx"             %% "diffx-core"             % "0.9.0" % Test,
       "com.softwaremill.diffx"             %% "diffx-scalatest-should" % "0.9.0" % Test,

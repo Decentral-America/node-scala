@@ -62,7 +62,8 @@ class HotStuffWatchdogFinalizedHeightIsolationSpecification extends FlatSpec {
   "HotStuffWatchdog's recovery action" should "leave a finalizedHeight canary completely untouched, even after firing for real" in {
     // The canary: a var that ONLY `mutateFinalizedHeight` below is capable of changing. Standing in for
     // the real `finalizedHeight`/`BlockchainUpdaterImpl` this watchdog must never reach.
-    var finalizedHeightCanary                       = 0
+    var finalizedHeightCanary = 0
+    @scala.annotation.unused
     def mutateFinalizedHeight(newHeight: Int): Unit = finalizedHeightCanary = newHeight // deliberately never called below
 
     val lockPath = tempLockPath()

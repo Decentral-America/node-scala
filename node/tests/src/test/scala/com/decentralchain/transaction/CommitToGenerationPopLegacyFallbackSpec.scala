@@ -39,7 +39,7 @@ class CommitToGenerationPopLegacyFallbackSpec extends FlatSpec {
     // DO NOT regenerate these literals to "fix" a failure: a failure here means an actual regression
     // in the legacy fallback path (BlsUtils.BlsLegacyDomainSeparationTag or
     // CommitToGenerationTransaction's private legacy message layout), not a stale vector.
-    val pk = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
+    val pk        = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
     val signature = Base64.decode(
       "qCjEnAO3kh+PIFnsIOJtKqpJYPnUArDe1VjVvqi6Bygr+kZq68vtLR4IJ9TFuIYUDpM2ua73KFNpp4l7QdQ8Db23AQ+R6WsI4799GnwRgA8P7fBruFRkdRtBHcC4VpOQ"
     )
@@ -74,7 +74,7 @@ class CommitToGenerationPopLegacyFallbackSpec extends FlatSpec {
     // Signed under a v2 message, but for a DIFFERENT chainId than the one we verify against, and
     // under neither the legacy message shape nor the legacy DST -- must fail both branches.
     val wrongChainId = 'W'.toByte
-    val signature     = CommitToGenerationTransaction.mkPopSignature(endorserKp, start, sender.publicKey, wrongChainId)
+    val signature    = CommitToGenerationTransaction.mkPopSignature(endorserKp, start, sender.publicKey, wrongChainId)
 
     CommitToGenerationTransaction.verifyPop(
       signature.arr,

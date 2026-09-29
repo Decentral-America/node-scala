@@ -17,13 +17,13 @@ import com.decentralchain.test.FlatSpec
   * (`BlockEndorsement.sign`/`signed`) stays v2-only.
   */
 class BlockEndorsementLegacyFallbackSpec extends FlatSpec {
-  private val kp: BlsKeyPair = TestBlsKeyPair.unsafe(Array.fill[Byte](32)(7))
+  private val kp: BlsKeyPair  = TestBlsKeyPair.unsafe(Array.fill[Byte](32)(7))
   private val kp2: BlsKeyPair = TestBlsKeyPair.unsafe(Array.fill[Byte](32)(8))
 
-  private val finalizedId   = ByteStr(Array.fill[Byte](32)(1))
+  private val finalizedId     = ByteStr(Array.fill[Byte](32)(1))
   private val finalizedHeight = Height(100)
-  private val endorsedId    = ByteStr(Array.fill[Byte](32)(2))
-  private val message       = BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId)
+  private val endorsedId      = ByteStr(Array.fill[Byte](32)(2))
+  private val message         = BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId)
 
   "BlockEndorsement.verify" should "accept a legacy-tagged endorsement signature (pre-v2 on-chain endorsement)" in {
     val legacySig = kp.sign(message, BlsUtils.BlsLegacyDomainSeparationTag)
@@ -41,8 +41,8 @@ class BlockEndorsementLegacyFallbackSpec extends FlatSpec {
   }
 
   "BlockEndorsement.signatureValid" should "accept a legacy-tagged signature via the case-class instance method" in {
-    val legacySig    = kp.sign(message, BlsUtils.BlsLegacyDomainSeparationTag)
-    val endorsement  = BlockEndorsement(com.decentralchain.state.GeneratorIndex(0), finalizedId, finalizedHeight, endorsedId, legacySig)
+    val legacySig   = kp.sign(message, BlsUtils.BlsLegacyDomainSeparationTag)
+    val endorsement = BlockEndorsement(com.decentralchain.state.GeneratorIndex(0), finalizedId, finalizedHeight, endorsedId, legacySig)
     endorsement.signatureValid(kp.publicKey) shouldBe a[Right[?, ?]]
   }
 

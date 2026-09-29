@@ -1348,7 +1348,7 @@ class BlockRewardSpec extends FreeSpec with WithDomain {
   "Boost block reward:" - {
     "block reward is" - {
       "increased after feature activation" in boostBlockRewardActivationScenario(0.5.dcc, 2.dcc)
-      "decreased after feature activation" in boostBlockRewardActivationScenario(-0.5.dcc, 3.5.dcc / 2)
+      "decreased after feature activation" in boostBlockRewardActivationScenario((-0.5).dcc, 3.5.dcc / 2)
       "unchanged after feature activation" in boostBlockRewardActivationScenario(0, 2.dcc)
     }
   }

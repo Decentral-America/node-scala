@@ -21,7 +21,7 @@ class HotStuffWatchdogBackoffSpecification extends FlatSpec {
     Paths.get(dir.toString, "locked-qc.dat")
   }
 
-  private def newWatchdog(threshold: Int = 3, maxConsecutiveRecoveries: Int = 3): (HotStuffWatchdog, () => Int) = {
+  private def newWatchdog(threshold: Int, maxConsecutiveRecoveries: Int): (HotStuffWatchdog, () => Int) = {
     var resetCount = 0
     val watchdog   = new HotStuffWatchdog(
       committeeNonEmpty = () => true,

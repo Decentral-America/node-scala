@@ -11,6 +11,7 @@ case class BlockEndorsement(
     endorsedId: BlockId,
     signature: BlsSignature
 ) {
+
   /** Verifies this endorsement's signature. Tries the current `_ENDORSE_` DST first; if that fails,
     * falls back to the legacy `_NUL_` DST (message layout is unchanged either way -- only the DST
     * ever differed, see `BlockEndorsement.legacyFallbackVerify`'s doc) so historical, already-on-chain
@@ -57,8 +58,8 @@ object BlockEndorsement {
     */
   def verify(signatureBytes: Array[Byte], message: Array[Byte], endorserPublicKeyBytes: Array[Byte]): Either[String, Unit] =
     BlsUtils.verifyBasic(signatureBytes, message, endorserPublicKeyBytes, Dst) match {
-      case Right(())   => Right(())
-      case Left(_)     => BlsUtils.verifyBasic(signatureBytes, message, endorserPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag)
+      case Right(()) => Right(())
+      case Left(_)   => BlsUtils.verifyBasic(signatureBytes, message, endorserPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag)
     }
 
   /** Verify-only bimodal check for an AGGREGATED endorsement signature (multiple endorsers, one
@@ -69,7 +70,7 @@ object BlockEndorsement {
     */
   def verifyAgg(aggSignatureBytes: Array[Byte], message: Array[Byte], endorserPublicKeys: Iterable[Array[Byte]]): Either[String, Unit] =
     BlsUtils.verifyAgg(aggSignatureBytes, message, endorserPublicKeys, Dst) match {
-      case Right(())   => Right(())
-      case Left(_)     => BlsUtils.verifyAgg(aggSignatureBytes, message, endorserPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
+      case Right(()) => Right(())
+      case Left(_)   => BlsUtils.verifyAgg(aggSignatureBytes, message, endorserPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
     }
 }

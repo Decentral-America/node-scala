@@ -369,7 +369,7 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest, TestSchedulerO
     // ForgeAttemptResult.TemporaryFailure retry path (never reaching appendTask/BlockAppender at
     // all, the path this test actually needs to exercise). TestTime keeps the clock fully
     // deterministic and under the test's control, matching MinerWithFinalitySuite's approach.
-    val testTime         = TestTime(System.currentTimeMillis() - 1.hour.toMillis)
+    val testTime          = TestTime(System.currentTimeMillis() - 1.hour.toMillis)
     val genesis           = TestBlock.create(testTime.correctedTime(), Nil).block
     val processBlockCalls = AtomicInt(0)
     val blockchainUpdater = new EmptyBlockchain with BlockchainUpdater with NG {
@@ -461,14 +461,14 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest, TestSchedulerO
     val dccSettings = {
       val config = ConfigFactory
         .parseString(s"""
-                       |dcc.miner {
-                       |  quorum = 0
-                       |  interval-after-last-block-then-generation-is-allowed = 0
-                       |  no-quorum-mining-delay = ${noQuorumMiningDelay.toMillis}ms
-                       |}
-                       |
-                       |dcc.features.supported=[2]
-                       |""".stripMargin)
+                        |dcc.miner {
+                        |  quorum = 0
+                        |  interval-after-last-block-then-generation-is-allowed = 0
+                        |  no-quorum-mining-delay = ${noQuorumMiningDelay.toMillis}ms
+                        |}
+                        |
+                        |dcc.features.supported=[2]
+                        |""".stripMargin)
         .withFallback(ConfigFactory.load())
 
       DCCSettings.fromRootConfig(loadConfig(config))
@@ -485,9 +485,10 @@ class MiningFailuresSuite extends FlatSpec, WithNewDBForEachTest, TestSchedulerO
     val allChannels       = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
     val wallet            = Wallet(WalletSettings(None, Some("123"), None))
     wallet.generateNewAccount()
-    val utxPool = new UtxPoolImpl(testTime, blockchainUpdater, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
-    val pos     = PoSSelector(blockchainUpdater, dccSettings.synchronizationSettings.maxBaseTarget)
-    val miner   = new MinerImpl(
+    val utxPool =
+      new UtxPoolImpl(testTime, blockchainUpdater, dccSettings.utxSettings, dccSettings.maxTxErrorLogSize, dccSettings.minerSettings.enable)
+    val pos   = PoSSelector(blockchainUpdater, dccSettings.synchronizationSettings.maxBaseTarget)
+    val miner = new MinerImpl(
       allChannels,
       blockchainUpdater,
       dccSettings.copy(blockchainSettings = blockchainSettings),

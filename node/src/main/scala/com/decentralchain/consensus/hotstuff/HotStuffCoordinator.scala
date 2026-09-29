@@ -489,9 +489,7 @@ object HotStuffCoordinator {
               val proof = HotStuffEquivocationProof(a, b)
               val ok    = for {
                 _ <- proof.consistent
-                _ <- proof.signaturesValid(
-                  i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey)
-                )
+                _ <- proof.signaturesValid(i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey))
               } yield ()
               ok match {
                 case Right(()) =>
