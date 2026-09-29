@@ -18,7 +18,7 @@ import com.decentralchain.state.appender.MaxTimeDrift
 import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.state.{Blockchain, CompleteBlockchainUpdater, SnapshotBlockchain, StateSnapshot, TxStateSnapshotHashBuilder}
 import com.decentralchain.transaction.TxValidationError.GenericError
-import com.decentralchain.transaction.{BlockchainUpdater, Transaction}
+import com.decentralchain.transaction.Transaction
 import com.decentralchain.utils.{ScorexLogging, Time}
 import com.decentralchain.wallet.Wallet
 import io.netty.channel.Channel

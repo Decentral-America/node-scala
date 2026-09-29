@@ -30,7 +30,7 @@ class HotStuffWatchdogSpecification extends FlatSpec {
 
   private def newWatchdog(
       committeeProvider: () => GeneratorSet,
-      threshold: Int = 3,
+      threshold: Int,
       lockPath: java.nio.file.Path = tempLockPath()
   ): (HotStuffWatchdog, () => Int) = {
     var resetCount = 0

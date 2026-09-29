@@ -1,6 +1,6 @@
 package com.decentralchain
 
-import com.decentralchain.utils.{SystemTime, Time}
+import com.decentralchain.utils.SystemTime
 import org.scalatest.Suite
 
 trait NTPTime { suite: Suite =>

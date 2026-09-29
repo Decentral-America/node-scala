@@ -37,7 +37,7 @@ import com.decentralchain.test.*
 import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.TxHelpers.defaultAddress
 import com.decentralchain.transaction.smart.script.trace.TracedResult
-import com.decentralchain.transaction.{BlockchainUpdater, GenesisTransaction, Transaction, TxHelpers}
+import com.decentralchain.transaction.{GenesisTransaction, Transaction, TxHelpers}
 import com.decentralchain.{NTPTime, TestHelpers}
 import org.rocksdb.RocksDB
 import org.scalatest.matchers.should.Matchers
