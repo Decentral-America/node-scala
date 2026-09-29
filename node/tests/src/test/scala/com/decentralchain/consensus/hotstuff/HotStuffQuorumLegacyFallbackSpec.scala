@@ -61,14 +61,22 @@ class HotStuffQuorumLegacyFallbackSpec extends FlatSpec {
   }
 
   "verifyQC" should "accept a QC whose signatures are legacy-tagged" in {
-    val votes = Seq(vote(0, BlsUtils.BlsLegacyDomainSeparationTag), vote(1, BlsUtils.BlsLegacyDomainSeparationTag), vote(2, BlsUtils.BlsLegacyDomainSeparationTag))
-    val qc    = HotStuffQuorum.formQC(votes, committee).toOption.get
+    val votes = Seq(
+      vote(0, BlsUtils.BlsLegacyDomainSeparationTag),
+      vote(1, BlsUtils.BlsLegacyDomainSeparationTag),
+      vote(2, BlsUtils.BlsLegacyDomainSeparationTag)
+    )
+    val qc = HotStuffQuorum.formQC(votes, committee).toOption.get
     HotStuffQuorum.verifyQC(qc, committee) should be(Right(()))
   }
 
   it should "still accept a QC whose signatures are v2 (_HSVOTE_)-tagged (no regression)" in {
-    val votes = Seq(vote(0, BlsUtils.BlsHsVoteDomainSeparationTag), vote(1, BlsUtils.BlsHsVoteDomainSeparationTag), vote(2, BlsUtils.BlsHsVoteDomainSeparationTag))
-    val qc    = HotStuffQuorum.formQC(votes, committee).toOption.get
+    val votes = Seq(
+      vote(0, BlsUtils.BlsHsVoteDomainSeparationTag),
+      vote(1, BlsUtils.BlsHsVoteDomainSeparationTag),
+      vote(2, BlsUtils.BlsHsVoteDomainSeparationTag)
+    )
+    val qc = HotStuffQuorum.formQC(votes, committee).toOption.get
     HotStuffQuorum.verifyQC(qc, committee) should be(Right(()))
   }
 

@@ -62,8 +62,8 @@ object HotStuffQuorum {
   /** Same v2-then-legacy fallback as [[verifyVoteSignature]], for an aggregated QC signature. */
   private def verifyQCSignature(aggSignatureBytes: Array[Byte], message: Array[Byte], blsPublicKeys: Iterable[Array[Byte]]): Either[String, Unit] =
     BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, VoteDst) match {
-      case Right(())   => Right(())
-      case Left(_)     => BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
+      case Right(()) => Right(())
+      case Left(_)   => BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
     }
 
   /** The transition-gating rule (T10, design doc §6/§8 follow-up (a)): whether a QC/vote whose signed

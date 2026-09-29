@@ -36,7 +36,7 @@ class PeerStallDetectorSpecification extends AnyFreeSpec with Matchers {
       val detector = new PeerStallDetector(threshold = 3)
       detector.tick(hasConnections = false, hasCandidate = false) shouldBe false
       detector.tick(hasConnections = false, hasCandidate = false) shouldBe false
-      detector.tick(hasConnections = true, hasCandidate = false) shouldBe false // reconnected, resets
+      detector.tick(hasConnections = true, hasCandidate = false) shouldBe false  // reconnected, resets
       detector.tick(hasConnections = false, hasCandidate = false) shouldBe false // 1 again
       detector.tick(hasConnections = false, hasCandidate = false) shouldBe false // 2
       detector.tick(hasConnections = false, hasCandidate = false) shouldBe true  // 3 -- fires again

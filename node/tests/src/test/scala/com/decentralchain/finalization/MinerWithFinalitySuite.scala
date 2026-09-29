@@ -438,7 +438,7 @@ class MinerWithFinalitySuite extends BaseFinalizationSpec, TestSchedulerOps {
         // calculation divide by zero elsewhere -- a tiny positive balance is enough to still land
         // below the minimal generating balance and safely trigger the veto under test.
         val depositHeld = d.blockchain.generationDeposit(thisNodeAcc.toAddress)
-        val block3 = d.createBlock(
+        val block3      = d.createBlock(
           version = Block.ProtoBlockVersion,
           txs = Seq(
             TxHelpers.transfer(

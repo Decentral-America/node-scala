@@ -129,7 +129,7 @@ object Dependencies {
     "org.scalacheck"    %% "scalacheck"      % "1.20.0",
     "org.scalamock"     %% "scalamock"       % "7.6.0",
     // scalamock 7.6.0 moved org.scalamock.scalatest into its own artifact
-    "org.scalamock"     %% "scalamock-scalatest" % "7.6.0"
+    "org.scalamock" %% "scalamock-scalatest" % "7.6.0"
   ).map(_ % Test)
 
   lazy val logDeps = Seq(
@@ -196,8 +196,8 @@ object Dependencies {
   lazy val rideRunner = Def.setting(
     Seq(
       rocksdb,
-      "com.github.ben-manes.caffeine" % "caffeine"                 % "3.3.0",
-      "net.logstash.logback"          % "logstash-logback-encoder" % "9.0" % Runtime, // 9.x is built on Jackson 3 (tools.jackson), already on the classpath
+      "com.github.ben-manes.caffeine" % "caffeine" % "3.3.0",
+      "net.logstash.logback" % "logstash-logback-encoder" % "9.0" % Runtime, // 9.x is built on Jackson 3 (tools.jackson), already on the classpath
       kamonModule("caffeine"),
       kamonModule("prometheus"),
       sttp3,

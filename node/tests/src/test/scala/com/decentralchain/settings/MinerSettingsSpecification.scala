@@ -42,18 +42,24 @@ class MinerSettingsSpecification extends FlatSpec {
   }
 
   it should "self-commit-to-generation default to false" in {
-    val config = ConfigFactory.parseString("""dcc.miner {
-                                              |  enable = yes
-                                              |}""".stripMargin).withFallback(ConfigFactory.load()).resolve()
+    val config = ConfigFactory
+      .parseString("""dcc.miner {
+                     |  enable = yes
+                     |}""".stripMargin)
+      .withFallback(ConfigFactory.load())
+      .resolve()
     val settings = ConfigSource.fromConfig(config).at("dcc.miner").loadOrThrow[MinerSettings]
     settings.selfCommitToGeneration should be(false)
   }
 
   it should "self-commit-to-generation can be enabled explicitly" in {
-    val config = ConfigFactory.parseString("""dcc.miner {
-                                              |  enable = yes
-                                              |  self-commit-to-generation = yes
-                                              |}""".stripMargin).withFallback(ConfigFactory.load()).resolve()
+    val config = ConfigFactory
+      .parseString("""dcc.miner {
+                     |  enable = yes
+                     |  self-commit-to-generation = yes
+                     |}""".stripMargin)
+      .withFallback(ConfigFactory.load())
+      .resolve()
     val settings = ConfigSource.fromConfig(config).at("dcc.miner").loadOrThrow[MinerSettings]
     settings.selfCommitToGeneration should be(true)
   }
