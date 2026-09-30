@@ -4,7 +4,7 @@
   "extends": ["config:best-practices", ":semanticCommitTypeAll(chore)"],
   "labels": ["dependencies"],
   "osvVulnerabilityAlerts": true,
-  "schedule": ["before 4am on monday"],
+  "schedule": ["* * * * 1"],
   "timezone": "America/Costa_Rica",
   "prConcurrentLimit": 10,
   "prHourlyLimit": 5,
