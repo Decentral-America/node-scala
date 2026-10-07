@@ -282,6 +282,13 @@ object HotStuffCoordinator {
       EngineState(
         committeeProvider(),
         safety = SafetyState(lockedQC = initialLockedQC, lastVotedView = initialLastVotedView),
+        // Start just above every view this replica can no longer use: it already voted up to the restored
+        // `lastVotedView` (and `safeToVote` requires `proposal.view > lastVotedView`), and a restored lock
+        // was formed at its view. Starting at 0 instead left every node unable to vote after the whole
+        // committee restarted at once (live testnet 2026-10-07: lastVotedView ~382843, so ~5 days of
+        // 1200 ms round timeouts before anyone could vote; HotStuff never committed). With no persisted
+        // state (-1, None) this is view 0, as before.
+        pacemaker = PacemakerState(view = (initialLastVotedView max initialLockedQC.fold(-1)(_.view)) + 1),
         committeeEpoch = committeeEpochProvider()
       )
     private var pool = VotePool()

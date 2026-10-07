@@ -55,10 +55,11 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
   private def withMiner(dccSettings: DCCSettings)(f: (MinerImpl, Domain, UtxPoolImpl) => Unit): Unit =
     withMinerAndChannels(dccSettings, new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))(f)
 
-  private def withMinerAndChannels(dccSettings: DCCSettings, channels: ChannelGroup)(f: (MinerImpl, Domain, UtxPoolImpl) => Unit): Unit =
+  private def withMinerAndChannels(dccSettings: DCCSettings, channels: ChannelGroup, time: TestTime = TestTime())(
+      f: (MinerImpl, Domain, UtxPoolImpl) => Unit
+  ): Unit =
     withDomain(dccSettings, AddrWithBalance.enoughBalances(minerAcc)) { d =>
-      val time = TestTime()
-      val utx  = new UtxPoolImpl(
+      val utx = new UtxPoolImpl(
         time,
         d.blockchainUpdater,
         dccSettings.utxSettings,
@@ -370,5 +371,60 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
       }
     }
     peer.finishAndReleaseAll()
+  }
+
+  private def awaitOutbound(peer: EmbeddedChannel, timeoutMs: Long = 3000): AnyRef = {
+    val deadline     = System.currentTimeMillis() + timeoutMs
+    var sent: AnyRef = peer.readOutbound[AnyRef]()
+    while (sent == null && System.currentTimeMillis() < deadline) { Thread.sleep(50); peer.runPendingTasks(); sent = peer.readOutbound[AnyRef]() }
+    sent
+  }
+
+  // Live testnet, 2026-10-07 (first period after the #66 rollout): main self-committed 8s after a restart,
+  // when it had 0 peers ("Loaded 0 known peer(s)"; first handshake 2 minutes later). The one-shot broadcast
+  // reached nobody, the commit sat only in main's own pool, and main -- not allowed to forge that period --
+  // lost its committee slot. A commit still pending in the pool must be re-broadcast while it can land.
+  "a pending self-commit is re-broadcast to peers that connect after the first broadcast" in {
+    val channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE) // no peers yet, like a node just started
+    val time     = TestTime()
+    val peer     = new EmbeddedChannel()
+    withMinerAndChannels(settingsWithSelfCommit(true), channels, time) { (miner, d, utx) =>
+      val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height)).get
+      miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+      val committed = awaitCommits(utx)
+      committed should have size 1
+      Thread.sleep(300) // the dispatched attempt has finished (its only broadcast went to nobody)
+
+      channels.add(peer) // a peer connects later
+      time.setTime(time.correctedTime() + 61_000)
+      miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+      withClue("the still-pending commit must be re-broadcast to the newly connected peer: ") {
+        awaitOutbound(peer) shouldBe committed.head
+      }
+
+      // Not more often than the re-broadcast interval.
+      miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+      awaitOutbound(peer, 500) shouldBe null
+      utx.all.collect { case tx: CommitToGenerationTransaction => tx } should have size 1
+    }
+    peer.finishAndReleaseAll()
+  }
+
+  "a pending self-commit evicted from the pool without landing is replaced by a new attempt" in {
+    withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+      val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height)).get
+      miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+      val first = awaitCommits(utx)
+      first should have size 1
+      Thread.sleep(300)
+
+      utx.removeAll(first) // evicted (e.g. by revalidation) without ever being mined
+      d.blockchain.committedGenerators(period.next).exists(_._1 == minerAcc.toAddress) shouldBe false
+
+      miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+      val retried = awaitCommits(utx)
+      withClue("an evicted, never-mined commit must not end the period's attempts: ") { retried should have size 1 }
+      retried.head.generationPeriodStart shouldBe period.next.start
+    }
   }
 }

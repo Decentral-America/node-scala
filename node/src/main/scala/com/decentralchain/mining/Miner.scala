@@ -91,6 +91,12 @@ class MinerImpl(
   // an already-attempted period; a fresh process restart legitimately attempts again.
   private val lastSelfCommitAttempt = new AtomicReference[Map[Address, GenerationPeriod]](Map.empty)
 
+  // The self-commit accepted into the UTX pool for each account, with when it was last broadcast. Its
+  // single broadcast can reach nobody (live testnet 2026-10-07: main self-committed 8s after a restart,
+  // with 0 peers until 2 minutes later, and lost its committee slot), so while it is still pending it is
+  // re-broadcast from later forges at most every `SelfCommitRebroadcastInterval`.
+  private val pendingSelfCommits = new AtomicReference[Map[Address, (CommitToGenerationTransaction, Long)]](Map.empty)
+
   @volatile
   private var debugStateRef: MinerDebugInfo.State = MinerDebugInfo.Disabled
 
@@ -383,6 +389,30 @@ class MinerImpl(
     ()
   }
 
+  /** Keeps an accepted-but-not-yet-mined self-commit for `period.next` alive until it lands:
+    *   - on chain (committed) or for another period: forget it;
+    *   - still in the UTX pool: re-broadcast it, at most every `SelfCommitRebroadcastInterval` (same
+    *     transaction, so peers dedup it by id; nothing new is signed);
+    *   - gone from the pool without landing (evicted): release the claim so this call dispatches a new one.
+    */
+  private def followUpPendingSelfCommit(address: Address, period: GenerationPeriod, alreadyCommitted: Boolean): Unit =
+    pendingSelfCommits.get().get(address).foreach { case (tx, lastBroadcast) =>
+      if (alreadyCommitted || tx.generationPeriodStart != period.next.start) {
+        pendingSelfCommits.updateAndGet(_.removed(address))
+      } else if (utx.transactionById(tx.id()).isDefined) {
+        val now = timeService.correctedTime()
+        if (now - lastBroadcast >= Miner.SelfCommitRebroadcastInterval.toMillis) {
+          allChannels.broadcast(tx)
+          pendingSelfCommits.updateAndGet(_.updated(address, (tx, now)))
+          log.info(s"Re-broadcast pending self-commit ${tx.id()} of $address to generation period ${period.next}")
+        }
+      } else {
+        pendingSelfCommits.updateAndGet(_.removed(address))
+        releaseSelfCommitAttempt(address, period.next)
+        log.warn(s"Pending self-commit ${tx.id()} of $address to generation period ${period.next} left the UTX pool without landing; retrying")
+      }
+    }
+
   /** In-process replacement for the external auto-commit-generators/commit-generators-hotstuff
     * GH Actions crons (docs/superpowers/plans/2026-09-12-inprocess-self-commit-generation.md).
     * Called from `forgeBlock` on EVERY key-block forge for which the height falls inside a generation
@@ -404,6 +434,7 @@ class MinerImpl(
     */
   private[mining] def maybeSelfCommit(account: KeyPair, blockchain: Blockchain, period: GenerationPeriod): Unit = {
     val alreadyCommitted = blockchain.committedGenerators(period.next).exists(_._1 == account.toAddress)
+    followUpPendingSelfCommit(account.toAddress, period, alreadyCommitted)
     if (Miner.shouldSelfCommit(minerSettings.selfCommitToGeneration, alreadyCommitted) && claimSelfCommitAttempt(account.toAddress, period)) {
       Task {
         val blsKeyPair = BlsKeyPair(account.privateKey)
@@ -433,6 +464,7 @@ class MinerImpl(
                 // node's own blocks: live testnet 2026-10-04..06, 61/61 commits on chain were in a block forged
                 // by their own sender, and a node that did not forge in time lost its committee slot.
                 allChannels.broadcast(tx)
+                pendingSelfCommits.updateAndGet(_.updated(account.toAddress, (tx, timeService.correctedTime())))
                 log.info(s"Self-committed ${account.toAddress} to generation period ${period.next}")
               case Right(false) => log.debug(s"Self-commit for ${account.toAddress} at period ${period.next}: already in UTX pool")
               case Left(err)    =>
@@ -691,6 +723,9 @@ object Miner {
   private[mining] val microMiningStarted = Kamon.counter("micro-mining-started").withoutTags()
 
   val MaxTransactionsPerMicroblock: Int = 500
+
+  /** How often a still-pending self-commit is re-broadcast (see `MinerImpl.followUpPendingSelfCommit`). */
+  val SelfCommitRebroadcastInterval: FiniteDuration = 1.minute
 
   val StrictDisabledMiner: Miner & MinerDebugInfo = new Miner with MinerDebugInfo {
     override def scheduleMining(baseBlockchain: Option[Blockchain], cancelMicroBlockMining: Boolean): Unit = {}
