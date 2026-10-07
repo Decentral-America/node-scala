@@ -234,7 +234,13 @@ class MinerImpl(
     // maybeSelfCommit short-circuits on the memoized on-chain committedGenerators(period.next) gate
     // and on the per-(account, period.next) in-process claim before doing any work, so all but the
     // first call per period are no-ops.
-    blockchain.generationPeriodOf(newBlockHeight).foreach(period => maybeSelfCommit(account, blockchain, period))
+    // The target is derived from the period of the LIQUID TIP (`height`), not of the block being forged
+    // (`newBlockHeight`): the transaction is validated by the UTX pool (and later packed into a
+    // microblock) against the liquid tip, whose `currentGenerationPeriod.next.start` is what
+    // CommitToGenerationTransactionDiff requires. Deriving it from `newBlockHeight` made every attempt
+    // taken while forging the FIRST block of a period target one period too far and get rejected
+    // (`Expected the next period start height (x01), got x01+100`, live testnet 2026-10-04..06).
+    blockchain.generationPeriodOf(Height(height)).foreach(period => maybeSelfCommit(account, blockchain, period))
 
     metrics.blockBuildTimeStats.measureSuccessful {
       val stopReasons = for {
@@ -316,7 +322,7 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = withHotStuffConflicts(tryCollectSelfWithGrace(reference)),
+            finalizationVoting = withHotStuffConflicts(tryCollectSelfWithGrace(reference, address)),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
@@ -343,10 +349,11 @@ class MinerImpl(
     *
     * Not a correctness gate (the on-chain `committedGenerators` check and
     * `CommitToGenerationTransactionDiff`'s on-append rejection are what actually prevent a double
-    * commit from landing) -- purely a UTX-churn and log-noise suppressor. It deliberately does NOT
-    * expire within a period: if an attempt is dispatched and then silently lost, the operator alarm is
-    * the `period.end` warn in `forgeBlock`, not a blind re-submission; the tx is still live in the UTX
-    * pool for the whole period and re-minting it with a fresh timestamp would not make it land sooner.
+    * commit from landing) -- purely a UTX-churn and log-noise suppressor. The claim is held for as long as
+    * the attempt sits in the UTX pool (it is broadcast and stays valid for the whole period, so re-minting
+    * it with a fresh timestamp would not make it land sooner), but it is RELEASED by
+    * `releaseSelfCommitAttempt` when the attempt is rejected or fails to build, so a later forge in the
+    * same period retries instead of giving up for the rest of the period.
     * The map tracks only the LAST `period.next` attempted per account, so entries supersede themselves
     * as periods advance -- no cleanup needed, and it cannot grow unboundedly. A fresh process restart
     * legitimately attempts again.
@@ -362,6 +369,18 @@ class MinerImpl(
       }
     }
     claimed
+  }
+
+  /** Releases a claim made by `claimSelfCommitAttempt` for an attempt that did NOT land in the UTX pool
+    * (rejected, failed to build, or threw), so a later forge in the same period retries. Without this a
+    * single rejected attempt consumed the period's only chance: live testnet 2026-10-04..06, a node forged
+    * all 100 blocks of a period after one rejected attempt and never retried, leaving the next period's
+    * committee empty. Only releases if the claim still names `target`, so it never clobbers a claim for a
+    * newer period made meanwhile.
+    */
+  private def releaseSelfCommitAttempt(address: Address, target: GenerationPeriod): Unit = {
+    lastSelfCommitAttempt.updateAndGet(attempts => if (attempts.get(address).contains(target)) attempts.removed(address) else attempts)
+    ()
   }
 
   /** In-process replacement for the external auto-commit-generators/commit-generators-hotstuff
@@ -408,15 +427,26 @@ class MinerImpl(
         ) match {
           case Right(tx) =>
             utx.putIfNew(tx).resultE match {
-              case Right(true)  => log.info(s"Self-committed ${account.toAddress} to generation period ${period.next}")
+              case Right(true) =>
+                // Gossip it like any REST-submitted transaction (TransactionPublisher broadcasts on accept).
+                // utx.putIfNew alone only adds it to THIS node's pool, so it could only ever be mined in this
+                // node's own blocks: live testnet 2026-10-04..06, 61/61 commits on chain were in a block forged
+                // by their own sender, and a node that did not forge in time lost its committee slot.
+                allChannels.broadcast(tx)
+                log.info(s"Self-committed ${account.toAddress} to generation period ${period.next}")
               case Right(false) => log.debug(s"Self-commit for ${account.toAddress} at period ${period.next}: already in UTX pool")
-              case Left(err)    => log.warn(s"Self-commit for ${account.toAddress} at period ${period.next} rejected: $err")
+              case Left(err)    =>
+                releaseSelfCommitAttempt(account.toAddress, period.next)
+                log.warn(s"Self-commit for ${account.toAddress} at period ${period.next} rejected: $err")
             }
           case Left(err) =>
+            releaseSelfCommitAttempt(account.toAddress, period.next)
             log.warn(s"Failed to build self-commit tx for ${account.toAddress} at period ${period.next}: $err")
         }
-      }.onErrorHandle(err => log.warn(s"Self-commit for ${account.toAddress} failed: ${err.getMessage}"))
-        .runAsyncLogErr(using appenderScheduler)
+      }.onErrorHandle { err =>
+        releaseSelfCommitAttempt(account.toAddress, period.next)
+        log.warn(s"Self-commit for ${account.toAddress} failed: ${err.getMessage}")
+      }.runAsyncLogErr(using appenderScheduler)
       ()
     }
   }
@@ -435,7 +465,7 @@ class MinerImpl(
   // elsewhere in this codebase for the same Frankfurt<->Newark link (p99 round latency ~1000ms +
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
-  private def tryCollectSelfWithGrace(endorsedId: BlockId): Option[FinalizationVoting] = {
+  private def tryCollectSelfWithGrace(endorsedId: BlockId, forger: Address): Option[FinalizationVoting] = {
     // Fast path: a disabled endorser (tests, the importer, the block generator) never collects
     // anything, so the grace poll below would burn the full 1200ms window on EVERY key-block forge
     // waiting for a guaranteed-None result -- pathologically slowing any miner-heavy suite. Production
@@ -458,11 +488,11 @@ class MinerImpl(
     val deadline       = System.currentTimeMillis() + 1200
     val pollIntervalMs = 100
     var attempts       = 1
-    var result         = blockEndorser.tryCollectSelf(endorsedId)
+    var result         = blockEndorser.tryCollectSelf(endorsedId, forger)
     while (result.isEmpty && System.currentTimeMillis() < deadline) {
       Thread.sleep(pollIntervalMs)
       attempts += 1
-      result = blockEndorser.tryCollectSelf(endorsedId)
+      result = blockEndorser.tryCollectSelf(endorsedId, forger)
     }
     log.debug(s"tryCollectSelfWithGrace($endorsedId): attempts=$attempts result=$result")
     result

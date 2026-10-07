@@ -25,6 +25,19 @@ trait HotStuffEffects {
     */
   def signVote(voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature]
 
+  /** Committee slots this node holds a BLS key for in `committee` -- the committee of a vote TARGET's own
+    * generation period, which differs from the live tip's committee for a target in the previous period.
+    * Default: the `myVoterIndexes` slots that exist in `committee` (for effects that only know one committee).
+    */
+  def myVoterIndexesIn(committee: GeneratorSet): Set[Int] =
+    myVoterIndexes.filter(idx => committee.exists(_.index.toInt == idx))
+
+  /** Sign as slot `voterIndex` of `committee` (see `myVoterIndexesIn`). Default: `signVote`, only for a slot
+    * that exists in `committee`.
+    */
+  def signVoteIn(committee: GeneratorSet, voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature] =
+    if (committee.exists(_.index.toInt == voterIndex)) signVote(voteMessage, voterIndex, dst) else None
+
   /** A block reached T2 finality — apply it (advance finalized height). */
   def onCommit(blockId: BlockId, height: Int): Unit
 
@@ -253,7 +266,16 @@ object HotStuffCoordinator {
       // pairs with the `Int.MaxValue` default above to make `tooStale` unconditionally `false` (tip=0
       // minus any non-negative height is never > Int.MaxValue) -- a genuine no-op for every existing
       // call site/test. Production wiring supplies `() => blockchainUpdater.height`.
-      tipHeight: () => Int = () => 0
+      tipHeight: () => Int = () => 0,
+      // RC2 fix (live testnet 2026-10-04..06, TESTNET-FINAL-PLAN "RC2"): the committee of a vote/QC TARGET
+      // height's own generation period. Votes and QCs are signed under the target's epoch
+      // (`committeeEpochOf`), so their signer indexes are positions in THAT committee; resolving them
+      // against the live tip's committee broke every hand-off across a membership change (HotStuff frozen
+      // at x97 until the watchdog, 24 times). Used for signing, pooling, equivocation proofs and QC/justify
+      // verification. `None` = the live tip's committee for every target, i.e. the previous behaviour, for
+      // existing call sites/tests. Production wiring supplies `blockchainUpdater`'s committed set for the
+      // target height's period (see `Application.scala`).
+      committeeAt: Option[Int => GeneratorSet] = None
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine =
@@ -318,6 +340,9 @@ object HotStuffCoordinator {
     // the start of each event so reducers always see the current period's set.
     private def refreshCommittee(): Unit =
       engine = engine.copy(committee = committeeProvider(), committeeEpoch = committeeEpochProvider())
+
+    /** The committee that signed / must sign for a target at `height` (see the `committeeAt` parameter). */
+    private def committeeOf(height: Int): GeneratorSet = committeeAt.fold(engine.committee)(_(height))
 
     // Bounded eviction of superseded pool entries (memory-leak guard, audit finding 2026-07-25). A
     // target never resolves on its own — a losing-fork block, or junk votes broadcast for bogus
@@ -408,15 +433,16 @@ object HotStuffCoordinator {
           )
         } else {
           voted += key
-          val epoch   = committeeEpochOf(height)
-          val message = HotStuffQuorum.voteMessage(view, phase, blockId, height, epoch)
-          val dst     = HotStuffQuorum.VoteDst
-          val mine    = effects.myVoterIndexes
+          val epoch     = committeeEpochOf(height)
+          val message   = HotStuffQuorum.voteMessage(view, phase, blockId, height, epoch)
+          val dst       = HotStuffQuorum.VoteDst
+          val committee = committeeOf(height)
+          val mine      = effects.myVoterIndexesIn(committee)
           logger.debug(
-            s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${engine.committee.size} epoch=$epoch"
+            s"[HotStuff] castVotes $phase v=$view b=${bid(blockId)} myIndexes=$mine committee=${committee.size} epoch=$epoch"
           )
           mine.foreach { idx =>
-            effects.signVote(message, idx, dst) match {
+            effects.signVoteIn(committee, message, idx, dst) match {
               case Some(sig) =>
                 val vote = HotStuffVote(view, phase, blockId, Height(height), idx, sig.byteStr, epoch)
                 effects.broadcast(vote)
@@ -458,7 +484,7 @@ object HotStuffCoordinator {
         )
       } else {
         val previousLastVotedView    = engine.safety.lastVotedView
-        val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch)
+        val (nextEngine, shouldVote) = HotStuffEngine.onProposal(engine, proposal, extendsBranch, committeeOf)
         engine = nextEngine
         logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} shouldVote=$shouldVote committee=${engine.committee.size}")
         // M1 fix: persist exactly on a genuine advance (mirrors `onLockedQCPersist` in `applyQC` below),
@@ -471,7 +497,8 @@ object HotStuffCoordinator {
 
     def onVote(vote: HotStuffVote): Unit = {
       refreshCommittee()
-      val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, engine.committee)
+      val targetCommittee     = committeeOf(vote.blockHeight.toInt)
+      val (nextPool, maybeQC) = HotStuffVotePool.onVote(pool, vote, targetCommittee)
       pool = nextPool
       // T5 rev.2: pool.pending is keyed by the FULL (view, phase, blockId) target, so a double-signer's
       // votes land in different buckets -- gather every bucket sharing (view, phase) before running
@@ -489,7 +516,7 @@ object HotStuffCoordinator {
               val proof = HotStuffEquivocationProof(a, b)
               val ok    = for {
                 _ <- proof.consistent
-                _ <- proof.signaturesValid(i => engine.committee.find(_.index.toInt == i).map(_.blsPublicKey))
+                _ <- proof.signaturesValid(i => targetCommittee.find(_.index.toInt == i).map(_.blsPublicKey))
               } yield ()
               ok match {
                 case Right(()) =>
@@ -510,8 +537,8 @@ object HotStuffCoordinator {
       val key            = (vote.view, vote.phase, vote.blockId)
       val bucket         = nextPool.pending.getOrElse(key, Vector.empty)
       val voters         = bucket.map(_.voterIndex).distinct.sorted
-      val committeeReady = engine.committee.nonEmpty
-      val quorum         = committeeReady && HotStuffQuorum.hasQuorum(voters, engine.committee)
+      val committeeReady = targetCommittee.nonEmpty
+      val quorum         = committeeReady && HotStuffQuorum.hasQuorum(voters, targetCommittee)
       logger.debug(
         maybeQC match {
           case Some(qc) =>
@@ -548,7 +575,7 @@ object HotStuffCoordinator {
     private def applyQC(qc: QuorumCertificate, onAccepted: => Unit): Unit = {
       refreshCommittee()
       val previousLockedQC      = engine.safety.lockedQC
-      val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc)
+      val (nextEngine, actions) = HotStuffEngine.onQC(engine, qc, committeeOf)
       engine = nextEngine
       // `HotStuffSafety.update` only ever advances `lockedQC` monotonically (never regresses, never
       // touches it on a rejected QC -- a rejected QC's `actions` never reach here with a changed safety

@@ -1,6 +1,7 @@
 package com.decentralchain.state
 
 import com.typesafe.scalalogging.StrictLogging
+import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{BlockEndorsement, FinalizationVoting, SignedBlockHeader}
 import com.decentralchain.crypto.bls.BlsKeyPair
@@ -42,9 +43,12 @@ trait BlockEndorser {
 
   /** Collect the self-target round (see `voteSelf`) for the given reference block ID. Called by
     * Miner.forgeBlock when sealing a new key block, using that key block's own reference (the tip it
-    * extends) as endorsedId -- the exact candidate voteSelf produces.
+    * extends) as endorsedId -- the exact candidate voteSelf produces. `forger` is the account forging
+    * that key block, i.e. the CARRIER of the voting: its own endorsement is left out and its stake is
+    * credited implicitly, exactly as block validation treats the carrier (see
+    * `EndorsementStorage.tryCollectFor`).
     */
-  def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting]
+  def tryCollectSelf(endorsedId: BlockId, forger: Address): Option[FinalizationVoting]
 
   /** Whether this endorser ever participates in finality voting. `false` only for
     * [[BlockEndorser.Disabled]] (used by tests, the importer and the block generator), where every
@@ -56,11 +60,11 @@ trait BlockEndorser {
 
 object BlockEndorser {
   object Disabled extends BlockEndorser {
-    override def vote(generatorSet: GeneratorSet): Unit                          = {}
-    override def voteSelf(generatorSet: GeneratorSet): Unit                      = {}
-    override def rebroadcast(): Unit                                             = {}
-    override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = None
-    override val enabled: Boolean                                                = false
+    override def vote(generatorSet: GeneratorSet): Unit                                           = {}
+    override def voteSelf(generatorSet: GeneratorSet): Unit                                       = {}
+    override def rebroadcast(): Unit                                                              = {}
+    override def tryCollectSelf(endorsedId: BlockId, forger: Address): Option[FinalizationVoting] = None
+    override val enabled: Boolean                                                                 = false
   }
 
   class InMemory(
@@ -114,7 +118,8 @@ object BlockEndorser {
         votingBlockHeader: SignedBlockHeader,
         generatorSet: GeneratorSet,
         storage: EndorsementStorage,
-        label: String
+        label: String,
+        carrierIsVotingBlockMiner: Boolean
     ): Seq[EndorseBlock] =
       if (endorsedHeight > GenesisBlockHeight) {
         val msgs: Seq[EndorseBlock] = for {
@@ -133,7 +138,7 @@ object BlockEndorser {
           committed        = blockchain.committedGenerators(votingPeriod)
           votingBlockMiner = votingBlockHeader.header.generator.toAddress
           minerIndex       = committed.indexWhere { case (addr, _) => addr == votingBlockMiner }
-          if minerIndex >= 0 // -1 means no miner among committed, impossible
+          if !carrierIsVotingBlockMiner || minerIndex >= 0 // -1 means no miner among committed, impossible
 
           balances = generatorSet.collect {
             case x if blockchain.isGeneratingBalanceValid(votingHeight, votingBlockHeader.header, x.balance) => x.address -> x.balance
@@ -145,10 +150,16 @@ object BlockEndorser {
             }.toVector
 
             val conflict = blockchain.conflictGenerators(votingPeriod).upTo(votingHeight)
+            // The parent-target round's voting is carried by microblocks of the voting block, so that
+            // block's miner is the carrier. The self-target round's voting is carried by the NEXT key block,
+            // whose miner is unknown here: no member is excluded now, the forger excludes itself when it
+            // collects (EndorsementStorage.tryCollectFor). Treating the TIP's generator as the miner here
+            // rejected its legitimate endorsement and let the eventual carrier embed its own, which block
+            // validation rejects ("Miner can't endorse its own block", live testnet 2026-10-04..06).
             EndorsementFilter(
               blockchain.settings.functionalitySettings.maxValidEndorsers,
-              GeneratorIndex(minerIndex),
-              isMiner = wallet.privateKeyAccount(votingBlockMiner).isRight,
+              if (carrierIsVotingBlockMiner) GeneratorIndex(minerIndex) else EndorsementFilter.UnknownCarrierMiner,
+              isMiner = carrierIsVotingBlockMiner && wallet.privateKeyAccount(votingBlockMiner).isRight,
               finalizedId,
               finalizedHeight,
               endorsedId,
@@ -201,7 +212,8 @@ object BlockEndorser {
           votingBlockHeader,
           generatorSet,
           endorsementStorage,
-          "vote"
+          "vote",
+          carrierIsVotingBlockMiner = true
         )
       } yield msg)
 
@@ -222,7 +234,8 @@ object BlockEndorser {
           votingBlockHeader,
           generatorSet,
           selfEndorsementStorage,
-          "voteSelf"
+          "voteSelf",
+          carrierIsVotingBlockMiner = false
         )
       } yield msg)
 
@@ -235,7 +248,8 @@ object BlockEndorser {
       pendingSelf.set(if (msgs.nonEmpty) Some((votingHeight.toInt, endorsedHeight.toInt, msgs)) else None)
     }
 
-    override def tryCollectSelf(endorsedId: BlockId): Option[FinalizationVoting] = selfEndorsementStorage.tryCollectAndClear(endorsedId)
+    override def tryCollectSelf(endorsedId: BlockId, forger: Address): Option[FinalizationVoting] =
+      selfEndorsementStorage.tryCollectFor(endorsedId, forger)
 
     override def rebroadcast(): Unit = {
       rebroadcastOne(pending, "vote")

@@ -303,10 +303,18 @@ object Blockchain {
       * reflects "right now") should prefer this over `currentGeneratorSet`.
       */
     def currentCommittedGeneratorSet: GeneratorSet =
-      this.currentGenerationPeriod.fold(Seq.empty[GeneratorInfo]) { period =>
-        blockchain.committedGenerators(period).zipWithIndex.map { case ((address, blsPk), idx) =>
-          GeneratorInfo(GeneratorIndex(idx), address, blsPk, blockchain.balance(address))
-        }
+      this.currentGenerationPeriod.fold(Seq.empty[GeneratorInfo])(committedGeneratorSetOf)
+
+    /** The committed generator set of the generation period containing `height` -- the committee whose
+      * indexes a HotStuff vote/QC targeting a block at `height` is signed under (see
+      * `HotStuffCoordinator.Enabled`'s `committeeAt`). Same shape as `currentCommittedGeneratorSet`.
+      */
+    def committedGeneratorSetAt(height: Height): GeneratorSet =
+      blockchain.generationPeriodOf(height).fold(Seq.empty[GeneratorInfo])(committedGeneratorSetOf)
+
+    private def committedGeneratorSetOf(period: GenerationPeriod): GeneratorSet =
+      blockchain.committedGenerators(period).zipWithIndex.map { case ((address, blsPk), idx) =>
+        GeneratorInfo(GeneratorIndex(idx), address, blsPk, blockchain.balance(address))
       }
 
     def supportsFinalizationVoting(height: Int = blockchain.height): Boolean =
