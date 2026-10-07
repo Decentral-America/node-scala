@@ -3,6 +3,7 @@ package com.decentralchain.state
 import cats.syntax.either.*
 import cats.syntax.option.*
 import com.typesafe.scalalogging.StrictLogging
+import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.block.{BlockEndorsement, FinalizationVoting}
 import com.decentralchain.crypto.bls.{BlsPublicKey, BlsSignature}
@@ -27,13 +28,22 @@ trait EndorsementStorage {
     *   None if there are no updates since last attempt.
     */
   def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting]
+
+  /** Collects a voting for `endorsedId` to be carried by a block that `forger` is forging right now, for a
+    * round started with `EndorsementFilter.UnknownCarrierMiner`. Applies exactly what block validation
+    * applies to the carrier (`appender` "Miner can't endorse its own block"; `FinalizationState`
+    * credits the carrier's stake implicitly): the forger's own endorsement is left out and its stake is
+    * counted. Returns None when that reaches neither finalization nor any conflict.
+    */
+  def tryCollectFor(endorsedId: BlockId, forger: Address): Option[FinalizationVoting]
 }
 
 object EndorsementStorage {
   object Disabled extends EndorsementStorage {
-    override def tryAdd(msg: EndorseBlock): Either[String, Boolean]                  = true.asRight
-    override def startVoting(filter: EndorsementFilter): Boolean                     = false
-    override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting] = None
+    override def tryAdd(msg: EndorseBlock): Either[String, Boolean]                              = true.asRight
+    override def startVoting(filter: EndorsementFilter): Boolean                                 = false
+    override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting]             = None
+    override def tryCollectFor(endorsedId: BlockId, forger: Address): Option[FinalizationVoting] = None
   }
 
   class InMemory(blockAtHeight: (BlockId, Height) => Boolean) extends EndorsementStorage, StrictLogging {
@@ -155,6 +165,19 @@ object EndorsementStorage {
         if (currentFilter.nonEmpty) logger.debug(s"Not found new significant endorsements for $endorsedId: $err")
       }
       r.toOption
+    }
+
+    override def tryCollectFor(endorsedId: BlockId, forger: Address): Option[FinalizationVoting] = synced {
+      for {
+        filter <- currentFilter
+        if filter.endorsedId == endorsedId
+        forgerIndex = filter.normalizedGeneratorSet.indexWhere(_._1 == forger)
+        // simulate() skips `miner` and credits its balance: make the forger the miner of this voting.
+        carrier    = if (forgerIndex >= 0) filter.copy(miner = GeneratorIndex(forgerIndex), isMiner = true) else filter
+        simulation = carrier.simulate(valid.keys, conflict.keySet)
+        if simulation.reachedFinalization || conflict.nonEmpty
+        result <- createVoting(carrier, simulation).toOption
+      } yield result.voting
     }
 
     private def createVoting(currentFilter: EndorsementFilter, simulationResult: SimulationResult): Either[String, FinalizationResult] = {

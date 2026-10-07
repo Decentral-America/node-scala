@@ -65,6 +65,15 @@ case class EndorsementFilter(
 }
 
 object EndorsementFilter {
+
+  /** `miner` for the self-target round, whose voting is carried by the NEXT key block: that block's miner is
+    * not known when endorsements are cast, so no committee member may be treated as "the miner" (rejected
+    * by `tryAdd`, skipped by `simulate`, its stake credited) at that point. Matches no index and has zero
+    * balance. The carrier's exclusion and implicit stake credit are applied by
+    * `EndorsementStorage.tryCollectFor` once the forging miner is known.
+    */
+  val UnknownCarrierMiner: GeneratorIndex = GeneratorIndex(Int.MaxValue)
+
   case class SimulationResult(
       reachedFinalization: Boolean = false,
       endorsedBalance: BigInt,

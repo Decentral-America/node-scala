@@ -14,7 +14,8 @@ import com.decentralchain.test.DomainPresets.*
 import com.decentralchain.transaction.{CommitToGenerationTransaction, TransactionType, TxHelpers}
 import com.decentralchain.utx.UtxPoolImpl
 import com.decentralchain.wallet.Wallet
-import io.netty.channel.group.DefaultChannelGroup
+import io.netty.channel.embedded.EmbeddedChannel
+import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.util.concurrent.GlobalEventExecutor
 import monix.execution.Scheduler
 import monix.reactive.Observable
@@ -52,6 +53,9 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
       .copy(minerSettings = DeterministicFinality.minerSettings.copy(quorum = 0, selfCommitToGeneration = enabled))
 
   private def withMiner(dccSettings: DCCSettings)(f: (MinerImpl, Domain, UtxPoolImpl) => Unit): Unit =
+    withMinerAndChannels(dccSettings, new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))(f)
+
+  private def withMinerAndChannels(dccSettings: DCCSettings, channels: ChannelGroup)(f: (MinerImpl, Domain, UtxPoolImpl) => Unit): Unit =
     withDomain(dccSettings, AddrWithBalance.enoughBalances(minerAcc)) { d =>
       val time = TestTime()
       val utx  = new UtxPoolImpl(
@@ -64,7 +68,7 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
       val appenderScheduler = Scheduler.singleThread("appender-test")
 
       val miner = new MinerImpl(
-        new DefaultChannelGroup(GlobalEventExecutor.INSTANCE),
+        channels,
         d.blockchainUpdater,
         dccSettings,
         time,
@@ -278,5 +282,93 @@ class MinerSelfCommitSpecification extends AnyFreeSpec with Matchers with WithDo
         utx.all.collect { case tx: CommitToGenerationTransaction => tx } shouldBe empty
       }
     }
+  }
+
+  private def awaitCommits(utx: UtxPoolImpl, timeoutMs: Long = 5000): Seq[CommitToGenerationTransaction] = {
+    val deadline = System.currentTimeMillis() + timeoutMs
+    def commits  = utx.all.collect { case tx: CommitToGenerationTransaction => tx }
+    while (commits.isEmpty && System.currentTimeMillis() < deadline) Thread.sleep(50)
+    commits
+  }
+
+  // Live testnet regression, 2026-10-04..06 (TESTNET-FINAL-PLAN "RC1"): every node that forged the FIRST
+  // block of a generation period logged `Self-commit ... rejected: Expected the next period start height
+  // (x01), got x01+100`. forgeBlock derived the target from the period of the block being FORGED (h+1),
+  // while the UTX pool validates the transaction against the liquid tip (h), whose next period starts at
+  // x01. The target must come from the same height the UTX pool validates against.
+  "self-commit while forging the first block of a period" - {
+    "targets the next period of the liquid tip and is accepted by the UTX pool" in {
+      withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+        // Advance until the block about to be forged is the first block of a period (tip = period end).
+        while (!d.blockchain.generationPeriodOf(Height(d.blockchain.height)).exists(_.end == Height(d.blockchain.height)))
+          d.appendBlock()
+        val tipPeriod   = d.blockchain.generationPeriodOf(Height(d.blockchain.height)).get
+        val forgePeriod = d.blockchain.generationPeriodOf(Height(d.blockchain.height + 1)).get
+        withClue("precondition: forging the first block of the next period: ") {
+          Height(d.blockchain.height + 1) shouldBe forgePeriod.start
+          forgePeriod shouldBe tipPeriod.next
+        }
+
+        miner.forgeBlock(minerAcc)
+
+        val committed = awaitCommits(utx)
+        withClue("the commit must be accepted, not rejected with 'Expected the next period start height': ") {
+          committed should have size 1
+        }
+        committed.head.generationPeriodStart shouldBe tipPeriod.next.start
+      }
+    }
+  }
+
+  // Live testnet regression (RC1): after a rejected attempt the per-period claim was never released, so
+  // the node made NO further self-commit attempt for the rest of the period even while forging dozens of
+  // blocks in it (period 35801: main forged all 100 blocks, one rejected attempt, no retry, next period
+  // empty). A rejected attempt must not consume the period's only chance.
+  "a rejected self-commit attempt is retried by a later forge in the same period" in {
+    withMiner(settingsWithSelfCommit(true)) { (miner, d, utx) =>
+      while (!d.blockchain.generationPeriodOf(Height(d.blockchain.height)).exists(_.end == Height(d.blockchain.height)))
+        d.appendBlock()
+      val current  = d.blockchain.generationPeriodOf(Height(d.blockchain.height)).get
+      val upcoming = current.next
+
+      // At the tip of `current`, a commit targeting upcoming.next is invalid (the UTX pool expects
+      // upcoming.start): this is exactly the rejected attempt observed live.
+      miner.maybeSelfCommit(minerAcc, d.blockchain, upcoming)
+      Thread.sleep(500)
+      utx.all.collect { case tx: CommitToGenerationTransaction => tx } shouldBe empty
+
+      // Enter `upcoming`: the same target (upcoming.next) is now valid and must be retried.
+      d.appendBlock()
+      d.blockchain.generationPeriodOf(Height(d.blockchain.height)) shouldBe Some(upcoming)
+      miner.maybeSelfCommit(minerAcc, d.blockchain, upcoming)
+
+      val committed = awaitCommits(utx)
+      withClue("the retry in the same period must land the commit: ") { committed should have size 1 }
+      committed.head.generationPeriodStart shouldBe upcoming.next.start
+    }
+  }
+
+  // Live testnet finding (RC1): all 61 commits on chain were mined in a block forged by their own sender;
+  // no node ever relayed another node's commit, because maybeSelfCommit only called utx.putIfNew and
+  // never broadcast. A commit that only its sender knows can only land if the sender forges in time.
+  "an accepted self-commit is broadcast to peers" in {
+    val peer     = new EmbeddedChannel()
+    val channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+    channels.add(peer)
+    withMinerAndChannels(settingsWithSelfCommit(true), channels) { (miner, d, utx) =>
+      val period = d.blockchain.generationPeriodOf(Height(d.blockchain.height)).get
+      miner.maybeSelfCommit(minerAcc, d.blockchain, period)
+
+      val committed = awaitCommits(utx)
+      committed should have size 1
+
+      val deadline     = System.currentTimeMillis() + 5000
+      var sent: AnyRef = peer.readOutbound[AnyRef]()
+      while (sent == null && System.currentTimeMillis() < deadline) { Thread.sleep(50); peer.runPendingTasks(); sent = peer.readOutbound[AnyRef]() }
+      withClue("the self-commit must be broadcast to connected peers: ") {
+        sent shouldBe committed.head
+      }
+    }
+    peer.finishAndReleaseAll()
   }
 }

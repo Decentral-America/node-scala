@@ -439,7 +439,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           committeeEpochOf,
           onAction = hsOnAction,
           maxTargetLag = maxTargetLag,
-          tipHeight = tipHeight
+          tipHeight = tipHeight,
+          committeeAt = Some(h => blockchainUpdater.committedGeneratorSetAt(com.decentralchain.state.Height(h)))
         )
       hsCoordinatorRef = hsCoordinator
       hotStuffEquivocations = () => hsCoordinator.detectedEquivocations

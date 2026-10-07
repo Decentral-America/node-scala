@@ -55,7 +55,13 @@ final class NodeHotStuffEffects(
     committeeProvider().iterator.filter(gi => wallet.privateKeyAccount(gi.address).isRight).map(_.index.toInt).toSet
 
   override def signVote(voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature] =
-    committeeProvider()
+    signVoteIn(committeeProvider(), voteMessage, voterIndex, dst)
+
+  override def myVoterIndexesIn(committee: GeneratorSet): Set[Int] =
+    committee.iterator.filter(gi => wallet.privateKeyAccount(gi.address).isRight).map(_.index.toInt).toSet
+
+  override def signVoteIn(committee: GeneratorSet, voteMessage: Array[Byte], voterIndex: Int, dst: String): Option[BlsSignature] =
+    committee
       .find(_.index.toInt == voterIndex)
       .flatMap(gi => wallet.privateKeyAccount(gi.address).toOption)
       .map(account => BlsKeyPair(account.privateKey).sign(voteMessage, dst))

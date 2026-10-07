@@ -41,7 +41,8 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
             actualFilter = Some(filter)
             true
           }
-          override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting] = None
+          override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting]                                        = None
+          override def tryCollectFor(endorsedId: BlockId, forger: com.decentralchain.account.Address): Option[FinalizationVoting] = None
         }
 
         val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
@@ -71,6 +72,49 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
       }
     }
 
+    // Live testnet regression (TESTNET-FINAL-PLAN "RC4"): the self-target round treated the TIP's generator as
+    // the miner, although its voting is carried by the NEXT key block (miner unknown at vote time). The round
+    // must name no carrier miner, so the tip's generator may endorse and the forger excludes itself on collect.
+    "voteSelf names no carrier miner (the next key block's miner is unknown when endorsements are cast)" in withManager { manager =>
+      val generator1 = TxHelpers.signer(0)
+      val generator2 = TxHelpers.signer(1)
+      val generators = Seq(generator1, generator2)
+
+      var selfFilter = Option.empty[EndorsementFilter]
+      withDomain(defaultSettings, AddrWithBalance.enoughBalances(generator1, generator2)) { d =>
+        val parentStorage = new EndorsementStorage {
+          override def tryAdd(msg: EndorseBlock): Either[String, Boolean]                                                         = false.asRight
+          override def startVoting(filter: EndorsementFilter): Boolean                                                            = true
+          override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting]                                        = None
+          override def tryCollectFor(endorsedId: BlockId, forger: com.decentralchain.account.Address): Option[FinalizationVoting] = None
+        }
+        val selfStorage = new EndorsementStorage {
+          override def tryAdd(msg: EndorseBlock): Either[String, Boolean] = false.asRight
+          override def startVoting(filter: EndorsementFilter): Boolean    = {
+            selfFilter = Some(filter)
+            true
+          }
+          override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting]                                        = None
+          override def tryCollectFor(endorsedId: BlockId, forger: com.decentralchain.account.Address): Option[FinalizationVoting] = None
+        }
+
+        val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
+        val endorser =
+          new BlockEndorser.InMemory(d.settings.synchronizationSettings.maxRollback, d.blockchain, d.wallet, parentStorage, selfStorage, channels)
+
+        val txs = generators.map(x => TxHelpers.commitToGeneration(generationPeriodStart = Height(3), x))
+        d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = txs, generator = generator1, strictTime = true))
+        (3 to 4).foreach { _ =>
+          d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = generator1, strictTime = true))
+        }
+
+        endorser.voteSelf(d.blockchain.currentGeneratorSet.getOrElse(Seq.empty))
+        val f = selfFilter.value
+        f.miner shouldBe EndorsementFilter.UnknownCarrierMiner
+        f.isMiner shouldBe false
+      }
+    }
+
     "don't broadcast" - {
       "if not enough generating balance" in withManager { manager =>
         val generator1         = Wallet.generateNewAccount(Domain.DefaultWalletSeed, nonce = 0)
@@ -83,9 +127,10 @@ class BlockEndorserSpec extends FreeSpec, WithDomain, WithResourceManager, Embed
           d.wallet.generateNewAccounts(2)
 
           val endorsementStorage = new EndorsementStorage {
-            override def tryAdd(msg: EndorseBlock): Either[String, Boolean]                  = true.asRight
-            override def startVoting(filter: EndorsementFilter): Boolean                     = true
-            override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting] = None
+            override def tryAdd(msg: EndorseBlock): Either[String, Boolean]                                                         = true.asRight
+            override def startVoting(filter: EndorsementFilter): Boolean                                                            = true
+            override def tryCollectAndClear(endorsedId: BlockId): Option[FinalizationVoting]                                        = None
+            override def tryCollectFor(endorsedId: BlockId, forger: com.decentralchain.account.Address): Option[FinalizationVoting] = None
           }
 
           val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))

@@ -277,6 +277,66 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
     }
   }
 
+  // Live testnet regression, 2026-10-04..06 (TESTNET-FINAL-PLAN "RC4"): in every 2-member committee period the
+  // miner rejected its own key block with `Miner can't endorse its own block` (gen-0 138x, gen-1 136x). The
+  // self-target round endorses the TIP, but the voting is carried by the NEXT key block, whose miner is not
+  // known when votes are cast. The round used the tip's generator as "the miner": it rejected the tip
+  // generator's legitimate endorsement and kept the eventual carrier's own one. The validator does the
+  // opposite (FinalizationState.isParentFinalized credits the CARRIER's stake implicitly; appender forbids
+  // only the carrier's endorsement), so the exclusion must be applied by the forger at collection time.
+  "self-target round (carrier miner unknown at vote time)" - {
+    def selfRound(gens: IndexedSeq[TestGenerator]): ExtendedEndorsementStorage = {
+      val r = new EndorsementStorage.InMemory((_, _) => true)
+      r.startVoting(
+        EndorsementFilter(
+          maxValidEndorsers = 5,
+          EndorsementFilter.UnknownCarrierMiner,
+          isMiner = false,
+          expectedFinalizedId,
+          expectedFinalizedHeight,
+          expectedEndorsedId,
+          gens.map(x => (x.addr, x.blsKp.publicKey, x.balance)),
+          Set.empty
+        )
+      ) shouldBe true
+      new ExtendedEndorsementStorage(r, gens)
+    }
+
+    "accepts and shares an endorsement from every committee member, including the tip's generator" in {
+      val s = selfRound(mkGeneratorSet(2))
+      s.addValidVote(0).value shouldBe true
+      s.addValidVote(1).value shouldBe true
+    }
+
+    "tryCollectFor drops the forger's own endorsement and credits its stake implicitly" in {
+      val gens   = mkGeneratorSet(2)
+      val s      = selfRound(gens)
+      val forger = gens(1).addr
+      s.addValidVote(0).value shouldBe true
+      s.addValidVote(1).value shouldBe true
+
+      val voting = s.tryCollectFor(expectedEndorsedId, forger).value
+      withClue("the forger's own index must never be in the voting it carries: ") {
+        voting.valid.map(_.toInt) shouldBe Seq(0)
+      }
+      voting.finalizedHeight shouldBe expectedFinalizedHeight
+    }
+
+    "tryCollectFor reaches no finalization without another member's endorsement (forger's stake alone is 1/2)" in {
+      val gens = mkGeneratorSet(2)
+      val s    = selfRound(gens)
+      s.addValidVote(1).value shouldBe true // only the forger itself endorsed
+      s.tryCollectFor(expectedEndorsedId, gens(1).addr).flatMap(v => Option.when(v.valid.nonEmpty)(v)) shouldBe None
+    }
+
+    "tryCollectFor by a forger outside the committee keeps every member's endorsement" in {
+      val gens = mkGeneratorSet(3)
+      val s    = selfRound(gens)
+      s.addValidVote(0, 1, 2).value shouldBe true
+      s.tryCollectFor(expectedEndorsedId, TxHelpers.signer(99).toAddress).value.valid.map(_.toInt).sorted should not be empty
+    }
+  }
+
   private def started(
       minerIndex: Int = 0,
       normalizedGeneratorSet: IndexedSeq[TestGenerator] = mkGeneratorSet(2),

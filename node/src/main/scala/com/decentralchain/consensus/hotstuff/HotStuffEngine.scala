@@ -58,10 +58,21 @@ object HotStuffEngine {
     * keeps the two failure reasons distinct in the `Rejected` action for observability).
     */
   def onQC(state: EngineState, qc: QuorumCertificate): (EngineState, Seq[HotStuffAction]) =
+    onQC(state, qc, _ => state.committee)
+
+  /** `onQC`, verifying the QC against `committeeAt(qc.blockHeight)` -- the committee of the QC TARGET's own
+    * generation period -- instead of the live tip's committee. A QC is signed under its target's epoch
+    * (`committeeEpochOf(targetHeight)`) and `acceptableCommitteeEpoch` admits the previous epoch during a
+    * rotation, so its signer indexes are positions in the TARGET's committee. Resolving them against the
+    * tip's committee rejected every QC straddling a membership change ("QC references unknown committee
+    * member" / "Wrong BLS signature") and froze HotStuff until the watchdog fired (live testnet
+    * 2026-10-04..06, 24 times).
+    */
+  def onQC(state: EngineState, qc: QuorumCertificate, committeeAt: Int => GeneratorSet): (EngineState, Seq[HotStuffAction]) =
     if (!HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
       (state, Seq(HotStuffAction.Rejected(s"QC rejected: committee epoch ${qc.committeeEpoch} not acceptable (current=${state.committeeEpoch})")))
     else
-      HotStuffQuorum.verifyQC(qc, state.committee) match {
+      HotStuffQuorum.verifyQC(qc, committeeAt(qc.blockHeight.toInt)) match {
         case Left(err) => (state, Seq(HotStuffAction.Rejected(s"QC rejected: $err")))
         case Right(_)  =>
           val advanced = state.copy(
@@ -91,9 +102,18 @@ object HotStuffEngine {
       state: EngineState,
       proposal: HotStuffProposal,
       extendsBranch: (BlockId, BlockId) => Boolean
+  ): (EngineState, Boolean) = onProposal(state, proposal, extendsBranch, _ => state.committee)
+
+  /** `onProposal`, verifying the justify QC against the committee of ITS target height (see `onQC`). */
+  def onProposal(
+      state: EngineState,
+      proposal: HotStuffProposal,
+      extendsBranch: (BlockId, BlockId) => Boolean,
+      committeeAt: Int => GeneratorSet
   ): (EngineState, Boolean) = {
     val justifyEpochOk = proposal.justify.forall(qc => HotStuffQuorum.acceptableCommitteeEpoch(qc.committeeEpoch, state.committeeEpoch))
-    val justifyValid   = justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, state.committee).isRight)
+    val justifyValid   =
+      justifyEpochOk && proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, committeeAt(qc.blockHeight.toInt)).isRight)
     if (!justifyValid) (state, false)
     else {
       val caughtUp   = proposal.justify.fold(state)(qc => state.copy(safety = HotStuffSafety.update(qc, state.safety)))
