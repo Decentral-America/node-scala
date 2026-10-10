@@ -627,6 +627,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
     val historyReplier = new HistoryReplier(blockchainUpdater.score, history, settings.synchronizationSettings)(using historyRepliesScheduler)
 
+    // Network-received transactions rejected against a tip that is about to change (their
+    // dependency is in a microblock this node has not pulled yet) are retried as the tip moves.
+    val pendingTxRetry = new PendingTransactionRetry(capacity = 256, ttl = 60.seconds, tip = () => blockchainUpdater.lastBlockId)
+    scheduler.scheduleAtFixedRate(1.second, 1.second) {
+      pendingTxRetry.retry(utxStorage.putIfNew(_, forceValidate = false), allChannels.broadcast)
+    }
+
     val transactionPublisher =
       TransactionPublisher.timeBounded(
         utxStorage.putIfNew,
@@ -635,7 +642,8 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         settings.synchronizationSettings.utxSynchronizer.allowTxRebroadcasting,
         () =>
           if (allChannels.size >= settings.restAPISettings.minimumPeers) Right(())
-          else Left(GenericError(s"There are not enough connections with peers (${allChannels.size}) to accept transaction"))
+          else Left(GenericError(s"There are not enough connections with peers (${allChannels.size}) to accept transaction")),
+        onNetworkRejected = pendingTxRetry.hold
       )
 
     def rollbackTask(blockId: ByteStr, returnTxsToUtx: Boolean) =
