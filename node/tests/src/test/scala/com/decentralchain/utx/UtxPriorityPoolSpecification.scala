@@ -54,5 +54,49 @@ class UtxPriorityPoolSpecification extends FreeSpec with SharedDomain {
       domain.utxPool.putIfNew(secondIssue)
       pack() shouldBe Some(List(issue, secondIssue))
     }
+
+    "cleanup keeps a transaction that depends on a priority transaction" in {
+      domain.utxPool.removeAll(domain.utxPool.all)
+      val blockId = domain.appendKeyBlock().id()
+      val bob     = nextKeyPair
+      val fund    = TxHelpers.transfer(alice, bob.toAddress, 10.dcc)
+      domain.appendMicroBlock(fund)
+
+      // Accepted while the funding transfer is in the liquid microblock...
+      val dependent = TxHelpers.transfer(bob, alice.toAddress, 1.dcc)
+      domain.utxPool.putIfNew(dependent).resultE shouldBe Right(true)
+
+      // ...which a competing key block then discards: `fund` returns as a priority transaction.
+      domain.appendKeyBlock(ref = Some(blockId))
+      domain.blockchain.transactionInfo(fund.id()) shouldBe None
+
+      domain.utxPool.cleanUnconfirmed()
+      domain.utxPool.all shouldBe Seq(fund, dependent)
+      pack() shouldBe Some(Seq(fund, dependent))
+    }
+
+    "cleanup still removes a transaction that is invalid even after the priority transactions" in {
+      domain.utxPool.removeAll(domain.utxPool.all)
+      val blockId = domain.appendKeyBlock().id()
+      val bob     = nextKeyPair
+      val fund    = TxHelpers.transfer(alice, bob.toAddress, 10.dcc)
+      domain.appendMicroBlock(fund)
+
+      val overspend = TxHelpers.transfer(bob, alice.toAddress, 9.dcc)
+      val tooMuch   = TxHelpers.transfer(bob, alice.toAddress, 2.dcc)
+      domain.utxPool.putIfNew(overspend).resultE shouldBe Right(true)
+      domain.utxPool.putIfNew(tooMuch).resultE shouldBe Right(true)
+
+      domain.appendKeyBlock(ref = Some(blockId))
+      // Both are individually valid once `fund` is applied, so both stay; packing then admits only
+      // what fits, exactly as before this change.
+      domain.utxPool.cleanUnconfirmed()
+      domain.utxPool.all.toSet shouldBe Set(fund, overspend, tooMuch)
+
+      val unrelated = TxHelpers.transfer(nextKeyPair, alice.toAddress, 1.dcc)
+      domain.utxPool.addTransaction(unrelated, verify = false)
+      domain.utxPool.cleanUnconfirmed()
+      domain.utxPool.all should not contain unrelated
+    }
   }
 }
