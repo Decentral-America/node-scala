@@ -199,7 +199,7 @@ class MinerImpl(
 
   def forgeBlock(account: KeyPair, referenceOpt: Option[ByteStr] = None): ForgeAttemptResult = {
     // should take last block right at the time of mining since microblocks might have been added
-    val reference = referenceOpt.getOrElse {
+    def bestReference(): ByteStr = {
       val lastBlockHeader = blockchainUpdater.lastBlockHeader.get.header
 
       val maxMicroblockTimestampOffsetMs = // See min-micro-block-age in application.conf
@@ -208,6 +208,27 @@ class MinerImpl(
 
       val lastBlockInfo = blockchainUpdater.bestLastBlockInfo(timeService.monotonicMillis() - maxMicroblockTimestampOffsetMs)
       lastBlockInfo.get.blockId
+    }
+
+    // The endorsement grace (up to 1200ms, see tryCollectSelfWithGrace) runs BEFORE the reference is
+    // chosen, never after. Choosing the reference first and then blocking on the grace orphaned every
+    // microblock the liquid-block owner appended during that window: the key block was sealed on the
+    // stale tip, the orphaned microblock's transactions went back to the UTX pool, and any transaction
+    // that depended on them (a transfer from a just-funded account, an invoke of a just-set dApp
+    // script) was revalidated against state without them and evicted, never to be mined. Live testnet
+    // 2026-10-10: 4 of the 18 key blocks that followed a microblock orphaned it, each with a ~1.2s
+    // forge-to-append gap on every generator, and the admin E2E suite lost 4 dependent transactions.
+    // If no microblock arrives during the grace the tip is unchanged and the collected voting is used
+    // as before; if one does, the fresh tip is referenced and gets a single immediate collect (the
+    // same None fallback the grace already has when nothing arrives in time).
+    val address                 = account.toAddress
+    val (reference, selfVoting) = referenceOpt match {
+      case Some(ref) => (ref, () => tryCollectSelfWithGrace(ref, address))
+      case None      =>
+        val candidate = bestReference()
+        val collected = tryCollectSelfWithGrace(candidate, address)
+        val ref       = bestReference()
+        (ref, () => if (ref == candidate) collected else blockEndorser.tryCollectSelf(ref, address))
     }
 
     // Pinned to `reference` so every read below (generatingBalance, isMiningAllowed, isConflict,
@@ -221,8 +242,6 @@ class MinerImpl(
     val height         = blockchain.height
     val newBlockHeight = Height(height + 1)
     val version        = blockchain.nextBlockVersion
-
-    val address = account.toAddress
 
     // Self-commit is attempted on EVERY key-block forge within the generation period, NOT only at the
     // period boundary. A CommitToGenerationTransaction is only accepted while
@@ -328,7 +347,7 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = withHotStuffConflicts(tryCollectSelfWithGrace(reference, address)),
+            finalizationVoting = withHotStuffConflicts(selfVoting()),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)

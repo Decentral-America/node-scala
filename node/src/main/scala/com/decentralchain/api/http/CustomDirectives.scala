@@ -43,7 +43,9 @@ trait CustomDirectives extends Directives with ApiMarshallers with ScorexLogging
       }
 
     def massValidateEthereumIds: Directive1[Vector[ByteStr]] =
-      dir.massValidate(str => Validated.fromTry(Try(ByteStr(EthEncoding.toBytes(str)))).leftMap(_ => str)).flatMap {
+      // An ERC20 address is exactly 20 bytes; any other length is an invalid id (400), not an
+      // ERC20Address require() failure surfacing as an uncaught 500 from /eth/assets.
+      dir.massValidate(str => Validated.fromTry(Try(ByteStr(EthEncoding.toBytes(str))).filter(_.size == 20)).leftMap(_ => str)).flatMap {
         case Validated.Valid(a)   => provide(a)
         case Validated.Invalid(e) => complete(ApiError.InvalidIds(e.toList))
       }

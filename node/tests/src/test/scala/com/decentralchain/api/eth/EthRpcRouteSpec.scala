@@ -325,6 +325,19 @@ class EthRpcRouteSpec extends RouteSpec("/eth") with WithDomain with EthHelpers 
       }
   }
 
+  "eth/assets rejects ids that are not 20 bytes" in withDomain() { d =>
+    val route = new EthRpcRoute(d.blockchain, d.commonApi.transactions, ntpTime).route
+    val valid = EthEncoding.toHexString(new Array[Byte](20))
+    Seq("0x1234", EthEncoding.toHexString(new Array[Byte](32))).foreach { badId =>
+      Get(routePath(s"/assets?id=$valid&id=$badId")) ~> route ~> check {
+        status.intValue() shouldBe 400
+        val json = responseAs[JsObject]
+        (json \ "error").as[Int] shouldBe 116
+        (json \ "ids").as[Seq[String]] shouldBe Seq(badId)
+      }
+    }
+  }
+
   "absence of id" in withDomain() { d =>
     val expectedChainId = s"0x${d.settings.blockchainSettings.addressSchemeCharacter.toInt.toHexString}"
     Post(routePath(""), Json.obj("method" -> "eth_chainId"))
