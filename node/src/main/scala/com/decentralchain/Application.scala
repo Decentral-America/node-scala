@@ -145,7 +145,15 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
     val establishedConnections = new ConcurrentHashMap[Channel, PeerInfo]
     val allChannels            = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
     val utxStorage             =
-      new UtxPoolImpl(time, blockchainUpdater, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable, utxEvents.onNext)
+      new UtxPoolImpl(
+        time,
+        blockchainUpdater,
+        settings.utxSettings,
+        settings.maxTxErrorLogSize,
+        settings.minerSettings.enable,
+        utxEvents.onNext,
+        rebroadcast = tx => allChannels.broadcast(tx)
+      )
     maybeUtx = Some(utxStorage)
 
     val timer                 = new HashedWheelTimer()

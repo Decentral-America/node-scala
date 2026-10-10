@@ -47,7 +47,8 @@ case class UtxPoolImpl(
     maxTxErrorLogSize: Int,
     isMiningEnabled: Boolean,
     onEvent: UtxEvent => Unit = _ => (),
-    nanoTimeSource: () => TxTimestamp = () => System.nanoTime()
+    nanoTimeSource: () => TxTimestamp = () => System.nanoTime(),
+    rebroadcast: Transaction => Unit = _ => ()
 ) extends ScorexLogging
     with AutoCloseable
     with UtxPool {
@@ -62,6 +63,11 @@ case class UtxPoolImpl(
   // State
   val priorityPool         = new UtxPriorityPool
   private val transactions = new ConcurrentHashMap[ByteStr, Transaction]()
+
+  // Transactions cleanup kept only because they are valid once the priority transactions are
+  // applied. Peers rejected them on gossip (the dependency was not in their state yet), so until
+  // they are gossiped again this node is the only one that can mine them.
+  private val keptForPriority = ConcurrentHashMap.newKeySet[ByteStr]()
 
   override def getPriorityPool: Option[UtxPriorityPool] = Some(priorityPool)
 
@@ -179,6 +185,7 @@ case class UtxPoolImpl(
     priorityPool.setPriorityDiffs(Seq.empty)
 
   private def removeFromOrdPool(txId: ByteStr): Option[Transaction] = {
+    keptForPriority.remove(txId)
     for (tx <- Option(transactions.remove(txId))) yield {
       PoolMetrics.removeTransaction(tx)
       tx
@@ -304,11 +311,21 @@ case class UtxPoolImpl(
         if (TxCheck.isExpired(tx)) {
           TxStateActions.removeExpired(tx)
         } else {
-          differ(blockchain)(tx).resultE.left.foreach { error =>
-            val validAfterPriority =
-              !priorityIds.contains(tx.id()) && withPriority.exists(on => differ(on)(tx).resultE.isRight)
-            if (validAfterPriority) log.trace(s"Keeping ${tx.id()}: valid once priority transactions are applied")
-            else TxStateActions.removeInvalid("Cleanup", tx, error)
+          differ(blockchain)(tx).resultE match {
+            case Right(_) =>
+              // Its dependency is now in this node's state, and in the state of any peer that has
+              // seen the same blocks, so gossip it again rather than wait for this node to mine.
+              if (keptForPriority.remove(tx.id())) {
+                log.debug(s"Rebroadcasting ${tx.id()}: valid now that its priority dependency is applied")
+                rebroadcast(tx)
+              }
+            case Left(error) =>
+              val validAfterPriority =
+                !priorityIds.contains(tx.id()) && withPriority.exists(on => differ(on)(tx).resultE.isRight)
+              if (validAfterPriority) {
+                keptForPriority.add(tx.id())
+                log.trace(s"Keeping ${tx.id()}: valid once priority transactions are applied")
+              } else TxStateActions.removeInvalid("Cleanup", tx, error)
           }
         }
       }
