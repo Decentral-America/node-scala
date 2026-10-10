@@ -25,7 +25,8 @@ object TransactionPublisher extends ScorexLogging {
       broadcast: (Transaction, Option[Channel]) => Unit,
       timedScheduler: Scheduler,
       allowRebroadcast: Boolean,
-      canBroadcast: () => Either[ValidationError, Unit]
+      canBroadcast: () => Either[ValidationError, Unit],
+      onNetworkRejected: (Transaction, Option[Channel], ValidationError) => Unit = (_, _, _) => ()
   ): TransactionPublisher = { (tx, source) =>
     canBroadcast() match {
       case Right(_) =>
@@ -41,6 +42,7 @@ object TransactionPublisher extends ScorexLogging {
           }
           .andThen {
             case Success(TracedResult(Right(isNew), _, _)) if isNew || (allowRebroadcast && source.isEmpty) => broadcast(tx, source)
+            case Success(TracedResult(Left(error), _, _)) if source.nonEmpty                                => onNetworkRejected(tx, source, error)
           }
 
       case Left(err) =>
