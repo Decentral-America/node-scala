@@ -268,6 +268,35 @@ case class UtxPoolImpl(
   def cleanUnconfirmed(): Unit = {
     log.trace(s"Starting UTX cleanup at height ${blockchain.height}")
 
+    def differ(on: Blockchain): Transaction => TracedResult[ValidationError, StateSnapshot] =
+      if (!isMiningEnabled && utxSettings.forceValidateInCleanup) {
+        TransactionDiffer.forceValidate(blockchain.lastBlockTimestamp, time.correctedTime(), enableExecutionLog = true)(on, _)
+      } else {
+        TransactionDiffer.limitedExecution(
+          blockchain.lastBlockTimestamp,
+          time.correctedTime(),
+          utxSettings.alwaysUnlimitedExecution,
+          enableExecutionLog = true
+        )(on, _)
+      }
+
+    // Transactions from microblocks discarded by a competing key block come back as priority
+    // transactions and are packed first, in order. Validating every other transaction against the
+    // bare state evicted the ones that DEPEND on them (a transfer from an account funded in the
+    // discarded microblock, an invoke of a dApp whose SetScript was in it) before they could ever be
+    // packed on top of their dependency: accepted with HTTP 200, then silently gone (live testnet
+    // 2026-10-10, admin E2E). A transaction that is invalid on the bare state but valid once the
+    // priority transactions are applied is kept; it is packed after them like any other.
+    lazy val priorityIds                      = priorityPool.priorityTransactionIds.toSet
+    lazy val withPriority: Option[Blockchain] =
+      Option.when(priorityIds.nonEmpty) {
+        priorityPool.priorityTransactionIds
+          .flatMap(id => Option(transactions.get(id)))
+          .foldLeft(blockchain) { (on, ptx) =>
+            differ(on)(ptx).resultE.fold(_ => on, snapshot => SnapshotBlockchain(on, snapshot))
+          }
+      }
+
     this.transactions
       .values()
       .asScala
@@ -275,25 +304,11 @@ case class UtxPoolImpl(
         if (TxCheck.isExpired(tx)) {
           TxStateActions.removeExpired(tx)
         } else {
-          val differ = if (!isMiningEnabled && utxSettings.forceValidateInCleanup) {
-            TransactionDiffer.forceValidate(blockchain.lastBlockTimestamp, time.correctedTime(), enableExecutionLog = true)(
-              blockchain,
-              _
-            )
-          } else {
-            TransactionDiffer.limitedExecution(
-              blockchain.lastBlockTimestamp,
-              time.correctedTime(),
-              utxSettings.alwaysUnlimitedExecution,
-              enableExecutionLog = true
-            )(
-              blockchain,
-              _
-            )
-          }
-          val diffEi = differ(tx).resultE
-          diffEi.left.foreach { error =>
-            TxStateActions.removeInvalid("Cleanup", tx, error)
+          differ(blockchain)(tx).resultE.left.foreach { error =>
+            val validAfterPriority =
+              !priorityIds.contains(tx.id()) && withPriority.exists(on => differ(on)(tx).resultE.isRight)
+            if (validAfterPriority) log.trace(s"Keeping ${tx.id()}: valid once priority transactions are applied")
+            else TxStateActions.removeInvalid("Cleanup", tx, error)
           }
         }
       }
