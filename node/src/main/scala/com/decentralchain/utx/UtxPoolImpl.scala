@@ -200,27 +200,32 @@ case class UtxPoolImpl(
       verify: Boolean,
       forceValidate: Boolean = false
   ): TracedResult[ValidationError, Boolean] = {
-    val diffEi = {
-      def calculateSnapshot(): TracedResult[ValidationError, StateSnapshot] = {
-        if (forceValidate)
-          TransactionDiffer.forceValidate(blockchain.lastBlockTimestamp, time.correctedTime(), enableExecutionLog = true)(
-            blockchain,
-            tx
-          )
-        else
-          TransactionDiffer.limitedExecution(
-            blockchain.lastBlockTimestamp,
-            time.correctedTime(),
-            utxSettings.alwaysUnlimitedExecution,
-            verify,
-            enableExecutionLog = true
-          )(
-            blockchain,
-            tx
-          )
-      }
+    def calculateSnapshot(on: Blockchain)(t: Transaction): TracedResult[ValidationError, StateSnapshot] =
+      if (forceValidate)
+        TransactionDiffer.forceValidate(blockchain.lastBlockTimestamp, time.correctedTime(), enableExecutionLog = true)(on, t)
+      else
+        TransactionDiffer.limitedExecution(
+          blockchain.lastBlockTimestamp,
+          time.correctedTime(),
+          utxSettings.alwaysUnlimitedExecution,
+          verify,
+          enableExecutionLog = true
+        )(on, t)
 
-      calculateSnapshot()
+    // Same rule as cleanUnconfirmed: a transaction that depends on a re-queued priority transaction
+    // (one from a microblock a competing key block discarded) is accepted if it is valid once the
+    // priority transactions are applied. Without this, a client that saw its funding/setup
+    // transaction confirm in the now-discarded microblock got a 400 for the follow-up (live testnet
+    // 2026-10-10: a Burn rejected with "negative asset balance" right after its Transfer confirmed).
+    val diffEi = calculateSnapshot(blockchain)(tx) match {
+      case bare if verify && bare.resultE.isLeft && !priorityPool.priorityTransactionIds.contains(tx.id()) =>
+        priorityApplied(calculateSnapshot).map(on => calculateSnapshot(on)(tx)).filter(_.resultE.isRight) match {
+          case Some(afterPriority) =>
+            keptForPriority.add(tx.id())
+            afterPriority
+          case None => bare
+        }
+      case bare => bare
     }
 
     if (!verify || diffEi.resultE.isRight) {
@@ -295,14 +300,7 @@ case class UtxPoolImpl(
     // 2026-10-10, admin E2E). A transaction that is invalid on the bare state but valid once the
     // priority transactions are applied is kept; it is packed after them like any other.
     lazy val priorityIds                      = priorityPool.priorityTransactionIds.toSet
-    lazy val withPriority: Option[Blockchain] =
-      Option.when(priorityIds.nonEmpty) {
-        priorityPool.priorityTransactionIds
-          .flatMap(id => Option(transactions.get(id)))
-          .foldLeft(blockchain) { (on, ptx) =>
-            differ(on)(ptx).resultE.fold(_ => on, snapshot => SnapshotBlockchain(on, snapshot))
-          }
-      }
+    lazy val withPriority: Option[Blockchain] = priorityApplied(differ)
 
     this.transactions
       .values()
@@ -329,6 +327,18 @@ case class UtxPoolImpl(
           }
         }
       }
+  }
+
+  /** The state with the priority transactions (from discarded microblocks) applied in pack order, if any. */
+  private def priorityApplied(differ: Blockchain => Transaction => TracedResult[ValidationError, StateSnapshot]): Option[Blockchain] = {
+    val ids = priorityPool.priorityTransactionIds
+    Option.when(ids.nonEmpty) {
+      ids
+        .flatMap(id => Option(transactions.get(id)))
+        .foldLeft(blockchain: Blockchain) { (on, ptx) =>
+          differ(on)(ptx).resultE.fold(_ => on, snapshot => SnapshotBlockchain(on, snapshot))
+        }
+    }
   }
 
   private def removeInvalid(
