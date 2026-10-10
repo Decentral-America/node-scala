@@ -1165,6 +1165,16 @@ class BlockchainUpdatesSpec extends FreeSpec with WithBUDomain with ScalaFutures
 
         val subscription = Future(repo.createFakeObserver(SubscribeRequest.of(1, toHeight)))
 
+        // The scenario needs the subscriber registered and blocked in its DB read BEFORE the extra
+        // blocks land. Under CI load the Future could start after them: stream() then snapshots the
+        // already-advanced liquid state, nothing later trips takeWhile, and the stream never closes
+        // (seen as a 60s TimeoutException). A queued reader on startRead proves the ordering.
+        val registeredBy = System.nanoTime() + 30.seconds.toNanos
+        while (!startRead.hasQueuedThreads) {
+          if (System.nanoTime() > registeredBy) fail("subscriber never reached its DB read")
+          Thread.sleep(5)
+        }
+
         appendExtraBlocks(d)
 
         startRead.unlock()
