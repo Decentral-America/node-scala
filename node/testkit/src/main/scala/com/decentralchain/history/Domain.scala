@@ -88,8 +88,18 @@ case class Domain(
   def createDiff(tx: Transaction): StateSnapshot                           = createDiffE(tx).explicitGet()
 
   // NOTE: Uses system time — testTime can be substituted for time-sensitive tests
+  // Tests can capture what the UTX pool would gossip to peers.
+  @volatile var utxRebroadcast: Transaction => Unit = _ => ()
+
   lazy val utxPool: UtxPoolImpl =
-    new UtxPoolImpl(SystemTime, blockchain, settings.utxSettings, settings.maxTxErrorLogSize, settings.minerSettings.enable)
+    new UtxPoolImpl(
+      SystemTime,
+      blockchain,
+      settings.utxSettings,
+      settings.maxTxErrorLogSize,
+      settings.minerSettings.enable,
+      rebroadcast = tx => utxRebroadcast(tx)
+    )
 
   lazy val endorsementStorage: EndorsementStorage     = EndorsementStorage.Disabled
   lazy val selfEndorsementStorage: EndorsementStorage = EndorsementStorage.Disabled

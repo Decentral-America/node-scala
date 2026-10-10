@@ -1,5 +1,6 @@
 package com.decentralchain.utx
 
+import com.decentralchain.common.state.ByteStr
 import com.decentralchain.db.WithState
 import com.decentralchain.mining.MultiDimensionalMiningConstraint
 import com.decentralchain.settings.DCCSettings
@@ -73,6 +74,31 @@ class UtxPriorityPoolSpecification extends FreeSpec with SharedDomain {
       domain.utxPool.cleanUnconfirmed()
       domain.utxPool.all shouldBe Seq(fund, dependent)
       pack() shouldBe Some(Seq(fund, dependent))
+    }
+
+    "a kept dependent is rebroadcast once, when its dependency is applied" in {
+      domain.utxPool.removeAll(domain.utxPool.all)
+      val rebroadcast = Seq.newBuilder[ByteStr]
+      domain.utxRebroadcast = tx => rebroadcast += tx.id()
+
+      val blockId = domain.appendKeyBlock().id()
+      val bob     = nextKeyPair
+      val fund    = TxHelpers.transfer(alice, bob.toAddress, 10.dcc)
+      domain.appendMicroBlock(fund)
+      val dependent = TxHelpers.transfer(bob, alice.toAddress, 1.dcc)
+      domain.utxPool.putIfNew(dependent).resultE shouldBe Right(true)
+      domain.appendKeyBlock(ref = Some(blockId))
+
+      domain.utxPool.cleanUnconfirmed()
+      rebroadcast.result() shouldBe empty // kept, but not valid on its own yet
+
+      domain.appendMicroBlock(fund) // the dependency lands
+      domain.utxPool.cleanUnconfirmed()
+      domain.utxPool.cleanUnconfirmed()
+      rebroadcast.result() shouldBe Seq(dependent.id())
+      domain.utxPool.all shouldBe Seq(dependent)
+
+      domain.utxRebroadcast = _ => ()
     }
 
     "cleanup still removes a transaction that is invalid even after the priority transactions" in {
