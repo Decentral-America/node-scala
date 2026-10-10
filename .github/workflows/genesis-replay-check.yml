@@ -75,17 +75,29 @@ jobs:
           cp node-config/testnet/dcc.conf /tmp/replay-scratch/dcc.conf 2>/dev/null || \
             curl -sf -o /tmp/replay-scratch/dcc.conf \
               https://raw.githubusercontent.com/Decentral-America/infra/main/node-config/testnet/dcc.conf
-          python3 - <<'PYEOF'
+          # Dial the live main node by its public DNS name, resolved now: the IP has changed
+          # before (66.228.55.154 -> 50.116.30.244 in the 2026-09 relaunch), and a hardcoded one
+          # made every run since 2026-09-21 sit at height 1 with no peer.
+          PEER_IP=$(getent hosts testnet-node.decentralchain.io | awk '{print $1; exit}')
+          test -n "$PEER_IP" || { echo "::error::could not resolve testnet-node.decentralchain.io"; exit 1; }
+          echo "Replay peer: $PEER_IP:6868"
+          PEER_IP="$PEER_IP" python3 - <<'PYEOF'
+          import os, re
           p = "/tmp/replay-scratch/dcc.conf"
           s = open(p).read()
+          peer = os.environ["PEER_IP"] + ":6868"
           # Disable mining, keep REST enabled, dial the real main node directly, and make sure our
           # own declared-address does NOT equal the known-peer address -- if it does, the node
           # treats it as itself and never dials out at all (a real gotcha hit once investigating
-          # this exact class of bug).
-          s = s.replace('declared-address = "66.228.55.154:6868"', 'declared-address = "127.0.0.1:16868"')
-          s = s.replace('known-peers = []', 'known-peers = ["66.228.55.154:6868"]')
-          import re
-          s = re.sub(r'miner \{\n(\s*)enable = yes', r'miner {\n\1enable = false', s)
+          # this exact class of bug). Every substitution must match exactly once: a silent no-op
+          # here (the config drifted) leaves a node that never syncs and only times out.
+          for pattern, repl in [
+              (r'declared-address = "[^"]*"', 'declared-address = "127.0.0.1:16868"'),
+              (r'known-peers = \[[^\]]*\]', f'known-peers = ["{peer}"]'),
+              (r'miner \{\n(\s*)enable = yes', r'miner {\n\1enable = false'),
+          ]:
+              s, n = re.subn(pattern, repl, s, count=1)
+              assert n == 1, f"dcc.conf drifted: no match for {pattern!r}"
           open(p, "w").write(s)
           PYEOF
           cat >> /tmp/replay-scratch/dcc.conf <<'EOF'
