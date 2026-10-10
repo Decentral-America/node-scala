@@ -101,6 +101,25 @@ class UtxPriorityPoolSpecification extends FreeSpec with SharedDomain {
       domain.utxRebroadcast = _ => ()
     }
 
+    "putIfNew accepts a transaction that depends on a priority transaction" in {
+      domain.utxPool.removeAll(domain.utxPool.all)
+      val blockId = domain.appendKeyBlock().id()
+      val bob     = nextKeyPair
+      val fund    = TxHelpers.transfer(alice, bob.toAddress, 10.dcc)
+      domain.appendMicroBlock(fund)
+      domain.appendKeyBlock(ref = Some(blockId)) // discards the microblock: `fund` is a priority tx again
+      domain.blockchain.transactionInfo(fund.id()) shouldBe None
+
+      // The client saw `fund` confirm before the discard and sends its follow-up now.
+      val dependent = TxHelpers.transfer(bob, alice.toAddress, 1.dcc)
+      domain.utxPool.putIfNew(dependent).resultE shouldBe Right(true)
+      pack() shouldBe Some(Seq(fund, dependent))
+
+      // Still rejected if it is invalid even with the priority transactions applied.
+      val overspend = TxHelpers.transfer(bob, alice.toAddress, 100.dcc)
+      domain.utxPool.putIfNew(overspend).resultE.isLeft shouldBe true
+    }
+
     "cleanup still removes a transaction that is invalid even after the priority transactions" in {
       domain.utxPool.removeAll(domain.utxPool.all)
       val blockId = domain.appendKeyBlock().id()
