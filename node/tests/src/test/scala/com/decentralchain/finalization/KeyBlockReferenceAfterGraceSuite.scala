@@ -36,7 +36,7 @@ class KeyBlockReferenceAfterGraceSuite extends BaseFinalizationSpec {
     .configure(_.copy(generationPeriodLength = 2))
 
   /** Enabled endorser that never collects anything, and runs `onGrace` the first time the miner polls it. */
-  private class MicroBlockDuringGrace(onGrace: () => Unit) extends BlockEndorser {
+  private class MicroBlockDuringGrace(onGrace: () => Unit, voting: Option[FinalizationVoting] = None) extends BlockEndorser {
     @volatile private var fired                                                                   = false
     @volatile var collectedFor: Seq[BlockId]                                                      = Seq.empty
     override def vote(generatorSet: GeneratorSet): Unit                                           = {}
@@ -49,7 +49,7 @@ class KeyBlockReferenceAfterGraceSuite extends BaseFinalizationSpec {
         fired = true
         onGrace()
       }
-      None
+      voting
     }
   }
 
@@ -99,11 +99,53 @@ class KeyBlockReferenceAfterGraceSuite extends BaseFinalizationSpec {
       d.lastBlockId shouldBe microTip
       block.header.reference shouldBe microTip
       block.header.reference should not be staleTip
-      // The grace polled the pre-grace tip; the moved tip then got exactly one immediate collect.
+      // The grace polled the pre-grace tip. (No second collect for the moved tip here: block 3 starts a
+      // period whose committee differs from the tip's, so self-round votes are not carried at all.)
       endorser.collectedFor.head shouldBe staleTip
-      endorser.collectedFor.last shouldBe microTip
       d.appender.appendBlock(block)
       d.lastBlockId shouldBe block.id()
+    }
+  }
+
+  "Self-round votes are not carried into the first block of a period with a different committee" in withManager { manager =>
+    val channels = manager(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
+    withDomain(defaultSettings, AddrWithBalance.enoughBalances(otherNodeAcc, thisNodeAcc), miner = Miner.StrictDisabledMiner) { d =>
+      d.wallet.generateNewAccounts(1)
+
+      // Period [3,4] committee: {other, this}. Period [5,6] committee: {this} only.
+      val commits3 = Seq(otherNodeAcc, thisNodeAcc).map(x => TxHelpers.commitToGeneration(Height(3), sender = x))
+      d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = commits3, generator = otherNodeAcc, strictTime = true))
+      d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = otherNodeAcc, strictTime = true))
+      val commit5 = TxHelpers.commitToGeneration(Height(5), sender = thisNodeAcc)
+      d.appender.appendBlock(d.createBlock(version = Block.ProtoBlockVersion, txs = Seq(commit5), generator = otherNodeAcc, strictTime = true))
+      d.blockchain.height shouldBe 4
+
+      // A self-round voting for the tip (height 4), indexed against the tip's 2-member committee.
+      val tipVoting = mkFinalizationVoting(valid = GeneratorIndex.seq(Seq(1)), finalizedHeight = Height(1))
+      val endorser  = new MicroBlockDuringGrace(() => (), Some(tipVoting))
+      val minerImpl = new MinerImpl(
+        channels,
+        d.blockchain,
+        d.settings,
+        d.testTime,
+        d.utxPool,
+        endorser,
+        EndorsementStorage.Disabled,
+        d.wallet,
+        d.posSelector,
+        TestScheduler(),
+        TestScheduler(),
+        Observable.empty
+      )
+
+      d.testTime.setTimeIfGreater(d.nextBlockTime(thisNodeAcc))
+      val block = minerImpl.forgeBlock(thisNodeAcc) match {
+        case ForgeAttemptResult.Success(block, _) => block
+        case other                                => fail(s"forge failed: $other")
+      }
+      block.header.finalizationVoting shouldBe None
+      d.appender.appendBlock(block)
+      d.blockchain.height shouldBe 5
     }
   }
 }

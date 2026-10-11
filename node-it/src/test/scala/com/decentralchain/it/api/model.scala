@@ -983,7 +983,9 @@ object GenerationSignatureResponse {
 }
 
 object GeneratorsResponse {
-  case class Entry(address: String, balance: Long, transactionId: String)
+  // `balance` is omitted by the node while the generating balance is unknown (e.g. the next period's
+  // committee), so it must be optional here or parsing that response throws.
+  case class Entry(address: String, balance: Option[Long], transactionId: String)
   object Entry {
     given OFormat[Entry] = Json.format
   }
