@@ -105,12 +105,16 @@ class FourNodeHotStuffTestSuite extends HotStuffFourNodeSuite {
       val heightBefore   = survivors.map(_.height).max
       log.info(s"Crashing generator ${victim.name} (smallest committed stake); survivors=${survivors.map(_.name)}")
 
+      // Keep every member committed for the next period before the crash, and the survivors for each
+      // period after it while the victim is down (see commitForUpcomingPeriod).
+      commitForUpcomingPeriod(hsNodes.map(n => (n, n.address)))
       val victimId = docker.stopContainer(victim)
 
       // SAFETY + block production: survivors keep producing (quorum=1) and NEVER regress finalized height.
       val deadline  = 3.minutes.fromNow
       var producing = false
       while (!producing && deadline.hasTimeLeft()) {
+        commitForUpcomingPeriod(survivors.map(n => (n, n.address)))
         survivors.foreach(n => n.transfer(n.keyPair, survivors.head.address, 1.dcc, waitForTx = true))
         survivors.map(_.finalizedHeight).foreach(fh => if (fh < finalizedFloor) fail(s"finalized regressed during crash: $fh < $finalizedFloor"))
         producing = survivors.map(_.height).max >= heightBefore + 2
@@ -130,6 +134,7 @@ class FourNodeHotStuffTestSuite extends HotStuffFourNodeSuite {
       val finalizedBefore = hsNodes.map(n => n.name -> n.finalizedHeight).toMap
 
       log.info(s"Partitioning ${victim.name} away from the majority=${majority.map(_.name)}")
+      commitForUpcomingPeriod(hsNodes.map(n => (n, n.address)))
       docker.disconnectFromNetwork(victim)
 
       // Majority keeps producing while the minority is isolated; its finalized height must not regress.
@@ -138,6 +143,7 @@ class FourNodeHotStuffTestSuite extends HotStuffFourNodeSuite {
       val deadline  = 3.minutes.fromNow
       var advanced  = false
       while (!advanced && deadline.hasTimeLeft()) {
+        commitForUpcomingPeriod(majority.map(n => (n, n.address)))
         majority.foreach(n => n.transfer(n.keyPair, majority.head.address, 1.dcc, waitForTx = true))
         majority.map(_.finalizedHeight).foreach(fh => if (fh < majFloor) fail(s"majority finalized regressed during partition: $fh < $majFloor"))
         advanced = majority.map(_.height).max >= majBefore + 2

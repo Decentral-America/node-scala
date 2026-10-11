@@ -101,4 +101,22 @@ trait HotStuffCommitOps extends ScorexLogging { self: BaseFreeSpec =>
       commitLeader.generators(period.start)
     }
   }
+
+  /** Best-effort: commit `targets` for the period after the current one, without waiting for it.
+    *
+    * Fault-injection tests take a committee member down for longer than one generation period
+    * (3 blocks in these suites). The following period's committee is otherwise only whoever
+    * self-committed while forging, which can be just the member that was taken down: then nobody
+    * left is allowed to generate ("X is not allowed to generate a block, allowed: <victim>") and the
+    * chain correctly halts, failing the test for a reason it does not test. Rejections here (already
+    * committed, the period rolled over mid-call) are expected and ignored; the next call retries.
+    */
+  protected def commitForUpcomingPeriod(targets: Seq[(Node, String)]): Unit =
+    targets.foreach { case (node, sender) =>
+      try node.broadcastRequest(node.sign(CommitToGenerationRequest(sender = Some(sender))))
+      catch {
+        case ApiCallException(e: UnexpectedStatusCodeException) if e.statusCode == StatusCodes.BadRequest.intValue =>
+          log.debug(s"commitForUpcomingPeriod($sender): ${e.responseBody}")
+      }
+    }
 }
