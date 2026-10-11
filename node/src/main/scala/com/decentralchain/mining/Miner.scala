@@ -347,7 +347,16 @@ class MinerImpl(
             // specifically -- use its result (see tryCollectSelfWithGrace for why a single immediate
             // attempt isn't enough), or None if still nothing after giving other nodes' endorsements a
             // fair chance to arrive (safe: matches pre-fix behavior).
-            finalizationVoting = withHotStuffConflicts(selfVoting()),
+            // The self-round's endorser indexes refer to the committee of the TIP's generation period
+            // (BlockEndorser.castVote), but block validation resolves them against the committee of
+            // the NEW block's period (appender.validateFinalizationVoting). On the first block of a
+            // period whose committee differs, carrying them made the miner forge a block it then
+            // rejected itself ("Invalid endorser index: 1, expected < 0") and retry it forever: a chain
+            // wedge, seen intermittently in node-it OneNodeFinalizationTestSuite since 2026-07-30.
+            // Carry the votes only when both committees are identical (same members, same order).
+            finalizationVoting = withHotStuffConflicts(
+              if (selfVotingCommitteeMatches(blockchain, Height(height), newBlockHeight)) selfVoting() else None
+            ),
             committedGeneratorsHash = committedGeneratorsHash
           )
           .leftMap(_.err)
@@ -516,6 +525,13 @@ class MinerImpl(
   // elsewhere in this codebase for the same Frankfurt<->Newark link (p99 round latency ~1000ms +
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
+  private def selfVotingCommitteeMatches(blockchain: Blockchain, tipHeight: Height, newBlockHeight: Height): Boolean =
+    (blockchain.generationPeriodOf(tipHeight), blockchain.generationPeriodOf(newBlockHeight)) match {
+      case (Some(tipPeriod), Some(blockPeriod)) =>
+        tipPeriod == blockPeriod || blockchain.committedGenerators(tipPeriod) == blockchain.committedGenerators(blockPeriod)
+      case _ => true // no generation periods (finality not active): nothing to resolve indexes against
+    }
+
   private def tryCollectSelfWithGrace(endorsedId: BlockId, forger: Address): Option[FinalizationVoting] = {
     // Fast path: a disabled endorser (tests, the importer, the block generator) never collects
     // anything, so the grace poll below would burn the full 1200ms window on EVERY key-block forge

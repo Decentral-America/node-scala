@@ -42,7 +42,7 @@ class TwoNodesFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLo
       // pairs: the hardened commit helper can legitimately re-sign/retry across a period rollover,
       // so the locally-signed transaction id from a single attempt is no longer guaranteed to match.
       generators.map(_.address) should contain theSameElementsAs Seq(miner1Addr, miner2Addr)
-      all(generators.map(_.balance)) should be > 0L
+      all(generators.map(_.balance.getOrElse(0L))) should be > 0L
     }
 
     step("Finalized height checks")

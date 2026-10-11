@@ -58,7 +58,7 @@ class OneNodeFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLog
         (miner1Addr, commitTxn1.id),
         (miner2Addr, commitTxn2.id)
       )
-      generators.foreach(g => withClue(s"generating balance for ${g.address}: ")(g.balance should be > 0L))
+      generators.foreach(g => withClue(s"generating balance for ${g.address}: ")(g.balance.getOrElse(0L) should be > 0L))
     }
 
     step("Finalized height checks")
@@ -125,9 +125,9 @@ class OneNodeFinalizationTestSuite extends BaseFreeSpec, OptionValues, ScorexLog
       finalizationVoting.endorserIndexes should not contain minerEndorser.index
     }
 
-    val totalBalance = generators.map { g => BigInt(g.data.balance) }.sum
+    val totalBalance = generators.map { g => BigInt(g.data.balance.getOrElse(0L)) }.sum
     val votedBalance = generators.collect {
-      case g if finalizationVoting.endorserIndexes.contains(g.index) || g.index == minerEndorser.index => BigInt(g.data.balance)
+      case g if finalizationVoting.endorserIndexes.contains(g.index) || g.index == minerEndorser.index => BigInt(g.data.balance.getOrElse(0L))
     }.sum
 
     withClue(s"totalBalance=$totalBalance, votedBalance=$votedBalance: ") {

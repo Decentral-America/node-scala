@@ -41,7 +41,7 @@ abstract class HotStuffFourNodeSuite extends BaseFreeSpec, OptionValues, ScorexL
     * least committed stake, so the surviving set retains the most quorum weight.
     */
   protected def smallestStakeNode(generators: Seq[GeneratorsResponse.Entry]) =
-    hsNodes.minBy(n => generators.find(_.address == n.address).map(_.balance).getOrElse(Long.MaxValue))
+    hsNodes.minBy(n => generators.find(_.address == n.address).flatMap(_.balance).getOrElse(Long.MaxValue))
 }
 
 /** Step-5 runtime validation of the T2 HotStuff 4c-bind wiring on a real multi-node cluster.
