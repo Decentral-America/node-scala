@@ -1,6 +1,6 @@
 package com.decentralchain.tools
 
-import com.decentralchain.account.{Address, AddressScheme}
+import com.decentralchain.account.Address
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.consensus.hotstuff.{HotStuffEquivocationProof, HotStuffQuorum, HotStuffSafety}
 import com.decentralchain.crypto.bls.BlsKeyPair
@@ -8,13 +8,10 @@ import com.decentralchain.test.FreeSpec
 
 class EquivocationDrillSpec extends FreeSpec {
   "accountOf derives the same account as the TS SDK / node wallet (nonce 0)" in {
-    val saved = AddressScheme.current
-    try {
-      AddressScheme.current = new AddressScheme { val chainId: Byte = '!'.toByte }
-      // Public testnet treasury seed; its address is pinned in the funding scripts.
-      Address.fromPublicKey(EquivocationDrill.accountOf("dcc-testnet-treasury").publicKey).toString shouldBe
-        "31LQd8WcvtYXMjHzNKzRrgZy8P3NnLQvPnk"
-    } finally AddressScheme.current = saved
+    // Explicit chain id: never mutate the global AddressScheme, other suites run in parallel in this JVM.
+    // Public testnet treasury seed; its address is pinned in the funding scripts.
+    Address.fromPublicKey(EquivocationDrill.accountOf("dcc-testnet-treasury").publicKey, '!'.toByte).toString shouldBe
+      "31LQd8WcvtYXMjHzNKzRrgZy8P3NnLQvPnk"
   }
 
   "the vote pair is a valid, detectable equivocation" in {
