@@ -73,10 +73,11 @@ import scala.concurrent.duration.FiniteDuration
   * @param slashingEnabled T5 rev.2 (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md):
   *                     gates ONLY whether THIS node's miner folds pending equivocation proofs into
   *                     blocks it forges. Proof VALIDATION and the conflictGenerators union are
-  *                     unconditional (gated solely by feature-29 activation) -- a node with this
+  *                     unconditional (gated solely by feature-25 activation) -- a node with this
   *                     flag off applies exclusions from received proof-carrying blocks identically,
   *                     so mixed flag settings can never diverge consensus. TESTNET-ONLY until
-  *                     externally audited; consequences are real (generation-deposit forfeiture).
+  *                     externally audited; consequences are real (generation-deposit forfeiture from
+  *                     `FunctionalitySettings.hotStuffEquivocationPenaltyHeight` on).
   *                     OPERATIONAL NOTE: a replica's very first boot has no persisted lastVotedView
   *                     (T11 first-boot window) -- do not run a first-boot replica as a committee
   *                     member with slashing active until it has participated once.
