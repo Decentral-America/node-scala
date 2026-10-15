@@ -332,10 +332,10 @@ object BlockDiffer {
       prevHeight <- blockchain.heightOf(prevBlockId)
       period     <- blockchain.generationPeriodOf(Height(prevHeight))
       voting     <- blockchain.blockHeader(prevHeight).flatMap(_.header.finalizationVoting)
-    } yield (period, voting)
+    } yield (Height(prevHeight), period, voting)
 
-    parentBlockInfo.fold(empty) { case (period, voting) =>
-      calculatePenalties(blockchain, period, voting)
+    parentBlockInfo.fold(empty) { case (prevHeight, period, voting) =>
+      calculatePenalties(blockchain, prevHeight, period, voting)
     }
   }
 
@@ -345,25 +345,38 @@ object BlockDiffer {
       voting     <- prevBlock.header.finalizationVoting
       prevHeight <- blockchain.heightOf(prevBlock.id())
       period     <- blockchain.generationPeriodOf(Height(prevHeight))
-    } yield (period, voting)
+    } yield (Height(prevHeight), period, voting)
 
-    parentBlockInfo.fold(empty) { case (period, voting) =>
-      calculatePenalties(blockchain, period, voting)
+    parentBlockInfo.fold(empty) { case (prevHeight, period, voting) =>
+      calculatePenalties(blockchain, prevHeight, period, voting)
     }
   }
 
+  /** Forfeits the generation deposit of every generator the previous block proved misbehaving.
+    *
+    * T0 conflicting endorsements always forfeit. HotStuff equivocation proofs forfeit only for proofs
+    * carried at or above `hotStuffEquivocationPenaltyHeight`: below it they excluded the voter and
+    * released its deposit lock (RocksDBWriter.collectGenerationDepositChanges) without debiting it,
+    * and existing chain history must keep replaying that way. Validation guarantees a voter appears
+    * at most once across both sources, so nobody is debited twice.
+    */
   private def calculatePenalties(
       blockchain: Blockchain,
+      prevBlockHeight: Height,
       prevBlockPeriod: GenerationPeriod,
       prevBlockVoting: FinalizationVoting
   ): Either[String, Map[Address, Portfolio]] = {
-    val empty          = Map.empty[Address, Portfolio].asRight[String]
-    lazy val committed = blockchain.committedGenerators(prevBlockPeriod)
-    prevBlockVoting.conflict.foldLeft(empty) {
-      case (r @ Left(_), _)        => r
-      case (Right(r), endorsement) =>
-        committed.lift(endorsement.endorserIndex.toInt) match {
-          case None            => Left(s"Invalid endorsement index in $endorsement, valid: [0; ${committed.size}]")
+    val empty               = Map.empty[Address, Portfolio].asRight[String]
+    lazy val committed      = blockchain.committedGenerators(prevBlockPeriod)
+    val hotStuffPenalized   = prevBlockHeight.toInt >= blockchain.settings.functionalitySettings.hotStuffEquivocationPenaltyHeight
+    val penalizedGenerators =
+      prevBlockVoting.conflict.map(_.endorserIndex) ++
+        (if (hotStuffPenalized) prevBlockVoting.hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex)) else Seq.empty)
+    penalizedGenerators.foldLeft(empty) {
+      case (r @ Left(_), _)      => r
+      case (Right(r), generator) =>
+        committed.lift(generator.toInt) match {
+          case None            => Left(s"Invalid penalized generator index $generator, valid: [0; ${committed.size}]")
           case Some((addr, _)) =>
             val orig    = r.getOrElse(addr, Portfolio.empty)
             val updated = orig.combine(Portfolio.dcc(-CommitToGenerationTransaction.DepositInDcclets))

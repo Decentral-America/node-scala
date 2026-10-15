@@ -7,7 +7,7 @@ import com.decentralchain.consensus.hotstuff.HotStuffQuorum
 import com.decentralchain.crypto
 import com.decentralchain.crypto.bls.BlsKeyPair
 import com.decentralchain.network.client.NetworkSender
-import com.decentralchain.network.{HotStuffVote, TrafficLogger}
+import com.decentralchain.network.{HotStuffVote, HotStuffVoteSpec, RawBytes, TrafficLogger}
 import com.decentralchain.state.{GenerationPeriod, Height}
 import com.decentralchain.transaction.CommitToGenerationTransaction
 import com.google.common.primitives.Ints
@@ -135,7 +135,10 @@ object EquivocationDrill {
       try {
         val ch = Await.result(sender.connect(new InetSocketAddress(host, port.toInt)), 30.seconds)
         require(ch.isActive, s"P2P channel to $p2p is not active")
-        Await.result(sender.send(ch, a, b), 30.seconds)
+        // NetworkSender's pipeline frames RawBytes but has no MessageCodec for consensus messages, so
+        // encode each vote the way the node's own MessageCodec does (spec code + protobuf payload).
+        val raw = Seq(a, b).map(v => RawBytes(HotStuffVoteSpec.messageCode, HotStuffVoteSpec.serializeData(v)))
+        Await.result(sender.send(ch, raw*), 30.seconds)
         println(s"sent conflicting PREPARE votes for view $h to $p2p")
       } finally sender.close()
 

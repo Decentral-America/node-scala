@@ -10,6 +10,7 @@ import com.decentralchain.crypto.SignatureLength
 import io.decentralchain.protobuf.block.PBBlocks
 import io.decentralchain.protobuf.utils.PBUtils
 import com.decentralchain.serialization.ByteBufferOps
+import com.decentralchain.network.HotStuffVote
 import com.decentralchain.state.{GeneratorIndex, Height}
 import com.decentralchain.transaction.Asset.Dcc
 import com.decentralchain.transaction.Transaction
@@ -72,6 +73,18 @@ object BlockHeaderSerializer {
             "finalizedBlockId" -> c.finalizedId.toString,
             "finalizedHeight"  -> c.finalizedHeight.toInt,
             "signature"        -> c.signature.base58
+          )
+        }
+        if (fv.hotstuffConflicts.nonEmpty) builder += "hotstuffConflicts" -> fv.hotstuffConflicts.map { p =>
+          def vote(v: HotStuffVote) =
+            Json.obj("blockId" -> v.blockId.toString, "blockHeight" -> v.blockHeight.toInt, "signature" -> v.signature.toString)
+          Json.obj(
+            "voterIndex"     -> p.voterIndex,
+            "view"           -> p.view,
+            "phase"          -> p.phase.name,
+            "committeeEpoch" -> p.committeeEpoch,
+            "voteA"          -> vote(p.voteA),
+            "voteB"          -> vote(p.voteB)
           )
         }
 
