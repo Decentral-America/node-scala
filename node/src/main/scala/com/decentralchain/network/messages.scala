@@ -224,6 +224,8 @@ case class HotStuffProposal(view: Int, blockId: BlockId, justify: Option[QuorumC
 }
 
 object HotStuffProposal {
-  def fromProtobuf(x: PBHotStuffProposal): HotStuffProposal =
+  def fromProtobuf(x: PBHotStuffProposal): HotStuffProposal = {
+    require(x.view >= 0, s"Invalid proposal view ${Integer.toUnsignedString(x.view)}")
     HotStuffProposal(x.view, x.blockId.toByteStr, x.justify.map(QuorumCertificate.fromProtobuf))
+  }
 }

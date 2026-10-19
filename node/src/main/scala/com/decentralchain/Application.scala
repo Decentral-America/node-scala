@@ -381,8 +381,11 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // this replica's last-persisted voted view at startup, and persist every subsequent advance.
       // Sibling file of `hsLockedQCPath`, same `hotstuff` data directory.
       import com.decentralchain.consensus.hotstuff.HotStuffLastVotedViewStore
-      val hsLastVotedViewPath    = hsLockedQCPath.resolveSibling("last-voted-view.dat")
-      val hsInitialLastVotedView = HotStuffLastVotedViewStore.load(hsLastVotedViewPath).getOrElse(-1)
+      val hsLastVotedViewPath = hsLockedQCPath.resolveSibling("last-voted-view.dat")
+      // AUD-006: a persisted view this close to Int.MaxValue cannot come from an honest run and would leave
+      // the replica unable to vote; discard it (see `HotStuffLastVotedViewStore.load`).
+      val hsInitialLastVotedView =
+        HotStuffLastVotedViewStore.load(hsLastVotedViewPath, Int.MaxValue - settings.hotStuffSettings.maxProposalViewAhead - 1).getOrElse(-1)
       // `heightOf` lets the self-vote path (`onLeaderTurn`) independently re-derive a block's height
       // from its blockId, the same defense-in-depth the receive path below already applies via
       // `blockchainUpdater.heightOf(p.blockId)`, instead of trusting `blockSource`'s returned height
@@ -448,7 +451,10 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           onAction = hsOnAction,
           maxTargetLag = maxTargetLag,
           tipHeight = tipHeight,
-          committeeAt = Some(h => blockchainUpdater.committedGeneratorSetAt(com.decentralchain.state.Height(h)))
+          committeeAt = Some(h => blockchainUpdater.committedGeneratorSetAt(com.decentralchain.state.Height(h))),
+          requireLeaderVote = settings.hotStuffSettings.requireLeaderVote,
+          generatorAt = h => blockchainUpdater.blockHeader(h).map(_.header.generator.toAddress),
+          maxProposalViewAhead = settings.hotStuffSettings.maxProposalViewAhead
         )
       hsCoordinatorRef = hsCoordinator
       hotStuffEquivocations = () => hsCoordinator.detectedEquivocations

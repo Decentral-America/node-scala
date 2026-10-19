@@ -1,5 +1,6 @@
 package com.decentralchain.consensus.hotstuff
 
+import com.decentralchain.account.Address
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.crypto.bls.BlsSignature
 import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
@@ -133,6 +134,9 @@ object HotStuffCoordinator {
       * bound the livelock, not to give the in-flight branch every possible chance.
       */
     val MaxConsecutiveReproposeAttempts: Int = 3
+
+    /** Bound on proposals parked while waiting for their leader's PREPARE vote (pruned by view too). */
+    val MaxPendingProposals: Int = 64
   }
 
   /** The active coordinator. Single-threaded — the shell MUST confine all calls to one actor/scheduler
@@ -275,7 +279,16 @@ object HotStuffCoordinator {
       // verification. `None` = the live tip's committee for every target, i.e. the previous behaviour, for
       // existing call sites/tests. Production wiring supplies `blockchainUpdater`'s committed set for the
       // target height's period (see `Application.scala`).
-      committeeAt: Option[Int => GeneratorSet] = None
+      committeeAt: Option[Int => GeneratorSet] = None,
+      // AUD-006: when true, a WIRE proposal is voted for only after a verified PREPARE vote for the same
+      // (view, blockId, height) from the expected leader (see `expectedLeaderIndexes`). The leader's own
+      // proposal (`onLeaderTurn`) is always processed directly. `false` keeps the previous behaviour
+      // for existing specs; production passes `HotStuffSettings.requireLeaderVote`.
+      requireLeaderVote: Boolean = false,
+      // AUD-006: the FairPoS generator of the block at a height (the happy-path leader when view == height).
+      generatorAt: Int => Option[Address] = _ => None,
+      // AUD-006: highest accepted proposal view relative to this replica's pacemaker view.
+      maxProposalViewAhead: Int = Int.MaxValue
   ) extends HotStuffCoordinator
       with StrictLogging {
     private var engine =
@@ -334,11 +347,15 @@ object HotStuffCoordinator {
     private var lastReproposedBlockId: Option[BlockId] = None
     private var reproposeAttempts: Int                 = 0
 
+    // AUD-006: wire proposals awaiting their leader's PREPARE vote, keyed (view, blockId).
+    private var pendingProposals = Map.empty[(Int, BlockId), (HotStuffProposal, Int)]
+
     // T5 rev.2 (equivocation detection, audit F-3): verified equivocation proofs recorded by this
     // replica so far, at most one per (voter, view, phase) -- see `detectedEquivocations`/
-    // `pruneEquivocations` on the trait for the read/retention contract.
-    private var _detectedEquivocations: Vector[HotStuffEquivocationProof] = Vector.empty
-    override def detectedEquivocations: Seq[HotStuffEquivocationProof]    = _detectedEquivocations
+    // `pruneEquivocations` on the trait for the read/retention contract. Volatile (AUD-107): written on
+    // the coordinator thread, read by the miner thread via `detectedEquivocations`.
+    @volatile private var _detectedEquivocations: Vector[HotStuffEquivocationProof] = Vector.empty
+    override def detectedEquivocations: Seq[HotStuffEquivocationProof]              = _detectedEquivocations
 
     override def pruneEquivocations(alreadyExcluded: Int => Boolean, currentPeriodIndex: Int): Unit =
       _detectedEquivocations = _detectedEquivocations.filterNot(p => alreadyExcluded(p.voterIndex) || p.committeeEpoch < currentPeriodIndex)
@@ -365,6 +382,7 @@ object HotStuffCoordinator {
       // audit F-9: prune `voted` alongside the pool, using the SAME one-view retention margin --
       // see the field's doc above for why this bound must never be tighter than the pool's.
       voted = voted.filter { case (view, _, _) => view >= minView }
+      pendingProposals = pendingProposals.filter { case ((view, _), _) => view >= minView }
     }
 
     private def bid(b: BlockId): String = b.toString.take(8)
@@ -475,9 +493,66 @@ object HotStuffCoordinator {
       * the design's "what state resets on re-anchor: NOTHING" decision applied consistently in the
       * other direction too. `castVotes` keeps its own defensive copy of this check for the `applyQC`
       * phase-progression path, which reaches `castVotes` without passing through here.
+      *
+      * AUD-006: wire proposals are view-bounded and, with requireLeaderVote, need the leader's signed PREPARE vote.
       */
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
+      if (!proposalViewAcceptable(proposal.view))
+        logger.warn(
+          s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED: view outside " +
+            s"[0, ${engine.pacemaker.view} + $maxProposalViewAhead] (AUD-006)"
+        )
+      else if (!requireLeaderVote || leaderVoteSeen(proposal.view, proposal.blockId, blockHeight))
+        processProposal(proposal, blockHeight)
+      else if (proposalValid(proposal.blockId)) parkProposal(proposal, blockHeight)
+    }
+
+    /** Park a wire proposal until its leader's PREPARE vote arrives. The buffer is bounded; when it is full
+      * the entry with the highest view is evicted in favour of one at the same or a lower view, so
+      * proposals for the views this replica is actually in always find room.
+      */
+    private def parkProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
+      val key = (proposal.view, proposal.blockId)
+      if (!pendingProposals.contains(key) && pendingProposals.size >= HotStuffCoordinator.Enabled.MaxPendingProposals) {
+        val highest = pendingProposals.keys.maxBy(_._1)
+        if (proposal.view <= highest._1) pendingProposals = pendingProposals.removed(highest)
+      }
+      if (pendingProposals.contains(key) || pendingProposals.size < HotStuffCoordinator.Enabled.MaxPendingProposals) {
+        pendingProposals = pendingProposals.updated(key, (proposal, blockHeight))
+        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} parked until the leader's PREPARE vote arrives")
+      }
+    }
+
+    private def proposalViewAcceptable(view: Int): Boolean =
+      view >= 0 && view < Int.MaxValue - 1 && view.toLong <= engine.pacemaker.view.toLong + maxProposalViewAhead.toLong
+
+    /** Committee indexes (in the target height's committee) whose PREPARE vote authenticates a proposal:
+      * the block's FairPoS generator when view == height (happy path), and `leaderFor(view)` over the
+      * live committee (view change). Matched by address because the two committees index differently
+      * across a period boundary.
+      */
+    private def expectedLeaderIndexes(view: Int, blockHeight: Int): Set[Int] = {
+      val target    = committeeOf(blockHeight)
+      val generator = if (view == blockHeight) generatorAt(blockHeight) else None
+      val rotation  = HotStuffPacemaker.leaderFor(view, engine.committee).flatMap(li => engine.committee.find(_.index == li)).map(_.address)
+      (generator.toSeq ++ rotation.toSeq).flatMap(addr => target.find(_.address == addr)).map(_.index.toInt).toSet
+    }
+
+    /** A vote authenticates a proposal only when it is a PREPARE vote for the same (view, blockId) AT THE
+      * SAME target height: the voter index is a position in that height's committee, so a vote claiming
+      * another height is a signature by whoever holds that slot in a different committee.
+      */
+    private def isLeaderVoteFor(vote: HotStuffVote, view: Int, blockId: BlockId, blockHeight: Int): Boolean =
+      vote.phase == HotStuffPhase.HOTSTUFF_PHASE_PREPARE && vote.view == view && vote.blockId == blockId &&
+        vote.blockHeight.toInt == blockHeight && expectedLeaderIndexes(view, blockHeight).contains(vote.voterIndex)
+
+    private def leaderVoteSeen(view: Int, blockId: BlockId, blockHeight: Int): Boolean =
+      pool.pending
+        .getOrElse((view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, blockId), Vector.empty)
+        .exists(v => isLeaderVoteFor(v, view, blockId, blockHeight))
+
+    private def processProposal(proposal: HotStuffProposal, blockHeight: Int): Unit =
       if (!proposalValid(proposal.blockId)) {
         logger.debug(
           s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED (not a block this replica recognizes on its own chain)"
@@ -500,7 +575,6 @@ object HotStuffCoordinator {
         if (engine.safety.lastVotedView > previousLastVotedView) onLastVotedViewPersist(engine.safety.lastVotedView)
         if (shouldVote) castVotes(proposal.view, HotStuffPhase.HOTSTUFF_PHASE_PREPARE, proposal.blockId, blockHeight)
       }
-    }
 
     def onVote(vote: HotStuffVote): Unit = {
       refreshCommittee()
@@ -570,6 +644,14 @@ object HotStuffCoordinator {
         // (before commit/phase-progression) the broadcast previously occupied.
         applyQC(qc, effects.broadcast(qc))
       }
+      // AUD-006: a verified PREPARE vote from the expected leader releases the parked proposal.
+      if (vote.phase == HotStuffPhase.HOTSTUFF_PHASE_PREPARE)
+        pendingProposals.get((vote.view, vote.blockId)).foreach { case (p, h) =>
+          if (isLeaderVoteFor(vote, p.view, p.blockId, h) && HotStuffQuorum.verifyVote(vote, committeeOf(h))) {
+            pendingProposals = pendingProposals.removed((vote.view, vote.blockId))
+            processProposal(p, h)
+          }
+        }
     }
 
     def onQC(qc: QuorumCertificate): Unit = applyQC(qc, ()) // wire-received QC: no re-broadcast on accept
@@ -632,7 +714,7 @@ object HotStuffCoordinator {
       logger.debug(s"[HotStuff] onLeaderTurn v=$view b=${bid(blockId)} committee=${engine.committee.size} myIndexes=${effects.myVoterIndexes}")
       val proposal = HotStuffProposal(view, blockId, engine.safety.prepareQC)
       effects.broadcast(proposal)
-      onProposal(proposal, derivedHeight) // the leader also votes for its own proposal
+      processProposal(proposal, derivedHeight) // the leader also votes for its own proposal (local origin: no wire checks)
     }
 
     def onTimeout(): Unit = {
