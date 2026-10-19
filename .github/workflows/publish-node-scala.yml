@@ -134,7 +134,8 @@ jobs:
           set -euo pipefail
           out=$(docker run --rm --platform linux/amd64 --entrypoint java "$REF" -cp '/usr/share/dcc/lib/*' com.decentralchain.utils.UtilApp smoke)
           echo "$out"
-          test "$out" = "smoke: p256=ok bls=ok groth16=ok"
+          # The node logs to stdout too, so match the smoke result as a whole line.
+          grep -qxF "smoke: p256=ok bls=ok groth16=ok" <<< "$out"
       - name: Scan the pushed digest (HIGH/CRITICAL with an available fix)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
