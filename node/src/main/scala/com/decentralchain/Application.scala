@@ -517,7 +517,9 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           // `p.view` only when we don't recognize the block at all (heightOf is None) -- in that case
           // `proposalValid` above has already rejected the proposal via the same lookup, so this
           // fallback value is never actually consumed by a cast vote.
-          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}", p))
+          // Keyed by the full proposal content, not just (view, blockId): variants that differ only in
+          // `justify` must each reach the coordinator, which keeps a bounded set of them per target.
+          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}:${ByteStr(com.decentralchain.crypto.fastHash(p.toProtobuf.toByteArray))}", p))
             hsCoordinator.onProposal(p, blockchainUpdater.heightOf(p.blockId).getOrElse(p.view))
         }(using hotStuffScheduler)
       messageObserver.hotStuffVotes

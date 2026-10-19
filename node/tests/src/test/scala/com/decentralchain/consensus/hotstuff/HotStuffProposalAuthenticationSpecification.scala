@@ -4,7 +4,7 @@ import com.decentralchain.account.{Address, KeyPair}
 import com.decentralchain.block.Block.BlockId
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.crypto.bls.{BlsKeyPair, BlsSignature, TestBlsKeyPair}
-import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message}
+import com.decentralchain.network.{HotStuffProposal, HotStuffVote, Message, QuorumCertificate}
 import com.decentralchain.state.{GeneratorIndex, GeneratorInfo, GeneratorSet, Height}
 import com.decentralchain.test.FlatSpec
 import io.decentralchain.protobuf.block.HotStuffPhase
@@ -134,5 +134,58 @@ class HotStuffProposalAuthenticationSpecification extends FlatSpec {
     h.coordinator.onProposal(HotStuffProposal(view, blockId, None), height)
     h.coordinator.onVote(prepareVote(3, view))
     h.myPrepareVotes.map(_.view) shouldBe List(view)
+  }
+
+  it should "admit a genuine proposal and vote once its leader's vote arrives when filled with low and current-1 views" in {
+    val h = new Harness(_ => None)
+    // Advance the pacemaker to view 20 and lastVotedView to 19 via a real, authenticated round at view 19.
+    val warmView = 19 // leaderFor(19) = 3
+    h.coordinator.onProposal(HotStuffProposal(warmView, blockId, None), height)
+    h.coordinator.onVote(prepareVote(3, warmView))
+    h.myPrepareVotes.map(_.view) shouldBe List(warmView)
+    (0 until 25).foreach(_ => h.coordinator.onTimeout()) // no QC forms (2 of 4 votes), so only timeouts move the view
+    val current = h.coordinator.currentView
+    current should be >= warmView + 1
+    // Fill the buffer: views this replica can never vote again (<= lastVotedView / older than current-1),
+    // plus votable current-1 entries for unrelated blocks.
+    (0 until HotStuffCoordinator.Enabled.MaxPendingProposals).foreach { i =>
+      h.coordinator.onProposal(HotStuffProposal(i % (warmView + 1), ByteStr(Array.fill[Byte](32)(i.toByte)), None), height)
+      h.coordinator.onProposal(HotStuffProposal(current - 1, ByteStr(Array.fill[Byte](32)((i + 100).toByte)), None), height)
+    }
+    val leader = HotStuffPacemaker.leaderFor(current, committee).get.toInt
+    h.coordinator.onProposal(HotStuffProposal(current, blockId, None), height)
+    h.coordinator.onVote(prepareVote(leader, current))
+    h.myPrepareVotes.map(_.view) shouldBe List(warmView, current)
+  }
+
+  "a parked proposal" should "still be voted for when a variant with a bogus justify arrives after it" in {
+    val h     = new Harness(_ => None)
+    val view  = 7
+    val bogus =
+      QuorumCertificate(5, prepare, ByteStr(Array.fill[Byte](32)(0x11.toByte)), Height(height), Seq(0, 2, 3), ByteStr(Array.fill[Byte](96)(1)), 0)
+    h.coordinator.onProposal(HotStuffProposal(view, blockId, None), height)
+    h.coordinator.onProposal(HotStuffProposal(view, blockId, Some(bogus)), height)
+    h.coordinator.onVote(prepareVote(3, view))
+    h.myPrepareVotes.map(_.view) shouldBe List(view)
+  }
+
+  it should "still be voted for when a variant with a bogus justify arrives before it" in {
+    val h     = new Harness(_ => None)
+    val view  = 7
+    val bogus =
+      QuorumCertificate(5, prepare, ByteStr(Array.fill[Byte](32)(0x11.toByte)), Height(height), Seq(0, 2, 3), ByteStr(Array.fill[Byte](96)(1)), 0)
+    (1 to 6).foreach(i => h.coordinator.onProposal(HotStuffProposal(view, blockId, Some(bogus.copy(view = i))), height))
+    h.coordinator.onProposal(HotStuffProposal(view, blockId, None), height)
+    h.coordinator.onVote(prepareVote(3, view))
+    h.myPrepareVotes.map(_.view) shouldBe List(view)
+  }
+
+  "the leader's own proposal (onLeaderTurn)" should "be voted for by the leader itself without waiting for any vote" in {
+    val h    = new Harness(_ => None)
+    val view = 5 // leaderFor(5) = 1 = me
+    h.coordinator.onLeaderTurn(view, blockId, height)
+    h.sent.collect { case p: HotStuffProposal => p.view }.toList shouldBe List(view)
+    h.myPrepareVotes.map(_.view) shouldBe List(view)
+    h.persisted.toList shouldBe List(view)
   }
 }

@@ -135,8 +135,13 @@ object HotStuffCoordinator {
       */
     val MaxConsecutiveReproposeAttempts: Int = 3
 
-    /** Bound on proposals parked while waiting for their leader's PREPARE vote (pruned by view too). */
+    /** Bound on (view, blockId) targets parked while waiting for their leader's PREPARE vote (pruned by view too). */
     val MaxPendingProposals: Int = 64
+
+    /** Bound on distinct proposals kept per parked (view, blockId) target. The leader's vote covers
+      * (view, blockId, height) but not `justify`, so several variants are kept and all are tried on release.
+      */
+    val MaxVariantsPerProposal: Int = 4
   }
 
   /** The active coordinator. Single-threaded — the shell MUST confine all calls to one actor/scheduler
@@ -347,8 +352,9 @@ object HotStuffCoordinator {
     private var lastReproposedBlockId: Option[BlockId] = None
     private var reproposeAttempts: Int                 = 0
 
-    // AUD-006: wire proposals awaiting their leader's PREPARE vote, keyed (view, blockId).
-    private var pendingProposals = Map.empty[(Int, BlockId), (HotStuffProposal, Int)]
+    // AUD-006: wire proposals awaiting their leader's PREPARE vote, keyed (view, blockId) -> (target height,
+    // distinct variants). Variants differ only in `justify`, which the leader's vote does not cover.
+    private var pendingProposals = Map.empty[(Int, BlockId), (Int, Vector[HotStuffProposal])]
 
     // T5 rev.2 (equivocation detection, audit F-3): verified equivocation proofs recorded by this
     // replica so far, at most one per (voter, view, phase) -- see `detectedEquivocations`/
@@ -499,28 +505,60 @@ object HotStuffCoordinator {
     def onProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       refreshCommittee()
       if (!proposalViewAcceptable(proposal.view))
-        logger.warn(
+        logger.debug(
           s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} REJECTED: view outside " +
             s"[0, ${engine.pacemaker.view} + $maxProposalViewAhead] (AUD-006)"
         )
       else if (!requireLeaderVote || leaderVoteSeen(proposal.view, proposal.blockId, blockHeight))
         processProposal(proposal, blockHeight)
-      else if (proposalValid(proposal.blockId)) parkProposal(proposal, blockHeight)
+      else if (canStillVote(proposal.view) && proposalValid(proposal.blockId)) parkProposal(proposal, blockHeight)
     }
 
-    /** Park a wire proposal until its leader's PREPARE vote arrives. The buffer is bounded; when it is full
-      * the entry with the highest view is evicted in favour of one at the same or a lower view, so
-      * proposals for the views this replica is actually in always find room.
+    /** Could this replica still cast a PREPARE vote at `view`? Below `lastVotedView` it never can, and views
+      * older than `pacemaker.view - 1` are evicted by `prunePool` anyway (same margin).
+      */
+    private def canStillVote(view: Int): Boolean =
+      view > engine.safety.lastVotedView && view >= engine.pacemaker.view - 1
+
+    /** A parked target's justify QC must verify before it may take one of the target's variant slots, so
+      * malformed copies cannot crowd out the leader's own proposal. `HotStuffEngine.onProposal` repeats
+      * the full check on release.
+      */
+    private def justifyVerifies(proposal: HotStuffProposal): Boolean =
+      proposal.justify.forall(qc => HotStuffQuorum.verifyQC(qc, committeeOf(qc.blockHeight.toInt)).isRight)
+
+    /** Park a wire proposal until its leader's PREPARE vote arrives. Bounded in two ways:
+      *   - at most `MaxPendingProposals` targets. When full, entries this replica can no longer vote on are
+      *     dropped first; otherwise the target farthest from the pacemaker view gives way to one at least as
+      *     close, so the views this replica is actually in always find room.
+      *   - at most `MaxVariantsPerProposal` distinct variants per target, each with a verifying justify.
+      *     When full, the variant with the lowest justify view gives way to one with a higher justify view.
       */
     private def parkProposal(proposal: HotStuffProposal, blockHeight: Int): Unit = {
       val key = (proposal.view, proposal.blockId)
       if (!pendingProposals.contains(key) && pendingProposals.size >= HotStuffCoordinator.Enabled.MaxPendingProposals) {
-        val highest = pendingProposals.keys.maxBy(_._1)
-        if (proposal.view <= highest._1) pendingProposals = pendingProposals.removed(highest)
+        pendingProposals = pendingProposals.filter { case ((view, _), _) => canStillVote(view) }
+        if (pendingProposals.size >= HotStuffCoordinator.Enabled.MaxPendingProposals) {
+          val pv       = engine.pacemaker.view.toLong
+          val distance = (view: Int) => math.abs(view.toLong - pv)
+          val farthest = pendingProposals.keys.maxBy(k => distance(k._1))
+          if (distance(proposal.view) <= distance(farthest._1)) pendingProposals = pendingProposals.removed(farthest)
+        }
       }
       if (pendingProposals.contains(key) || pendingProposals.size < HotStuffCoordinator.Enabled.MaxPendingProposals) {
-        pendingProposals = pendingProposals.updated(key, (proposal, blockHeight))
-        logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} parked until the leader's PREPARE vote arrives")
+        val (h, variants) = pendingProposals.getOrElse(key, (blockHeight, Vector.empty[HotStuffProposal]))
+        val justifyView   = (p: HotStuffProposal) => p.justify.fold(-1)(_.view)
+        val updated       =
+          if (variants.contains(proposal) || !justifyVerifies(proposal)) variants
+          else if (variants.size < HotStuffCoordinator.Enabled.MaxVariantsPerProposal) variants :+ proposal
+          else {
+            val weakest = variants.minBy(justifyView)
+            if (justifyView(proposal) > justifyView(weakest)) variants.filterNot(_ == weakest) :+ proposal else variants
+          }
+        if (updated.nonEmpty) {
+          pendingProposals = pendingProposals.updated(key, (h, updated))
+          logger.debug(s"[HotStuff] onProposal v=${proposal.view} b=${bid(proposal.blockId)} parked until the leader's PREPARE vote arrives")
+        }
       }
     }
 
@@ -646,10 +684,12 @@ object HotStuffCoordinator {
       }
       // AUD-006: a verified PREPARE vote from the expected leader releases the parked proposal.
       if (vote.phase == HotStuffPhase.HOTSTUFF_PHASE_PREPARE)
-        pendingProposals.get((vote.view, vote.blockId)).foreach { case (p, h) =>
-          if (isLeaderVoteFor(vote, p.view, p.blockId, h) && HotStuffQuorum.verifyVote(vote, committeeOf(h))) {
+        pendingProposals.get((vote.view, vote.blockId)).foreach { case (h, variants) =>
+          if (isLeaderVoteFor(vote, vote.view, vote.blockId, h) && HotStuffQuorum.verifyVote(vote, committeeOf(h))) {
             pendingProposals = pendingProposals.removed((vote.view, vote.blockId))
-            processProposal(p, h)
+            // Every variant carries the same (view, blockId); the strongest justify goes first. Once one is
+            // voted for, `lastVotedView` makes the rest no-ops.
+            variants.sortBy(p => -p.justify.fold(-1)(_.view)).foreach(processProposal(_, h))
           }
         }
     }
