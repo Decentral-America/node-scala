@@ -167,9 +167,8 @@ object BlockDiffer {
           case Some(prevBlock) => calculatePenalties(blockchain, prevBlock)
           case None            => Map.empty[Address, Portfolio].asRight[String]
         }
-        withPenaltiesPortfolios <- Portfolio.combine(penalties, totalRewardPortfolios)
         patchesSnapshot = leasePatchesSnapshot(blockchainWithNewBlock)
-        resultSnapshot <- patchesSnapshot.addBalances(withPenaltiesPortfolios, blockchainWithNewBlock)
+        resultSnapshot <- rewardsWithPenalties(blockchainWithNewBlock, patchesSnapshot, totalRewardPortfolios, penalties)
       } yield resultSnapshot
 
     for {
@@ -325,6 +324,19 @@ object BlockDiffer {
       _ <- checkStateHash(blockchain, micro.stateHash, r.computedStateHash)
     } yield r
   }
+
+  /** Rewards and penalties are netted per address BEFORE balances are written, on both the appender
+    * (`fromBlockTraced`) and the miner (`createInitialBlockSnapshot`) path. Writing rewards first and
+    * then adding penalties produced a zero-delta balance entry for a penalised miner whose reward
+    * equals its deposit, which the appender's netting never writes.
+    */
+  private[diffs] def rewardsWithPenalties(
+      blockchain: Blockchain,
+      base: StateSnapshot,
+      rewards: Map[Address, Portfolio],
+      penalties: Map[Address, Portfolio]
+  ): Either[String, StateSnapshot] =
+    Portfolio.combine(penalties, rewards).flatMap(base.addBalances(_, blockchain))
 
   private def calculatePenalties(blockchain: Blockchain, prevBlockId: BlockId): Either[String, Map[Address, Portfolio]] = {
     val empty           = Map.empty[Address, Portfolio].asRight[String]
@@ -497,9 +509,8 @@ object BlockDiffer {
       resultPf = Map(miner -> minerReward) ++
         daoAddress.map(_ -> Portfolio.dcc(rewardShares.daoAddress)) ++
         xtnBuybackAddress.map(_ -> Portfolio.dcc(rewardShares.xtnBuybackAddress))
-      withRewards   <- StateSnapshot.build(blockchain, portfolios = resultPf.filterNot(_._2.isEmpty))
       penaltiesPf   <- calculatePenalties(blockchain, reference).leftMap(GenericError(_))
-      withPenalties <- withRewards.addBalances(penaltiesPf, blockchain).leftMap(GenericError(_))
+      withPenalties <- rewardsWithPenalties(blockchain, StateSnapshot.empty, resultPf.filterNot(_._2.isEmpty), penaltiesPf).leftMap(GenericError(_))
     } yield withPenalties
   }
 
