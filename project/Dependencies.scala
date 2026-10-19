@@ -53,11 +53,11 @@ object Dependencies {
   private def jacksonModule(group: String, module: String, version: String = "2.22.3") =
     s"com.fasterxml.jackson.$group" % s"jackson-$module" % version
 
-  private def web3jModule(module: String) = "org.web3j" % module % "6.0.0" // requires Java 21+; safe on JDK 25 (was 4.13.0)
+  private val web3jVersion = "6.0.0" // requires Java 21+; safe on JDK 25 (was 4.13.0)
 
   def monixModule(module: String): Def.Initialize[ModuleID] = Def.setting("io.monix" %%% s"monix-$module" % "3.5.0")
 
-  private def grpcModule(module: String) = "io.grpc" % module % "1.84.0"
+  private val grpcVersion = "1.84.0"
 
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.7.2-jre"
@@ -72,10 +72,9 @@ object Dependencies {
   val scalaTest   = "org.scalatest" %% "scalatest" % "3.2.20" % Test
   val scalaJsTest = Def.setting("com.lihaoyi" %%% "utest" % "0.9.5" % Test)
 
-  private def sttp3Module(module: String) = "com.softwaremill.sttp.client3" %% module % "3.11.0"
-
-  val sttp3      = sttp3Module("core")
-  val sttp3Monix = sttp3Module("monix")
+  private val sttp3Version = "3.11.0"
+  val sttp3                = "com.softwaremill.sttp.client3" %% "core"  % sttp3Version
+  val sttp3Monix           = "com.softwaremill.sttp.client3" %% "monix" % sttp3Version
 
   val console = Seq("com.github.scopt" %% "scopt" % "4.1.0")
 
@@ -102,7 +101,7 @@ object Dependencies {
       googleGuava, // BaseEncoding.base16()
       curve25519,
       "io.decentralchain" % "groth16" % "0.2.1.0",
-      web3jModule("crypto").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
+      "org.web3j" % "crypto" % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
       protoSchemasLib % "protobuf"
     ) ++ cryptoProviders
   )
@@ -163,7 +162,7 @@ object Dependencies {
       "eu.timepit"        %% "refined"  % "0.11.4" exclude ("org.scala-lang.modules", "scala-xml_2.13"),
       "com.esaulpaugh"     % "headlong" % "13.3.1",
       "com.github.jbellis" % "jamm"     % "0.4.0", // Weighing caches
-      web3jModule("abi").excludeAll(ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
+      "org.web3j" % "abi" % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
       "io.decentralchain"              % "blst" % "0.3.16.0",
       amazonCorretto("linux-x86_64")   % Optional,
       amazonCorretto("linux-aarch_64") % Optional
@@ -187,8 +186,8 @@ object Dependencies {
   }
 
   lazy val grpc: Seq[ModuleID] = Seq(
-    grpcModule("grpc-netty"),
-    grpcModule("grpc-services"),
+    "io.grpc" % "grpc-netty" % grpcVersion,
+    "io.grpc" % "grpc-services" % grpcVersion,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
     protoSchemasLib         % "protobuf"
   )
@@ -206,7 +205,7 @@ object Dependencies {
       pekkoHttpModule("pekko-http-testkit") % Test,
       "com.softwaremill.diffx"             %% "diffx-core"             % "0.9.0" % Test,
       "com.softwaremill.diffx"             %% "diffx-scalatest-should" % "0.9.0" % Test,
-      grpcModule("grpc-inprocess")          % Test
+      "io.grpc" % "grpc-inprocess" % grpcVersion % Test
     ) ++ Dependencies.console ++ Dependencies.logDeps ++ Dependencies.test
   )
 

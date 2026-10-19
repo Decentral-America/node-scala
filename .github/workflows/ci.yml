@@ -273,30 +273,19 @@ jobs:
           fetch-depth: 0
 
       - name: Extract base-branch specs
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git show "origin/${{ github.base_ref }}:node/src/main/resources/swagger-ui/openapi.yaml" > /tmp/node-openapi-base.yaml
-          git show "origin/${{ github.base_ref }}:ride-runner/src/main/resources/swagger-ui/openapi.yaml" > /tmp/ride-runner-openapi-base.yaml
+          git show "origin/${BASE_REF}:node/src/main/resources/swagger-ui/openapi.yaml" > /tmp/node-openapi-base.yaml
+          git show "origin/${BASE_REF}:ride-runner/src/main/resources/swagger-ui/openapi.yaml" > /tmp/ride-runner-openapi-base.yaml
 
-      - name: Install oasdiff
-        # Installed via the project's official install script rather than a
-        # hardcoded release-asset URL -- mirrors the matcher repo's
-        # api-schema-conformance job (feat/tier5-oasdiff there). Verified live
-        # against the current release (v1.26.0, 2026-07-24): oasdiff's Linux
-        # tarballs are named oasdiff_<version>_<os>_<arch>.tar.gz (e.g.
-        # oasdiff_1.26.0_linux_amd64.tar.gz) -- there is no unversioned
-        # oasdiff_linux_amd64.tar.gz asset, so a bare
-        # `releases/latest/download/oasdiff_linux_amd64.tar.gz` URL 404s.
-        # install.sh resolves the correct per-platform asset name, verifies
-        # its sha256 against the release's checksums.txt, and installs to
-        # /usr/local/bin/oasdiff.
-        #
-        # Fetched from the v1.26.0 tag (not `main`) and `version=` pinned to
-        # match, so both the installer logic and the oasdiff version it
-        # installs are frozen -- a new oasdiff release can add new
-        # breaking-change checks, and an unpinned install could make a PR
-        # start failing this job for reasons unrelated to its own diff. Bump
-        # both together, deliberately, and keep in sync with matcher's pin.
-        run: curl -fsSL https://raw.githubusercontent.com/oasdiff/oasdiff/v1.26.0/install.sh | version=1.26.0 sh
+      - name: Install oasdiff (pinned release tarball, sha256-verified)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/oasdiff.tgz https://github.com/oasdiff/oasdiff/releases/download/v1.26.0/oasdiff_1.26.0_linux_amd64.tar.gz
+          echo "06893108bdf5b7e310f39f0ce5aaff3151eae1ccade7ab457b16b16b6f95ae3e  /tmp/oasdiff.tgz" | sha256sum -c -
+          sudo tar xzf /tmp/oasdiff.tgz -C /usr/local/bin oasdiff
+          oasdiff --version
 
       - name: Check node REST API for breaking changes
         # --fail-on ERR: exit 1 only on definite breaking changes (ERR),

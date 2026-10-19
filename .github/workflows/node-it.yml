@@ -55,7 +55,9 @@ jobs:
         # consensus-liveness suites -- each one wants the whole runner -- so serialize them; the
         # HotStuffFourNodeSuite docstring already warns they are resource-sensitive. Wall-clock cost
         # is minor (well within this job's 90m budget) and buys deterministic runs.
-        run: sbt --batch -Ddcc.it.max-parallel-suites=1 "node-it/testOnly ${{ inputs.suite || 'com.decentralchain.it.sync.finalization.*' }}"
+        env:
+          SUITE: ${{ inputs.suite || 'com.decentralchain.it.sync.finalization.*' }}
+        run: sbt --batch -Ddcc.it.max-parallel-suites=1 "node-it/testOnly $SUITE"
       - name: Upload node-it logs on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
