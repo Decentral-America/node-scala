@@ -1,3 +1,6 @@
+> **ARCHIVED 2026-10-18 — historical.** Describes the 2026-08-04 state (branch `dev`, image `dev-hotstuff`,
+> v1.6.3), all superseded. Current entry point: [`../hotstuff-audit-readiness.md`](../hotstuff-audit-readiness.md).
+
 # T2 HotStuff — OWN-IT-TO-COMPLETION HANDOFF (SSOT)
 
 > **STATUS UPDATE (2026-08-04): the §5 decision below is RESOLVED — Option A (proper pacemaker/
@@ -5,7 +8,7 @@
 > is live on **testnet only** and confirmed genuinely advancing `GET /blocks/height/finalized`
 > (107779 → 107697, verified 2026-08-04). T10 (cross-committee-epoch-fork) is also fixed and merged.
 > The remaining open item is the **external consensus audit** before mainnet — see
-> [`hotstuff-audit-readiness.md`](./hotstuff-audit-readiness.md) for the current, actively-maintained
+> [`hotstuff-audit-readiness.md`](../hotstuff-audit-readiness.md) for the current, actively-maintained
 > status banner and enable-gate checklist; that file is now the SSOT for "where things stand." This file
 > is kept for its execution playbook (§6), environment gotchas (§7), and key identifiers (§8), which remain
 > accurate, but its TL;DR/decision framing below (as of 2026-07-13) is historical — the decision it asks

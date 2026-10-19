@@ -34,7 +34,7 @@ class BlockchainUpdates(private val context: Context) extends Extension with Sco
   private val repo = new Repo(rdb, context.blocksApi)
 
   private val grpcServer: Server = NettyServerBuilder
-    .forAddress(new InetSocketAddress("0.0.0.0", settings.grpcPort))
+    .forAddress(new InetSocketAddress(settings.bindAddress, settings.grpcPort))
     .permitKeepAliveTime(settings.minKeepAlive.toNanos, TimeUnit.NANOSECONDS)
     .addStreamTracerFactory((fullMethodName: String, headers: Metadata) =>
       new ServerStreamTracer {
@@ -94,7 +94,7 @@ class BlockchainUpdates(private val context: Context) extends Extension with Sco
     }
 
     grpcServer.start()
-    log.info(s"BlockchainUpdates extension started gRPC API on port ${settings.grpcPort}")
+    log.info(s"BlockchainUpdates extension started gRPC API on ${settings.bindAddress}:${settings.grpcPort}")
   }
 
   override def shutdown(): Future[Unit] =

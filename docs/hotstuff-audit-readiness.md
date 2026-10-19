@@ -4,19 +4,16 @@
 > the threat scenarios to probe, the code surface, and the evidence already produced — so the audit can
 > start from a known baseline instead of rediscovering it.
 >
-> **Status of the thing being audited (updated 2026-08-04):** ✅ **Ready for audit against `main` @
-> `9c49632398`** (bumped 2026-08-04 from the prior baseline `304bd0e408` — scope has grown since: SC-695
-> (an unrelated RIDE feature, feature id 30, dormant) and the T10 cross-committee-epoch-fork fix + its
-> 2026-08-04 liveness follow-up fix are now also on `main` and are part of the HotStuff-relevant surface,
-> so the frozen baseline commit is updated to match). The pacemaker/single-active-view rework (Task 8) that
-> this banner previously marked as pending — fixing the `view=block-height` shell model's conflation of
-> view and block height, plus vote-pool bounding, `lockedQC` persistence across restarts, and the
-> re-propose-locked-branch leader-timeout optimization — is complete and merged, as is T10 (see §4/§7 T10
-> entry). The code described in this package (scope, threat model, evidence index below) is frozen at
-> `9c49632398` for the external auditor to review; if HotStuff-area commits land on `main` after this date,
-> this banner's commit reference needs bumping again before audit kickoff. See
-> [`hotstuff-step5-findings-and-rework.md`](./hotstuff-step5-findings-and-rework.md) for the history of what
-> was found and fixed to get here.
+> **Status of the thing being audited (re-baselined 2026-10-19):** **Ready for audit against release
+> `v1.8.0`** (`762c3a7c24` on `main`; the tag points at that commit). Consensus-relevant changes since the
+> previous baseline `9c49632398`: epoch hand-off (#66), pacemaker restart (#67), self-vote period boundary
+> (#74), HotStuff equivocation penalty at `hotStuffEquivocationPenaltyHeight` (#77), and the 2026-10-18
+> hardening in §4 T12-T15 and §7 item 9. Bump this reference again if HotStuff-area code changes before audit
+> kickoff.
+>
+> **Merge policy.** `main` requires the Check PR and Test checks (Build, Security Scan (Trivy) and Semgrep also
+> run on every PR). With a single maintainer, an admin merge without a second review is allowed only after
+> those checks are green; this is the recorded exception (audit AUD-007 / AUD-202).
 >
 > **Separately — not covered by this audit-readiness status:** by explicit human decision, ahead of this
 > external audit, a new `dcc.hotstuff.authoritative` opt-in flag was deployed live on testnet only
@@ -90,10 +87,10 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T2 | Forged / below-quorum QC | `HotStuffQuorum.verifyQC` | all-signers-∈-committee + 2/3-stake + agg verify; unit-tested |
 | T3 | Unverified QC influencing safety/commit | `HotStuffEngine.onQC/onProposal` | `verifyQC` gate before `update` (`:44`,`:70`); finding #1 ✅ |
 | T4 | Conflicting / out-of-chain COMMIT | `verifyQC` + honest-quorum voting/lock rules | verified COMMIT QC trusted by design (finding #2); forged/below-quorum rejected, same-height re-commit blocked (tested) — audit the safety proof under the honest-≥2/3 assumption |
-| T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | proof-carried, block-validated exclusion wired unconditionally (was gated feature 29 `HotStuffEquivocationEvidence`, deleted 2026-09-02 — every node validates/unions from genesis, no activation-height check); still gated by `slashing-enabled` (default off) on the miner-side fold only; live testnet exercise pending |
+| T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | proof-carried, block-validated exclusion wired unconditionally (was gated feature 29 `HotStuffEquivocationEvidence`, deleted 2026-09-02 — every node validates/unions from genesis, no activation-height check); still gated by `slashing-enabled` (default off) on the miner-side fold only; live testnet drill 2026-10-13: proof carried in block 56354, voter excluded from 56355; deposit forfeiture applies from `hotStuffEquivocationPenaltyHeight` (testnet 60000, pinned in `KnownChainParameters`); miner-side folding still gated by `slashing-enabled` (off on testnet) |
 | T6 | Byzantine voter stalls QC formation | `HotStuffVotePool.onVote` | invalid votes dropped on ingress; finding #3 ✅ |
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
-| T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 (**superseded**, see below). **BLS domain separation (2026-09-02, unconditional — was gated feature 30, since deleted):** cross-CHAIN and cross-SENDER replay are now closed too (PoP binds `chainId ‖ sender`, per T1 above), and "framing note = finding #4" is superseded by per-context DSTs — `_POP_`/`_ENDORSE_`/`_HSVOTE_` (`BlsUtils.Bls{Pop,Endorse,HsVote}DomainSeparationTagV2`) are the ONLY tags used in production, so a PoP/endorsement/vote signature from one context can no longer be transplanted into another even by encoding coincidence. Proved by the 3x3 cross-DST matrix in `BlsUtilsTest`. |
+| T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 (**superseded**, see below). **BLS domain separation (2026-09-02, unconditional — was gated feature 30, since deleted):** cross-CHAIN and cross-SENDER replay are now closed too (PoP binds `chainId ‖ sender`, per T1 above), and "framing note = finding #4" is superseded by per-context DSTs — `_POP_`/`_ENDORSE_`/`_HSVOTE_` are the only tags used for SIGNING; the legacy `_NUL_` tag is verified only for block-carried signatures strictly below `finalityHardeningHeight` (testnet 90000) and never on gossip paths (see §7 item 9), so a PoP/endorsement/vote signature from one context can no longer be transplanted into another even by encoding coincidence. Proved by the 3x3 cross-DST matrix in `BlsUtilsTest`. |
 | T9 | Crashed leader / partition (liveness + safety) | pacemaker + safety | unit + `FourNodeHotStuffTestSuite`; **needs live soak** |
 | T10 | Cross-committee-epoch fork — two disjoint committees (e.g. a full validator-set rotation between committed-generators periods) each independently form a valid, honestly-signed 2/3-stake QC for a *different* block at the identical (view, height), with zero shared signers | `HotStuffQuorum`/`HotStuffVotePool` — committee identity is now bound into the signed vote/QC bytes | **Narrowed, not fully closed (fork hazard fixed 2026-08-03; a related liveness gap in the same fix found and closed 2026-08-04).** A `committeeEpoch: Int = 0` field (schema 1.6.5, `dcc/block.proto` field 7 `committee_epoch`, reusing the existing `state.GenerationPeriod.index` rotation identifier — no new committee-hash concept) is folded into the canonical signed bytes in `HotStuffQuorum.voteMessage`, carried on the wire on `HotStuffVote`/`QuorumCertificate`, and gated by a new `HotStuffQuorum.acceptableCommitteeEpoch(qcEpoch, currentEpoch)` transition rule (accepts the current epoch or the immediately-preceding one; rejects everything else) applied in `HotStuffEngine.onQC`/`onProposal` *before* cryptographic verification. `HotStuffCrossEpochForkSpecification` proves the fork-hazard fix: labeled votes from disjoint epochs can no longer be relabeled/merged into a cross-epoch QC, and `HotStuffEngine.onQC` demonstrably rejects a QC from an epoch outside the transition window end-to-end. Default `committeeEpoch = 0` is fully backward compatible — a pre-1.6.5 peer's messages simply omit the proto3 field and decode as `0`, matching every existing call site, so this closes cleanly with zero behaviour change for unlabeled traffic. **Adversarial review (2026-08-04) found the fork-hazard fix's OWN wiring introduced a distinct, previously-uncharacterized LIVENESS gap:** `committeeEpoch` was derived from the SIGNING replica's own live chain tip (`blockchainUpdater.currentGenerationPeriod`) rather than the vote's TARGET height, so two fully honest, synced replicas voting the identical `(view, phase, blockId, blockHeight)` target could sign DIFFERENT epochs if their local tip crossed a generation-period boundary at slightly different moments — ordinary propagation skew, not an attack — and `formQC`'s (correctly epoch-sensitive) `sameTarget` check then permanently stalled that target. Fixed by deriving `committeeEpoch` as a PURE function of the target height (`HotStuffCoordinator.Enabled`'s new `committeeEpochOf: Int => Int` parameter, `blockchain.generationPeriodOf(targetHeight).index` in `Application.scala`) at every vote-signing call site, so every honest replica now computes the identical epoch for the identical target regardless of its own local tip; `HotStuffVotePool.onVote`'s per-voter dedup was additionally made epoch-aware (`(voterIndex, committeeEpoch)`, not `voterIndex` alone) as defense-in-depth. See `HotStuffCrossEpochLivenessSpecification` for the reproduction and fix proof. All HotStuff-area unit/DST tests green (`node-tests/testOnly com.decentralchain.consensus.hotstuff.* …`). **Real Docker evidence obtained (2026-08-03, pre-dates the liveness fix above):** built the actual `node-it` Docker image off this
 branch (`sbt node-it/docker`, `.m2`-resolved 1.6.5 schema) and ran `FourNodeHotStuffTestSuite`
@@ -111,8 +108,12 @@ mid-cluster) exists yet — only unit/DST-level simulation (`DstCommitteeChangeS
 plus the non-regression 4-node run above; a dedicated `node-it` rotation scenario is still future work,
 best done on CI/testnet given local `node-it` Docker's documented memory/flakiness constraints on this
 laptop (see
-`docs/hotstuff-HANDOFF.md`) for anything longer/heavier than the single run just completed. |
+`docs/archive/hotstuff-HANDOFF-2026-08-04.md`) for anything longer/heavier than the single run just completed. |
 | T11 | Post-restart replay under a blank safety lock — a freshly-constructed `SafetyState` (`lockedQC = None`) admits ANY view-ordering-valid proposal, incl. a Byzantine leader's replay of an old-but-real block under an inflated view, until the replica re-accumulates its own lock | `HotStuffSafety.safeToVote`'s `None` branch / `HotStuffCoordinator.Enabled`'s `initialLockedQC` | **Narrowed, not fully closed** — `HotStuffLockedQCStore` persists a replica's real `lockedQC` to disk on every genuine advance and reloads it via `initialLockedQC` at coordinator construction, so a restart resumes from the replica's actual last lock instead of blank state. This closes the window on every restart from a replica's SECOND boot onward, adversarially tested against a fabricated-but-well-formed persisted QC (`HotStuffViewChangeSpecification`, "a fabricated-but-well-formed QC loaded as initialLockedQC" — proven to at worst self-DoS that one replica's voting, never corrupt consensus, since `HotStuffEngine.onQC` independently re-verifies BLS/quorum regardless of `lockedQC`). It does **not** close the window on a replica's very first-ever boot, when by definition nothing has been locked/persisted yet — that one-time gap still exists, bounded the same way as before (`HotStuffEngine.onQC`'s monotonic commit-height guard; see T4) |
+| T12 | Unauthenticated proposal raises `lastVotedView` (incl. near `Int.MaxValue`) | `HotStuffCoordinator.onProposal`, `HotStuffLastVotedViewStore.load` | **Fixed 2026-10-18.** A wire proposal is voted for only after a verified PREPARE vote for the same (view, block) from the expected leader (block generator when view == height, else `leaderFor(view)`); views bounded by `pacemaker.view + maxProposalViewAhead` (2^20); implausible persisted views discarded on restart. No wire-format change. `HotStuffProposalAuthenticationSpecification`, `HotStuffLastVotedViewPlausibilitySpecification` |
+| T13 | Gossip dedup pre-empted by invalid messages | `HotStuffGossip` (Application wiring) | **Fixed 2026-10-18.** Seen-cache keys include signature material and are set only after ingress bounds + BLS verification. `HotStuffGossipSpecification` |
+| T14 | One malformed `EndorseBlock` ends feature-25 endorsement intake | `EndorseBlock.fromProtobuf`, `EndorsementStorage.tryAdd`, `EndorsementIngress`, `SafeHandler` | **Fixed 2026-10-18.** Negative index rejected at decode and in storage (`GeneratorIndex.checked` total); P2P subscription handlers survive a failing element. `EndorsementIngressSpec`, `EndorsementStorageSpec` |
+| T15 | QC weight from live balance; proven equivocators keep weight | `Blockchain.committedGeneratorSetAt` | **Fixed from `finalityHardeningHeight`** (testnet 90000): generating balance at the target's parent; proven equivocators weigh 0. `CommitteeQuorumWeightSuite` |
 
 ## 5. Code surface (package `com.decentralchain.consensus.hotstuff` unless noted)
 | File | Role | Audit priority |
@@ -126,7 +127,7 @@ laptop (see
 | `Application.scala` (gated block) | wiring: subscriptions, timer, propose hook, committee provider | med |
 | `network/messages.scala`, `network/BasicMessagesRepo.scala` | wire format + msg codes 39/40/41 | low-med (T8) |
 | `CommitToGenerationTransactionDiff.scala:22` (`transaction/…`) | on-chain BLS PoP | high (T1) |
-| `crypto/bls/BlsUtils.scala` | domain-separation tag SSOT — `_POP_`/`_ENDORSE_`/`_HSVOTE_`, the only tags used anywhere in production (the legacy shared `_NUL_` tag was deleted 2026-09-02, see the historical note in §7 item 9) | **highest** (T1, T8) — first file a crypto auditor should read |
+| `crypto/bls/BlsUtils.scala` | domain-separation tag SSOT — `_POP_`/`_ENDORSE_`/`_HSVOTE_` for all signing; verify-only legacy `_NUL_` accepted solely for block-carried signatures below `finalityHardeningHeight` and counted (`LEGACY_BLS_DST_ACCEPTED`), see §7 item 9 | **highest** (T1, T8) — first file a crypto auditor should read |
 | `CommitToGenerationTransaction.popMessage` (`transaction/…`) | PoP message SSOT — `chainId ‖ sender ‖ endorserPk ‖ generationPeriodStart` layout, constructed in exactly this one function, unconditional since genesis | high (T1) |
 
 ## 6. Evidence index
@@ -308,6 +309,22 @@ laptop (see
    > already-on-chain historical signatures falls back to the legacy tag. See
    > `node/src/main/scala/com/decentralchain/crypto/bls/BlsUtils.scala` (the `BlsLegacyDomainSeparationTag`
    > scaladoc) for the full explanation.
+   >
+   > **2026-10-18 (audit AUD-040):** the fallback is now bounded. Block validation accepts a legacy-tagged
+   > signature only below `finalityHardeningHeight` (testnet 90000, pinned per genesis in
+   > `KnownChainParameters`); HotStuff vote/QC gossip and EndorseBlock gossip never accept it. A full replay
+   > of the current chain (genesis 2026-09-04) to height 75073 (CI run 39220391854) counted legacy
+   > acceptances per context:
+   >
+   > | Context | Legacy acceptances |
+   > |---|---|
+   > | pop | 0 |
+   > | endorsement | 0 |
+   > | endorsement-aggregate | 0 |
+   > | hotstuff-vote | 0 |
+   >
+   > No signature in the replayed history needs the legacy DST. It is no longer accepted from height 90000.
+   > The verify-only fallback code may be deleted after testnet passes 90000.
 
 ## 8. Enable-gate checklist (all required before `dcc.hotstuff.authoritative = true` on **mainnet** — testnet already has both flags on, see banner)
 - [x] Pure core + engine + shell implemented, gated OFF by default (mainnet)
