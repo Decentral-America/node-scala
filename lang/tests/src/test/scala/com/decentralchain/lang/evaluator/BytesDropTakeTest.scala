@@ -46,9 +46,7 @@ class BytesDropTakeTest extends EvaluatorSpec {
 
     evalVerRange(s""" takeRight($b, -1) """, V1, V5) shouldBe bytes()
     eval(s""" takeRight($b, -1) """)(using V6) shouldBe Left("Unexpected negative number = -1 passed to takeRight()")
-    // JDK 25 OmitStackTraceInFastThrow may strip the ArithmeticException message after repeated throws,
-    // so accept either "long overflow" (message present) or "ArithmeticException" (message stripped).
-    evalVerRange(s""" takeRight($b, $min) """, V1, V5) should (produce("long overflow") or produce("ArithmeticException"))
+    evalVerRange(s""" takeRight($b, $min) """, V1, V5) should produce("long overflow")
     eval(s""" takeRight($b, $min) """)(using V6) shouldBe Left(s"Unexpected negative number = $min passed to takeRight()")
   }
 
@@ -80,9 +78,7 @@ class BytesDropTakeTest extends EvaluatorSpec {
 
     evalVerRange(s""" dropRight($b, -1) """, V1, V5) shouldBe bytes(1, 2, 3, 4, 5)
     eval(s""" dropRight($b, -1) """)(using V6) shouldBe Left("Unexpected negative number = -1 passed to dropRight()")
-    // JDK 25 OmitStackTraceInFastThrow may strip the ArithmeticException message after repeated throws,
-    // so accept either "long overflow" (message present) or "ArithmeticException" (message stripped).
-    evalVerRange(s""" dropRight($b, $min) """, V1, V5) should (produce("long overflow") or produce("ArithmeticException"))
+    evalVerRange(s""" dropRight($b, $min) """, V1, V5) should produce("long overflow")
     eval(s""" dropRight($b, $min) """)(using V6) shouldBe Left(s"Unexpected negative number = $min passed to dropRight()")
   }
 

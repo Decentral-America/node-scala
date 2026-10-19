@@ -36,4 +36,12 @@ class EquivocationDrillSpec extends FreeSpec {
         .byteStr shouldBe v.signature
     }
   }
+
+  "toWire frames votes the way the node's MessageCodec decodes them" in {
+    val voter  = EquivocationDrill.accountOf("equivocation drill test voter")
+    val (a, b) = EquivocationDrill.equivocatingVotes(voter, 3, 55000, 55000, 549, ByteStr(Array.fill[Byte](32)(1)), ByteStr(Array.fill[Byte](32)(2)))
+    val wire   = EquivocationDrill.toWire(a, b)
+    wire.map(_.code) shouldBe Seq(com.decentralchain.network.HotStuffVoteSpec.messageCode, com.decentralchain.network.HotStuffVoteSpec.messageCode)
+    wire.map(r => com.decentralchain.network.HotStuffVoteSpec.deserializeData(r.data).get) shouldBe Seq(a, b)
+  }
 }

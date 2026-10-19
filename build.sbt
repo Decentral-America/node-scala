@@ -142,6 +142,11 @@ lazy val `node-tests` = project
   .in(file("node/tests"))
   .dependsOn(`node-testkit`)
   .settings(libraryDependencies ++= Dependencies.logDeps)
+  .settings(
+    // SlowTest suites run nightly only (-Ddcc.include-slow-tests=true); Check PR and CI Test share this default.
+    Test / testOptions ++= (if (sys.props.get("dcc.include-slow-tests").contains("true")) Nil
+                            else Seq(Tests.Argument(TestFrameworks.ScalaTest, "-l", "com.decentralchain.tags.SlowTest")))
+  )
 
 lazy val `grpc-server` =
   project.dependsOn(node % "compile;runtime->provided", `node-testkit`)

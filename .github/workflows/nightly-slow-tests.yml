@@ -32,9 +32,12 @@ jobs:
         # OperationFuzzSpecification / OperationDeterminismSpecification seed sweep at runtime
         # (see SeedCount in both spec files). Scheduled (cron) runs have no dispatch inputs, so
         # this falls back to the same default depth as the workflow_dispatch input's default.
+        env:
+          SEED_COUNT: ${{ github.event.inputs.seed-count || '2000' }}
         run: |
           sbt --batch \
-            -Ddcc.fuzz.seedCount="${{ github.event.inputs.seed-count || '2000' }}" \
+            -Ddcc.include-slow-tests=true \
+            -Ddcc.fuzz.seedCount="$SEED_COUNT" \
             "node-tests/testOnly com.decentralchain.state.diffs.OperationFuzzSpecification com.decentralchain.state.diffs.OperationDeterminismSpecification"
 
   alert-on-failure:
