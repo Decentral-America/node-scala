@@ -1,7 +1,7 @@
 package com.decentralchain.http
 
 import com.google.protobuf.ByteString
-import com.decentralchain.api.http.ApiError.TooBigArrayAllocation
+import com.decentralchain.api.http.ApiError.{ApiKeyNotValid, TooBigArrayAllocation}
 import com.decentralchain.api.http.requests.ScriptWithImportsRequest
 import com.decentralchain.api.http.utils.UtilsApiRoute
 import com.decentralchain.common.state.ByteStr
@@ -795,7 +795,9 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
   }
 
   routePath("/seed") in {
-    Get(routePath("/seed")) ~> route ~> check {
+    Get(routePath("/seed")) ~> route should produce(ApiKeyNotValid)
+    Get(routePath("/seed/32")) ~> route should produce(ApiKeyNotValid)
+    Get(routePath("/seed")) ~> ApiKeyHeader ~> route ~> check {
       val seed = Base58.tryDecodeWithLimit((responseAs[JsValue] \ "seed").as[String])
       seed.get.length shouldEqual UtilsApiRoute.DefaultSeedSize
     }
@@ -803,9 +805,9 @@ class UtilsRouteSpec extends RouteSpec("/utils"), RestAPISettingsHelper, Propert
 
   routePath("/seed/{length}") in forAll(Gen.posNum[Int]) { l =>
     if (l > UtilsApiRoute.MaxSeedSize) {
-      Get(routePath(s"/seed/$l")) ~> route should produce(TooBigArrayAllocation)
+      Get(routePath(s"/seed/$l")) ~> ApiKeyHeader ~> route should produce(TooBigArrayAllocation)
     } else {
-      Get(routePath(s"/seed/$l")) ~> route ~> check {
+      Get(routePath(s"/seed/$l")) ~> ApiKeyHeader ~> route ~> check {
         val seed = Base58.tryDecodeWithLimit((responseAs[JsValue] \ "seed").as[String])
         seed.get.length shouldEqual l
       }

@@ -81,6 +81,8 @@ paths:
         wallet](https://docs.dcc.tech/en/dcc-node/how-to-work-with-node-wallet)
         by a given range of indices. Max range {from}-{to} is 1000 addresses.
       operationId: getWalletAddressesRange
+      security:
+        - APIKey: [ ]
       parameters:
         - name: from
           in: path
@@ -95,6 +97,8 @@ paths:
           schema:
             type: integer
       responses:
+        '403':
+          $ref: '#/components/responses/ApiKeyNotValid'
         '200':
           description: successful operation
           content:
@@ -1945,6 +1949,8 @@ paths:
         Generate random seed of a given length in bytes. The returned value is
         base58 encoded
       operationId: generateSeedByLength
+      security:
+        - APIKey: [ ]
       parameters:
         - name: length
           in: path
@@ -1953,6 +1959,8 @@ paths:
           schema:
             type: integer
       responses:
+        '403':
+          $ref: '#/components/responses/ApiKeyNotValid'
         '200':
           description: successful operation
           content:
@@ -2221,7 +2229,11 @@ paths:
       summary: Seed
       description: Generate random seed. The returned value is base58 encoded
       operationId: generateSeed
+      security:
+        - APIKey: [ ]
       responses:
+        '403':
+          $ref: '#/components/responses/ApiKeyNotValid'
         '200':
           description: successful operation
           content:
