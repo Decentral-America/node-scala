@@ -1024,6 +1024,12 @@ object Application extends ScorexLogging {
     // DO NOT LOG BEFORE THIS LINE, THIS PROPERTY IS USED IN logback.xml
     System.setProperty("dcc.directory", config.getString("dcc.directory"))
     if (config.hasPath("dcc.config.directory")) System.setProperty("dcc.config.directory", config.getString("dcc.config.directory"))
+    UnknownConfigKeys.check(config) match {
+      case Left(err) =>
+        log.error(err)
+        forceStopApplication(Misconfiguration)
+      case Right(warnings) => warnings.foreach(w => log.warn(w))
+    }
 
     maybeExternalConfig match {
       case Success(None) =>
