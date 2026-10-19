@@ -396,21 +396,48 @@ class Docker(
     // (6870) via the lazy grpcChannel -- if that binding hadn't appeared yet when the snapshot was
     // taken, externalPort(6870) NPEd (the `*GrpcSuite` family). Waiting for all exposed ports covers
     // REST, network, blockchain-updates (6881) and gRPC (6870) uniformly.
+    //
+    // Docker Desktop can also fail to open the host side of a published port for good: its port
+    // forwarder logs "listen tcp4 0.0.0.0:<hostPort>: bind: address already in use" when the host
+    // port the engine picked is taken by another host process, and the container then reports empty
+    // bindings forever (observed on DegradedLinkHotStuffTestSuite; the old code waited 40 attempts and
+    // then died with an NPE inside NodeInfo). Restarting the container makes the engine pick fresh host
+    // ports, so after a short wait the container is restarted (at most `MaxPortRestarts` times) and the
+    // final failure names the unbound ports instead of throwing an NPE.
     def isBound(info: com.github.dockerjava.api.command.InspectContainerResponse, port: ExposedPort): Boolean =
       Option(info.getNetworkSettings.getPorts.getBindings.get(port)).exists(_.nonEmpty)
 
-    @tailrec def awaitPortBindings(attempt: Int): com.github.dockerjava.api.command.InspectContainerResponse = {
-      val info         = inspectContainer(containerId)
-      val exposedPorts = Option(info.getConfig.getExposedPorts).map(_.toSeq).getOrElse(Seq.empty)
-      if ((exposedPorts.nonEmpty && exposedPorts.forall(isBound(info, _))) || attempt >= 40) info
-      else {
+    def exposedPortsOf(info: com.github.dockerjava.api.command.InspectContainerResponse): Seq[ExposedPort] =
+      Option(info.getConfig.getExposedPorts).map(_.toSeq).getOrElse(Seq.empty)
+
+    def unboundPorts(info: com.github.dockerjava.api.command.InspectContainerResponse): Seq[Int] =
+      exposedPortsOf(info).filterNot(isBound(info, _)).map(_.getPort)
+
+    val MaxAttemptsPerStart = 20
+    val MaxPortRestarts     = 3
+
+    @tailrec def awaitPortBindings(attempt: Int, restarts: Int): com.github.dockerjava.api.command.InspectContainerResponse = {
+      val info = inspectContainer(containerId)
+      if (exposedPortsOf(info).nonEmpty && unboundPorts(info).isEmpty) info
+      else if (attempt < MaxAttemptsPerStart) {
         log.debug(s"Container $containerId exposed ports not all bound yet (attempt $attempt), retry")
         Thread.sleep(500)
-        awaitPortBindings(attempt + 1)
-      }
+        awaitPortBindings(attempt + 1, restarts)
+      } else if (restarts < MaxPortRestarts) {
+        log.warn(
+          s"Container $containerId still has unbound host ports ${unboundPorts(info).mkString(",")} after $attempt attempts; " +
+            s"restarting it so Docker publishes fresh host ports (restart ${restarts + 1}/$MaxPortRestarts)"
+        )
+        client.restartContainerCmd(containerId).withTimeout(5).exec()
+        awaitPortBindings(0, restarts + 1)
+      } else
+        throw new IllegalStateException(
+          s"Container $containerId never got host bindings for ports ${unboundPorts(info).mkString(",")} " +
+            s"after $MaxPortRestarts restarts (state=${info.getState.getStatus}); the Docker port forwarder is failing"
+        )
     }
 
-    val containerInfo = awaitPortBindings(0)
+    val containerInfo = awaitPortBindings(0, 0)
     val dccIpAddress  = containerInfo.getNetworkSettings.getNetworks.get(dccNetwork.getName).getIpAddress
 
     NodeInfo(restApiPort, networkPort, dccIpAddress, containerInfo.getNetworkSettings.getPorts)
