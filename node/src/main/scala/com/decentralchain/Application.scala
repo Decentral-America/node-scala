@@ -261,6 +261,16 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // NOT blockchainUpdater.currentGeneratorSet -- see Blockchain.BlockchainExt.currentCommittedGeneratorSet's
       // doc for why (confirmed-live T2 HotStuff wedge, 2026-08-30/31).
       val committee: () => GeneratorSet = () => blockchainUpdater.currentCommittedGeneratorSet
+      import com.google.common.cache.{Cache as GCache, CacheBuilder as GCacheBuilder}
+      // Keyed by the target height AND the ids at the target and its parent, so a rollback that replaces
+      // either block can never serve a stale committee.
+      val hsCommitteeCache: GCache[(Int, Option[BlockId], Option[BlockId]), GeneratorSet] =
+        GCacheBuilder.newBuilder().maximumSize(256).build()
+      def hsCommitteeAt(h: Int): GeneratorSet =
+        hsCommitteeCache.get(
+          (h, blockchainUpdater.blockId(h - 1), blockchainUpdater.blockId(h)),
+          () => blockchainUpdater.committedGeneratorSetAt(com.decentralchain.state.Height(h))
+        )
       // T10 fork-hazard fix (see docs/hotstuff-audit-readiness.md and
       // HotStuffQuorum.acceptableCommitteeEpoch): the committee epoch THIS REPLICA'S OWN LIVE TIP
       // currently believes is active, reused directly from the existing generation-period rotation
@@ -451,7 +461,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           onAction = hsOnAction,
           maxTargetLag = maxTargetLag,
           tipHeight = tipHeight,
-          committeeAt = Some(h => blockchainUpdater.committedGeneratorSetAt(com.decentralchain.state.Height(h))),
+          committeeAt = Some(hsCommitteeAt),
           requireLeaderVote = settings.hotStuffSettings.requireLeaderVote,
           generatorAt = h => blockchainUpdater.blockHeader(h).map(_.header.generator.toAddress),
           maxProposalViewAhead = settings.hotStuffSettings.maxProposalViewAhead
@@ -525,7 +535,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         .foreach(SafeHandler[(Channel, HotStuffVote)]("hotstuff-vote", hsHandlerFailed("vote")) { case (ch, v) =>
           val valid =
             hsIngressSane("vote", v.view, v.blockHeight.toInt) &&
-              HotStuffQuorum.verifyVote(v, blockchainUpdater.committedGeneratorSetAt(v.blockHeight))
+              HotStuffQuorum.verifyVote(v, hsCommitteeAt(v.blockHeight.toInt))
           if (hsGossip.admit(ch, HotStuffGossip.voteKey(v), v)(valid)) hsCoordinator.onVote(v)
         })(using hotStuffScheduler)
       messageObserver.hotStuffQCs
@@ -533,7 +543,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
         .foreach(SafeHandler[(Channel, QuorumCertificate)]("hotstuff-qc", hsHandlerFailed("QC")) { case (ch, qc) =>
           val valid =
             hsIngressSane("QC", qc.view, qc.blockHeight.toInt) &&
-              HotStuffQuorum.verifyQC(qc, blockchainUpdater.committedGeneratorSetAt(qc.blockHeight)).isRight
+              HotStuffQuorum.verifyQC(qc, hsCommitteeAt(qc.blockHeight.toInt)).isRight
           if (hsGossip.admit(ch, HotStuffGossip.qcKey(qc), qc)(valid)) hsCoordinator.onQC(qc)
         })(using hotStuffScheduler)
 

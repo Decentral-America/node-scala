@@ -302,20 +302,40 @@ object Blockchain {
       * single synchronous use within the same block-processing call (where the live value legitimately
       * reflects "right now") should prefer this over `currentGeneratorSet`.
       */
-    def currentCommittedGeneratorSet: GeneratorSet =
-      this.currentGenerationPeriod.fold(Seq.empty[GeneratorInfo])(committedGeneratorSetOf)
+    def currentCommittedGeneratorSet: GeneratorSet = {
+      val at = Height(blockchain.height)
+      this.currentGenerationPeriod.fold(Seq.empty[GeneratorInfo])(committedGeneratorSetOf(_, at))
+    }
 
     /** The committed generator set of the generation period containing `height` -- the committee whose
       * indexes a HotStuff vote/QC targeting a block at `height` is signed under (see
       * `HotStuffCoordinator.Enabled`'s `committeeAt`). Same shape as `currentCommittedGeneratorSet`.
       */
     def committedGeneratorSetAt(height: Height): GeneratorSet =
-      blockchain.generationPeriodOf(height).fold(Seq.empty[GeneratorInfo])(committedGeneratorSetOf)
+      blockchain.generationPeriodOf(height).fold(Seq.empty[GeneratorInfo])(committedGeneratorSetOf(_, height))
 
-    private def committedGeneratorSetOf(period: GenerationPeriod): GeneratorSet =
-      blockchain.committedGenerators(period).zipWithIndex.map { case ((address, blsPk), idx) =>
-        GeneratorInfo(GeneratorIndex(idx), address, blsPk, blockchain.balance(address))
+    /** HotStuff committee weights for a target at `at`. From `finalityHardeningHeight` on, a
+      * member weighs its generating balance as of the target's parent block -- the reference T0 uses for
+      * the same block, identical on every node that has that block -- and a member already proven to
+      * have equivocated (`conflictGenerators` up to `at`) weighs 0. Below that height the previous
+      * live-balance weighting is kept so mixed-version rollouts agree until the switch.
+      */
+    private def committedGeneratorSetOf(period: GenerationPeriod, at: Height): GeneratorSet = {
+      val committed = blockchain.committedGenerators(period)
+      if (at.toInt < blockchain.settings.functionalitySettings.finalityHardeningHeight)
+        committed.zipWithIndex.map { case ((address, blsPk), idx) =>
+          GeneratorInfo(GeneratorIndex(idx), address, blsPk, blockchain.balance(address))
+        }
+      else {
+        val excluded  = blockchain.conflictGenerators(period).upTo(at)
+        val refHeight = math.max(1, math.min(at.toInt - 1, blockchain.height))
+        val refBlock  = blockchain.blockId(refHeight)
+        committed.zipWithIndex.map { case ((address, blsPk), idx) =>
+          val gi = GeneratorIndex(idx)
+          GeneratorInfo(gi, address, blsPk, if (excluded.contains(gi)) 0L else blockchain.generatingBalance(address, refBlock))
+        }
       }
+    }
 
     def supportsFinalizationVoting(height: Int = blockchain.height): Boolean =
       blockchain.featureActivationHeight(BlockchainFeatures.DeterministicFinality).exists(Height(height) >= _)
