@@ -24,6 +24,13 @@ class UnknownConfigKeysSpecification extends FlatSpec {
     UnknownConfigKeys.check(cfg("""rest-api { cors = yes }""")) shouldBe Right(Seq("Unknown config key dcc.rest-api.cors is ignored"))
   }
 
+  "blockchain-updates.bind-address" should "be a known key, and a misspelt one only warns" in {
+    UnknownConfigKeys.check(cfg("""blockchain-updates { bind-address = "127.0.0.1" }""")) shouldBe Right(Seq.empty)
+    UnknownConfigKeys.check(cfg("""blockchain-updates { bind-adress = "127.0.0.1" }""")) shouldBe Right(
+      Seq("Unknown config key dcc.blockchain-updates.bind-adress is ignored")
+    )
+  }
+
   "the shipped defaults" should "produce no warnings at all" in {
     UnknownConfigKeys.check(cfg("")) shouldBe Right(Seq.empty)
   }
