@@ -9,26 +9,23 @@ name: Genesis replay regression check
 # the current branch, syncs a brand-new node from genesis against the live testnet chain, and
 # fails loudly if it ever gets stuck with InvalidStateHash before a known-good height.
 #
-# MIN_HEIGHT is set comfortably past the two bugs already found and fixed (heights 1798/1799),
-# but before a third, still-unresolved divergence at height 3325 (see project history / node-scala
-# PRs #52, #53 for context) -- raise it once that one is fixed too, so this check keeps tightening
-# over time instead of permanently tolerating a known gap.
+# The replay target is the live tip minus 200 blocks, never below 56500, so every divergence ever found
+# on this chain (1798/1799, 2640, 3325, the 56355 penalty proof) is inside the replayed range. The replay
+# also counts block signatures that verify only under the legacy BLS DST (audit AUD-040).
 
 on:
   schedule:
-    - cron: '17 4 * * 1'  # weekly, Monday 04:17 UTC -- this is a live-network check, not a unit
-                          # test; weekly avoids being noisy/flaky from transient network conditions
-                          # while still catching a silent regression within days, not months.
+    - cron: '17 4 * * 1'  # weekly, Monday 04:17 UTC -- a live-network check, not a unit test
   workflow_dispatch:
     inputs:
       min-height:
-        description: 'Minimum height the fresh replay must reach without InvalidStateHash'
+        description: 'Height the fresh replay must reach (empty = live tip - 200, never below 56500)'
         required: false
-        default: '2500'
+        default: ''
       timeout-minutes:
-        description: 'How long to wait for the replay to reach min-height'
+        description: 'Minutes to wait for the replay to reach min-height'
         required: false
-        default: '10'
+        default: '150'
 
 permissions:
   contents: read
@@ -41,7 +38,7 @@ jobs:
   replay:
     name: Fresh-genesis replay vs live testnet
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
@@ -55,29 +52,26 @@ jobs:
 
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
 
-      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
-        with:
-          path: |
-            ~/.cache/coursier
-            ~/.ivy2/cache
-            ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt', 'project/Dependencies.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-
+      - name: Build node tarball from pinned Maven Central native deps
+        run: sbt --batch verifyDccArtifacts buildTarballsForDocker
 
-      - name: Build node tarball
-        run: sbt buildTarballsForDocker
+      - name: Resolve the replay target
+        id: target
+        env:
+          MIN_HEIGHT_INPUT: ${{ inputs.min-height }}
+        run: |
+          set -euo pipefail
+          TIP=$(curl -fsS --max-time 15 https://testnet-node.decentralchain.io/blocks/height | jq -r .height)
+          TARGET="${MIN_HEIGHT_INPUT:-$((TIP - 200))}"
+          if [ "$TARGET" -lt 56500 ]; then TARGET=56500; fi
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "Live tip $TIP; replay target $TARGET" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Prepare a fresh-genesis testnet config (miner disabled, no self-collision)
         run: |
           set -euo pipefail
           mkdir -p /tmp/replay-scratch
-          cp node-config/testnet/dcc.conf /tmp/replay-scratch/dcc.conf 2>/dev/null || \
-            curl -sf -o /tmp/replay-scratch/dcc.conf \
-              https://raw.githubusercontent.com/Decentral-America/infra/main/node-config/testnet/dcc.conf
-          # Dial the live main node by its public DNS name, resolved now: the IP has changed
-          # before (66.228.55.154 -> 50.116.30.244 in the 2026-09 relaunch), and a hardcoded one
-          # made every run since 2026-09-21 sit at height 1 with no peer.
+          curl -sf -o /tmp/replay-scratch/dcc.conf https://raw.githubusercontent.com/Decentral-America/infra/main/node-config/testnet/dcc.conf
           PEER_IP=$(getent hosts testnet-node.decentralchain.io | awk '{print $1; exit}')
           test -n "$PEER_IP" || { echo "::error::could not resolve testnet-node.decentralchain.io"; exit 1; }
           echo "Replay peer: $PEER_IP:6868"
@@ -86,11 +80,6 @@ jobs:
           p = "/tmp/replay-scratch/dcc.conf"
           s = open(p).read()
           peer = os.environ["PEER_IP"] + ":6868"
-          # Disable mining, keep REST enabled, dial the real main node directly, and make sure our
-          # own declared-address does NOT equal the known-peer address -- if it does, the node
-          # treats it as itself and never dials out at all (a real gotcha hit once investigating
-          # this exact class of bug). Every substitution must match exactly once: a silent no-op
-          # here (the config drifted) leaves a node that never syncs and only times out.
           for pattern, repl in [
               (r'declared-address = "[^"]*"', 'declared-address = "127.0.0.1:16868"'),
               (r'known-peers = \[[^\]]*\]', f'known-peers = ["{peer}"]'),
@@ -100,12 +89,7 @@ jobs:
               assert n == 1, f"dcc.conf drifted: no match for {pattern!r}"
           open(p, "w").write(s)
           PYEOF
-          cat >> /tmp/replay-scratch/dcc.conf <<'EOF'
-
-          dcc.wallet.seed = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uxUx"
-          dcc.wallet.password = "ci-scratch-only"
-          dcc.rest-api.bind-address = "0.0.0.0"
-          EOF
+          printf '\ndcc.wallet.seed = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uxUx"\ndcc.wallet.password = "ci-scratch-only"\ndcc.rest-api.bind-address = "0.0.0.0"\n' >> /tmp/replay-scratch/dcc.conf
 
       - name: Extract build
         run: |
@@ -113,7 +97,7 @@ jobs:
           tar xzf docker/target/dcc.tgz -C /tmp/replay-run
           NODE_BIN=$(find /tmp/replay-run -maxdepth 3 -name node -path '*/bin/*')
           if [ -z "$NODE_BIN" ]; then
-            echo "::error::Could not locate the node launcher script under /tmp/replay-run (tarball layout changed?). Refusing to continue with an empty binary path."
+            echo "::error::Could not locate the node launcher script under /tmp/replay-run"
             find /tmp/replay-run -maxdepth 3
             exit 1
           fi
@@ -121,45 +105,46 @@ jobs:
 
       - name: Run fresh-genesis replay and watch for InvalidStateHash
         env:
-          MIN_HEIGHT: ${{ inputs.min-height || '2500' }}
-          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes || '10' }}
+          MIN_HEIGHT: ${{ steps.target.outputs.target }}
+          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes || '150' }}
         run: |
           set -euo pipefail
           "$NODE_BIN" /tmp/replay-scratch/dcc.conf > /tmp/replay.log 2>&1 &
           NODE_PID=$!
           trap 'kill $NODE_PID 2>/dev/null || true' EXIT
-
-          # IMPORTANT: check height reaching the target BEFORE checking for InvalidStateHash.
-          # The sync is fast enough that by the time any single poll runs, the log may already
-          # contain a LATER InvalidStateHash (from the known, still-open height-3325 issue) even
-          # though the height threshold was already crossed moments earlier in the same batch --
-          # a fresh node's height stays pinned at the last successfully-applied block once a
-          # later block in the same extension fails, so "height >= MIN_HEIGHT" and "the log
-          # mentions InvalidStateHash" can both be true simultaneously on the very same poll.
-          # Checking height first and exiting immediately on success avoids treating that known,
-          # tracked, later failure as a regression in this check.
+          START=$SECONDS
           DEADLINE=$((SECONDS + TIMEOUT_MINUTES * 60))
           while [ "$SECONDS" -lt "$DEADLINE" ]; do
             HEIGHT=$(curl -s --max-time 5 http://localhost:6869/blocks/height 2>/dev/null | grep -o '[0-9]*' || echo 0)
             if [ "${HEIGHT:-0}" -ge "$MIN_HEIGHT" ]; then
-              echo "Reached height $HEIGHT (>= $MIN_HEIGHT). Genesis replay is healthy at least up to the known-good point."
+              echo "Reached height $HEIGHT (>= $MIN_HEIGHT) in $(( (SECONDS - START) / 60 )) min." | tee -a "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             if grep -q "InvalidStateHash" /tmp/replay.log; then
-              echo "::error::Fresh-genesis replay hit InvalidStateHash BEFORE reaching height $MIN_HEIGHT (last seen: ${HEIGHT:-0}) -- this is a real consensus-hash regression, not the known/tracked height-3325 issue (which only manifests after ~3300)."
-              echo "--- relevant log lines ---"
-              grep -B2 -A2 "InvalidStateHash" /tmp/replay.log
+              echo "::error::Fresh-genesis replay hit InvalidStateHash before height $MIN_HEIGHT (last applied: ${HEIGHT:-0}) -- consensus-hash regression."
+              grep -B2 -A2 "InvalidStateHash" /tmp/replay.log | head -60
               exit 1
             fi
-            sleep 3
+            sleep 5
           done
-
-          echo "::error::Timed out after $TIMEOUT_MINUTES minutes without reaching height $MIN_HEIGHT (last seen: ${HEIGHT:-0}). This could be a real regression OR a network/CI environment issue -- check the log."
+          echo "::error::Timed out after $TIMEOUT_MINUTES min at height ${HEIGHT:-0} (< $MIN_HEIGHT)."
           tail -100 /tmp/replay.log
           exit 1
 
-      - name: Upload replay log on failure
-        if: failure()
+      - name: Count legacy BLS DST acceptances (AUD-040)
+        if: always()
+        run: |
+          {
+            echo '### Signatures accepted only under the legacy BLS DST during this replay'
+            echo '| context | count |'
+            echo '|---|---|'
+            for c in pop endorsement endorsement-aggregate hotstuff-vote; do
+              echo "| $c | $(grep -cE "LEGACY_BLS_DST_ACCEPTED context=${c}( |$)" /tmp/replay.log || true) |"
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload replay log
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: genesis-replay-log
