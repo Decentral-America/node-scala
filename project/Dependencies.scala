@@ -195,7 +195,7 @@ object Dependencies {
   lazy val rideRunner = Def.setting(
     Seq(
       rocksdb,
-      "com.github.ben-manes.caffeine" % "caffeine" % "3.3.0",
+      "com.github.ben-manes.caffeine" % "caffeine" % "3.3.1",
       "net.logstash.logback" % "logstash-logback-encoder" % "9.0" % Runtime, // 9.x is built on Jackson 3 (tools.jackson), already on the classpath
       kamonModule("caffeine"),
       kamonModule("prometheus"),
