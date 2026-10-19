@@ -139,7 +139,7 @@ jobs:
             echo '| context | count |'
             echo '|---|---|'
             for c in pop endorsement endorsement-aggregate hotstuff-vote; do
-              echo "| $c | $(grep -cE "LEGACY_BLS_DST_ACCEPTED context=${c}( |$)" /tmp/replay.log || true) |"
+              echo "| $c | $(grep -cE "LEGACY_BLS_DST_ACCEPTED context=${c}([^a-z-]|$)" /tmp/replay.log || true) |"
             done
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
