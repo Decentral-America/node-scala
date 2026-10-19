@@ -41,7 +41,8 @@ class HotStuffProofValidOverlapSuite extends BaseFinalizationSpec {
       val parentId    = d.lastBlock.id()
       val finalizedId = d.blockchain.blockId(1).get
       val voting      = mkFinalizationVoting(valid = Seq(offIdx)).signed(parentId, finalizedId, offender).copy(hotstuffConflicts = Seq(proof))
-      val block3      = d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = miner, strictTime = true, finalizationVoting = Some(voting))
+      val block3      =
+        d.createBlock(version = Block.ProtoBlockVersion, txs = Nil, generator = miner, strictTime = true, finalizationVoting = Some(voting))
       check(d.appender.appendBlockWithoutFallback(block3))
     }
 

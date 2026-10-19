@@ -103,6 +103,7 @@ trait Blockchain {
 
 object Blockchain {
   implicit class BlockchainExt(private val blockchain: Blockchain) extends AnyVal {
+
     /** Whether block validation at `height` still accepts the legacy `_NUL_` BLS DST. */
     def legacyBlsDstAllowedAt(height: Int): Boolean =
       height < blockchain.settings.functionalitySettings.finalityHardeningHeight

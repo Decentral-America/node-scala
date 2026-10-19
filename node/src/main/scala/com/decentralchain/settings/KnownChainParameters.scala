@@ -26,7 +26,7 @@ object KnownChainParameters {
 
   def enforce(genesisSignature: Option[ByteStr], fs: FunctionalitySettings): Either[String, FunctionalitySettings] =
     genesisSignature.flatMap(byGenesisSignature.get) match {
-      case None => Right(fs)
+      case None    => Right(fs)
       case Some(p) =>
         for {
           penalty <- pin(
@@ -36,7 +36,13 @@ object KnownChainParameters {
             p.hotStuffEquivocationPenaltyHeight,
             p.name
           )
-          hardening <- pin("finality-hardening-height", fs.finalityHardeningHeight, Defaults.finalityHardeningHeight, p.finalityHardeningHeight, p.name)
+          hardening <- pin(
+            "finality-hardening-height",
+            fs.finalityHardeningHeight,
+            Defaults.finalityHardeningHeight,
+            p.finalityHardeningHeight,
+            p.name
+          )
         } yield fs.copy(hotStuffEquivocationPenaltyHeight = penalty, finalityHardeningHeight = hardening)
     }
 

@@ -62,8 +62,11 @@ class HotStuffQuorumLegacyFallbackSpec extends FlatSpec {
 
   "verifyQC (gossip path)" should "reject a QC whose signatures are legacy-tagged" in {
     val votes = Seq(0, 1, 2).map(i => vote(i, BlsUtils.BlsLegacyDomainSeparationTag))
-    val agg   = com.decentralchain.crypto.bls.BlsSignature.agg(votes.map(v => com.decentralchain.crypto.bls.BlsSignature(v.signature).toOption.get)).toOption.get
-    val qc    = QuorumCertificate(view, phase, blockId, height, Seq(0, 1, 2), agg.byteStr, 0)
+    val agg   = com.decentralchain.crypto.bls.BlsSignature
+      .agg(votes.map(v => com.decentralchain.crypto.bls.BlsSignature(v.signature).toOption.get))
+      .toOption
+      .get
+    val qc = QuorumCertificate(view, phase, blockId, height, Seq(0, 1, 2), agg.byteStr, 0)
     HotStuffQuorum.verifyQC(qc, committee).isLeft should be(true)
   }
 

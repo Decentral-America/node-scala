@@ -10,7 +10,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 enablePlugins(GitVersioning)
 
-git.uncommittedSignifier       := Some("DIRTY")
+git.uncommittedSignifier := Some("DIRTY")
 // The version identifies the build: exactly the base version only on the commit tagged
 // v<base>; any other commit carries its sha, so two different builds never report the same version.
 ThisBuild / version := {
@@ -18,7 +18,7 @@ ThisBuild / version := {
   if (git.gitCurrentTags.value.contains(s"v$base")) base
   else s"$base-dev-${git.gitHeadCommit.value.fold("unknown")(_.take(10))}"
 }
-ThisBuild / PB.protocVersion   := Dependencies.gProtoVersion
+ThisBuild / PB.protocVersion := Dependencies.gProtoVersion
 
 ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
 
@@ -310,7 +310,7 @@ verifyDccArtifacts := {
       parts(1) -> parts(0)
     }
     .toMap
-  val resolved = (node / update).value.allFiles.filter(f => f.getPath.replace('\\', '/').contains("/io/decentralchain/")).distinct
+  val resolved                = (node / update).value.allFiles.filter(f => f.getPath.replace('\\', '/').contains("/io/decentralchain/")).distinct
   def sha256(f: File): String =
     java.security.MessageDigest.getInstance("SHA-256").digest(IO.readBytes(f)).map(b => f"${b & 0xff}%02x").mkString
   val problems = resolved.flatMap { f =>

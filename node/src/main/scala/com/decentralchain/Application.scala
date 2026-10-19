@@ -524,7 +524,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           // `proposalValid` above has already rejected the proposal via the same lookup, so this
           // fallback value is never actually consumed by a cast vote.
           val knownHeight = blockchainUpdater.heightOf(p.blockId)
-          val sane =
+          val sane        =
             hsIngressSane("proposal", p.view, knownHeight.getOrElse(blockchainUpdater.height)) &&
               p.justify.forall(j => hsIngressSane("proposal justify", j.view, j.blockHeight.toInt))
           if (hsGossip.admit(ch, HotStuffGossip.proposalKey(p), p)(sane))
@@ -557,38 +557,43 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       var hsLastHeight = 0
       lastBlockInfo
         .observeOn(hotStuffScheduler)
-        .foreach(SafeHandler[com.decentralchain.transaction.LastBlockInfo]("hotstuff-tip", (i, e) => log.warn(s"[HotStuff] tip handler failed at ${i.height}: ${e.getMessage}")) { info =>
-          val tip = info.height.toInt
-          if (tip > hsLastHeight) {
-            hsLastHeight = tip
-            // Retention pruning [M2] (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md
-            // §5): drop proofs already reflected on-chain (voter excluded via committedGenerators/
-            // conflictGenerators union) or aged out of the current committee epoch, so
-            // `detectedEquivocations` doesn't grow unboundedly and doesn't keep re-offering evidence
-            // the chain has already acted on. Runs once per appended key block (height increment), the
-            // same cadence this subscription already drives the coordinator's leader turn on.
-            hsCoordinator.pruneEquivocations(
-              idx =>
-                blockchainUpdater.currentGenerationPeriod
-                  .exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
-              blockchainUpdater.currentGenerationPeriod.fold(0)(_.index)
-            )
-            // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,
-            // not a liquid tip that still differs across nodes) before it is proposed — else the
-            // canonical-block guard rejects and votes never converge. See HotStuffSettings.settledDepth.
-            val s = tip - settings.hotStuffSettings.settledDepth
-            if (s > 0) {
-              for {
-                canonicalId <- blockchainUpdater.blockId(s)
-                header      <- blockchainUpdater.blockHeader(s)
-              } {
-                val weAreLeader = wallet.privateKeyAccount(header.header.generator.toAddress).isRight
-                log.debug(s"[HotStuff] settled view=$s leader=${header.header.generator.toAddress} weAreLeader=$weAreLeader block=$canonicalId")
-                if (weAreLeader) hsCoordinator.onLeaderTurn(s, canonicalId, s)
+        .foreach(
+          SafeHandler[com.decentralchain.transaction.LastBlockInfo](
+            "hotstuff-tip",
+            (i, e) => log.warn(s"[HotStuff] tip handler failed at ${i.height}: ${e.getMessage}")
+          ) { info =>
+            val tip = info.height.toInt
+            if (tip > hsLastHeight) {
+              hsLastHeight = tip
+              // Retention pruning [M2] (docs/superpowers/specs/2026-09-01-hotstuff-equivocation-evidence-design.md
+              // §5): drop proofs already reflected on-chain (voter excluded via committedGenerators/
+              // conflictGenerators union) or aged out of the current committee epoch, so
+              // `detectedEquivocations` doesn't grow unboundedly and doesn't keep re-offering evidence
+              // the chain has already acted on. Runs once per appended key block (height increment), the
+              // same cadence this subscription already drives the coordinator's leader turn on.
+              hsCoordinator.pruneEquivocations(
+                idx =>
+                  blockchainUpdater.currentGenerationPeriod
+                    .exists(p => blockchainUpdater.conflictGenerators(p).upTo(Height(blockchainUpdater.height)).contains(GeneratorIndex(idx))),
+                blockchainUpdater.currentGenerationPeriod.fold(0)(_.index)
+              )
+              // Run `settledDepth` blocks behind the tip so every node has SETTLED s (final key-block id,
+              // not a liquid tip that still differs across nodes) before it is proposed — else the
+              // canonical-block guard rejects and votes never converge. See HotStuffSettings.settledDepth.
+              val s = tip - settings.hotStuffSettings.settledDepth
+              if (s > 0) {
+                for {
+                  canonicalId <- blockchainUpdater.blockId(s)
+                  header      <- blockchainUpdater.blockHeader(s)
+                } {
+                  val weAreLeader = wallet.privateKeyAccount(header.header.generator.toAddress).isRight
+                  log.debug(s"[HotStuff] settled view=$s leader=${header.header.generator.toAddress} weAreLeader=$weAreLeader block=$canonicalId")
+                  if (weAreLeader) hsCoordinator.onLeaderTurn(s, canonicalId, s)
+                }
               }
             }
           }
-        })(using hotStuffScheduler)
+        )(using hotStuffScheduler)
 
       // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
       // Uses `onRoundTimerTick` (Task 8 Step 2 rework), which now genuinely detects a stalled round (no

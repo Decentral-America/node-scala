@@ -429,7 +429,9 @@ class BlockDifferTest extends FreeSpec with WithDomain {
 
           withDomain(settings, AddrWithBalance.enoughBalances(committerA, committerB, committerC)) { d =>
             val next = d.blockchain.currentGenerationPeriod.get.next.start
-            d.appendBlock(d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.commitToGeneration(next, committerA, fee = fee)), generator = committerA))
+            d.appendBlock(
+              d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.commitToGeneration(next, committerA, fee = fee)), generator = committerA)
+            )
             d.appendBlock(
               d.createBlock(
                 Block.ProtoBlockVersion,
@@ -467,11 +469,16 @@ class BlockDifferTest extends FreeSpec with WithDomain {
                 d.appendBlock(d.createBlock(Block.ProtoBlockVersion, Nil, generator = committerA))
             }
             val periodTarget = d.blockchain.currentGenerationPeriod.get.next.start
-            d.appendBlock(d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.commitToGeneration(periodTarget, committerA, fee = fee)), generator = committerA))
+            d.appendBlock(
+              d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.commitToGeneration(periodTarget, committerA, fee = fee)), generator = committerA)
+            )
             d.appendBlock(
               d.createBlock(
                 Block.ProtoBlockVersion,
-                Seq(TxHelpers.commitToGeneration(periodTarget, committerB, fee = fee), TxHelpers.commitToGeneration(periodTarget, committerC, fee = fee)),
+                Seq(
+                  TxHelpers.commitToGeneration(periodTarget, committerB, fee = fee),
+                  TxHelpers.commitToGeneration(periodTarget, committerC, fee = fee)
+                ),
                 generator = committerA
               )
             )

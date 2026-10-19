@@ -299,7 +299,7 @@ class MinerImpl(
             Some(blockchain.lastStateHash(Some(reference)))
           else None
         (unconfirmed, totalConstraint, stateHash) <- packTransactionsForKeyBlock(address, reference, prevStateHash)
-        committedGeneratorsHash                   = {
+        committedGeneratorsHash = {
           // A period boundary is the LAST height of a GenerationPeriod (period.end), not simply
           // "height % generationPeriodLength == 0". Periods are anchored to the DeterministicFinality
           // feature's ACTIVATION height (see GenerationPeriod.from), which is only guaranteed to be 0
@@ -752,6 +752,7 @@ class MinerImpl(
 }
 
 object Miner {
+
   /** The key block's state hash, or an error that stops this forge attempt. A failed initial
     * snapshot used to become `stateHash = None` silently, surfacing only later as InvalidStateHash on
     * append with no trace of the cause.
@@ -763,7 +764,7 @@ object Miner {
       reference: ByteStr
   ): Either[String, Option[ByteStr]] =
     prevStateHash match {
-      case None => Right(None)
+      case None           => Right(None)
       case Some(prevHash) =>
         initialSnapshot
           .leftMap(e => s"Not forging on $reference for $miner: the key block's initial snapshot failed: $e")

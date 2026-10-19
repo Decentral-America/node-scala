@@ -14,14 +14,16 @@ class RewardsWithPenaltiesTest extends FreeSpec with WithDomain {
   "a reward that exactly cancels the penalty leaves NO balance entry (same as the appender's netting)" in
     withDomain(DomainPresets.TransactionStateSnapshot, AddrWithBalance.enoughBalances(acc)) { d =>
       val a = acc.toAddress
-      val r = BlockDiffer.rewardsWithPenalties(d.blockchain, StateSnapshot.empty, Map(a -> Portfolio.dcc(100)), Map(a -> Portfolio.dcc(-100))).explicitGet()
+      val r =
+        BlockDiffer.rewardsWithPenalties(d.blockchain, StateSnapshot.empty, Map(a -> Portfolio.dcc(100)), Map(a -> Portfolio.dcc(-100))).explicitGet()
       r.balances shouldBe empty
     }
 
   "non-cancelling amounts net into one entry" in
     withDomain(DomainPresets.TransactionStateSnapshot, AddrWithBalance.enoughBalances(acc)) { d =>
       val a = acc.toAddress
-      val r = BlockDiffer.rewardsWithPenalties(d.blockchain, StateSnapshot.empty, Map(a -> Portfolio.dcc(140)), Map(a -> Portfolio.dcc(-100))).explicitGet()
+      val r =
+        BlockDiffer.rewardsWithPenalties(d.blockchain, StateSnapshot.empty, Map(a -> Portfolio.dcc(140)), Map(a -> Portfolio.dcc(-100))).explicitGet()
       r.balances.toMap shouldBe Map((a, Dcc) -> (d.blockchain.balance(a) + 40))
     }
 }

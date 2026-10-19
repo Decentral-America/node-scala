@@ -98,7 +98,12 @@ object CommitToGenerationTransaction {
       .verifyBasic(signature, popMessage(chainId, sender, endorserPublicKey, generationPeriodStart), endorserPublicKey.arr, PopDst)
       .isRight || (allowLegacyDst && {
       val ok = BlsUtils
-        .verifyBasic(signature, legacyPopMessage(endorserPublicKey, generationPeriodStart), endorserPublicKey.arr, BlsUtils.BlsLegacyDomainSeparationTag)
+        .verifyBasic(
+          signature,
+          legacyPopMessage(endorserPublicKey, generationPeriodStart),
+          endorserPublicKey.arr,
+          BlsUtils.BlsLegacyDomainSeparationTag
+        )
         .isRight
       if (ok) BlsUtils.recordLegacyDstAcceptance("pop")
       ok

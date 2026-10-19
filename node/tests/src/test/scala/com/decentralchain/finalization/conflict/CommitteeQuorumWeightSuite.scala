@@ -53,7 +53,12 @@ class CommitteeQuorumWeightSuite extends BaseFinalizationSpec {
       ) should beRight
       // A transfer in block 4 moves live balance but not generating balance.
       d.appender.appendBlockWithoutFallback(
-        d.createBlock(version = Block.ProtoBlockVersion, txs = Seq(TxHelpers.transfer(TxHelpers.signer(1), TxHelpers.address(90), 1000)), generator = miner, strictTime = true)
+        d.createBlock(
+          version = Block.ProtoBlockVersion,
+          txs = Seq(TxHelpers.transfer(TxHelpers.signer(1), TxHelpers.address(90), 1000)),
+          generator = miner,
+          strictTime = true
+        )
       ) should beRight
       check(d)
     }

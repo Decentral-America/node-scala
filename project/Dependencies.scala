@@ -101,8 +101,8 @@ object Dependencies {
       googleGuava, // BaseEncoding.base16()
       curve25519,
       "io.decentralchain" % "groth16" % "0.2.1.0",
-      "org.web3j" % "crypto" % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
-      protoSchemasLib % "protobuf"
+      "org.web3j"         % "crypto"  % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
+      protoSchemasLib     % "protobuf"
     ) ++ cryptoProviders
   )
 
@@ -159,11 +159,11 @@ object Dependencies {
       monixModule("reactive").value,
       nettyHandler,
       scalaLogging,
-      "eu.timepit"        %% "refined"  % "0.11.4" exclude ("org.scala-lang.modules", "scala-xml_2.13"),
-      "com.esaulpaugh"     % "headlong" % "13.3.1",
-      "com.github.jbellis" % "jamm"     % "0.4.0", // Weighing caches
-      "org.web3j" % "abi" % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
-      "io.decentralchain"              % "blst" % "0.3.16.0",
+      "eu.timepit"                    %% "refined"  % "0.11.4" exclude ("org.scala-lang.modules", "scala-xml_2.13"),
+      "com.esaulpaugh"                 % "headlong" % "13.3.1",
+      "com.github.jbellis"             % "jamm"     % "0.4.0", // Weighing caches
+      "org.web3j"                      % "abi"      % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
+      "io.decentralchain"              % "blst"     % "0.3.16.0",
       amazonCorretto("linux-x86_64")   % Optional,
       amazonCorretto("linux-aarch_64") % Optional
     ) ++ console ++ logDeps ++ protobuf.value
@@ -186,8 +186,8 @@ object Dependencies {
   }
 
   lazy val grpc: Seq[ModuleID] = Seq(
-    "io.grpc" % "grpc-netty" % grpcVersion,
-    "io.grpc" % "grpc-services" % grpcVersion,
+    "io.grpc"               % "grpc-netty"           % grpcVersion,
+    "io.grpc"               % "grpc-services"        % grpcVersion,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
     protoSchemasLib         % "protobuf"
   )
@@ -203,9 +203,9 @@ object Dependencies {
       sttp3Monix,
       "org.scala-lang.modules"             %% "scala-xml"              % "2.5.0", // JUnit reports
       pekkoHttpModule("pekko-http-testkit") % Test,
-      "com.softwaremill.diffx"             %% "diffx-core"             % "0.9.0" % Test,
-      "com.softwaremill.diffx"             %% "diffx-scalatest-should" % "0.9.0" % Test,
-      "io.grpc" % "grpc-inprocess" % grpcVersion % Test
+      "com.softwaremill.diffx"             %% "diffx-core"             % "0.9.0"     % Test,
+      "com.softwaremill.diffx"             %% "diffx-scalatest-should" % "0.9.0"     % Test,
+      "io.grpc"                             % "grpc-inprocess"         % grpcVersion % Test
     ) ++ Dependencies.console ++ Dependencies.logDeps ++ Dependencies.test
   )
 

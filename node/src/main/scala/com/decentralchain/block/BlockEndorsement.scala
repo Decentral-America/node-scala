@@ -60,7 +60,7 @@ object BlockEndorsement {
     BlsUtils.verifyBasic(signatureBytes, message, endorserPublicKeyBytes, Dst) match {
       case Right(())                    => Right(())
       case Left(err) if !allowLegacyDst => Left(err)
-      case Left(_) =>
+      case Left(_)                      =>
         BlsUtils
           .verifyBasic(signatureBytes, message, endorserPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag)
           .map(_ => BlsUtils.recordLegacyDstAcceptance("endorsement"))
@@ -81,7 +81,7 @@ object BlockEndorsement {
     BlsUtils.verifyAgg(aggSignatureBytes, message, endorserPublicKeys, Dst) match {
       case Right(())                    => Right(())
       case Left(err) if !allowLegacyDst => Left(err)
-      case Left(_) =>
+      case Left(_)                      =>
         BlsUtils
           .verifyAgg(aggSignatureBytes, message, endorserPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
           .map(_ => BlsUtils.recordLegacyDstAcceptance("endorsement-aggregate"))
