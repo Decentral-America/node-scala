@@ -27,7 +27,6 @@ jobs:
           java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
-      - uses: ./.github/actions/install-dcc-native-deps
       - name: Run the Operation fuzzer at nightly depth
         # -Ddcc.fuzz.seedCount threads the workflow_dispatch `seed-count` input into the
         # OperationFuzzSpecification / OperationDeterminismSpecification seed sweep at runtime

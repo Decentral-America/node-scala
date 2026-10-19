@@ -1,26 +1,23 @@
 name: Publish node-scala
 run-name: Publish node-scala @ ${{ github.ref_name }}
 
+# The ONLY path that builds a node-scala image. One build per commit: the image is pushed under a
+# per-run candidate tag, smoke-tested (groth16 native + BLS + P-256) and Trivy-scanned BY DIGEST, and
+# only then are the real tags (always sha-<7>, plus the caller's) pointed at that same digest and
+# its build provenance attested.
 on:
   workflow_dispatch:
     inputs:
       docker-tags:
-        description: 'Docker tags'
+        description: 'Extra docker tags, comma-separated (sha-<short> is always added)'
         required: true
       base-image:
-        description: 'Base image'
+        description: 'Base image (defaults to docker/Dockerfile ARG baseImage)'
         required: false
   workflow_call:
     inputs:
       raw-docker-tags:
         type: string
-      environment:
-        type: string
-      ref:
-        type: string
-    secrets:
-      DOCKERHUB_TOKEN:
-        required: false
     outputs:
       digest:
         value: ${{ jobs.publish.outputs.digest }}
@@ -31,15 +28,13 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/decentral-america/node-scala
-  # Container-aware heap (70% of cgroup limit), G1GC for compilation throughput.
   JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
 
 jobs:
   publish:
-    name: Build · Push · Attest
+    name: Build · Smoke · Scan · Tag · Attest
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    environment: ${{ inputs.environment }}
     permissions:
       contents: read
       packages: write
@@ -47,75 +42,35 @@ jobs:
       id-token: write
     outputs:
       digest: ${{ steps.push.outputs.digest }}
-      node-version: ${{ steps.versions.outputs.node-version }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-        with:
-          repository: Decentral-America/DecentralChain
-          path: _dcc-monorepo
-          persist-credentials: false
-          sparse-checkout: |
-            packages/jvm/curve25519
-            packages/jvm/blst
-            packages/jvm/groth16
-            packages/sdk/protobuf-schemas
+          fetch-depth: 0 # the version label needs the tags on HEAD
       - uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc  # v0.1.0
-      - name: Get version from git describe
-        id: ghd
-        run: |
-          set -euo pipefail
-          SHA=$(git rev-parse HEAD)
-          DESCRIBE=$(git describe --tags --match 'v*' --long HEAD 2>/dev/null \
-            || echo "v0.0.0-0-g$(git rev-parse --short HEAD)")
-          echo "describe=$DESCRIBE" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-      - name: Prepare base image and node version
+      - name: Resolve commit, version and base image
+        id: versions
         env:
           BASE_IMAGE_INPUT: ${{ inputs.base-image }}
         run: |
           set -euo pipefail
+          BASE=$(awk -F'"' '/git.baseVersion/{print $2; exit}' version.sbt)
+          if git tag --points-at HEAD | grep -qx "v$BASE"; then VERSION="$BASE"; else VERSION="$BASE-dev-$(git rev-parse --short=10 HEAD)"; fi
           BASE_IMAGE="${BASE_IMAGE_INPUT:-$(grep '^ARG baseImage=' docker/Dockerfile | cut -d= -f2-)}"
-          echo "base-image=$BASE_IMAGE" >> "$GITHUB_OUTPUT"
-          echo "base-image-digest=$(regctl manifest digest "$BASE_IMAGE")" >> "$GITHUB_OUTPUT"
-          echo "node-version=$(echo ${{ steps.ghd.outputs.describe }} | cut -c 2-)" >> "$GITHUB_OUTPUT"
-        id: versions
+          {
+            echo "sha=$(git rev-parse HEAD)"
+            echo "node-version=$VERSION"
+            echo "base-image=$BASE_IMAGE"
+            echo "base-image-digest=$(regctl manifest digest "$BASE_IMAGE")"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520  # v5.4.0
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
-      - name: Install Rust stable (for groth16 JNI native lib)
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
-        with:
-          toolchain: stable
-          targets: x86_64-unknown-linux-gnu
-      - uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc  # v2.9.1
-        with:
-          workspaces: _dcc-monorepo/packages/jvm/groth16
-      - name: Build groth16_jni native library (linux/amd64)
-        working-directory: _dcc-monorepo/packages/jvm/groth16/groth16_jni
-        run: cargo build --release --target x86_64-unknown-linux-gnu
-      - name: Stage groth16 native lib into Maven resources
-        run: |
-          set -euo pipefail
-          mkdir -p _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64
-          cp _dcc-monorepo/packages/jvm/groth16/target/x86_64-unknown-linux-gnu/release/libgroth16_jni.so \
-             _dcc-monorepo/packages/jvm/groth16/groth16_jni/javalib/src/main/resources/META-INF/native/linux64/amd64/
-      - name: Install JVM dependencies from DecentralChain monorepo
-        run: |
-          set -euo pipefail
-          MVN_OPTS="--batch-mode --no-transfer-progress -DskipTests -Dmaven.javadoc.skip=true -Dgpg.skip=true -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true"
-          (cd _dcc-monorepo/packages/sdk/protobuf-schemas && ./mvnw $MVN_OPTS install)
-          (cd _dcc-monorepo/packages/jvm/curve25519            && ./mvnw $MVN_OPTS install)
-          (cd _dcc-monorepo/packages/jvm/blst                  && ./mvnw $MVN_OPTS install)
-          (cd _dcc-monorepo/packages/jvm/groth16               && ./mvnw $MVN_OPTS install)
-      - name: Build tarballs for docker
-        run: sbt --batch -Dproject.version=${{ steps.versions.outputs.node-version }} buildTarballsForDocker
+      - name: Verify pinned DCC artifacts and build tarballs
+        run: sbt --batch verifyDccArtifacts buildTarballsForDocker
       - name: Resolve tags for workflow_dispatch
         id: resolved
         if: github.event_name == 'workflow_dispatch'
@@ -123,36 +78,30 @@ jobs:
           INPUT_DOCKER_TAGS: ${{ inputs.docker-tags }}
         run: |
           set -euo pipefail
-          TAGS=$(echo "${INPUT_DOCKER_TAGS}" | tr ',' '\n' | sed -e 's/^/type=raw,value=/')
           {
             echo 'tags<<EOF'
-            echo "${TAGS}"
+            echo "${INPUT_DOCKER_TAGS}" | tr ',' '\n' | sed -e '/^$/d' -e 's/^/type=raw,value=/'
             echo EOF
           } >> "$GITHUB_OUTPUT"
       - name: Prepare annotations
+        id: annotations
         run: |
           {
             echo 'annotations<<EOF'
-            echo org.opencontainers.image.source=https://github.com/${{ github.repository }}/tree/${{ steps.ghd.outputs.sha }}/docker
+            echo org.opencontainers.image.source=https://github.com/${{ github.repository }}/tree/${{ steps.versions.outputs.sha }}/docker
             echo org.opencontainers.image.licenses=MIT
             echo org.opencontainers.image.description=DCC Node
             echo org.opencontainers.image.base.name=${{ steps.versions.outputs.base-image }}
             echo org.opencontainers.image.base.digest=${{ steps.versions.outputs.base-image-digest }}
             echo org.opencontainers.image.version=${{ steps.versions.outputs.node-version }}
-            echo org.opencontainers.image.revision=${{ steps.ghd.outputs.sha }}
+            echo org.opencontainers.image.revision=${{ steps.versions.outputs.sha }}
             echo EOF
           } >> "$GITHUB_OUTPUT"
-        id: annotations
       - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
-        if: inputs.environment != ''
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
       - uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
         id: meta
@@ -160,8 +109,11 @@ jobs:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest-descriptor,index-descriptor
         with:
           images: ${{ env.IMAGE_NAME }}
-          flavor: latest=${{ contains(inputs.docker-tags, 'latest') }}
-          tags: ${{ inputs.raw-docker-tags != '' && inputs.raw-docker-tags || steps.resolved.outputs.tags }}
+          flavor: latest=false
+          tags: |
+            type=sha
+            ${{ inputs.raw-docker-tags }}
+            ${{ steps.resolved.outputs.tags }}
           annotations: ${{ steps.annotations.outputs.annotations }}
       - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
         id: push
@@ -170,22 +122,52 @@ jobs:
           platforms: linux/amd64
           push: true
           build-args: baseImage=${{ steps.versions.outputs.base-image }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.IMAGE_NAME }}:candidate-${{ github.run_id }}-${{ github.run_attempt }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to:   type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+      - name: Smoke-test the pushed digest (groth16 native library, BLS, P-256)
+        env:
+          REF: ${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          out=$(docker run --rm --platform linux/amd64 --entrypoint java "$REF" -cp '/usr/share/dcc/lib/*' com.decentralchain.utils.UtilApp smoke)
+          echo "$out"
+          test "$out" = "smoke: p256=ok bls=ok groth16=ok"
+      - name: Scan the pushed digest (HIGH/CRITICAL with an available fix)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+      - name: Point the real tags at the tested digest
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [ -n "$tag" ] || continue
+            regctl image copy "${IMAGE_NAME}@${DIGEST}" "$tag"
+            echo "tagged $tag -> $DIGEST"
+          done <<< "$TAGS"
       - name: Attest build provenance
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
         with:
-          subject-name:     ${{ env.IMAGE_NAME }}
-          subject-digest:   ${{ steps.push.outputs.digest }}
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
-      - name: Prepare summary
+      - name: Summary
         run: |
           {
-            echo '## Image Info'
-            echo '- This image: `${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}`'
-            echo '- Base image: `${{ steps.versions.outputs.base-image }}@${{ steps.versions.outputs.base-image-digest }}`'
+            echo '## Image'
+            echo '- Digest: `${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}`'
             echo '- Version: `${{ steps.versions.outputs.node-version }}`'
-          } >> $GITHUB_STEP_SUMMARY
+            echo '- Base: `${{ steps.versions.outputs.base-image }}@${{ steps.versions.outputs.base-image-digest }}`'
+            echo '- Tags:'
+            echo '${{ steps.meta.outputs.tags }}' | sed 's/^/  - /'
+          } >> "$GITHUB_STEP_SUMMARY"
