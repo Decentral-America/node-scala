@@ -131,12 +131,12 @@ jobs:
       - id: sbt-version
         run: |
           set -euo pipefail
-          # version.sbt has a `//` comment line between the two `:=` lines; a
-          # blind `cut -d\" -f2` over the whole file also matches (empty) on
-          # that comment line, producing a multi-line value that corrupts
-          # $GITHUB_OUTPUT ("Unable to process file command 'output'").
-          # Extract only the `ThisBuild / version` line specifically.
-          sbt_version=$(grep '^ThisBuild / version' version.sbt | cut -d\" -f2)
+          # version.sbt declares the version as `git.baseVersion := "x.y.z"`.
+          sbt_version=$(grep -m1 '^git.baseVersion' version.sbt | cut -d\" -f2)
+          if [ -z "$sbt_version" ]; then
+            echo "::error::could not read git.baseVersion from version.sbt"
+            exit 1
+          fi
           echo "sbt_version=$sbt_version" >> "$GITHUB_OUTPUT"
       - if: format('v{0}', steps.sbt-version.outputs.sbt_version) != github.ref_name
         env:
