@@ -33,29 +33,45 @@ jobs:
       - name: Upload tarball under both names matcher's build expects
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           tgz=$(find grpc-server/target/universal -maxdepth 1 -name 'dcc-grpc-server-*.tgz')
-          version="${{ github.ref_name }}"
+          version="$RELEASE_TAG"
           version="${version#v}"
           cp "$tgz" "dcc-grpc-server-stagenet-${version}.tgz"
-          gh release upload "${{ github.ref_name }}" "$tgz" "dcc-grpc-server-stagenet-${version}.tgz" --repo "${{ github.repository }}"
+          gh release upload "$RELEASE_TAG" "$tgz" "dcc-grpc-server-stagenet-${version}.tgz" --repo "${{ github.repository }}"
 
   publish-node-image:
-    name: Publish DCC Node Image
-    uses: ./.github/workflows/publish-node-scala.yml
-    with:
-      raw-docker-tags: |
-        type=match,pattern=v(.*),group=1
-        type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
-      environment: Docker Hub
+    name: Tag the already-built node image with the release version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
-      attestations: write
-      id-token: write
-    secrets:
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc  # v0.1.0
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Re-tag sha-<commit> as <version> (and latest for full releases)
+        env:
+          IMAGE: ghcr.io/decentral-america/node-scala
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          set -euo pipefail
+          SRC="$IMAGE:sha-$(git rev-parse --short=7 "$TAG^{commit}")"
+          regctl manifest head "$SRC" >/dev/null || { echo "::error::no image was built for $TAG ($SRC); dispatch publish-node-scala.yml on the tag first"; exit 1; }
+          regctl image copy "$SRC" "$IMAGE:${TAG#v}"
+          if [ "$PRERELEASE" != "true" ]; then regctl image copy "$SRC" "$IMAGE:latest"; fi
+          echo "$SRC -> $IMAGE:${TAG#v} (digest $(regctl manifest digest "$SRC"))" | tee -a "$GITHUB_STEP_SUMMARY"
 
   publish-ride-runner-image:
     name: Publish RIDE Runner to Docker Hub

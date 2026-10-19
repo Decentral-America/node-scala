@@ -123,14 +123,16 @@ class AddressRouteSpec extends RouteSpec("/addresses") with RestAPISettingsHelpe
   }
 
   routePath("/seq/{from}/{to}") in {
-    val r1 = Get(routePath("/seq/1/4")) ~> route ~> check {
+    Get(routePath("/seq/1/4")) ~> route should produce(ApiKeyNotValid)
+
+    val r1 = Get(routePath("/seq/1/4")) ~> ApiKeyHeader ~> route ~> check {
       val response = responseAs[Seq[String]]
       response.length shouldBe 3
       allAddresses.map(_.toString) should contain allElementsOf response
       response
     }
 
-    val r2 = Get(routePath("/seq/5/9")) ~> route ~> check {
+    val r2 = Get(routePath("/seq/5/9")) ~> ApiKeyHeader ~> route ~> check {
       val response = responseAs[Seq[String]]
       response.length shouldBe 4
       allAddresses.map(_.toString) should contain allElementsOf response
@@ -139,11 +141,11 @@ class AddressRouteSpec extends RouteSpec("/addresses") with RestAPISettingsHelpe
 
     r1 shouldNot contain allElementsOf r2
 
-    Get(routePath("/seq/1/9000")) ~> route ~> check {
+    Get(routePath("/seq/1/9000")) ~> ApiKeyHeader ~> route ~> check {
       responseAs[JsObject] shouldBe Json.obj("error" -> 10, "message" -> "Too big sequence requested: max limit is 1000 entries")
     }
 
-    Get(routePath("/seq/10/1")) ~> route ~> check {
+    Get(routePath("/seq/10/1")) ~> ApiKeyHeader ~> route ~> check {
       responseAs[JsObject] shouldBe Json.obj("error" -> 199, "message" -> "Invalid sequence")
     }
   }

@@ -4,11 +4,12 @@
   "extends": ["config:best-practices", ":semanticCommitTypeAll(chore)"],
   "labels": ["dependencies"],
   "osvVulnerabilityAlerts": true,
-  "schedule": ["* * * * 1"],
+  "schedule": ["before 8am on monday"],
   "timezone": "America/Costa_Rica",
   "prConcurrentLimit": 10,
   "prHourlyLimit": 5,
-  "prCreation": "not-pending",
+  "prCreation": "immediate",
+  "minimumReleaseAge": "3 days",
   "platformAutomerge": true,
   "packageRules": [
     {
@@ -74,6 +75,11 @@
       "dependencyDashboardApproval": true,
       "description": "Require approval for all major updates across all managers",
       "matchUpdateTypes": ["major"]
+    },
+    {
+      "description": "Not resolvable by the sbt/github-tags datasources (Scala-2-only stub, sbt-1 plugin path, renamed action repo); updated by hand",
+      "matchPackageNames": ["org.scala-js:scalajs-stubs", "org.xerial.sbt:sbt-sonatype", "ScalableCapital/action-surefire-report"],
+      "enabled": false
     }
   ],
   "vulnerabilityAlerts": {

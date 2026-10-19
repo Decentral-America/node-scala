@@ -67,6 +67,7 @@ object EndorsementStorage {
         _      <- Either.raiseWhen(msg.finalizedHeight < GenesisBlockHeight || msg.finalizedHeight > filter.finalizedHeight) {
           s"Expected finalized height >= $GenesisBlockHeight and <= ${filter.finalizedHeight}"
         }
+        _ <- Either.raiseWhen(msg.endorserIndex < 0)(s"Invalid endorser index: ${msg.endorserIndex}")
         _ <- Either.raiseWhen(msg.endorserIndex >= filter.normalizedGeneratorSet.size)(
           s"There are only ${filter.normalizedGeneratorSet.size} endorsers"
         )

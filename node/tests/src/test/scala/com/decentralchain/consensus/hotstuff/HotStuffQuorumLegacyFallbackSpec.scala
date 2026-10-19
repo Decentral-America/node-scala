@@ -40,34 +40,34 @@ class HotStuffQuorumLegacyFallbackSpec extends FlatSpec {
   private def vote(i: Int, dst: String): HotStuffVote =
     HotStuffVote(view, phase, blockId, height, i, kps(i).sign(voteMsg, dst).byteStr)
 
-  "verifyVote" should "accept a legacy-tagged vote signature (pre-v2 on-chain vote)" in {
-    val legacyVote = vote(0, BlsUtils.BlsLegacyDomainSeparationTag)
-    HotStuffQuorum.verifyVote(legacyVote, committee) should be(true)
+  "verifyVote (gossip path)" should "reject a legacy-tagged vote signature" in {
+    HotStuffQuorum.verifyVote(vote(0, BlsUtils.BlsLegacyDomainSeparationTag), committee) should be(false)
   }
 
   it should "still accept a current v2-tagged (_HSVOTE_) vote signature (no regression)" in {
-    val v2Vote = vote(0, BlsUtils.BlsHsVoteDomainSeparationTag)
-    HotStuffQuorum.verifyVote(v2Vote, committee) should be(true)
+    HotStuffQuorum.verifyVote(vote(0, BlsUtils.BlsHsVoteDomainSeparationTag), committee) should be(true)
   }
 
   it should "reject a vote signed under neither DST (wrong DST entirely)" in {
-    val wrongVote = vote(0, BlsUtils.BlsPopDomainSeparationTag)
-    HotStuffQuorum.verifyVote(wrongVote, committee) should be(false)
+    HotStuffQuorum.verifyVote(vote(0, BlsUtils.BlsPopDomainSeparationTag), committee) should be(false)
   }
 
-  it should "reject a legacy-tagged signature from the wrong voter (tampered voterIndex)" in {
-    val legacyVote = vote(0, BlsUtils.BlsLegacyDomainSeparationTag)
-    HotStuffQuorum.verifyVote(legacyVote.copy(voterIndex = 1), committee) should be(false)
+  "verifyVoteSignature (block-validation path)" should "accept legacy only when allowed, and count the acceptance" in {
+    val v      = vote(0, BlsUtils.BlsLegacyDomainSeparationTag)
+    val before = BlsUtils.legacyDstAcceptances.getOrElse("hotstuff-vote", 0L)
+    HotStuffQuorum.verifyVoteSignature(v.signature.arr, voteMsg, kps(0).publicKey.arr, allowLegacyDst = true) should be(true)
+    HotStuffQuorum.verifyVoteSignature(v.signature.arr, voteMsg, kps(0).publicKey.arr, allowLegacyDst = false) should be(false)
+    BlsUtils.legacyDstAcceptances.getOrElse("hotstuff-vote", 0L) shouldBe before + 1
   }
 
-  "verifyQC" should "accept a QC whose signatures are legacy-tagged" in {
-    val votes = Seq(
-      vote(0, BlsUtils.BlsLegacyDomainSeparationTag),
-      vote(1, BlsUtils.BlsLegacyDomainSeparationTag),
-      vote(2, BlsUtils.BlsLegacyDomainSeparationTag)
-    )
-    val qc = HotStuffQuorum.formQC(votes, committee).toOption.get
-    HotStuffQuorum.verifyQC(qc, committee) should be(Right(()))
+  "verifyQC (gossip path)" should "reject a QC whose signatures are legacy-tagged" in {
+    val votes = Seq(0, 1, 2).map(i => vote(i, BlsUtils.BlsLegacyDomainSeparationTag))
+    val agg   = com.decentralchain.crypto.bls.BlsSignature
+      .agg(votes.map(v => com.decentralchain.crypto.bls.BlsSignature(v.signature).toOption.get))
+      .toOption
+      .get
+    val qc = QuorumCertificate(view, phase, blockId, height, Seq(0, 1, 2), agg.byteStr, 0)
+    HotStuffQuorum.verifyQC(qc, committee).isLeft should be(true)
   }
 
   it should "still accept a QC whose signatures are v2 (_HSVOTE_)-tagged (no regression)" in {

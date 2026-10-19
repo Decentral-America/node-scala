@@ -10,9 +10,15 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 enablePlugins(GitVersioning)
 
-git.uncommittedSignifier       := Some("DIRTY")
-ThisBuild / git.useGitDescribe := true
-ThisBuild / PB.protocVersion   := Dependencies.gProtoVersion
+git.uncommittedSignifier := Some("DIRTY")
+// The version identifies the build: exactly the base version only on the commit tagged
+// v<base>; any other commit carries its sha, so two different builds never report the same version.
+ThisBuild / version := {
+  val base = git.baseVersion.value
+  if (git.gitCurrentTags.value.contains(s"v$base")) base
+  else s"$base-dev-${git.gitHeadCommit.value.fold("unknown")(_.take(10))}"
+}
+ThisBuild / PB.protocVersion := Dependencies.gProtoVersion
 
 ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
 
@@ -142,6 +148,11 @@ lazy val `node-tests` = project
   .in(file("node/tests"))
   .dependsOn(`node-testkit`)
   .settings(libraryDependencies ++= Dependencies.logDeps)
+  .settings(
+    // SlowTest suites run nightly only (-Ddcc.include-slow-tests=true); Check PR and CI Test share this default.
+    Test / testOptions ++= (if (sys.props.get("dcc.include-slow-tests").contains("true")) Nil
+                            else Seq(Tests.Argument(TestFrameworks.ScalaTest, "-l", "com.decentralchain.tags.SlowTest")))
+  )
 
 lazy val `grpc-server` =
   project.dependsOn(node % "compile;runtime->provided", `node-testkit`)
@@ -249,10 +260,6 @@ inScope(Global)(
     testOptions += Tests.Argument("-oIDOF", "-u", "target/test-reports"),
     testOptions += Tests.Setup(_ => sys.props("sbt-testing") = "true"),
     network := Network.default(),
-    // REMOVE after DCC-269 Phase 3: once all io.decentralchain artifacts are
-    // published to Maven Central, this resolver and the CI mvn install chain
-    // become unnecessary.
-    resolvers ++= Resolver.sonatypeCentralSnapshots +: Seq(Resolver.mavenLocal),
     // Maven Central's Central Portal rejects any published artifact missing a
     // javadoc jar ("Javadocs must be provided but not found in entries") --
     // only surfaced once this repo was actually published there for the
@@ -263,7 +270,9 @@ inScope(Global)(
     // generation runs instead of a placeholder; verified it succeeds
     // (grpc-server: 31s, no errors).
     Compile / packageDoc / publishArtifact := true,
-    concurrentRestrictions                 := Seq(Tags.limit(Tags.Test, math.min(EvaluateTask.SystemProcessors, 8))),
+    // Append (++=) rather than assign: IntegrationTestsPlugin sets the Tags.ForkedTestGroup limit from
+    // -Ddcc.it.max-parallel-suites in this same scope, and `:=` here silently discarded it.
+    concurrentRestrictions ++= Seq(Tags.limit(Tags.Test, math.min(EvaluateTask.SystemProcessors, 8))),
     excludeLintKeys ++= Set(
       node / Universal / configuration,
       node / Linux / configuration,
@@ -287,6 +296,32 @@ buildTarballsForDocker := {
     (`grpc-server` / Universal / packageZipTarball).value,
     baseDirectory.value / "docker" / "target" / "dcc-grpc-server.tgz"
   )
+}
+
+lazy val verifyDccArtifacts = taskKey[Unit]("Fail unless every io.decentralchain artifact resolved for node matches project/dcc-artifacts.sha256")
+verifyDccArtifacts := {
+  val log    = streams.value.log
+  val pinned = IO
+    .readLines(baseDirectory.value / "project" / "dcc-artifacts.sha256")
+    .map(_.trim)
+    .filter(l => l.nonEmpty && !l.startsWith("#"))
+    .map { l =>
+      val parts = l.split("\\s+")
+      parts(1) -> parts(0)
+    }
+    .toMap
+  val resolved                = (node / update).value.allFiles.filter(f => f.getPath.replace('\\', '/').contains("/io/decentralchain/")).distinct
+  def sha256(f: File): String =
+    java.security.MessageDigest.getInstance("SHA-256").digest(IO.readBytes(f)).map(b => f"${b & 0xff}%02x").mkString
+  val problems = resolved.flatMap { f =>
+    pinned.get(f.getName) match {
+      case None                      => Some(s"${f.getName}: not pinned in project/dcc-artifacts.sha256")
+      case Some(h) if h != sha256(f) => Some(s"${f.getName}: sha256 ${sha256(f)} != pinned $h (${f.getPath})")
+      case _                         => None
+    }
+  } ++ pinned.keySet.diff(resolved.map(_.getName).toSet).map(n => s"$n: pinned but not resolved")
+  if (problems.nonEmpty) sys.error(problems.mkString("Pinned io.decentralchain artifact check failed:\n  ", "\n  ", ""))
+  log.info(s"verifyDccArtifacts: ${resolved.size} io.decentralchain artifacts match their pinned Maven Central sha256")
 }
 
 lazy val buildRIDERunnerForDocker = taskKey[Unit]("Package RIDE Runner tarball and copy it to docker/target")

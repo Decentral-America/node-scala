@@ -18,8 +18,8 @@ case class BlockEndorsement(
     * endorsements signed before the per-context-DST switch still verify. New signing
     * (`BlockEndorsement.sign`/`signed`) stays v2-only.
     */
-  def signatureValid(endorserPublicKey: BlsPublicKey): Either[String, Unit] =
-    BlockEndorsement.verify(signature.arr, mkMessageBytes, endorserPublicKey.arr)
+  def signatureValid(endorserPublicKey: BlsPublicKey, allowLegacyDst: Boolean): Either[String, Unit] =
+    BlockEndorsement.verify(signature.arr, mkMessageBytes, endorserPublicKey.arr, allowLegacyDst)
 
   private def mkMessageBytes: Array[Byte] = BlockEndorsement.mkMessage(finalizedId, finalizedHeight, endorsedId)
 }
@@ -56,10 +56,14 @@ object BlockEndorsement {
     * NEVER changed by that commit -- only the DST selection was, so the legacy branch here reuses
     * the exact same `message` bytes, just under the old domain). Never used for new signing.
     */
-  def verify(signatureBytes: Array[Byte], message: Array[Byte], endorserPublicKeyBytes: Array[Byte]): Either[String, Unit] =
+  def verify(signatureBytes: Array[Byte], message: Array[Byte], endorserPublicKeyBytes: Array[Byte], allowLegacyDst: Boolean): Either[String, Unit] =
     BlsUtils.verifyBasic(signatureBytes, message, endorserPublicKeyBytes, Dst) match {
-      case Right(()) => Right(())
-      case Left(_)   => BlsUtils.verifyBasic(signatureBytes, message, endorserPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag)
+      case Right(())                    => Right(())
+      case Left(err) if !allowLegacyDst => Left(err)
+      case Left(_)                      =>
+        BlsUtils
+          .verifyBasic(signatureBytes, message, endorserPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag)
+          .map(_ => BlsUtils.recordLegacyDstAcceptance("endorsement"))
     }
 
   /** Verify-only bimodal check for an AGGREGATED endorsement signature (multiple endorsers, one
@@ -68,9 +72,18 @@ object BlockEndorsement {
     * (`state/appender/package.scala`'s `validateFinalizationVoting`), which mirrors `EndorsementStorage`'s
     * pairwise checks but re-verifies the whole aggregate unconditionally on replay.
     */
-  def verifyAgg(aggSignatureBytes: Array[Byte], message: Array[Byte], endorserPublicKeys: Iterable[Array[Byte]]): Either[String, Unit] =
+  def verifyAgg(
+      aggSignatureBytes: Array[Byte],
+      message: Array[Byte],
+      endorserPublicKeys: Iterable[Array[Byte]],
+      allowLegacyDst: Boolean
+  ): Either[String, Unit] =
     BlsUtils.verifyAgg(aggSignatureBytes, message, endorserPublicKeys, Dst) match {
-      case Right(()) => Right(())
-      case Left(_)   => BlsUtils.verifyAgg(aggSignatureBytes, message, endorserPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
+      case Right(())                    => Right(())
+      case Left(err) if !allowLegacyDst => Left(err)
+      case Left(_)                      =>
+        BlsUtils
+          .verifyAgg(aggSignatureBytes, message, endorserPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
+          .map(_ => BlsUtils.recordLegacyDstAcceptance("endorsement-aggregate"))
     }
 }

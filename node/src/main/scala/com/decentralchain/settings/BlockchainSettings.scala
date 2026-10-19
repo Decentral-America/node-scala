@@ -7,6 +7,7 @@ import com.decentralchain.account.Address
 import com.decentralchain.common.state.ByteStr
 import com.decentralchain.state.Height
 import pureconfig.*
+import pureconfig.error.UserValidationFailed
 import pureconfig.generic.semiauto.deriveReader
 
 import scala.concurrent.duration.*
@@ -84,7 +85,12 @@ case class FunctionalitySettings(
     unitsRegistryAddress: Option[String] = None,
     maxValidEndorsers: Int = 5,
     generationPeriodLength: Int = 1001,
-    hotStuffEquivocationPenaltyHeight: Int = 0
+    hotStuffEquivocationPenaltyHeight: Int = 0,
+    // First height at which: HotStuff quorum weight uses generating balance and drops proven
+    // equivocators; a voter may not be both a valid endorser and a proven equivocator in one
+    // voting; block validation stops accepting the legacy `_NUL_` BLS DST.
+    // 0 = from genesis (new chains). Chains with history are pinned in KnownChainParameters.
+    finalityHardeningHeight: Int = 0
 ) {
   val allowLeasedBalanceTransferUntilHeight: Int              = blockVersion3AfterHeight
   val allowTemporaryNegativeUntil: Long                       = lastTimeBasedForkParameter
@@ -285,9 +291,13 @@ object BlockchainSettings {
           for {
             customObjCur  <- objCur.atKey("custom").flatMap(_.asObjectCursor)
             networkId     <- customObjCur.atKey("address-scheme-character").flatMap(_.asString).map(_.charAt(0))
-            functionality <- customObjCur.atKey("functionality").flatMap(ConfigReader[FunctionalitySettings].from)
+            configured    <- customObjCur.atKey("functionality").flatMap(ConfigReader[FunctionalitySettings].from)
             genesis       <- customObjCur.atKey("genesis").flatMap(ConfigReader[GenesisSettings].from)
             rewards       <- customObjCur.atKey("rewards").flatMap(ConfigReader[RewardsSettings].from)
+            functionality <- KnownChainParameters.enforce(genesis.signature, configured) match {
+              case Right(fs) => Right(fs)
+              case Left(msg) => customObjCur.failed[FunctionalitySettings](UserValidationFailed(msg))
+            }
           } yield {
             require(functionality.minBlockTime <= genesis.averageBlockDelay, "min-block-time should be <= average-block-delay")
             (networkId, functionality, genesis, rewards)

@@ -91,12 +91,13 @@ object CommitToGenerationTransaction {
       chainId: Byte,
       sender: PublicKey,
       endorserPublicKey: BlsPublicKey,
-      generationPeriodStart: Height
+      generationPeriodStart: Height,
+      allowLegacyDst: Boolean
   ): Boolean =
     BlsUtils
       .verifyBasic(signature, popMessage(chainId, sender, endorserPublicKey, generationPeriodStart), endorserPublicKey.arr, PopDst)
-      .isRight ||
-      BlsUtils
+      .isRight || (allowLegacyDst && {
+      val ok = BlsUtils
         .verifyBasic(
           signature,
           legacyPopMessage(endorserPublicKey, generationPeriodStart),
@@ -104,6 +105,9 @@ object CommitToGenerationTransaction {
           BlsUtils.BlsLegacyDomainSeparationTag
         )
         .isRight
+      if (ok) BlsUtils.recordLegacyDstAcceptance("pop")
+      ok
+    })
 
   def create(
       version: TxVersion,

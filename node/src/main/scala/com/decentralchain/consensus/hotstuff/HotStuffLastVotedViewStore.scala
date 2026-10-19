@@ -49,14 +49,22 @@ import scala.util.control.NonFatal
   */
 object HotStuffLastVotedViewStore extends StrictLogging {
 
-  /** Load the persisted lastVotedView, if any. Never throws. */
-  def load(path: Path): Option[Int] =
+  /** Load the persisted lastVotedView, if any. Never throws. A value outside [-1, maxPlausible] cannot
+    * have come from an honest run (2^20 views below Int.MaxValue is centuries of 1200 ms rounds) and
+    * would keep the replica unable to vote forever, so it is discarded with an ERROR.
+    */
+  def load(path: Path, maxPlausible: Int = Int.MaxValue): Option[Int] =
     if (!Files.exists(path)) None
     else
       try {
         val view = new String(Files.readAllBytes(path), UTF_8).trim.toInt
-        logger.info(s"[HotStuff] restored lastVotedView=$view from $path")
-        Some(view)
+        if (view < -1 || view > maxPlausible) {
+          logger.error(s"[HotStuff] persisted lastVotedView=$view at $path is outside [-1, $maxPlausible] -- ignoring it, starting with -1")
+          None
+        } else {
+          logger.info(s"[HotStuff] restored lastVotedView=$view from $path")
+          Some(view)
+        }
       } catch {
         case NonFatal(e) =>
           logger.warn(s"[HotStuff] failed to load persisted lastVotedView from $path -- starting with lastVotedView=-1: ${e.getMessage}")

@@ -314,7 +314,8 @@ package object appender {
       validEndorsements: Set[Address],
       minerAddress: Address,
       generatorsWithEnoughBalance: Set[GeneratorIndex],
-      validFinalizedHeight: Height
+      validFinalizedHeight: Height,
+      allowLegacyDst: Boolean
   )(
       conflictingEndorsement: BlockEndorsement
   ): Either[String, Unit] = for {
@@ -343,7 +344,7 @@ package object appender {
       s"Contains expected finalized block: ${conflictingEndorsement.finalizedId}"
     }
     _ <- conflictingEndorsement
-      .signatureValid(blsPublicKey)
+      .signatureValid(blsPublicKey, allowLegacyDst)
       .leftMap(err => s"Invalid conflicting endorsement signature from $address: $err")
   } yield ()
 
@@ -355,7 +356,9 @@ package object appender {
       fv: FinalizationVoting,
       blockGenerationPeriodIndex: Int,
       commitedGenerators: IndexedSeq[(Address, BlsPublicKey)],
-      knownConflictGenerators: Set[GeneratorIndex]
+      knownConflictGenerators: Set[GeneratorIndex],
+      enforceDisjointFromValid: Boolean,
+      allowLegacyDst: Boolean
   ): Either[String, Unit] =
     if (fv.hotstuffConflicts.isEmpty) Right(())
     else
@@ -363,6 +366,7 @@ package object appender {
         voters = fv.hotstuffConflicts.map(_.voterIndex)
         _ <- Either.raiseWhen(voters.toSet.size != voters.length)("Duplicate equivocation-proof voter indexes")
         conflictIdxs = fv.conflict.map(_.endorserIndex.toInt).toSet
+        validIdxs    = fv.valid.map(_.toInt).toSet
         _ <- fv.hotstuffConflicts.toList.traverse { proof =>
           for {
             _ <- proof.consistent
@@ -378,7 +382,10 @@ package object appender {
             _ <- Either.raiseWhen(conflictIdxs.contains(proof.voterIndex))(
               s"Voter ${proof.voterIndex} already carries a conflicting endorsement in this voting"
             )
-            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2))
+            _ <- Either.raiseWhen(enforceDisjointFromValid && validIdxs.contains(proof.voterIndex))(
+              s"Voter ${proof.voterIndex} carries both a valid endorsement and an equivocation proof in this voting"
+            )
+            _ <- proof.signaturesValid(i => commitedGenerators.lift(i).map(_._2), allowLegacyDst)
           } yield ()
         }
       } yield ()
@@ -404,6 +411,7 @@ package object appender {
 
           generatorsWithEnoughBalance = generatorSet.view.map(_._1).toSet
           blockHeight                 = Height(blockchain.height + 1)
+          legacyDstAllowed            = blockchain.legacyBlsDstAllowedAt(blockHeight.toInt)
           blockGenerationPeriod <- blockchain
             .generationPeriodOf(blockHeight)
             .toRight(s"No period for height $blockHeight")
@@ -429,14 +437,17 @@ package object appender {
                 validEndorserAddresses,
                 block.header.generator.toAddress,
                 generatorsWithEnoughBalance,
-                fv.finalizedHeight
+                fv.finalizedHeight,
+                legacyDstAllowed
               )
             )
           _ <- validateHotStuffEquivocationProofs(
             fv,
             blockGenerationPeriod.index,
             allCommittedGenerators,
-            knownConflictGenerators
+            knownConflictGenerators,
+            enforceDisjointFromValid = blockHeight.toInt >= blockchain.settings.functionalitySettings.finalityHardeningHeight,
+            allowLegacyDst = legacyDstAllowed
           )
           // Safe by construction: FinalizationVoting.allConflictGeneratorIndexes wraps each proof's raw voterIndex
           // in GeneratorIndex.apply, which throws on negative input. That's sound here because
@@ -457,7 +468,8 @@ package object appender {
                       BlockEndorsement.verifyAgg(
                         aggregatedEndorsement.arr,
                         BlockEndorsement.mkMessage(finalizedBlockId, fv.finalizedHeight, block.header.reference),
-                        validEndorsers.view.map(_._2.arr)
+                        validEndorsers.view.map(_._2.arr),
+                        legacyDstAllowed
                       )
                 } yield ()
           }

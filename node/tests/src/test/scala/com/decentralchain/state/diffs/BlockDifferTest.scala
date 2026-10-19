@@ -414,6 +414,76 @@ class BlockDifferTest extends FreeSpec with WithDomain {
             minerDelta shouldBe d.blockchain.settings.rewardsSettings.initial + fee / 5 * 2 // reward + 40% of fee
           }
         }
+
+        // Regression guard (height-3325 investigation): one committer alone, then two more together for
+        // the SAME target period in the next block. The miner's embedded stateHash (block construction,
+        // `createInitialBlockSnapshot`) must equal the appender's recomputation for the identical block.
+        "a commitment round spanning two blocks (one committer alone, then two more together) does not diverge the state hash" in {
+          val settings = DomainPresets.DeterministicFinality
+            .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+            .configure(_.copy(generationPeriodLength = 10, lightNodeBlockFieldsAbsenceInterval = 0))
+          val committerA = TxHelpers.signer(0)
+          val committerB = TxHelpers.signer(1)
+          val committerC = TxHelpers.signer(2)
+          val fee        = 1000000L
+
+          withDomain(settings, AddrWithBalance.enoughBalances(committerA, committerB, committerC)) { d =>
+            val next = d.blockchain.currentGenerationPeriod.get.next.start
+            d.appendBlock(
+              d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.commitToGeneration(next, committerA, fee = fee)), generator = committerA)
+            )
+            d.appendBlock(
+              d.createBlock(
+                Block.ProtoBlockVersion,
+                Seq(TxHelpers.commitToGeneration(next, committerB, fee = fee), TxHelpers.commitToGeneration(next, committerC, fee = fee)),
+                generator = committerA
+              )
+            )
+          }
+        }
+
+        "the same commitment-round shape, repeated for a second rotation with real prior history, still does not diverge" in {
+          val settings = DomainPresets.DeterministicFinality
+            .addFeatures(BlockchainFeatures.SmallerMinimalGeneratingBalance)
+            .configure(_.copy(generationPeriodLength = 10, lightNodeBlockFieldsAbsenceInterval = 0))
+          val committerA = TxHelpers.signer(0)
+          val committerB = TxHelpers.signer(1)
+          val committerC = TxHelpers.signer(2)
+          val fee        = 1000000L
+
+          withDomain(settings, AddrWithBalance.enoughBalances(committerA, committerB, committerC)) { d =>
+            (1 to 33).foreach { _ =>
+              val periodTarget = d.blockchain.currentGenerationPeriod.get.next.start
+              d.appendBlock(
+                d.createBlock(
+                  Block.ProtoBlockVersion,
+                  Seq(
+                    TxHelpers.commitToGeneration(periodTarget, committerA, fee = fee),
+                    TxHelpers.commitToGeneration(periodTarget, committerB, fee = fee),
+                    TxHelpers.commitToGeneration(periodTarget, committerC, fee = fee)
+                  ),
+                  generator = committerA
+                )
+              )
+              while (d.blockchain.currentGenerationPeriod.get.next.start == periodTarget)
+                d.appendBlock(d.createBlock(Block.ProtoBlockVersion, Nil, generator = committerA))
+            }
+            val periodTarget = d.blockchain.currentGenerationPeriod.get.next.start
+            d.appendBlock(
+              d.createBlock(Block.ProtoBlockVersion, Seq(TxHelpers.commitToGeneration(periodTarget, committerA, fee = fee)), generator = committerA)
+            )
+            d.appendBlock(
+              d.createBlock(
+                Block.ProtoBlockVersion,
+                Seq(
+                  TxHelpers.commitToGeneration(periodTarget, committerB, fee = fee),
+                  TxHelpers.commitToGeneration(periodTarget, committerC, fee = fee)
+                ),
+                generator = committerA
+              )
+            )
+          }
+        }
       }
     }
 

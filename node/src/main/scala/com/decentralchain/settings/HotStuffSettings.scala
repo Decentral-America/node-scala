@@ -81,6 +81,14 @@ import scala.concurrent.duration.FiniteDuration
   *                     OPERATIONAL NOTE: a replica's very first boot has no persisted lastVotedView
   *                     (T11 first-boot window) -- do not run a first-boot replica as a committee
   *                     member with slashing active until it has participated once.
+  * @param requireLeaderVote AUD-006: vote for a wire proposal only after a verified PREPARE vote for the
+  *                     same (view, blockId) from the expected leader (the block's generator when
+  *                     view == height, else the pacemaker rotation leader). Validation-only: every
+  *                     leader broadcasts its own PREPARE vote right after its proposal. Emergency
+  *                     switch: `dcc.hotstuff.require-leader-vote = no`.
+  * @param maxProposalViewAhead AUD-006: highest accepted proposal view, relative to this replica's
+  *                     pacemaker view. Must be in `(0, Int.MaxValue / 2)`; also bounds the restored
+  *                     lastVotedView (see `HotStuffLastVotedViewStore.load`).
   */
 case class HotStuffSettings(
     enabled: Boolean,
@@ -88,7 +96,13 @@ case class HotStuffSettings(
     settledDepth: Int = 3,
     authoritative: Boolean = false,
     slashingEnabled: Boolean = false,
-    maxTargetLagFraction: Double = 0.25
+    maxTargetLagFraction: Double = 0.25,
+    // AUD-006: vote for a wire proposal only once the expected leader's own signed PREPARE vote for the
+    // same (view, blockId) has been verified. Leaders of every version already broadcast that vote.
+    requireLeaderVote: Boolean = true,
+    // AUD-006: a proposal's view must be <= this replica's pacemaker view + this many views. 2^20 views
+    // is ~14.5 days at a 1200 ms round timeout; it keeps lastVotedView far away from Int.MaxValue.
+    maxProposalViewAhead: Int = 1048576
 ) derives ConfigReader {
   if (enabled) {
     require(roundTimeout.toMillis > 0, "dcc.hotstuff.round-timeout must be positive when hotstuff is enabled")
@@ -98,6 +112,10 @@ case class HotStuffSettings(
       "dcc.hotstuff.max-target-lag-fraction must be in (0, 1) when hotstuff is enabled"
     )
   }
+  require(
+    maxProposalViewAhead > 0 && maxProposalViewAhead < (Int.MaxValue / 2),
+    "dcc.hotstuff.max-proposal-view-ahead must be in (0, Int.MaxValue / 2)"
+  )
   require(!authoritative || enabled, "hotstuff.authoritative requires hotstuff.enabled")
   require(!slashingEnabled || enabled, "hotstuff.slashing-enabled requires hotstuff.enabled")
 }

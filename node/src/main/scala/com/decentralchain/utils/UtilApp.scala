@@ -84,7 +84,9 @@ object UtilApp {
       }
 
       result match {
-        case Left(value)     => System.err.println(s"Error executing command: $value")
+        case Left(value) =>
+          System.err.println(s"Error executing command: $value")
+          sys.exit(1)
         case Right(outBytes) => IO.writeOutput(cmd, outBytes)
       }
     }
@@ -234,13 +236,13 @@ object UtilApp {
   }
 
   // noinspection TypeAnnotation
-  private final class NodeState(c: Command) {
+  private[utils] final class NodeState(c: Command) {
     lazy val settings = Application.loadApplicationConfig(c.configFile.map(new File(_)))
     lazy val wallet   = Wallet(settings.walletSettings)
     lazy val time     = Time(settings.ntpServer)
   }
 
-  private object Actions {
+  private[utils] object Actions {
     type ActionResult = Either[String, Array[Byte]]
 
     @nowarn("cat=deprecation")
@@ -386,7 +388,19 @@ object UtilApp {
       val aggSig = BlsSignature.agg(Seq(blsSig1, blsSig2)).explicitGet()
       aggSig.verifyAgg(message, Seq(blsSK1.publicKey, blsSK2.publicKey), BlsUtils.BlsEndorseDomainSeparationTag).explicitGet()
 
-      Right(Array.emptyByteArray)
+      // groth16 native library : this loads libgroth16_jni from the classpath jar, so an
+      // image whose groth16 jar lacks the linux64/amd64 .so fails here with UnsatisfiedLinkError.
+      // Vector: the BLS12-381 case lang IntegrationTest "groth16Verify" expects to be true.
+      val vk = Base64.decode(
+        "hwk883gUlTKCyXYA6XWZa8H9/xKIYZaJ0xEs0M5hQOMxiGpxocuX/8maSDmeCk3bo5ViaDBdO7ZBxAhLSe5k/5TFQyF5Lv7KN2tLKnwgoWMqB16OL8WdbePIwTCuPtJNAFKoTZylLDbSf02kckMcZQDPF9iGh+JC99Pio74vDpwTEjUx5tQ99gNQwxULtztsqDRsPnEvKvLmsxHt8LQVBkEBm2PBJFY+OXf1MNW021viDBpR10mX4WQ6zrsGL5L0GY4cwf4tlbh+Obit+LnN/SQTnREf8fPpdKZ1sa/ui3pGi8lMT6io4D7Ujlwx2RdCkBF+isfMf77HCEGsZANw0hSrO2FGg14Sl26xLAIohdaW8O7gEaag8JdVAZ3OVLd5Df1NkZBEr753Xb8WwaXsJjE7qxwINL1KdqA4+EiYW4edb7+a9bbBeOPtb67ZxmFqgyTNS/4obxahezNkjk00ytswsENg//Ee6dWBJZyLH+QGsaU2jO/W4WvRyZhmKKPdipOhiz4Rlrd2XYgsfHsfWf5v4GOTL+13ZB24dW1/m39n2woJ+v686fXbNW85XP/r"
+      )
+      val proof = Base64.decode(
+        "lvQLU/KqgFhsLkt/5C/scqs7nWR+eYtyPdWiLVBux9GblT4AhHYMdCgwQfSJcudvsgV6fXoK+DUSRgJ++Nqt+Wvb7GlYlHpxCysQhz26TTu8Nyo7zpmVPH92+UYmbvbQCSvX2BhWtvkfHmqDVjmSIQ4RUMfeveA1KZbSf999NE4qKK8Do+8oXcmTM4LZVmh1rlyqznIdFXPN7x3pD4E0gb6/y69xtWMChv9654FMg05bAdueKt9uA4BEcAbpkdHF"
+      )
+      val inputs = Base64.decode("LcMT3OOlkHLzJBKCKjjzzVMg+r+FVgd52LlhZPB4RFg=")
+      require(com.decentralchain.lang.Global.groth16Verify(vk, proof, inputs), "groth16 verification of the known-valid vector returned false")
+
+      Right("smoke: p256=ok bls=ok groth16=ok".getBytes(StandardCharsets.UTF_8))
     }
   }
 

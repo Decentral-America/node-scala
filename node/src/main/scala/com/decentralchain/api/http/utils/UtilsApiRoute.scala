@@ -215,11 +215,11 @@ case class UtilsApiRoute(
     complete(Json.obj("system" -> System.currentTimeMillis(), "NTP" -> timeService.correctedTime()))
   }
 
-  def seedRoute: Route = (path("seed") & get) {
+  def seedRoute: Route = (path("seed") & get & withAuth) {
     complete(seed(DefaultSeedSize))
   }
 
-  def length: Route = (path("seed" / IntNumber) & get) { length =>
+  def length: Route = (path("seed" / IntNumber) & get & withAuth) { length =>
     if (length <= MaxSeedSize) complete(seed(length))
     else complete(TooBigArrayAllocation)
   }

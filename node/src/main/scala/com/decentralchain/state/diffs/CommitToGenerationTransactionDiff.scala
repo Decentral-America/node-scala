@@ -19,7 +19,16 @@ object CommitToGenerationTransactionDiff {
       }
       _ <- Either.raiseUnless(
         CommitToGenerationTransaction
-          .verifyPop(tx.commitmentSignature.arr, tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)
+          .verifyPop(
+            tx.commitmentSignature.arr,
+            tx.chainId,
+            tx.sender,
+            tx.endorserPublicKey,
+            tx.generationPeriodStart,
+            // Keyed on the tx's own target period start, so the UTX/diff path and the snapshot path
+            // decide identically regardless of which height each one reads.
+            allowLegacyDst = blockchain.legacyBlsDstAllowedAt(tx.generationPeriodStart.toInt)
+          )
       )(GenericError("Invalid commitment signature"))
       // Full curve validation (in-group, not point-at-infinity) at the actual enforcement point: once,
       // when the key is trusted going forward as a committed generator -- not on every deserialization.

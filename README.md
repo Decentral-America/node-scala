@@ -17,7 +17,7 @@ The DecentralChain node connects to the blockchain network and provides:
 
 *Prerequisites:*
 - Java 25 JDK — [Eclipse Temurin 25](https://adoptium.net/temurin/releases/?version=25) recommended
-- A network configuration file from [node/](./node)
+- A network configuration file: `node/decentralchain-testnet.conf` joins the DCC testnet; `node/decentralchain-sample.conf` documents every option.
 
 Linux:
 ```bash
@@ -25,18 +25,23 @@ Linux:
 wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo apt-key add -
 echo "deb https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
 sudo apt-get update && sudo apt-get install -y temurin-25-jdk
-java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
 Mac (with Homebrew):
 ```bash
 brew install --cask temurin@25
-java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
 ```
 
-Windows (with Eclipse Temurin 25 installed):
+Build and run from source (Linux / macOS / Windows with Temurin 25):
 ```bash
-java -jar node/target/dcc-all*.jar path/to/config/decentralchain-{network}.conf
+sbt node/Universal/packageZipTarball
+tar xzf node/target/universal/decentralchain-*.tgz -C /tmp
+/tmp/decentralchain-*/bin/node node/decentralchain-testnet.conf
+```
+
+Or with Docker:
+```bash
+docker run -d --name dcc-node -v "$PWD/node/decentralchain-testnet.conf:/etc/dcc/dcc.conf" -p 6868:6868 ghcr.io/decentral-america/node-scala:1.8.0
 ```
 
 ## Configuration

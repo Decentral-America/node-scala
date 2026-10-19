@@ -173,28 +173,26 @@ class MinerImpl(
       miner: Address,
       reference: ByteStr,
       prevStateHash: Option[ByteStr]
-  ): (Seq[Transaction], MiningConstraint, Option[ByteStr]) = {
-    val estimators        = MiningConstraints(blockchainUpdater, blockchainUpdater.height, Some(minerSettings))
-    val keyBlockStateHash = prevStateHash.flatMap { prevHash =>
-      BlockDiffer
-        .createInitialBlockSnapshot(blockchainUpdater, reference, miner)
-        .toOption
-        .map { initSnapshot =>
-          if (initSnapshot == StateSnapshot.empty) prevHash
-          else TxStateSnapshotHashBuilder.createHashFromSnapshot(initSnapshot, None).createHash(prevHash)
+  ): Either[String, (Seq[Transaction], MiningConstraint, Option[ByteStr])] = {
+    val estimators = MiningConstraints(blockchainUpdater, blockchainUpdater.height, Some(minerSettings))
+    Miner
+      .keyBlockStateHash(prevStateHash, BlockDiffer.createInitialBlockSnapshot(blockchainUpdater, reference, miner), miner, reference)
+      .leftMap { err =>
+        log.error(err)
+        err
+      }
+      .map { keyBlockStateHash =>
+        if (blockchainUpdater.isFeatureActivated(BlockchainFeatures.NG)) (Seq.empty, estimators.total, keyBlockStateHash)
+        else {
+          val mdConstraint                                       = MultiDimensionalMiningConstraint(estimators.total, estimators.keyBlock)
+          val (maybeUnconfirmed, updatedMdConstraint, stateHash) = Instrumented.logMeasure(log, "packing unconfirmed transactions for block")(
+            utx.packUnconfirmed(mdConstraint, keyBlockStateHash, PackStrategy.Limit(settings.minerSettings.microBlockInterval))
+          )
+          val unconfirmed = maybeUnconfirmed.getOrElse(Seq.empty)
+          log.debug(s"Adding ${unconfirmed.size} unconfirmed transaction(s) to new block")
+          (unconfirmed, updatedMdConstraint.head, stateHash)
         }
-    }
-
-    if (blockchainUpdater.isFeatureActivated(BlockchainFeatures.NG)) (Seq.empty, estimators.total, keyBlockStateHash)
-    else {
-      val mdConstraint                                       = MultiDimensionalMiningConstraint(estimators.total, estimators.keyBlock)
-      val (maybeUnconfirmed, updatedMdConstraint, stateHash) = Instrumented.logMeasure(log, "packing unconfirmed transactions for block")(
-        utx.packUnconfirmed(mdConstraint, keyBlockStateHash, PackStrategy.Limit(settings.minerSettings.microBlockInterval))
-      )
-      val unconfirmed = maybeUnconfirmed.getOrElse(Seq.empty)
-      log.debug(s"Adding ${unconfirmed.size} unconfirmed transaction(s) to new block")
-      (unconfirmed, updatedMdConstraint.head, stateHash)
-    }
+      }
   }
 
   def forgeBlock(account: KeyPair, referenceOpt: Option[ByteStr] = None): ForgeAttemptResult = {
@@ -300,8 +298,8 @@ class MinerImpl(
           if (blockchain.isFeatureActivated(BlockchainFeatures.LightNode, newBlockHeight.toInt))
             Some(blockchain.lastStateHash(Some(reference)))
           else None
-        (unconfirmed, totalConstraint, stateHash) = packTransactionsForKeyBlock(address, reference, prevStateHash)
-        committedGeneratorsHash                   = {
+        (unconfirmed, totalConstraint, stateHash) <- packTransactionsForKeyBlock(address, reference, prevStateHash)
+        committedGeneratorsHash = {
           // A period boundary is the LAST height of a GenerationPeriod (period.end), not simply
           // "height % generationPeriodLength == 0". Periods are anchored to the DeterministicFinality
           // feature's ACTIVATION height (see GenerationPeriod.from), which is only guaranteed to be 0
@@ -754,6 +752,27 @@ class MinerImpl(
 }
 
 object Miner {
+
+  /** The key block's state hash, or an error that stops this forge attempt. A failed initial
+    * snapshot used to become `stateHash = None` silently, surfacing only later as InvalidStateHash on
+    * append with no trace of the cause.
+    */
+  private[mining] def keyBlockStateHash(
+      prevStateHash: Option[ByteStr],
+      initialSnapshot: => Either[com.decentralchain.lang.ValidationError, StateSnapshot],
+      miner: Address,
+      reference: ByteStr
+  ): Either[String, Option[ByteStr]] =
+    prevStateHash match {
+      case None           => Right(None)
+      case Some(prevHash) =>
+        initialSnapshot
+          .leftMap(e => s"Not forging on $reference for $miner: the key block's initial snapshot failed: $e")
+          .map { s =>
+            Some(if (s == StateSnapshot.empty) prevHash else TxStateSnapshotHashBuilder.createHashFromSnapshot(s, None).createHash(prevHash))
+          }
+    }
+
   private[mining] val blockMiningStarted = Kamon.counter("block-mining-started").withoutTags()
   private[mining] val microMiningStarted = Kamon.counter("micro-mining-started").withoutTags()
 
@@ -814,7 +833,10 @@ object Miner {
           // proof for a voter already present there must be dropped here too, or the composed block
           // fails that same validator rule on this node's own append.
           val conflictingVoters = fv.conflict.map(_.endorserIndex.toInt).toSet
-          val stillUsable       = usable.filterNot(p => conflictingVoters.contains(p.voterIndex))
+          // Validation also rejects a proof for a voter that is a VALID endorser in the same voting
+          // (from finality-hardening-height). Dropping it here unconditionally is always valid.
+          val validVoters = fv.valid.map(_.toInt).toSet
+          val stillUsable = usable.filterNot(p => conflictingVoters.contains(p.voterIndex) || validVoters.contains(p.voterIndex))
           if (stillUsable.isEmpty) voting
           else Some(fv.copy(hotstuffConflicts = (fv.hotstuffConflicts ++ stillUsable).distinctBy(_.voterIndex)))
         case None => Some(FinalizationVoting(Seq.empty, fallbackFinalizedHeight(), None, Seq.empty, usable))

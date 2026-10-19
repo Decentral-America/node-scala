@@ -21,6 +21,8 @@ class HotStuffSettingsSpecification extends FlatSpec {
                           |authoritative = false
                           |slashing-enabled = false
                           |max-target-lag-fraction = 0.25
+                          |require-leader-vote = true
+                          |max-proposal-view-ahead = 1048576
       """.stripMargin)
     settings.enabled should be(true)
     settings.roundTimeout should be(1200.millis)
@@ -28,6 +30,8 @@ class HotStuffSettingsSpecification extends FlatSpec {
     settings.authoritative should be(false)
     settings.slashingEnabled should be(false)
     settings.maxTargetLagFraction should be(0.25)
+    settings.requireLeaderVote should be(true)
+    settings.maxProposalViewAhead should be(1048576)
   }
 
   it should "reject a settled-depth below 1 when enabled" in {
@@ -80,6 +84,8 @@ class HotStuffSettingsSpecification extends FlatSpec {
                           |authoritative = false
                           |slashing-enabled = true
                           |max-target-lag-fraction = 0.25
+                          |require-leader-vote = true
+                          |max-proposal-view-ahead = 1048576
       """.stripMargin)
     settings.slashingEnabled should be(true)
   }
@@ -104,6 +110,8 @@ class HotStuffSettingsSpecification extends FlatSpec {
                           |authoritative = false
                           |slashing-enabled = false
                           |max-target-lag-fraction = 0.1
+                          |require-leader-vote = true
+                          |max-proposal-view-ahead = 1048576
       """.stripMargin)
     settings.maxTargetLagFraction should be(0.1)
   }
@@ -128,5 +136,32 @@ class HotStuffSettingsSpecification extends FlatSpec {
 
   it should "allow an out-of-(0,1) maxTargetLagFraction when disabled (flag off = inert)" in {
     HotStuffSettings(enabled = false, roundTimeout = 1200.millis, maxTargetLagFraction = 5.0).enabled should be(false)
+  }
+
+  // AUD-006: leader-vote authentication of wire proposals and the proposal view bound.
+  it should "default requireLeaderVote to true and maxProposalViewAhead to 2^20 in the reference config" in {
+    val settings = ConfigSource.fromConfig(ConfigFactory.load()).at("dcc.hotstuff").loadOrThrow[HotStuffSettings]
+    settings.requireLeaderVote should be(true)
+    settings.maxProposalViewAhead should be(1 << 20)
+  }
+
+  it should "read require-leader-vote = no (emergency switch)" in {
+    val settings = load("""
+                          |enabled = true
+                          |round-timeout = 1200ms
+                          |settled-depth = 3
+                          |authoritative = false
+                          |slashing-enabled = false
+                          |max-target-lag-fraction = 0.25
+                          |require-leader-vote = no
+                          |max-proposal-view-ahead = 1000
+      """.stripMargin)
+    settings.requireLeaderVote should be(false)
+    settings.maxProposalViewAhead should be(1000)
+  }
+
+  it should "reject a non-positive or near-Int.MaxValue maxProposalViewAhead" in {
+    assertThrows[IllegalArgumentException](HotStuffSettings(enabled = true, roundTimeout = 1200.millis, maxProposalViewAhead = 0))
+    assertThrows[IllegalArgumentException](HotStuffSettings(enabled = true, roundTimeout = 1200.millis, maxProposalViewAhead = Int.MaxValue / 2))
   }
 }

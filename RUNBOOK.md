@@ -235,21 +235,13 @@ If the upgraded node fails to start or produces errors after upgrade:
 
 ## Known peer list
 
-Mainnet seed peers (as of release 1.6.1):
+- Testnet: `testnet-node.decentralchain.io:6868` (in `node/decentralchain-testnet.conf` and the `testnet` network defaults).
+- Mainnet: no built-in seeds yet (see `network-defaults.conf`); peers come with the mainnet migration.
 
-```
-168.119.116.189:6868
-135.181.87.72:6868
-35.158.218.156:6868
-52.48.34.89:6868
-```
-
-These are configured in `node/decentralchain-mainnet.conf`. To add additional peers at runtime:
+To add a peer at runtime:
 
 ```sh
-curl -X POST "http://localhost:6869/peers/connect" \
-  -H "Content-Type: application/json" \
-  -d '{"host": "<ip>", "port": 6868}'
+curl -X POST "http://localhost:6869/peers/connect" -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" -d '{"host": "<ip>", "port": 6868}'
 ```
 
 ---

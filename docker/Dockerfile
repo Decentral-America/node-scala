@@ -1,17 +1,19 @@
 # renovate: image=eclipse-temurin tag=25-jre-noble
-ARG baseImage=eclipse-temurin:25-jre-noble@sha256:a9f8520bcafe06d2e689cb0d88b9a0fe73492e567821ede6a0abe5c3ec104210
+ARG baseImage=eclipse-temurin:25-jre-noble@sha256:3f2223fe04b750aa5a8179e29b5c9a1ddf7665fc9bb08bfe11ad01d143bc13a5
 FROM $baseImage
 
 ARG TARGETARCH
 ARG CORRETTO_VERSION=2.5.0
-ARG ROCKSDB_VERSION=10.2.1
+# Must equal project/Dependencies.scala `rocksdbjni` (the version unit tests run against). The
+# linux64 classifier jar carries linux64, aarch64, ppc64le, s390x and riscv64 natives.
+# renovate: datasource=maven depName=org.rocksdb:rocksdbjni
+ARG ROCKSDB_VERSION=10.10.1.1
 # Supply-chain pinning: SHA-256 hashes verified from Maven Central at release time.
 # Update alongside CORRETTO_VERSION.
 ARG CORRETTO_AMD64_SHA256=94e92977ee52af1f50cf6744684c214f300e668ee6e1793be1802b209543dc9f
 ARG CORRETTO_ARM64_SHA256=e03899f5cc33de706b5059a62107b5a3262dd2816d4295d998f0fb843db0c80d
 # Maven Central publishes only SHA-1 for rocksdbjni; update alongside ROCKSDB_VERSION.
-# See https://github.com/facebook/rocksdb/issues/13893 before bumping ROCKSDB_VERSION.
-ARG ROCKSDB_LINUX64_SHA1=1fb1d6519cd2a7ff61478f766fa985baa890c7b9
+ARG ROCKSDB_LINUX64_SHA1=66a72fcc4d62abc56dc9cd7d6c0977488954f939
 
 ENV DCC_LOG_LEVEL=INFO
 ENV DCC_HEAP_SIZE=2g
@@ -20,7 +22,7 @@ ENV DCC_NETWORK=mainnet
 SHELL ["/bin/bash", "-c"]
 
 # Install wget for downloading runtime JARs
-RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 
 # Node files
 ENV WVDATA=/var/lib/dcc

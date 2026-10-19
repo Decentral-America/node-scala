@@ -36,6 +36,9 @@ import scala.concurrent.{Await, ExecutionContext}
 object EquivocationDrill {
 
   /** The account a TS-SDK / node wallet derives from `seed` at nonce 0. */
+  /** Encode votes exactly like the node's MessageCodec: HotStuffVoteSpec code + protobuf payload. */
+  def toWire(votes: HotStuffVote*): Seq[RawBytes] = votes.map(v => RawBytes(HotStuffVoteSpec.messageCode, HotStuffVoteSpec.serializeData(v)))
+
   def accountOf(seed: String): SeedKeyPair =
     KeyPair(crypto.secureHash(Ints.toByteArray(0) ++ seed.getBytes(UTF_8)))
 
@@ -137,7 +140,7 @@ object EquivocationDrill {
         require(ch.isActive, s"P2P channel to $p2p is not active")
         // NetworkSender's pipeline frames RawBytes but has no MessageCodec for consensus messages, so
         // encode each vote the way the node's own MessageCodec does (spec code + protobuf payload).
-        val raw = Seq(a, b).map(v => RawBytes(HotStuffVoteSpec.messageCode, HotStuffVoteSpec.serializeData(v)))
+        val raw = toWire(a, b)
         Await.result(sender.send(ch, raw*), 30.seconds)
         println(s"sent conflicting PREPARE votes for view $h to $p2p")
       } finally sender.close()

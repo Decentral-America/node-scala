@@ -25,7 +25,7 @@ class EquivocationDrillSpec extends FreeSpec {
 
     HotStuffSafety.equivocators(Seq(a, b)) shouldBe Set(3)
     proof.consistent shouldBe Right(())
-    proof.signaturesValid(keyOf) shouldBe Right(())
+    proof.signaturesValid(keyOf, allowLegacyDst = false) shouldBe Right(())
     // Each vote alone is exactly what an honest replica would sign.
     Seq(a, b).foreach { v =>
       BlsKeyPair(voter.privateKey)
@@ -35,5 +35,13 @@ class EquivocationDrillSpec extends FreeSpec {
         )
         .byteStr shouldBe v.signature
     }
+  }
+
+  "toWire frames votes the way the node's MessageCodec decodes them" in {
+    val voter  = EquivocationDrill.accountOf("equivocation drill test voter")
+    val (a, b) = EquivocationDrill.equivocatingVotes(voter, 3, 55000, 55000, 549, ByteStr(Array.fill[Byte](32)(1)), ByteStr(Array.fill[Byte](32)(2)))
+    val wire   = EquivocationDrill.toWire(a, b)
+    wire.map(_.code) shouldBe Seq(com.decentralchain.network.HotStuffVoteSpec.messageCode, com.decentralchain.network.HotStuffVoteSpec.messageCode)
+    wire.map(r => com.decentralchain.network.HotStuffVoteSpec.deserializeData(r.data).get) shouldBe Seq(a, b)
   }
 }
