@@ -62,7 +62,7 @@ object Dependencies {
   val pekkoHttp       = pekkoHttpModule("pekko-http")
   val googleGuava     = "com.google.guava"    % "guava"             % "33.7.2-jre"
   val kamonCore       = kamonModule("core")
-  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.6.4"
+  val logback         = "ch.qos.logback"      % "logback-classic"   % "1.6.5"
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.14"
   val curve25519      = "io.decentralchain"   % "curve25519"        % "1.0.0"
   val nettyHandler    = nettyModule("handler")
