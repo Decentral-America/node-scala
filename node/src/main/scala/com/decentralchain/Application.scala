@@ -745,13 +745,13 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       microblockSynchronizerScheduler
     )
 
-    messageObserver.endorseBlocks.foreach { case (ch, x) =>
-      endorsementStorage.tryAdd(x) match {
-        case Left(err)   => log.trace(s"Unexpected $x: $err")
-        case Right(true) => allChannels.broadcast(x, Some(ch))
-        case _           =>
-      }
-    }(using endorseBlockSynchronizerScheduler)
+    messageObserver.endorseBlocks.foreach(
+      EndorsementIngress.handler(
+        endorsementStorage,
+        (x, ch) => allChannels.broadcast(x, Some(ch)),
+        (ch, reason) => log.warn(s"Dropped an EndorseBlock from $ch: $reason")
+      )
+    )(using endorseBlockSynchronizerScheduler)
 
     val (newBlocksWithSnapshot, extLoaderState, _) = RxExtensionLoader(
       settings.synchronizationSettings.synchronizationTimeout,

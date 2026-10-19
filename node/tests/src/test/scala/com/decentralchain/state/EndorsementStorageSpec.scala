@@ -92,6 +92,16 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
           "Invalid endorser index"
         )
 
+        "an index below -1 is rejected without throwing" in test(
+          EndorseBlock(-2, expectedFinalizedId, expectedFinalizedHeight, expectedEndorsedId, ByteStr.empty),
+          "Invalid endorser index"
+        )
+
+        "Int.MinValue index is rejected without throwing" in test(
+          EndorseBlock(Int.MinValue, expectedFinalizedId, expectedFinalizedHeight, expectedEndorsedId, ByteStr.empty),
+          "Invalid endorser index"
+        )
+
         "an unexpected endorser" in test(
           EndorseBlock.from(mk(committedGenerator, GeneratorIndex(2))),
           "There are only"
@@ -148,6 +158,14 @@ class EndorsementStorageSpec extends FreeSpec with EitherValues {
             mkPoorGenerator(1) // activeGenerator
           )
         ).tryAddEndorsement(mk()) should produce("has no enough balance") // activeGenerator
+      }
+
+      "a malformed endorsement followed by a valid one: the valid one is still accepted" in {
+        val s = started()
+        s.tryAdd(EndorseBlock(-2, expectedFinalizedId, expectedFinalizedHeight, expectedEndorsedId, ByteStr.empty)) should produce(
+          "Invalid endorser index"
+        )
+        s.tryAddEndorsement(mk()).value shouldBe true
       }
     }
   }

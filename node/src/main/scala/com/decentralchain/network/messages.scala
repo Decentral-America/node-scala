@@ -134,13 +134,16 @@ case class EndorseBlock(endorserIndex: Int, finalizedId: BlockId, finalizedHeigh
 }
 
 object EndorseBlock {
-  def fromProtobuf(x: PBEndorseBlock): EndorseBlock = EndorseBlock(
-    x.endorserIndex,
-    x.finalizedBlockId.toByteStr,
-    Height(x.finalizedBlockHeight),
-    x.endorsedBlockId.toByteStr,
-    x.signature.toByteStr
-  )
+  def fromProtobuf(x: PBEndorseBlock): EndorseBlock = {
+    require(x.endorserIndex >= 0, s"Invalid endorser index ${x.endorserIndex}")
+    EndorseBlock(
+      x.endorserIndex,
+      x.finalizedBlockId.toByteStr,
+      Height(x.finalizedBlockHeight),
+      x.endorsedBlockId.toByteStr,
+      x.signature.toByteStr
+    )
+  }
 
   def from(x: BlockEndorsement): EndorseBlock =
     EndorseBlock(x.endorserIndex.toInt, x.finalizedId, x.finalizedHeight, x.endorsedId, x.signature.byteStr)

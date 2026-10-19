@@ -7,10 +7,11 @@ object GeneratorIndex {
     x
   }
 
-  def checked(x: Int): Option[GeneratorIndex] = {
-    require(x >= -1, s"Wrong generator index: $x. Expected -1 or >= 0")
-    Option.when(x >= 0)(x)
-  }
+  /** `None` for every negative input (`-1` is the `indexWhere` "not found" sentinel; anything lower is
+    * malformed input, e.g. a wire `endorser_index`). Total by design: a throwing guard here once let a
+    * single bad P2P message terminate the EndorseBlock subscription (audit AUD-005).
+    */
+  def checked(x: Int): Option[GeneratorIndex] = Option.when(x >= 0)(x)
 
   def seq(xs: Seq[Int]): Seq[GeneratorIndex]       = xs.map(apply)
   def unsafeSeq(xs: Seq[Int]): Seq[GeneratorIndex] = xs
