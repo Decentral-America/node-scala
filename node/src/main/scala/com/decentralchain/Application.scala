@@ -463,18 +463,14 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       // `allChannels.broadcast` only sends to direct peers, so in a non-full-mesh topology (e.g. gen
       // nodes bridged only via the main node) a validator sees <2/3 of votes and no QC ever forms.
       // Like feature-25 endorsements, GOSSIP them: on first receipt relay to every peer except the
-      // sender, then process. A bounded seen-cache dedups so relaying cannot storm.
-      import com.google.common.cache.{Cache, CacheBuilder}
+      // sender, then process. A bounded seen-cache (HotStuffGossip) dedups AFTER validation so relaying cannot storm and junk cannot pre-empt real messages.
       import io.netty.channel.Channel
-      import com.decentralchain.network.Message
-      val hsSeen: Cache[String, java.lang.Boolean]                          = CacheBuilder.newBuilder().maximumSize(100000).build()
-      def hsGossipOnce(sender: Channel, key: String, msg: Message): Boolean =
-        if (hsSeen.getIfPresent(key) != null) false
-        else {
-          hsSeen.put(key, java.lang.Boolean.TRUE)
-          allChannels.broadcast(msg, Set(sender)) // relay to all other peers (transitive delivery)
-          true
-        }
+      import com.decentralchain.consensus.hotstuff.{HotStuffGossip, HotStuffQuorum}
+      import com.decentralchain.utils.SafeHandler
+      val hsGossip = new HotStuffGossip[Channel]((sender, msg) => allChannels.broadcast(msg, Set(sender)))
+      def hsHandlerFailed[A](kind: String): ((Channel, A), Throwable) => Unit = { case ((ch, m), e) =>
+        log.warn(s"[HotStuff] $kind handler failed for $m from $ch: ${e.getMessage}")
+      }
 
       // audit F-8 (LOW): ingress sanity bounds on a wire QC/vote's `view`/`blockHeight`, applied at this
       // ingress seam (the shell, which has `blockchainUpdater`) rather than inside the pure
@@ -501,7 +497,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
 
       messageObserver.hotStuffProposals
         .observeOn(hotStuffScheduler)
-        .foreach { case (ch, p) =>
+        .foreach(SafeHandler[(Channel, HotStuffProposal)]("hotstuff-proposal", hsHandlerFailed("proposal")) { case (ch, p) =>
           // blockHeight MUST be independently derived from the proposal's OWN blockId
           // (`blockchainUpdater.heightOf(p.blockId)`), NOT taken from `p.view`. In the per-height happy
           // path view == the block's settled height so the two happened to agree, but that equality is
@@ -517,23 +513,29 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
           // `p.view` only when we don't recognize the block at all (heightOf is None) -- in that case
           // `proposalValid` above has already rejected the proposal via the same lookup, so this
           // fallback value is never actually consumed by a cast vote.
-          // Keyed by the full proposal content, not just (view, blockId): variants that differ only in
-          // `justify` must each reach the coordinator, which keeps a bounded set of them per target.
-          if (hsGossipOnce(ch, s"p:${p.view}:${p.blockId}:${ByteStr(com.decentralchain.crypto.fastHash(p.toProtobuf.toByteArray))}", p))
-            hsCoordinator.onProposal(p, blockchainUpdater.heightOf(p.blockId).getOrElse(p.view))
-        }(using hotStuffScheduler)
+          val knownHeight = blockchainUpdater.heightOf(p.blockId)
+          val sane =
+            hsIngressSane("proposal", p.view, knownHeight.getOrElse(blockchainUpdater.height)) &&
+              p.justify.forall(j => hsIngressSane("proposal justify", j.view, j.blockHeight.toInt))
+          if (hsGossip.admit(ch, HotStuffGossip.proposalKey(p), p)(sane))
+            hsCoordinator.onProposal(p, knownHeight.getOrElse(p.view))
+        })(using hotStuffScheduler)
       messageObserver.hotStuffVotes
         .observeOn(hotStuffScheduler)
-        .foreach { case (ch, v) =>
-          if (hsGossipOnce(ch, s"v:${v.view}:${v.phase}:${v.blockId}:${v.voterIndex}", v) && hsIngressSane("vote", v.view, v.blockHeight.toInt))
-            hsCoordinator.onVote(v)
-        }(using hotStuffScheduler)
+        .foreach(SafeHandler[(Channel, HotStuffVote)]("hotstuff-vote", hsHandlerFailed("vote")) { case (ch, v) =>
+          val valid =
+            hsIngressSane("vote", v.view, v.blockHeight.toInt) &&
+              HotStuffQuorum.verifyVote(v, blockchainUpdater.committedGeneratorSetAt(v.blockHeight))
+          if (hsGossip.admit(ch, HotStuffGossip.voteKey(v), v)(valid)) hsCoordinator.onVote(v)
+        })(using hotStuffScheduler)
       messageObserver.hotStuffQCs
         .observeOn(hotStuffScheduler)
-        .foreach { case (ch, qc) =>
-          if (hsGossipOnce(ch, s"q:${qc.view}:${qc.phase}:${qc.blockId}", qc) && hsIngressSane("QC", qc.view, qc.blockHeight.toInt))
-            hsCoordinator.onQC(qc)
-        }(using hotStuffScheduler)
+        .foreach(SafeHandler[(Channel, QuorumCertificate)]("hotstuff-qc", hsHandlerFailed("QC")) { case (ch, qc) =>
+          val valid =
+            hsIngressSane("QC", qc.view, qc.blockHeight.toInt) &&
+              HotStuffQuorum.verifyQC(qc, blockchainUpdater.committedGeneratorSetAt(qc.blockHeight)).isRight
+          if (hsGossip.admit(ch, HotStuffGossip.qcKey(qc), qc)(valid)) hsCoordinator.onQC(qc)
+        })(using hotStuffScheduler)
 
       // HotStuff-over-FairPoS: run one SETTLED height behind the tip so every node agrees on exactly one
       // canonical block per view. view = settled height s = tip-1; the proposed block is the canonical
@@ -545,7 +547,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
       var hsLastHeight = 0
       lastBlockInfo
         .observeOn(hotStuffScheduler)
-        .foreach { info =>
+        .foreach(SafeHandler[com.decentralchain.transaction.LastBlockInfo]("hotstuff-tip", (i, e) => log.warn(s"[HotStuff] tip handler failed at ${i.height}: ${e.getMessage}")) { info =>
           val tip = info.height.toInt
           if (tip > hsLastHeight) {
             hsLastHeight = tip
@@ -576,7 +578,7 @@ class Application(val actorSystem: ActorSystem, val settings: DCCSettings, confi
               }
             }
           }
-        }(using hotStuffScheduler)
+        })(using hotStuffScheduler)
 
       // Pacemaker: advance the view on timeout. FairPoS + feature-25 continue underneath -> never halts.
       // Uses `onRoundTimerTick` (Task 8 Step 2 rework), which now genuinely detects a stalled round (no
