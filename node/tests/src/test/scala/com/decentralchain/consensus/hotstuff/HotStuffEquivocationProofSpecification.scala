@@ -64,31 +64,38 @@ class HotStuffEquivocationProofSpecification extends AnyFreeSpec with Matchers {
   "signaturesValid" - {
     "accepts when both votes verify against the voter's real key" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => Some(kp.publicKey)) shouldBe Right(())
+      p.signaturesValid(_ => Some(kp.publicKey), allowLegacyDst = false) shouldBe Right(())
     }
     "accepts when both votes are signed under the legacy DST (pre-v2 on-chain votes, Task 8b extension)" in {
       val p = HotStuffEquivocationProof(
         signedVote(0, 5, prepare, 1, 2, kp, BlsUtils.BlsLegacyDomainSeparationTag),
         signedVote(0, 5, prepare, 2, 2, kp, BlsUtils.BlsLegacyDomainSeparationTag)
       )
-      p.signaturesValid(_ => Some(kp.publicKey)) shouldBe Right(())
+      p.signaturesValid(_ => Some(kp.publicKey), allowLegacyDst = true) shouldBe Right(())
+    }
+    "rejects legacy-DST votes when the legacy DST is disallowed" in {
+      val p = HotStuffEquivocationProof(
+        signedVote(0, 5, prepare, 1, 2, kp, BlsUtils.BlsLegacyDomainSeparationTag),
+        signedVote(0, 5, prepare, 2, 2, kp, BlsUtils.BlsLegacyDomainSeparationTag)
+      )
+      p.signaturesValid(_ => Some(kp.publicKey), allowLegacyDst = false).isLeft shouldBe true
     }
     "rejects a forged voteB (an attacker cannot frame an honest voter)" in {
       val forged = signedVote(0, 5, prepare, 2, 2, kp).copy(signature = ByteStr(Array.fill(96)(7: Byte)))
       HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), forged)
-        .signaturesValid(_ => Some(kp.publicKey))
+        .signaturesValid(_ => Some(kp.publicKey), allowLegacyDst = false)
         .isLeft shouldBe true
     }
     "rejects when the index is outside the committee" in {
       val p = HotStuffEquivocationProof(signedVote(0, 5, prepare, 1, 2, kp), signedVote(0, 5, prepare, 2, 2, kp))
-      p.signaturesValid(_ => None).isLeft shouldBe true
+      p.signaturesValid(_ => None, allowLegacyDst = false).isLeft shouldBe true
     }
     "rejects when signed under a DST that is neither the current nor the legacy vote DST" in {
       val p = HotStuffEquivocationProof(
         signedVote(0, 5, prepare, 1, 2, kp, BlsUtils.BlsPopDomainSeparationTag),
         signedVote(0, 5, prepare, 2, 2, kp, BlsUtils.BlsPopDomainSeparationTag)
       )
-      p.signaturesValid(_ => Some(kp.publicKey)).isLeft shouldBe true
+      p.signaturesValid(_ => Some(kp.publicKey), allowLegacyDst = false).isLeft shouldBe true
     }
   }
 }

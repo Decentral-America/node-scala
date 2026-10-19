@@ -55,16 +55,16 @@ object HotStuffQuorum {
     * replay of the real testnet-relaunch chain proves otherwise -- `voteMessage`'s layout was never
     * changed by that commit, only the DST selection was). Never used for new vote signing.
     */
-  def verifyVoteSignature(signatureBytes: Array[Byte], message: Array[Byte], blsPublicKeyBytes: Array[Byte]): Boolean =
-    BlsUtils.verifyBasic(signatureBytes, message, blsPublicKeyBytes, VoteDst).isRight ||
-      BlsUtils.verifyBasic(signatureBytes, message, blsPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag).isRight
+  def verifyVoteSignature(signatureBytes: Array[Byte], message: Array[Byte], blsPublicKeyBytes: Array[Byte], allowLegacyDst: Boolean): Boolean =
+    BlsUtils.verifyBasic(signatureBytes, message, blsPublicKeyBytes, VoteDst).isRight || (allowLegacyDst && {
+      val ok = BlsUtils.verifyBasic(signatureBytes, message, blsPublicKeyBytes, BlsUtils.BlsLegacyDomainSeparationTag).isRight
+      if (ok) BlsUtils.recordLegacyDstAcceptance("hotstuff-vote")
+      ok
+    })
 
-  /** Same v2-then-legacy fallback as [[verifyVoteSignature]], for an aggregated QC signature. */
+  /** QCs are never chain history, so only the current `_HSVOTE_` DST is accepted. */
   private def verifyQCSignature(aggSignatureBytes: Array[Byte], message: Array[Byte], blsPublicKeys: Iterable[Array[Byte]]): Either[String, Unit] =
-    BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, VoteDst) match {
-      case Right(()) => Right(())
-      case Left(_)   => BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, BlsUtils.BlsLegacyDomainSeparationTag)
-    }
+    BlsUtils.verifyAgg(aggSignatureBytes, message, blsPublicKeys, VoteDst)
 
   /** The transition-gating rule (T10, design doc §6/§8 follow-up (a)): whether a QC/vote whose signed
     * `committeeEpoch` is `qcEpoch` should be ACCEPTED by a replica that currently believes
@@ -86,7 +86,7 @@ object HotStuffQuorum {
     */
   def verifyVote(vote: HotStuffVote, committee: GeneratorSet): Boolean =
     committee.find(_.index.toInt == vote.voterIndex).exists { gi =>
-      verifyVoteSignature(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr)
+      verifyVoteSignature(vote.signature.arr, voteMessageOf(vote), gi.blsPublicKey.arr, allowLegacyDst = false)
     }
 
   private def stakeOf(indexes: Set[Int], committee: GeneratorSet): BigInt = {

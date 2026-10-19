@@ -41,6 +41,22 @@ object BlsUtils {
     */
   val BlsLegacyDomainSeparationTag = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
+  private val legacyDstLog    = org.slf4j.LoggerFactory.getLogger("com.decentralchain.crypto.bls.LegacyDst")
+  private val legacyDstCounts = new java.util.concurrent.ConcurrentHashMap[String, java.util.concurrent.atomic.LongAdder]()
+
+  /** Called whenever a signature verifies ONLY under the legacy `_NUL_` tag. The fixed marker
+    * `LEGACY_BLS_DST_ACCEPTED` is what the genesis-replay workflow counts.
+    */
+  def recordLegacyDstAcceptance(context: String): Unit = {
+    legacyDstCounts.computeIfAbsent(context, _ => new java.util.concurrent.atomic.LongAdder()).increment()
+    legacyDstLog.warn(s"LEGACY_BLS_DST_ACCEPTED context=$context")
+  }
+
+  def legacyDstAcceptances: Map[String, Long] = {
+    import scala.jdk.CollectionConverters.*
+    legacyDstCounts.asScala.view.mapValues(_.sum()).toMap
+  }
+
   private val BlsKeyGenSalt = "BLS-SIG-KEYGEN-SALT-".getBytes(StandardCharsets.UTF_8) // From v4
 
   val PublicKeySizeInBytes = 48

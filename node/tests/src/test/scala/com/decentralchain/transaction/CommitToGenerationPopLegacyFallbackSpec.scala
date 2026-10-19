@@ -54,7 +54,8 @@ class CommitToGenerationPopLegacyFallbackSpec extends FlatSpec {
       chainId,
       sender.publicKey,
       legacyEndorserPublicKey,
-      legacyPeriodStart
+      legacyPeriodStart,
+      allowLegacyDst = true
     ) shouldBe true
   }
 
@@ -66,7 +67,8 @@ class CommitToGenerationPopLegacyFallbackSpec extends FlatSpec {
       chainId,
       sender.publicKey,
       endorserKp.publicKey,
-      start
+      start,
+      allowLegacyDst = true
     ) shouldBe true
   }
 
@@ -81,7 +83,8 @@ class CommitToGenerationPopLegacyFallbackSpec extends FlatSpec {
       chainId,
       sender.publicKey,
       endorserKp.publicKey,
-      start
+      start,
+      allowLegacyDst = true
     ) shouldBe false
   }
 
@@ -93,7 +96,23 @@ class CommitToGenerationPopLegacyFallbackSpec extends FlatSpec {
       chainId,
       sender.publicKey,
       endorserKp.publicKey,
-      start
+      start,
+      allowLegacyDst = true
+    ) shouldBe false
+  }
+
+  it should "reject the legacy vector when the legacy DST is disallowed (from finality-hardening-height)" in {
+    val pk        = Base64.decode("sY4xoEmpBuvbi8CRPeRuMYfJ8DjrAL7vfmuC3D5lu9WSl6f7Q10o6j4G+8lksaFc")
+    val signature = Base64.decode(
+      "qCjEnAO3kh+PIFnsIOJtKqpJYPnUArDe1VjVvqi6Bygr+kZq68vtLR4IJ9TFuIYUDpM2ua73KFNpp4l7QdQ8Db23AQ+R6WsI4799GnwRgA8P7fBruFRkdRtBHcC4VpOQ"
+    )
+    CommitToGenerationTransaction.verifyPop(
+      signature,
+      chainId,
+      sender.publicKey,
+      BlsPublicKey(pk).explicitGet(),
+      Height(12345),
+      allowLegacyDst = false
     ) shouldBe false
   }
 }

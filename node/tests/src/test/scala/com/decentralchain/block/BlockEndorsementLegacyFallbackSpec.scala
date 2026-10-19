@@ -27,40 +27,52 @@ class BlockEndorsementLegacyFallbackSpec extends FlatSpec {
 
   "BlockEndorsement.verify" should "accept a legacy-tagged endorsement signature (pre-v2 on-chain endorsement)" in {
     val legacySig = kp.sign(message, BlsUtils.BlsLegacyDomainSeparationTag)
-    BlockEndorsement.verify(legacySig.arr, message, kp.publicKey.arr) shouldBe a[Right[?, ?]]
+    BlockEndorsement.verify(legacySig.arr, message, kp.publicKey.arr, allowLegacyDst = true) shouldBe a[Right[?, ?]]
   }
 
   it should "still accept a current v2-tagged (_ENDORSE_) endorsement signature (no regression)" in {
     val v2Sig = kp.sign(message, BlsUtils.BlsEndorseDomainSeparationTag)
-    BlockEndorsement.verify(v2Sig.arr, message, kp.publicKey.arr) shouldBe a[Right[?, ?]]
+    BlockEndorsement.verify(v2Sig.arr, message, kp.publicKey.arr, allowLegacyDst = true) shouldBe a[Right[?, ?]]
   }
 
   it should "reject a signature that is wrong under both schemes" in {
     val wrongDstSig = kp.sign(message, BlsUtils.BlsPopDomainSeparationTag)
-    BlockEndorsement.verify(wrongDstSig.arr, message, kp.publicKey.arr) shouldBe a[Left[?, ?]]
+    BlockEndorsement.verify(wrongDstSig.arr, message, kp.publicKey.arr, allowLegacyDst = true) shouldBe a[Left[?, ?]]
   }
 
   "BlockEndorsement.signatureValid" should "accept a legacy-tagged signature via the case-class instance method" in {
     val legacySig   = kp.sign(message, BlsUtils.BlsLegacyDomainSeparationTag)
     val endorsement = BlockEndorsement(com.decentralchain.state.GeneratorIndex(0), finalizedId, finalizedHeight, endorsedId, legacySig)
-    endorsement.signatureValid(kp.publicKey) shouldBe a[Right[?, ?]]
+    endorsement.signatureValid(kp.publicKey, allowLegacyDst = true) shouldBe a[Right[?, ?]]
   }
 
   "BlockEndorsement.verifyAgg" should "accept an aggregated legacy-tagged signature (pre-v2 on-chain aggregated endorsement)" in {
     val sigs: Seq[BlsSignature] = Seq(kp, kp2).map(_.sign(message, BlsUtils.BlsLegacyDomainSeparationTag))
     val aggSig                  = BlsSignature.agg(sigs).toOption.get
-    BlockEndorsement.verifyAgg(aggSig.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr)) shouldBe a[Right[?, ?]]
+    BlockEndorsement.verifyAgg(aggSig.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr), allowLegacyDst = true) shouldBe a[Right[?, ?]]
   }
 
   it should "still accept an aggregated v2-tagged (_ENDORSE_) signature (no regression)" in {
     val sigs: Seq[BlsSignature] = Seq(kp, kp2).map(_.sign(message, BlsUtils.BlsEndorseDomainSeparationTag))
     val aggSig                  = BlsSignature.agg(sigs).toOption.get
-    BlockEndorsement.verifyAgg(aggSig.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr)) shouldBe a[Right[?, ?]]
+    BlockEndorsement.verifyAgg(aggSig.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr), allowLegacyDst = true) shouldBe a[Right[?, ?]]
   }
 
   it should "reject an aggregate that is wrong under both schemes" in {
     val sigs: Seq[BlsSignature] = Seq(kp, kp2).map(_.sign(message, BlsUtils.BlsPopDomainSeparationTag))
     val aggSig                  = BlsSignature.agg(sigs).toOption.get
-    BlockEndorsement.verifyAgg(aggSig.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr)) shouldBe a[Left[?, ?]]
+    BlockEndorsement.verifyAgg(aggSig.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr), allowLegacyDst = true) shouldBe a[Left[?, ?]]
+  }
+
+  "with the legacy DST disallowed (from finality-hardening-height)" should "reject legacy single and aggregated signatures" in {
+    val legacySig = kp.sign(message, BlsUtils.BlsLegacyDomainSeparationTag)
+    BlockEndorsement.verify(legacySig.arr, message, kp.publicKey.arr, allowLegacyDst = false) shouldBe a[Left[?, ?]]
+    val agg = BlsSignature.agg(Seq(kp, kp2).map(_.sign(message, BlsUtils.BlsLegacyDomainSeparationTag))).toOption.get
+    BlockEndorsement.verifyAgg(agg.arr, message, Seq(kp.publicKey.arr, kp2.publicKey.arr), allowLegacyDst = false) shouldBe a[Left[?, ?]]
+  }
+
+  it should "still accept v2 signatures" in {
+    val v2Sig = kp.sign(message, BlsUtils.BlsEndorseDomainSeparationTag)
+    BlockEndorsement.verify(v2Sig.arr, message, kp.publicKey.arr, allowLegacyDst = false) shouldBe a[Right[?, ?]]
   }
 }

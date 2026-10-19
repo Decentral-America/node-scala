@@ -40,18 +40,19 @@ case class HotStuffEquivocationProof(voteA: HotStuffVote, voteB: HotStuffVote) {
     * `HotStuffQuorum.verifyVoteSignature`, so an equivocation proof whose votes were cast before the
     * per-context-DST switch still verifies -- see that method's doc for why. New votes stay v2-only.
     */
-  def signaturesValid(blsKeyOf: Int => Option[BlsPublicKey]): Either[String, Unit] = for {
+  def signaturesValid(blsKeyOf: Int => Option[BlsPublicKey], allowLegacyDst: Boolean): Either[String, Unit] = for {
     pk <- blsKeyOf(voterIndex).toRight(s"equivocation proof voter index $voterIndex outside committee")
-    _  <- verifyOne(voteA, pk, "voteA")
-    _  <- verifyOne(voteB, pk, "voteB")
+    _  <- verifyOne(voteA, pk, "voteA", allowLegacyDst)
+    _  <- verifyOne(voteB, pk, "voteB", allowLegacyDst)
   } yield ()
 
-  private def verifyOne(v: HotStuffVote, pk: BlsPublicKey, label: String): Either[String, Unit] =
+  private def verifyOne(v: HotStuffVote, pk: BlsPublicKey, label: String, allowLegacyDst: Boolean): Either[String, Unit] =
     Either.cond(
       HotStuffQuorum.verifyVoteSignature(
         v.signature.arr,
         HotStuffQuorum.voteMessage(v.view, v.phase, v.blockId, v.blockHeight.toInt, v.committeeEpoch),
-        pk.arr
+        pk.arr,
+        allowLegacyDst
       ),
       (),
       s"equivocation proof $label signature invalid for voter $voterIndex"

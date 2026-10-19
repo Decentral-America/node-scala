@@ -693,7 +693,16 @@ object BlockDiffer {
                   }
                   _ <- Either.raiseUnless(
                     CommitToGenerationTransaction
-                      .verifyPop(tx.commitmentSignature.arr, tx.chainId, tx.sender, tx.endorserPublicKey, tx.generationPeriodStart)
+                                  .verifyPop(
+                                    tx.commitmentSignature.arr,
+                                    tx.chainId,
+                                    tx.sender,
+                                    tx.endorserPublicKey,
+                                    tx.generationPeriodStart,
+                                    // Keyed on the tx's own target period start, so the UTX/diff path and the snapshot path
+                                    // decide identically regardless of which height each one reads.
+                                    allowLegacyDst = blockchain.legacyBlsDstAllowedAt(tx.generationPeriodStart.toInt)
+                                  )
                   )(GenericError("Invalid commitment signature"))
                   _ <- tx.endorserPublicKey.validated.leftMap(GenericError(_))
                   _ <- seen.foldLeft(Either.unit[ValidationError]) {

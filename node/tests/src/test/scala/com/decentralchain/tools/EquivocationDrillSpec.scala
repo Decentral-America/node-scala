@@ -25,7 +25,7 @@ class EquivocationDrillSpec extends FreeSpec {
 
     HotStuffSafety.equivocators(Seq(a, b)) shouldBe Set(3)
     proof.consistent shouldBe Right(())
-    proof.signaturesValid(keyOf) shouldBe Right(())
+    proof.signaturesValid(keyOf, allowLegacyDst = false) shouldBe Right(())
     // Each vote alone is exactly what an honest replica would sign.
     Seq(a, b).foreach { v =>
       BlsKeyPair(voter.privateKey)
