@@ -11,7 +11,13 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(GitVersioning)
 
 git.uncommittedSignifier       := Some("DIRTY")
-ThisBuild / git.useGitDescribe := true
+// The version identifies the build: exactly the base version only on the commit tagged
+// v<base>; any other commit carries its sha, so two different builds never report the same version.
+ThisBuild / version := {
+  val base = git.baseVersion.value
+  if (git.gitCurrentTags.value.contains(s"v$base")) base
+  else s"$base-dev-${git.gitHeadCommit.value.fold("unknown")(_.take(10))}"
+}
 ThisBuild / PB.protocVersion   := Dependencies.gProtoVersion
 
 ThisBuild / dependencyOverrides ++= Dependencies.overrides.value
