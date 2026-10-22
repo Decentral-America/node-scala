@@ -4,7 +4,11 @@ name: Nightly Slow Tests (Operation Fuzzer)
 # at a larger seed count for deeper coverage than the push-gated budget allows.
 on:
   schedule:
-    - cron: '17 3 * * *'  # daily 03:17 UTC — distinct from existing weekly Monday security scans
+    # Mon + Thu 03:17 UTC. The fuzzer sweeps a fixed seed range (deterministic for a given commit), so
+    # its value is catching a regression within a few days of the commit that caused it, not within
+    # hours; it costs ~48 runner-min per run. Twice a week (plus the unchanged-commit skip below)
+    # replaces the former daily cron that ran 61 times in 60 days.
+    - cron: '17 3 * * 1,4'
   workflow_dispatch:
     inputs:
       seed-count:
@@ -13,8 +17,34 @@ on:
         default: '2000'
 permissions:
   contents: read
+concurrency:
+  group: nightly-slow-tests
+  cancel-in-progress: false  # never kill a 48 min sweep half-way for a newer trigger; queue instead
 jobs:
+  # Cheap gate (~15 s): skip the sweep when main is the exact commit the last successful scheduled
+  # run already verified. Manual dispatches always run.
+  gate:
+    name: Skip if main is unchanged since the last green run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/skip-if-unchanged.sh nightly-slow-tests.yml
+
   slow-tests:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -45,6 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [slow-tests]
     if: failure() && github.event_name == 'schedule'
+    timeout-minutes: 5
     permissions:
       issues: write
     steps:

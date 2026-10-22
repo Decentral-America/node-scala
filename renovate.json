@@ -6,12 +6,31 @@
   "osvVulnerabilityAlerts": true,
   "schedule": ["before 8am on monday"],
   "timezone": "America/Costa_Rica",
-  "prConcurrentLimit": 10,
+  "prConcurrentLimit": 5,
   "prHourlyLimit": 5,
+  "rebaseWhen": "conflicted",
   "prCreation": "immediate",
   "minimumReleaseAge": "3 days",
   "platformAutomerge": true,
   "packageRules": [
+    {
+      "description": "One weekly PR for all non-major sbt/Maven updates (each PR costs a full CI run). Ecosystem groups below override this for their packages; majors stay separate and need dashboard approval.",
+      "groupName": "all non-major dependencies",
+      "matchManagers": ["sbt", "maven"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "One weekly PR for all GitHub Actions pin/digest/minor/patch updates",
+      "groupName": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"]
+    },
+    {
+      "description": "One weekly PR for Dockerfile base-image patch/digest/pin updates",
+      "groupName": "Docker base images",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["patch", "digest", "pin", "pinDigest"]
+    },
     {
       "description": "Group Akka ecosystem",
       "groupName": "Akka",

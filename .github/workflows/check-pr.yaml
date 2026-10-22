@@ -15,24 +15,55 @@ env:
   JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
 
 jobs:
-  check-pr:
-    name: Check PR
+  # Classifies the PR so docs-only changes skip the 30+ min jobs. This is deliberately a job-level `if`
+  # and NOT a workflow-level `paths-ignore`: "Check PR" is a required status check, and a workflow that
+  # is skipped by `paths-ignore` never reports, leaving the required check pending forever. A job
+  # skipped by `if` reports as skipped, which branch protection treats as satisfied.
+  changes:
+    name: Classify changes
     runs-on: ubuntu-latest
-    # `sbt checkPR` (compile + unit tests + -Werror) now takes ~25-30 min; the parallel "DCC Node
-    # CI / Test" job ran 28-32 min on main in Sep 2026. Without an explicit cap this job inherits
-    # GitHub's 360-min default, so a hung runner (observed: sbt checkPR wedged for ~1h48m with no
-    # progress) silently burns up to 6h of minutes before failing. 45 min is ~1.5x the normal runtime:
-    # headroom for a slow runner, but it still fails fast on a genuine hang. (The old 30-min cap
-    # dated from a ~15 min suite and started cancelling healthy runs at 30m.)
-    timeout-minutes: 45
-    # action-surefire-report updates this job's own check-run with test annotations; needs checks:write
-    # (workflow-level permissions are read-only) or it fails the job with "Resource not accessible by
-    # integration" even when the actual sbt build/tests pass.
+    timeout-minutes: 5
     permissions:
       contents: read
-      checks: write
+      pull-requests: read
     outputs:
-      lang-changed: ${{ steps.filter.outputs.lang == 'true' }}
+      code: ${{ steps.filter.outputs.code }}
+      # Native-library smoke tests only differ per OS when the JVM native deps or the packaging change.
+      smoke-os: ${{ steps.filter.outputs.native == 'true' && '["macos-15-intel","macos-15","ubuntu-24.04","ubuntu-24.04-arm","windows-2022"]' || '["ubuntu-24.04"]' }}
+    steps:
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
+        id: filter
+        with:
+          # `every`: a file counts as `code` only if it matches '**' AND none of the exclusions.
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/CODEOWNERS'
+              - '!LICENSE'
+              - '!renovate.json'
+            native:
+              - '{build.sbt,**/build.sbt,project/**,docker/**}'
+
+  check-pr:
+    name: Check PR
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    # The unit tests are NOT run here: they run exactly once per PR push, with coverage, in the "Test"
+    # job of ci.yml (same suites `sbt checkPR` ran: lang-tests, lang-tests-js, repl, grpc-server,
+    # ride-runner, node-tests). This job runs everything else `checkPR` does: clean compile of every
+    # project incl. test sources with -Werror, scalafmt check, Scala.js link, and the node tarball that
+    # the smoke tests consume. Before the split both jobs ran the same ~30 min suite on every push.
+    # `sbt checkPR` still exists as the all-in-one local command.
+    # Without an explicit cap this job inherits GitHub's 360-min default, so a hung runner (observed:
+    # sbt wedged for ~1h48m with no progress) silently burns up to 6h of minutes before failing.
+    timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
@@ -52,21 +83,7 @@ jobs:
         # having to guess at the starved resource after the fact.
         env:
           JAVA_TOOL_OPTIONS: "${{ env.JAVA_TOOL_OPTIONS }} -Xlog:gc*:file=gc.log:time,uptime,level,tags"
-        run: sbt --batch checkPR
-      - uses: ScalableCapital/action-surefire-report@1e92f48016e566e4eed2d81560edbfe0f524cfb7  # v2.0.3
-        if: always()
-        with:
-          report_paths: '**/target/test-reports/*.xml'
-          create_check: false
-          check_name: 'Check PR'
-      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
-        id: filter
-        with:
-          filters: |
-            lang:
-              - 'lang/**'
-              - 'build.sbt'
-              - 'project/*'
+        run: sbt --batch buildPR
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dcc-node-tarball
@@ -85,17 +102,20 @@ jobs:
             gc.log*
             hs*.log
             core*
-            **/target/test-reports/*.xml
           retention-days: 14
 
   run-smoke-tests:
-    needs: check-pr
+    needs: [changes, check-pr]
     name: Run Smoke Tests ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-15-intel, macos-15, ubuntu-24.04, ubuntu-24.04-arm, windows-2022]
+        # Linux only unless native deps / packaging changed (see `changes`): macOS bills at 10x and
+        # Windows at 2x against the shared free-minute pool, and the smoke test only exercises the
+        # per-OS native libraries (groth16, BLS, P-256).
+        os: ${{ fromJSON(needs.changes.outputs.smoke-os) }}
     steps:
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
         with:

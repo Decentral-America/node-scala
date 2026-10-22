@@ -14,9 +14,12 @@ on:
 permissions:
   contents: read
 
+# Superseded PR pushes are cancelled. Pushes to main are NOT: cancelling a main run could kill the
+# docker publish of an earlier merge and leave that commit without its sha-<7> image, which release
+# tagging (on-release-published.yml) requires. Queued main runs are collapsed by GitHub to the latest.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Container-aware heap (70% of cgroup limit), G1GC for compilation throughput.
 # Java 25 defaults to ZGC (low-latency) which is suboptimal for batch sbt compilation.
@@ -26,19 +29,66 @@ env:
   JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70.0 -XX:-UseZGC -XX:+UseG1GC -Xss4m -XX:MaxMetaspaceSize=1g"
 
 jobs:
+  # Classifies the PR so docs-only changes skip the 30+ min jobs. Job-level `if` (not workflow-level
+  # `paths-ignore`) on purpose: "Build", "Test" and "Security Scan (Trivy)" are required status checks,
+  # and a workflow skipped by `paths-ignore` never reports, leaving them pending forever. A job skipped
+  # by `if` reports as skipped, which branch protection treats as satisfied. Pushes to main always run
+  # everything: every main commit must have its own tested image (see docker-reuse below).
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ github.event_name != 'pull_request' || steps.filter.outputs.code == 'true' }}
+      openapi: ${{ steps.filter.outputs.openapi == 'true' }}
+    steps:
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          # `every`: a file counts as `code` only if it matches '**' AND none of the exclusions.
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/CODEOWNERS'
+              - '!LICENSE'
+              - '!renovate.json'
+            openapi:
+              - '{node,ride-runner}/src/main/resources/swagger-ui/openapi.yaml'
+
+  # Required check "Build". On PRs the compile is already done, more strictly, by "Check PR"
+  # (check-pr.yaml: clean compile of every project incl. test sources, -Werror, scalafmt), so repeating a
+  # plain `sbt compile` here would only burn a runner. The job still reports, and on pushes to main it
+  # compiles for real.
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Compile is covered by Check PR on pull requests
+        if: github.event_name == 'pull_request'
+        run: echo "::notice::On pull requests the clean -Werror compile of all projects is verified by the required Check PR check"
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        if: github.event_name != 'pull_request'
       - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520  # v5.4.0
+        if: github.event_name != 'pull_request'
         with:
           distribution: 'temurin'
           java-version: '25'
           cache: 'sbt'
       - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
+        if: github.event_name != 'pull_request'
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        if: github.event_name != 'pull_request'
         with:
           path: |
             ~/.cache/coursier
@@ -53,11 +103,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-
       - name: Compile
+        if: github.event_name != 'pull_request'
         run: sbt --batch compile
 
+  # Required check "Test". The ONLY place the unit suites run per PR push (check-pr.yaml no longer runs
+  # them; it covers -Werror/format/JS/tarball). Does not wait for `build`: on PRs `build` is a no-op and
+  # on main a compile failure fails this job just the same, so serialising them only added wall time.
   test:
     name: Test
-    needs: build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     # The actual test run (node-tests + lang-tests + friends) consistently completes right at the ~45min
     # mark (confirmed twice: "8893 tests run, 0 failed" both times), leaving no slack for the report/upload
@@ -129,47 +184,12 @@ jobs:
             hs*.log
             core*
 
-  package:
-    name: Package
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520  # v5.4.0
-        with:
-          distribution: 'temurin'
-          java-version: '25'
-          cache: 'sbt'
-      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b  # v1.2.1
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-        with:
-          path: |
-            ~/.cache/coursier
-            ~/.ivy2/cache
-          # ~/.sbt (the launcher boot dir) is deliberately NOT cached: a loose
-          # restore-keys prefix match after an sbt.version bump mixed old and
-          # new compiler-bridge jars in the same boot subdirectory, causing
-          # sbt.internal.inc.InvalidComponent ("found: 2 files") on every
-          # subsequent run sharing that cache generation, including reruns.
-          # ~/.sbt/boot re-downloads are small and fast; not worth the risk.
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', 'project/build.properties', 'project/plugins.sbt') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-
-      - name: Build tarballs
-        run: sbt --batch buildTarballsForDocker
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: dcc-node-tarball
-          retention-days: 7
-          path: docker/target/dcc.tgz
-
   # One image per commit. A merge commit whose tree equals its merged branch head re-uses the image
   # already built (and smoke-tested, scanned, attested) for that head -- so the digest deployed from a
   # release tag and the digest main points at are the same bytes.
   docker-reuse:
     name: Docker (reuse check)
-    needs: package
+    needs: [build, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -227,6 +247,8 @@ jobs:
   # ── Security Scan (Trivy) ──────────────────────────────────────────────────
   security:
     name: Security Scan (Trivy)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -258,13 +280,15 @@ jobs:
   # Fails the PR if either OpenAPI spec (node REST API, ride-runner REST API)
   # changes in a way that breaks existing clients (oasdiff classifies each
   # schema/path change and this job gates on ERR-level findings only). Runs
-  # standalone -- it just diffs file revisions -- so it has no `needs:` on
-  # build/test/package and can report back well before those longer jobs finish.
+  # standalone -- it just diffs file revisions -- so it does not wait on
+  # build/test and can report back well before those longer jobs finish. Only runs when an
+  # OpenAPI spec file is part of the PR (nothing to diff otherwise).
   api-schema-conformance:
     name: OpenAPI Breaking-Change Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.openapi == 'true'
 
     steps:
       - name: Checkout PR branch

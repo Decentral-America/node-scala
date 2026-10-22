@@ -7,6 +7,11 @@ on:
 permissions:
   contents: read
 
+# One publication per release; a re-published release queues instead of racing the same uploads/tags.
+concurrency:
+  group: on-release-published-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
 jobs:
   # matcher's dex-ext build (project/NodeArtifactsPlugin.scala) downloads a
   # `dcc-grpc-server-<version>.tgz` (and a `dcc-grpc-server-stagenet-<version>.tgz`)

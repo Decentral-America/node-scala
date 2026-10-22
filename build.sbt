@@ -355,6 +355,21 @@ checkPRRaw := Def
   )
   .value
 
+// Everything `checkPR` does EXCEPT the unit tests. CI runs the unit tests once, in the `Test` job of
+// ci.yml (with coverage); the `Check PR` job runs this, so the two required checks cover disjoint work
+// instead of executing the same ~30 min suite twice per PR push. `checkPR` stays as the all-in-one
+// local command (and is what this task + the test tasks compose to).
+lazy val buildPRRaw = taskKey[Unit]("Clean compile with -Werror, scalafmt check, JS link and tarballs (no tests)")
+buildPRRaw := Def
+  .sequential(
+    compilePRRaw,
+    Def.sequential(
+      fullOptJS.all(ScopeFilter(inProjects(`lang-js`, `repl-js`), inConfigurations(Compile))),
+      buildTarballsForDocker
+    )
+  )
+  .value
+
 def commandWithFatalWarnings(commandName: String, task: TaskKey[Unit]): Command =
   Command.command(commandName) { state =>
     val extracted = Project.extract(state)
@@ -369,6 +384,7 @@ def commandWithFatalWarnings(commandName: String, task: TaskKey[Unit]): Command 
 
 def compilePR: Command = commandWithFatalWarnings("compilePR", compilePRRaw)
 def checkPR: Command   = commandWithFatalWarnings("checkPR", checkPRRaw)
+def buildPR: Command   = commandWithFatalWarnings("buildPR", buildPRRaw)
 
 commands += Command.command("buildDebPackages") { state =>
   "set node / Debian / packageArchitecture := \"arm64\"" ::
@@ -424,4 +440,4 @@ def generateGenesisCommand: Command =
     state
   }
 
-commands ++= Seq(compilePR, checkPR, generateGenesisCommand)
+commands ++= Seq(compilePR, checkPR, buildPR, generateGenesisCommand)
