@@ -4,6 +4,19 @@ on:
   push:
     branches:
       - main
+    # Docs-only merges change nothing these jobs publish or build.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/CODEOWNERS'
+      - 'LICENSE'
+      - 'renovate.json'
+
+# Serialise (never cancel) main pushes: a cancelled publish would leave a snapshot half-uploaded.
+concurrency:
+  group: on-push-default-branch
+  cancel-in-progress: false
 
 # Minimal permissions at workflow level; jobs that need more declare explicitly.
 permissions:
@@ -58,9 +71,13 @@ jobs:
   check-sonatype:
     name: Check Sonatype Configuration
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: read
     outputs:
       configured: ${{ steps.check.outputs.configured }}
+      already-published: ${{ steps.exists.outputs.already-published }}
     steps:
       - id: check
         env:
@@ -72,11 +89,34 @@ jobs:
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
+      # Decide BEFORE the expensive job whether this SNAPSHOT version is already on GitHub Packages. The
+      # version only changes on a release, so almost every push to main finds it published; checking
+      # first means those pushes no longer spend ~4 min building the monorepo deps just to skip the upload.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+          sparse-checkout: version.sbt
+      - id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Same derivation as the publish step below: increment the patch segment of git.baseVersion.
+          version=$(awk -F '[".]' '/baseVersion/{print $3"."$4"."$5+1; exit}' version.sbt)-SNAPSHOT
+          # Maven packages are org-scoped in GitHub Packages (the repo-level API 404s for Maven) and are
+          # named groupId.artifactId. On any API error, assume NOT published so the publish job decides.
+          existing=$(gh api "orgs/Decentral-America/packages/maven/io.decentralchain.lang/versions" --jq '.[].name' 2>/dev/null || true)
+          if echo "$existing" | grep -qF "$version"; then
+            echo "::notice::$version already published to GitHub Packages; skipping the publish job"
+            echo "already-published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already-published=false" >> "$GITHUB_OUTPUT"
+          fi
 
   publish-snapshot:
     name: Publish Snapshots to GitHub Packages
     needs: check-sonatype
-    if: needs.check-sonatype.outputs.configured == 'true'
+    if: needs.check-sonatype.outputs.configured == 'true' && needs.check-sonatype.outputs.already-published != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

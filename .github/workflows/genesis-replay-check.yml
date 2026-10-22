@@ -35,8 +35,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Cheap gate (~15 s). The replay is a function of (this commit, the live chain's history). History below
+  # the previously verified target never changes, so an unchanged commit re-proves nothing new; it still
+  # re-runs at least every 28 days to extend coverage to newly produced blocks. Manual dispatch always runs.
+  gate:
+    name: Skip if main is unchanged since the last green replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/skip-if-unchanged.sh genesis-replay-check.yml 28
+
   replay:
     name: Fresh-genesis replay vs live testnet
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
