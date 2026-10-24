@@ -1,5 +1,5 @@
 # sha256  file  -- Maven Central artifacts node-scala consumes; bump together with project/Dependencies.scala
 e576ea641182ec7fc8214a87c1d276601816270b605ae042a754f4c7d3c86520  blst-0.3.16.0.jar
-7d56a1ec72e758bbcb14bb9874cbcfa635017ce251b6fd9143569c5d7e98fbcc  curve25519-1.0.0.jar
-d3c57cc178af9e1a62c8db819bec574ed024e50f8490e27c569e1b51fd166259  groth16-0.2.1.0.jar
+a5cac17a671fcb19c1ad2b351eece5f5ba58f02137b2899b0435d50977847614  curve25519-1.0.1.jar
+df88f4f5ebea4fa04d11f7370fade2d34402bdf6e205895786787cfb07383fe5  groth16-0.2.1.2.jar
 c084e1c598ed9f3de4727c9ed984a6de56a4af197536e3688821f00672ebd920  protobuf-schemas-1.6.6-protobuf-src.jar
