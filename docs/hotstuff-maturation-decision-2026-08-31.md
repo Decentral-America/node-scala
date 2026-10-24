@@ -12,7 +12,7 @@ Whether T2 HotStuff moves toward authoritative status on a real timeline, stays 
 
 ## 2. Input 1 — Real finality-latency benchmark (Task 2)
 
-2h19m31s / 271-block live observation window on the actual testnet topology (Newark VPS ↔ Frankfurt LKE), spanning 2+ committee periods (`generationPeriodLength=100`).
+2h19m31s / 271-block live observation window on the actual testnet topology (primary VPS ↔ Frankfurt LKE), spanning 2+ committee periods (`generationPeriodLength=100`).
 
 | Mechanism | Result |
 |---|---|

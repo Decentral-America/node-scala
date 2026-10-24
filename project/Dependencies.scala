@@ -64,7 +64,7 @@ object Dependencies {
   val kamonCore       = kamonModule("core")
   val logback         = "ch.qos.logback"      % "logback-classic"   % "1.6.4"
   val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "3.0.14"
-  val curve25519      = "io.decentralchain"   % "curve25519"        % "1.0.0"
+  val curve25519      = "io.decentralchain"   % "curve25519"        % "1.0.1"
   val nettyHandler    = nettyModule("handler")
 
   val playJson = "org.playframework" %% "play-json" % "3.0.6"
@@ -100,7 +100,7 @@ object Dependencies {
       "ch.obermuhlner"  % "big-math"   % "2.3.2",
       googleGuava, // BaseEncoding.base16()
       curve25519,
-      "io.decentralchain" % "groth16" % "0.2.1.0",
+      "io.decentralchain" % "groth16" % "0.2.1.2",
       "org.web3j"         % "crypto"  % web3jVersion excludeAll (ExclusionRule("org.bouncycastle", "bcprov-jdk15on")),
       protoSchemasLib     % "protobuf"
     ) ++ cryptoProviders

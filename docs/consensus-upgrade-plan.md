@@ -405,7 +405,7 @@ The original T0 plan was Casper FFG built from scratch. During research we disco
 
 | Node | Address | DCC | Status |
 |---|---|---|---|
-| Main (Newark 66.228.55.154) | `31RPEKcz71a3hdxt8z7qLhTpRMuRV2kUyr6` | ~26.7M | ✅ Mining ~33% of blocks |
+| Main (primary VPS) | `31RPEKcz71a3hdxt8z7qLhTpRMuRV2kUyr6` | ~26.7M | ✅ Mining ~33% of blocks |
 | gen-0 (LKE Frankfurt) | `31PmKNdHAU5sZbtg8TrzKh8WfE7E8xBc9WD` | ~26.7M | ✅ Mining ~33% of blocks |
 | gen-1 (LKE Frankfurt) | `31dLhqhGoGVhtkf5msWFmgZn1ErrVR6b9qV` | ~26.7M | ✅ Mining ~33% of blocks |
 | val-0 (LKE Frankfurt) | — | 0 | ✅ Synced |

@@ -131,7 +131,7 @@ object NetworkServer extends ScorexLogging {
             // after losing all peers, the worst possible moment to make the
             // timeout 30x tighter than normal. Any attempt slower than 1s
             // (routine for a cross-region path, e.g. LKE Frankfurt <-> a
-            // Newark VPS) got suspended for 300s and retried into the same
+            // main-region VPS) got suspended for 300s and retried into the same
             // 1s ceiling again -- a self-reinforcing connect/suspend loop.
             // Confirmed live via INCIDENT-GEN0-PEERS.md #11: newly-added
             // info-level logging caught a connection established then

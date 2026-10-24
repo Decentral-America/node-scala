@@ -520,7 +520,7 @@ class MinerImpl(
   // the NEXT block (a different node, possibly on a different continent) can seal that next block
   // before the other two members' broadcasts finish propagating to it, permanently losing the chance
   // to embed a real quorum for this height. 1200ms matches the round-timeout already established
-  // elsewhere in this codebase for the same Frankfurt<->Newark link (p99 round latency ~1000ms +
+  // elsewhere in this codebase for the same Frankfurt<->main-VPS link (p99 round latency ~1000ms +
   // 20% margin); polling short-circuits as soon as something arrives, so this only ever adds latency
   // on the (safe, matches pre-fix behavior) fallback path where nothing arrives in time.
   private def selfVotingCommitteeMatches(blockchain: Blockchain, tipHeight: Height, newBlockHeight: Height): Boolean =

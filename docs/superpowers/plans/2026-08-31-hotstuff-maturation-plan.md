@@ -57,7 +57,7 @@ observed live)."
 **Files:**
 - Create: `infra/monitoring/hotstuff-latency-benchmark.py` (or wherever this repo's other one-off measurement scripts live — check `infra/scripts/` first)
 
-**Why:** HotStuff's entire justification is faster finality than T0. Nobody has measured that on this deployment's real topology (Newark VPS ↔ Frankfurt LKE). This produces the one number every later decision in this plan depends on.
+**Why:** HotStuff's entire justification is faster finality than T0. Nobody has measured that on this deployment's real topology (primary VPS ↔ Frankfurt LKE). This produces the one number every later decision in this plan depends on.
 
 - [ ] **Step 1:** Poll `/node/status` on main at a short interval (1-2s) for a real observation window (at least a few hundred blocks, spanning at least 2 committee-period boundaries so the comparison isn't biased by one boundary's transition cost).
 - [ ] **Step 2:** For each block height, record the wall-clock time it first appears as `blockchainHeight`, the wall-clock time it first appears at or below `finalizedHeight` (T0), and the wall-clock time it first appears at or below `hotStuffFinalizedHeight` (T2).
