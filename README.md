@@ -63,7 +63,7 @@ sudo apt-get update && sudo apt-get install -y temurin-25-jdk
 # brew install --cask temurin@25                        # Mac
 ```
 
-Install SBT (Scala Build Tool) for your platform: [Linux](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Linux.html) | [Mac](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Mac.html) | [Windows](https://www.scala-sbt.org/1.0/docs/Installing-sbt-on-Windows.html)
+Install SBT (Scala Build Tool) for your platform: [Linux](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html) | [Mac](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html) | [Windows](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html)
 
 ### Clone this repo
 
@@ -123,7 +123,7 @@ For major changes, please open an issue first. Please follow the [code of conduc
 
 ## Licence
 
-The code in this project is licensed under [MIT license](./LICENSE)
+The code in this project is licensed under [MIT license](./LICENSE). This project contains a GPL-3.0-only dependency (`io.decentralchain:curve25519`); distributions that include it are a combined work under GPL-3.0. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
 
 ## Acknowledgements
 
