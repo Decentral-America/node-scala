@@ -87,7 +87,7 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 | T2 | Forged / below-quorum QC | `HotStuffQuorum.verifyQC` | all-signers-∈-committee + 2/3-stake + agg verify; unit-tested |
 | T3 | Unverified QC influencing safety/commit | `HotStuffEngine.onQC/onProposal` | `verifyQC` gate before `update` (`:44`,`:70`); finding #1 ✅ |
 | T4 | Conflicting / out-of-chain COMMIT | `verifyQC` + honest-quorum voting/lock rules | verified COMMIT QC trusted by design (finding #2); forged/below-quorum rejected, same-height re-commit blocked (tested) — audit the safety proof under the honest-≥2/3 assumption |
-| T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | proof-carried, block-validated exclusion wired unconditionally (was gated feature 29 `HotStuffEquivocationEvidence`, deleted 2026-09-02 — every node validates/unions from genesis, no activation-height check); still gated by `slashing-enabled` (default off) on the miner-side fold only; live testnet drill 2026-10-13: proof carried in block 56354, voter excluded from 56355; deposit forfeiture applies from `hotStuffEquivocationPenaltyHeight` (testnet 60000, pinned in `KnownChainParameters`); miner-side folding still gated by `slashing-enabled` (off on testnet) |
+| T5 | Equivocation (double-sign) | `HotStuffSafety.equivocators` | proof-carried, block-validated exclusion wired unconditionally (was gated feature 29 `HotStuffEquivocationEvidence`, deleted 2026-09-02 — every node validates/unions from genesis, no activation-height check); still gated by `slashing-enabled` (default off) on the miner-side fold only; live testnet drill 2026-10-12: proof carried in block 56354 (`finalizationVoting.hotstuffConflicts`), voter excluded from 56355; deposit forfeiture (#77) applies from `hotStuffEquivocationPenaltyHeight` (testnet 60000, pinned in `KnownChainParameters`), proven by `HotStuffEquivocationPenaltySuite` (forfeit at/above the gate, none below) and `HotStuffEquivocationDepositReleaseSuite` (the forfeited deposit is never released back or re-credited, and leaves the recorded total supply); miner-side folding still gated by `slashing-enabled` (off fleet-wide, see §8); live re-drill above the gate still pending |
 | T6 | Byzantine voter stalls QC formation | `HotStuffVotePool.onVote` | invalid votes dropped on ingress; finding #3 ✅ |
 | T7 | Stale-justify / conflicting-branch vote | `HotStuffSafety.safeToVote` | canonical rule; adversarially unit-tested |
 | T8 | Cross-period replay of votes/PoP | PoP binds period; canonical vote message | binds `generationPeriodStart`; framing note = finding #4 (**superseded**, see below). **BLS domain separation (2026-09-02, unconditional — was gated feature 30, since deleted):** cross-CHAIN and cross-SENDER replay are now closed too (PoP binds `chainId ‖ sender`, per T1 above), and "framing note = finding #4" is superseded by per-context DSTs — `_POP_`/`_ENDORSE_`/`_HSVOTE_` are the only tags used for SIGNING; the legacy `_NUL_` tag is verified only for block-carried signatures strictly below `finalityHardeningHeight` (testnet 90000) and never on gossip paths (see §7 item 9), so a PoP/endorsement/vote signature from one context can no longer be transplanted into another even by encoding coincidence. Proved by the 3x3 cross-DST matrix in `BlsUtilsTest`. |
@@ -343,8 +343,20 @@ laptop (see
 - [x] Equivocation → `conflictGenerators` slashing wired (T5) — unconditional from genesis (was gated
       feature 29, deleted 2026-09-02) + `slashing-enabled` (default off, miner-fold only); proof-carried,
       block-validated exclusion proven end-to-end incl. the wire hop
-      (`HotStuffEquivocationEvidenceE2ESpecification`); **live testnet exercise pending** before
-      `slashing-enabled` is turned on anywhere
+      (`HotStuffEquivocationEvidenceE2ESpecification`). **Live testnet drill done 2026-10-12** (one-node
+      `slashing-enabled = yes` on gen-0 only, reverted right after): a throwaway committee member
+      (index 4, period 56301) signed two PREPARE votes for view 56350 on different blocks; all 4 nodes
+      logged `EQUIVOCATION DETECTED` and `/node/status` reported `hotStuffEquivocationsTotal = 1`; gen-0
+      carried the proof in block **56354** as `finalizationVoting.hotstuffConflicts` (a block field, not a
+      transaction) and every node accepted that block (same id, no fork); `/generators/at` showed the
+      offender with `conflictHeight = 56355`. **Gap found:** the offender was excluded but kept its
+      generation deposit (`BlockDiffer.calculatePenalties` debited only T0 conflicts, and the lock was
+      released at the punishment height). **Fixed by #77** (`6ffedcf406`, merge `fb4e980`): HotStuff
+      equivocators forfeit the deposit from `hotStuffEquivocationPenaltyHeight` (testnet 60000, so block
+      56354 replays unchanged); the total-supply bookkeeping (`totalDccAmount`) now burns the same
+      deposits through the same gated predicate (`BlockDiffer.penalizedGeneratorIndexes`).
+      **Fleet decision (2026-10-12):** `slashing-enabled` stays `no` until #77 is live and the external
+      audit is done. A live re-drill above the gate is still to be recorded.
 - [ ] **External third-party consensus audit sign-off** (this package) — required before mainnet
       `authoritative`, not yet engaged
 - [ ] Live multi-node Docker evidence of an actual committee-epoch (T10) transition — unit/DST-simulation

@@ -1,11 +1,36 @@
 name: node-it (integration tests)
 # Runs the Docker-based multi-node integration suites (finality by default) on an ubuntu runner.
-# node-it is NOT part of ci.yml (it needs docker + is heavier); dispatch it for consensus changes.
+# node-it is NOT part of ci.yml (it needs docker + is heavier); it runs on release tags, on PRs to main that
+# touch consensus/finality/mining/state-application paths (see the paths filter), and on dispatch.
 # Builds the IT image via `sbt node-it/docker` (which runs buildTarballsForDocker + docker build),
 # then `node-it/testOnly` the requested suites. JVM native deps come from Maven Central (pinned in project/dcc-artifacts.sha256).
 on:
   push:
     tags: ['v*']  # release tags only -- this suite is Docker-heavy; nightly was pure cost with no gate value
+  # Consensus PRs: run the finalization suites when a PR to main touches consensus, finality, mining,
+  # block/state application or the node-it harness itself (ECO-98). Paths-filtered so ordinary PRs pay nothing.
+  pull_request:
+    branches: [main]
+    paths:
+      - 'node/src/main/scala/com/decentralchain/consensus/**'
+      - 'node/src/main/scala/com/decentralchain/mining/**'
+      - 'node/src/main/scala/com/decentralchain/state/diffs/**'
+      - 'node/src/main/scala/com/decentralchain/state/appender/**'
+      - 'node/src/main/scala/com/decentralchain/state/BlockchainUpdaterImpl.scala'
+      - 'node/src/main/scala/com/decentralchain/state/NgState.scala'
+      - 'node/src/main/scala/com/decentralchain/state/SnapshotBlockchain.scala'
+      - 'node/src/main/scala/com/decentralchain/state/FinalizationState.scala'
+      - 'node/src/main/scala/com/decentralchain/state/BlockEndorser.scala'
+      - 'node/src/main/scala/com/decentralchain/state/EndorsementFilter.scala'
+      - 'node/src/main/scala/com/decentralchain/state/EndorsementStorage.scala'
+      - 'node/src/main/scala/com/decentralchain/state/ConflictGenerators.scala'
+      - 'node/src/main/scala/com/decentralchain/state/GenerationPeriod.scala'
+      - 'node/src/main/scala/com/decentralchain/block/FinalizationVoting.scala'
+      - 'node/src/main/scala/com/decentralchain/block/BlockEndorsement.scala'
+      - 'node/src/main/scala/com/decentralchain/database/Caches.scala'
+      - 'node/src/main/scala/com/decentralchain/database/RocksDBWriter.scala'
+      - 'node-it/**'
+      - '.github/workflows/node-it.yml'
   workflow_dispatch:
     inputs:
       suite:

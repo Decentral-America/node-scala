@@ -10,6 +10,7 @@ import com.decentralchain.features.BlockchainFeatures.RideV6
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.settings.BlockchainSettings
 import com.decentralchain.state.TxMeta.Status
+import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.TxValidationError.{AliasDoesNotExist, AliasIsDisabled}
 import com.decentralchain.transaction.transfer.{TransferTransaction, TransferTransactionLike}
@@ -224,19 +225,17 @@ case class SnapshotBlockchain(
   override def blockRewardVotes(height: Int): Seq[Long] = inner.blockRewardVotes(height)
 
   override def dccAmount(height: Int): BigInt = {
-    val parentBlockHeader = blockMeta match {
-      case None => inner.blockHeader(height - 1)
-      case _    => inner.lastBlockHeader
+    val (parentHeight, parentBlockHeader) = blockMeta match {
+      case None => (height - 1, inner.blockHeader(height - 1))
+      case _    => (inner.height, inner.lastBlockHeader)
     }
 
-    val parentConflictEndorsements = for {
-      parentBlockHeader <- parentBlockHeader
-      voting            <- parentBlockHeader.header.finalizationVoting
-    } yield voting.conflict.size
+    val forfeitedInParent =
+      BlockDiffer.forfeitedDeposits(settings.functionalitySettings, Height(parentHeight), parentBlockHeader.flatMap(_.header.finalizationVoting))
 
     inner.dccAmount(height) +
       BigInt(reward.getOrElse(0L)) -
-      parentConflictEndorsements.getOrElse(0) * CommitToGenerationTransaction.DepositInDcclets
+      forfeitedInParent
   }
 
   override def hitSource(height: Int): Option[ByteStr] =

@@ -11,6 +11,7 @@ import com.decentralchain.common.state.ByteStr
 import com.decentralchain.features.BlockchainFeatures
 import com.decentralchain.lang.ValidationError
 import com.decentralchain.mining.MiningConstraint
+import com.decentralchain.settings.FunctionalitySettings
 import com.decentralchain.state.*
 import com.decentralchain.state.StateSnapshot.monoid
 import com.decentralchain.state.TxStateSnapshotHashBuilder.TxStatusInfo
@@ -380,10 +381,7 @@ object BlockDiffer {
   ): Either[String, Map[Address, Portfolio]] = {
     val empty               = Map.empty[Address, Portfolio].asRight[String]
     lazy val committed      = blockchain.committedGenerators(prevBlockPeriod)
-    val hotStuffPenalized   = prevBlockHeight.toInt >= blockchain.settings.functionalitySettings.hotStuffEquivocationPenaltyHeight
-    val penalizedGenerators =
-      prevBlockVoting.conflict.map(_.endorserIndex) ++
-        (if (hotStuffPenalized) prevBlockVoting.hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex)) else Seq.empty)
+    val penalizedGenerators = penalizedGeneratorIndexes(blockchain.settings.functionalitySettings, prevBlockHeight, prevBlockVoting)
     penalizedGenerators.foldLeft(empty) {
       case (r @ Left(_), _)      => r
       case (Right(r), generator) =>
@@ -396,6 +394,24 @@ object BlockDiffer {
         }
     }
   }
+
+  /** The generators whose generation deposit the block AFTER `votingBlockHeight` forfeits, given that block's
+    * `voting`. T0 conflicting endorsers always; HotStuff equivocators only for proofs carried at or above
+    * `hotStuffEquivocationPenaltyHeight`.
+    *
+    * SINGLE SOURCE OF TRUTH for both the balance debit (`calculatePenalties`) and the total-supply bookkeeping
+    * (`Caches.append`'s `totalDccAmount`, `BlockchainUpdaterImpl.dccAmount`, `SnapshotBlockchain.dccAmount`), which
+    * burn `DepositInDcclets` per entry. Before this was shared, the supply side counted only T0 `conflict` entries, so
+    * a HotStuff forfeiture debited the balance but left the recorded total supply unchanged.
+    */
+  def penalizedGeneratorIndexes(fs: FunctionalitySettings, votingBlockHeight: Height, voting: FinalizationVoting): Seq[GeneratorIndex] =
+    voting.conflict.map(_.endorserIndex) ++
+      (if (votingBlockHeight.toInt >= fs.hotStuffEquivocationPenaltyHeight) voting.hotstuffConflicts.map(p => GeneratorIndex(p.voterIndex))
+       else Seq.empty)
+
+  /** Total DCC burned by the block after `votingBlockHeight`: one generation deposit per penalized generator. */
+  def forfeitedDeposits(fs: FunctionalitySettings, votingBlockHeight: Height, voting: Option[FinalizationVoting]): Long =
+    voting.fold(0L)(v => penalizedGeneratorIndexes(fs, votingBlockHeight, v).size.toLong * CommitToGenerationTransaction.DepositInDcclets)
 
   def maybeApplySponsorship(blockchain: Blockchain, sponsorshipEnabled: Boolean, transactionFee: (Asset, Long)): (Asset, Long) =
     transactionFee match {
