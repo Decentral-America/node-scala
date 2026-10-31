@@ -264,3 +264,91 @@ clear the activation threshold — that is infra-repo config
 (`infra/node-config/testnet/dcc.conf` and the `infra/clusters/testnet/apps/nodes.yaml`
 blocks, a sibling repo to this one, not touched by this change) and is
 explicitly deferred to the relaunch runbook task, not silently dropped.
+
+## 8. "Bug 2" — finalized height advanced by a discarded microblock: CLOSED (2026-10-31)
+
+**The bug (inherited unmodified from upstream Waves).** `FinalizationState.append` advances
+`finalizedHeight` (and `generatorSet` / `conflictGenerators`) as soon as a microblock's accumulated
+voting reaches the finalization threshold. When that microblock is later discarded -- the next key
+block references an *earlier* microblock -- the advance was not walked back: the key-block persist
+path wrote `ng.finalizationState`, i.e. the latest state across *every* appended microblock including
+the discarded one. Two nodes holding the same canonical chain could persist different
+`finalizedHeightAt(h)` depending on whether they had briefly seen the discarded microblock.
+
+**Closing commit: `aa230593b7`** ("roll back finalizedHeight/generatorSet/conflictGenerators together on
+discarded microblock", 2026-08-30). `NgState` keeps a per-total-block-id snapshot of the
+`FinalizationState` (`finalizationSnapshots`, `NgState.scala:189`; read through
+`finalizationStateFor`, `NgState.scala:205`), and the key-block persist path reads the state *as of the
+referenced block* (`BlockchainUpdaterImpl.scala:411`). The second half of the original two-part
+concern -- `forgeBlock` folding the discarded microblock's voting into the forged block's header and
+corrupting its signature -- was checked in the same commit and needed no code change: the forged block
+at the referenced microblock already carries only the voting up to that point.
+
+**Evidence.**
+
+- `FinalizationRollbackSpec` (`node/tests/.../finalization/`, 4 cases), each case first asserting that
+  the to-be-discarded microblock really did advance the liquid finalized height (so no case can pass
+  vacuously):
+  1. *network discard path* -- key block 4 references micro1, discarding micro2: the persisted
+     `finalizedHeightAt(3)` returns to its pre-micro2 value; the persisted block 3 is byte-for-byte the
+     block forged at micro1 before micro2 existed (same id, header, signature) and its persisted state
+     hash is the one computed at micro1; blocks 4 and 5 are accepted with full verification (signature,
+     state hash, voting);
+  2. the same scenario compared with a node that never saw micro2: identical persisted and liquid
+     finalized heights at every step;
+  3. *rollback path* -- `removeAfter` below the liquid block discards it with micro2: the finalized
+     height is back to its value before block 3, and the rebuilt chain (block 3, micro1, block 4) is
+     valid with the same state hash as before the rollback;
+  4. a *persisted* advance (block 4 references micro2) rolled back by `removeAfter`: the per-height
+     `finalizedHeightAt(3)` is removed and the next liquid block starts from `finalizedHeightAt(2)`.
+     The node-global `finalizedHeight` deliberately stays monotonic here (`RocksDBWriter.scala:1038`
+     resets it only when the rollback target is *below* it; block 2 was finalized by a quorum vote and
+     is still on the chain). That value is not consensus state: the next block's `FinalizationState` is
+     derived from the per-height key.
+- **Bisect** (`git bisect run` with this spec, `broken` = spec fails, `fixed` = spec passes) between
+  `a1c9a9f581` (= `aa230593b7^`, spec FAILS: `finalizedHeightAt(3)` is `Some(2)`, expected `Some(1)`)
+  and `be90727cbf` (v1.8.1, spec PASSES): **first fixed commit `aa230593b7`**. Every bisect step
+  between `aa230593b7` and `be90727cbf` passes.
+- The pre-existing `DiscardedMicroBlockFinalizedHeightSpec` (added by `aa230593b7`) covers the same
+  path through both the verified append and the import (`verify = false`) path.
+
+`removeAfter(id)` where `id` is inside the current liquid block is a no-op by design ("no rollback
+necessary", `BlockchainUpdaterImpl.removeAfter`); liquid microblocks are discarded only by the next key
+block's reference (case 1) or by a rollback below the liquid block (case 3).
+
+### 8.1 Consumers of `committedGenerators` / `nextCommittedGenerators` / the live generator set
+
+Question (consensus investigation §8): for every non-hash consumer, does it read the committee *as of
+the referenced / persisted state* (rolled back with a discarded microblock) or the *live liquid tip*
+(which, until the discard happens, still contains a microblock that may be discarded)? Liquid
+committee data lives only in `NgState` snapshots; the persisted list (`Caches.committedGenerators`,
+`Caches.scala:266`) is built only from persisted blocks and its cache is cleared on every rollback
+(`Caches.scala:558`). `SnapshotBlockchain.committedGenerators` (`SnapshotBlockchain.scala:254`) merges
+the persisted list with whatever snapshot it wraps, so each caller's choice of wrapper decides the row.
+Committee data is not part of the per-block state hash (§3); `StateHashBuilder.addNextCommittedGenerator`
+/ `addCommittedGeneratorBalances` have no callers in main code.
+
+Legend: **REF** = referenced view (`referencedBlockchain`, `liquidBlockOf`, `finalizationStateFor`);
+**PERSISTED** = RocksDB/Caches only; **LIVE** = current liquid tip (`ng.bestLiquidSnapshot`,
+`ng.finalizationState`).
+
+| Consumer | Reads | Verdict |
+|---|---|---|
+| `Caches.committedGenerators` + cache (`Caches.scala:266`), persisted-list build in `append` | PERSISTED | Correct. Never holds liquid data; cleared on rollback. |
+| `RocksDBWriter` append / `doRollback` / `loadCommittedGenerators` / `committedHeights` | PERSISTED | Correct. Keys written per persisted block and deleted per rolled-back height. |
+| `RocksDBWriter.collectGenerationDepositChanges` (deposit lock) | PERSISTED | Correct. Proven for the forfeiture case by `HotStuffEquivocationDepositReleaseSuite`. |
+| `SnapshotBlockchain.committedGenerators` / `liveNextCommittedGenerators` | the wrapped snapshot | Correct as plumbing; only commits backed by a non-elided transaction count. |
+| `BlockchainUpdaterImpl.processBlock` persist (`:411`) | REF (`finalizationStateFor`) | Correct -- the Bug 2 fix. |
+| `BlockchainUpdaterImpl.processBlock` new `NgState` init | generator set passed by the caller | Correct when the caller passes the REF set (broadcast path). See the last two rows. |
+| `BlockchainUpdaterImpl.processMicroBlock` voting validation (`:619`) | PERSISTED committee + LIVE set | Correct by design: a microblock must reference the current best liquid block, so "live" is exactly its own reference. |
+| `BlockchainUpdaterImpl.committedGenerators` (`:952`) / `currentGeneratorSet` (`:960`) | LIVE | Correct by design for tip consumers (miner, voting, API); after a discard `ng` is rebuilt without the discarded microblock. |
+| `appender.appendKeyBlock` (`findBlockAndGetGenerators`, `validateBlock`, `validateFinalizationVoting`) | REF (`package.scala:96`) | Correct. |
+| `BlockDiffer` (`calculatePenalties`, committed-generators hash check, commitment validation) | REF (the differ's referenced blockchain) | Correct. |
+| `CommitToGenerationTransactionDiff`, `BalanceDiffValidation`, `Blockchain.generationDeposit` / `isConflict` | the differ's view | Correct; mempool results are re-validated per block. |
+| `Blockchain.currentCommittedGeneratorSet` / `committedGeneratorSetAt`, `Application` HotStuff committee provider | PERSISTED (current period) | Correct; HotStuff committee cache keyed by block ids, so a discard changes the key. |
+| `Miner` (committed-generators hash, self-commit, self-vote committee match) | REF (`referencedBlockchain(reference)`) | Correct; a self-commit lost with a discarded microblock returns to the mempool. |
+| `BlockEndorser.castVote`, `MicroblockAppender.voteSelf`, `BlockAppender` vote | LIVE / REF | Correct by design: votes are re-validated by every receiver against its referenced state. |
+| `CommonGeneratorsApi`, `Importer`, ride-runner blockchains | PERSISTED / LIVE | API, import and emulation only; not consensus. |
+| Keys, KeyTag, database codecs, `StateSnapshot` monoid, PB/JSON serializers, `Block`, `BlockSerializer` | n/a | Storage/serialization plumbing. |
+| `appender.appendExtensionBlock` (`package.scala:133`) | LIVE | **Open -- under separate review, not closed by this section.** |
+| `appender.processBlockWithChallenge` (`package.scala:186`) | LIVE | **Open -- under separate review, not closed by this section.** |
