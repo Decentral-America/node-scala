@@ -702,10 +702,14 @@ class BlockchainUpdaterImpl(
   override def dccAmount(height: Int): BigInt = readLock {
     ngState match {
       case Some(ng) if this.height == height =>
-        val parentConflictEndorsements = rocksdb.lastBlockHeader.flatMap(_.header.finalizationVoting).fold(0)(_.conflict.size)
+        val forfeitedInParent = BlockDiffer.forfeitedDeposits(
+          rocksdb.settings.functionalitySettings,
+          Height(rocksdb.height),
+          rocksdb.lastBlockHeader.flatMap(_.header.finalizationVoting)
+        )
         rocksdb.dccAmount(height - 1) +
           BigInt(ng.reward.getOrElse(0L)) * this.blockRewardBoost(Height(height)) -
-          parentConflictEndorsements * CommitToGenerationTransaction.DepositInDcclets
+          forfeitedInParent
       case _ =>
         rocksdb.dccAmount(height)
     }

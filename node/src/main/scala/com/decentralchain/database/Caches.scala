@@ -14,6 +14,7 @@ import io.decentralchain.protobuf.block.PBBlocks
 import io.decentralchain.protobuf.toByteStr
 import com.decentralchain.settings.DBSettings
 import com.decentralchain.state.*
+import com.decentralchain.state.diffs.BlockDiffer
 import com.decentralchain.transaction.Asset.{IssuedAsset, Dcc}
 import com.decentralchain.transaction.{Asset, CommitToGenerationTransaction, DiscardedBlocks, Transaction}
 import com.decentralchain.utils.ObservedLoadingCache
@@ -326,14 +327,12 @@ abstract class Caches extends Blockchain, Storage, StrictLogging {
     val newHeight = current.height + 1
     val newScore  = block.blockScore() + current.score
 
-    val conflictEndorsersInPrevBlock = for {
-      parentBlock <- lastBlock
-      voting      <- parentBlock.header.finalizationVoting
-    } yield voting.conflict.size
+    val forfeitedInPrevBlock =
+      BlockDiffer.forfeitedDeposits(settings.functionalitySettings, current.height, lastBlock.flatMap(_.header.finalizationVoting))
 
     val totalDccAmount = current.meta.fold(settings.genesisSettings.initialBalance)(_.totalDccAmount) +
       reward.getOrElse(0L) * this.blockRewardBoost(newHeight) -
-      conflictEndorsersInPrevBlock.getOrElse(0) * CommitToGenerationTransaction.DepositInDcclets
+      forfeitedInPrevBlock
 
     val newMeta = PBBlockMeta(
       Some(PBBlocks.protobuf(block.header)),
