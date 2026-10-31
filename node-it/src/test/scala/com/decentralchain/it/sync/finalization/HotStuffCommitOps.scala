@@ -59,6 +59,22 @@ trait HotStuffCommitOps extends ScorexLogging { self: BaseFreeSpec =>
     *      specific rejection as a signal to retry the whole selection against the freshly-current period
     *      rather than a failure: any node that already got included under the old period will show up in
     *      the next attempt's `alreadyCommitted` and won't be resubmitted.
+    *
+    * Retry audit (2026-10-31, ECO-98). The bounded retry was added in 1474ef9b13 (2026-07-27) after a real
+    * nightly failure ("Expected the next period start height (7), got 4") and moved here unchanged in
+    * ebc3712b3a. It does not mask a node race:
+    *   - the race is between this test client and chain progress (period read, then sign + broadcast), not
+    *     inside the node; the node's rejection is the correct consensus rule
+    *     (CommitToGenerationTransactionDiff: a commitment must target the next period start);
+    *   - it cannot be removed by the client: any read-then-submit against a live chain with 3-block periods
+    *     can straddle a boundary, so the only alternatives are stopping the chain or retrying;
+    *   - only that exact rejection is retried; every other error fails the test, the retry count is bounded
+    *     (`require` fails loudly), and each retry re-reads `alreadyCommitted`, so no transaction is resubmitted
+    *     and the returned committee is read back from the chain (`generators(period.start)`), which the
+    *     callers assert on.
+    * The historic red runs (38093314010, 38151643329) did not go through this retry: they were a miner
+    * wedge on a committee change (fixed in the node by #74, 3bcf076dfe) and a fault-injection test that
+    * stopped the next period's only committee member (fixed by #75, d1951aa79d, `commitForUpcomingPeriod`).
     */
   protected def commitAllForNextPeriod(retriesLeft: Int = 2): Seq[GeneratorsResponse.Entry] = {
     val period = commitLeader.currentGenerationPeriod.value.next
