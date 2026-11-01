@@ -41,7 +41,7 @@ tar xzf node/target/universal/decentralchain-*.tgz -C /tmp
 
 Or with Docker:
 ```bash
-docker run -d --name dcc-node -v "$PWD/node/decentralchain-testnet.conf:/etc/dcc/dcc.conf" -p 6868:6868 ghcr.io/decentral-america/node-scala:1.8.2
+docker run -d --name dcc-node -v "$PWD/node/decentralchain-testnet.conf:/etc/dcc/dcc.conf" -p 6868:6868 ghcr.io/decentral-america/node-scala:1.8.3
 ```
 
 ## Configuration

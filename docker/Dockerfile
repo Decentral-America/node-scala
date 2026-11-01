@@ -21,8 +21,10 @@ ENV DCC_NETWORK=mainnet
 
 SHELL ["/bin/bash", "-c"]
 
-# Install wget for downloading runtime JARs
-RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
+# Install wget for downloading runtime JARs. libbrotli1 is named so that the digest-pinned base's
+# vulnerable 1.1.0-2build2 is upgraded to the Ubuntu security fix (CVE-2026-111497, 1.1.0-2ubuntu0.1);
+# drop it once the pinned base image already carries the fixed version.
+RUN apt-get update && apt-get install -y --no-install-recommends wget libbrotli1 && rm -rf /var/lib/apt/lists/*
 
 # Node files
 ENV WVDATA=/var/lib/dcc
