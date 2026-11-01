@@ -77,6 +77,16 @@ HotStuff authoritative (not built); non-consensus node subsystems.
 - Committee = committed generators; each BLS key has an **on-chain proof-of-possession** verified at
   `CommitToGenerationTransactionDiff.scala:22` (binds key to holder + period; duplicate keys rejected).
 - ≥2/3 of committed **stake** is honest and live (standard BFT assumption).
+- **No single committee member may hold ≥ 1/3 of committee weight** (ECO-412, 2026-11-01). Committee weight is each
+  member's generating balance, so block rewards concentrate weight in whoever forges most. On testnet one member drifted
+  to 73.4% and formed a quorum alone: while partitioned from the others it kept finalizing by itself. Adopted for
+  testnet: the weight was rebalanced to about 25% per member (max 25.4%, 2026-11-01), the alert
+  `CommitteeMemberShareTooHigh` fires at a share of 1/3 or more for 15 minutes, and a drill on the balanced committee
+  showed an isolated member (25%) freezing while the other three (75%) kept finalizing. Proposed for mainnet, pending
+  Operator confirmation: at least four independent operators, each below 1/3 of committed stake at genesis and
+  re-checked every period, with rebalancing by transfer (a transfer's weight effect matures over the 1000-block
+  generating-balance window). A protocol-level per-member weight cap would remove the operational dependency but is a
+  consensus change and is not implemented.
 - The pure core is deterministic, clock-free, and I/O-free (injected `extendsBranch`, injected effects).
 - Network is partially synchronous; the pacemaker drives liveness across views on timeout.
 
