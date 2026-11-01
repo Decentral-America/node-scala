@@ -114,7 +114,19 @@ trait HotStuffCommitOps extends ScorexLogging { self: BaseFreeSpec =>
       commitAllForNextPeriod(retriesLeft - 1)
     } else {
       commitTargets.map(_._1).distinct.foreach(_.waitForGenerationPeriod(period))
-      commitLeader.generators(period.start)
+      val committed = commitLeader.generators(period.start)
+      // Broadcasting accepted every commit, but a commit that is not mined before the period starts never makes
+      // it into that period's committee (periods are 3 blocks here, so on a loaded runner the second commit can
+      // miss the window; node-it run 41346961774 returned 1 of 2). Verify, and retry against the next period.
+      val missing = commitTargets.map(_._2).toSet -- committed.map(_.address)
+      if (missing.nonEmpty) {
+        require(
+          retriesLeft > 0,
+          s"commitAllForNextPeriod: ${missing.mkString(", ")} still missing from period ${period.start} after all retries"
+        )
+        log.info(s"CommitToGeneration for ${missing.mkString(", ")} was not included before period ${period.start} began: retrying")
+        commitAllForNextPeriod(retriesLeft - 1)
+      } else committed
     }
   }
 
