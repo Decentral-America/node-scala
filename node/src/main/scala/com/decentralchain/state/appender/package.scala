@@ -81,19 +81,35 @@ package object appender {
     r.leftMap(GenericError(_))
   }
 
-  private[appender] def appendKeyBlock(
+  /** The state an incoming block is validated against: the block it references, not the live tip.
+    *
+    * A key block can reference the current liquid block, any of its microblocks, or (competing for the same height)
+    * the liquid block's parent. The live tip may contain microblocks the incoming block discards, or a competing
+    * liquid block it replaces, so validating against the live tip makes the outcome depend on which liquid state this
+    * node happens to hold. `referencedBlockchain` is the same view `BlockchainUpdaterImpl.processBlock` builds for
+    * the referenced block, and it is used for every path that appends a key block: broadcast, extension and
+    * challenge (ECO-413).
+    *
+    * The view is defined for a reference to the liquid block, one of its microblocks, the liquid block's parent, or
+    * the last persisted block when there is no liquid block. `BlockAppender.apply` admits only such blocks;
+    * `ExtensionAppender` first rolls back to the common block when it lies below the tip (otherwise the common block
+    * is the liquid block or one of its microblocks), then each block references the one appended before it. For any
+    * other reference `processBlock` rejects the block.
+    */
+  private def referencedView(blockchainUpdater: BlockchainUpdater & Blockchain, block: Block): Blockchain =
+    blockchainUpdater.referencedBlockchain(block.header.reference)
+
+  /** Validates a key block (no challenged header) against its referenced state and applies it. Shared by the
+    * broadcast and extension paths.
+    */
+  private def validateAndProcessKeyBlock(
       blockchainUpdater: BlockchainUpdater & Blockchain,
-      utx: UtxPool,
       pos: PoSSelector,
       time: Time,
-      log: Logger,
       verify: Boolean,
       txSignParCheck: Boolean
   )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] = {
-    // The block can reference only one of the latest liquid blocks. We have to validate the new block
-    // against a state by this reference, not the live tip -- which may have moved on to a different
-    // liquid block since this one was received (upstream PR #4034).
-    val blockchain = blockchainUpdater.referencedBlockchain(block.header.reference) // Safe to use, see BlockAppender.apply
+    val blockchain = referencedView(blockchainUpdater, block)
     for {
       data                  <- findBlockAndGetGenerators(blockchain, block)
       (hitSource, balances) <-
@@ -113,22 +129,32 @@ package object appender {
                 txSignParCheck
               )
           )
-          .map {
-            case res @ Applied(discardedDiffs = discardedDiffs) =>
-              // NOTE: UTX cleanup is done in appender — could be refactored to a dedicated service
-              if (block.transactionData.nonEmpty) {
-                utx.removeAll(block.transactionData)
-                log.trace(
-                  s"Removing txs of ${block.id()} ${block.transactionData.map(_.id()).mkString("(", ", ", ")")} from UTX pool"
-                )
-              }
-              utx.setPrioritySnapshots(discardedDiffs)
-              utx.scheduleCleanup()
-              res
-            case res => res
-          }
     } yield applyResult
   }
+
+  private[appender] def appendKeyBlock(
+      blockchainUpdater: BlockchainUpdater & Blockchain,
+      utx: UtxPool,
+      pos: PoSSelector,
+      time: Time,
+      log: Logger,
+      verify: Boolean,
+      txSignParCheck: Boolean
+  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, BlockApplyResult] =
+    validateAndProcessKeyBlock(blockchainUpdater, pos, time, verify, txSignParCheck)(block, snapshot).map {
+      case res @ Applied(discardedDiffs = discardedDiffs) =>
+        // NOTE: UTX cleanup is done in appender — could be refactored to a dedicated service
+        if (block.transactionData.nonEmpty) {
+          utx.removeAll(block.transactionData)
+          log.trace(
+            s"Removing txs of ${block.id()} ${block.transactionData.map(_.id()).mkString("(", ", ", ")")} from UTX pool"
+          )
+        }
+        utx.setPrioritySnapshots(discardedDiffs)
+        utx.scheduleCleanup()
+        res
+      case res => res
+    }
 
   private[appender] def appendExtensionBlock(
       blockchainUpdater: BlockchainUpdater & Blockchain,
@@ -136,29 +162,11 @@ package object appender {
       time: Time,
       verify: Boolean,
       txSignParCheck: Boolean
-  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, (BlockApplyResult, Int)] = {
-    if (block.header.challengedHeader.nonEmpty) {
+  )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, (BlockApplyResult, Int)] =
+    if (block.header.challengedHeader.nonEmpty)
       processBlockWithChallenge(blockchainUpdater, pos, time, verify, txSignParCheck)(block, snapshot)
-    } else {
-      for {
-        data                  <- findBlockAndGetGenerators(blockchainUpdater, block)
-        (hitSource, balances) <-
-          if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(block, data.parentHeight)
-          else pos.validateGenerationSignature(block).map(_ -> Seq.empty)
-        applyResult <- metrics.appendBlock.measureSuccessful(
-          blockchainUpdater.processBlock(
-            block,
-            hitSource,
-            snapshot.map(responseToSnapshot(block, Height(blockchainUpdater.height + 1))),
-            balances,
-            challengedHitSource = None,
-            verify,
-            txSignParCheck
-          )
-        )
-      } yield applyResult -> blockchainUpdater.height
-    }
-  }
+    else
+      validateAndProcessKeyBlock(blockchainUpdater, pos, time, verify, txSignParCheck)(block, snapshot).map(_ -> blockchainUpdater.height)
 
   private[appender] def appendChallengeBlock(
       blockchainUpdater: BlockchainUpdater & Blockchain,
@@ -190,16 +198,21 @@ package object appender {
       verify: Boolean,
       txSignParCheck: Boolean
   )(block: Block, snapshot: Option[BlockSnapshotResponse]): Either[ValidationError, (BlockApplyResult, Int)] = {
+    // The challenging block and the challenged original reference the same block, so both are validated against
+    // that block's state -- and the snapshot height derived from it. The live tip is wrong here in two ways: it may
+    // still hold microblocks the challenge discards, and when the challenge replaces a liquid block at the same
+    // height the live height is one above the challenging block's parent.
+    val blockchain      = referencedView(blockchainUpdater, block)
     val challengedBlock = block.toOriginal
     for {
-      data <- findBlockAndGetGenerators(blockchainUpdater, challengedBlock)
+      data <- findBlockAndGetGenerators(blockchain, challengedBlock)
 
       (challengedHitSource, _) <-
-        if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(challengedBlock, data.parentHeight)
+        if (verify) validateBlock(blockchain, pos, time, data.generatorSet)(challengedBlock, data.parentHeight)
         else pos.validateGenerationSignature(challengedBlock).map(_ -> Seq.empty)
 
       (hitSource, balances) <-
-        if (verify) validateBlock(blockchainUpdater, pos, time, data.generatorSet)(block, data.parentHeight)
+        if (verify) validateBlock(blockchain, pos, time, data.generatorSet)(block, data.parentHeight)
         else pos.validateGenerationSignature(block).map(_ -> Seq.empty)
 
       applyResult <-
@@ -208,7 +221,7 @@ package object appender {
             blockchainUpdater.processBlock(
               block,
               hitSource,
-              snapshot.map(responseToSnapshot(block, Height(blockchainUpdater.height + 1))),
+              snapshot.map(responseToSnapshot(block, Height(blockchain.height + 1))),
               balances,
               Some(challengedHitSource),
               verify,
